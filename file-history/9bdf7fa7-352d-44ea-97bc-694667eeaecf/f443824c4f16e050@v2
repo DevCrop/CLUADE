@@ -1,0 +1,37 @@
+---
+name: 260424 세션 신규 패턴 및 컴포넌트
+description: 2026-04-24에 확정된 SCSS 컴포넌트, 폼 시스템, SubpageStarfield 공통화, SEO 인프라 패턴
+type: project
+originSessionId: 9bdf7fa7-352d-44ea-97bc-694667eeaecf
+---
+2026-04-24 세션에서 새로 완성된 패턴과 컴포넌트.
+
+## 신규 버튼 컴포넌트 (resource/scss/components/_button.scss)
+
+- `.shiny-cta` — CSS `@property` 기반 애니메이션 gradient border + shimmer 효과
+- `.no-btn-char` — 문자 단위 rolling 텍스트 버튼 (아이콘 reveal 포함)
+- `.no-magnetic-corner-btn` — corner 없는 단순 hover 상태 버튼
+- PHP 대응: `views/components/button/button.php` — corner / prev-button / shiny / default 변형
+
+## 멀티스텝 폼 시스템 (resource/scss/components/_form.scss)
+
+- `.no-wizard` — 사이드바 progress indicator + step navigation + animated chips
+- `.no-form-reveal` — 조건부 섹션 reveal 애니메이션
+- contact 페이지 wizard 플로우와 연결됨 (`AppManager.ts` contact form success 시퀀싱)
+
+## SubpageStarfield 공통화
+
+- `resource/ts/runtime/SubpageStarfieldRuntime.ts` 신규 파일
+- contact / careers / inside 세 페이지에 공통 적용
+- 스크롤 속도 기반 boost + decay/lerp, bfcache 지원
+- `PageRuntime.ts`에서 초기화/해제 관리
+
+## SEO 인프라
+
+- `robots.txt`: admin/api/upload 경로 차단, `sitemap.xml` 참조
+- `views/pages/sitemap.php`: works/news/insight/award 모두 포함하는 동적 XML 사이트맵
+  - works: changefreq weekly, priority 0.8
+  - news/insight/award: changefreq monthly, priority 0.6
+
+**Why:** 각각 사용자 요청으로 추가됨 (버튼 다양화, 문의 폼 UX, 서브페이지 공통 효과, SEO 기본 인프라).
+**How to apply:** 신규 서브페이지에는 SubpageStarfield, 새 버튼에는 기존 변형 먼저 재사용. sitemap.php에 새 콘텐츠 타입 추가 시 changefreq/priority 기준 참고.

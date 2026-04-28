@@ -1,0 +1,111 @@
+<?php
+$posts = $posts ?? [];
+
+// TEST FALLBACK — 게시물 없을 때 더미 데이터, 실제 배포 전 제거
+if (count($posts) === 0) {
+    $posts = [
+        ['no' => '1', 'title' => '2025 웹 디자인 트렌드: 움직임과 공간의 언어', 'regdate' => '2025-06-05 10:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+        ['no' => '2', 'title' => 'Three.js로 만드는 인터랙티브 브랜드 경험', 'regdate' => '2025-05-12 09:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+        ['no' => '3', 'title' => 'UI/UX 설계에서 사용자 여정 지도 활용하기', 'regdate' => '2025-04-01 11:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+        ['no' => '4', 'title' => '모바일 퍼스트 시대의 반응형 브랜딩 전략', 'regdate' => '2025-03-18 14:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+        ['no' => '5', 'title' => '다크모드 UI 설계 시 고려해야 할 5가지', 'regdate' => '2025-02-14 09:30:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+        ['no' => '6', 'title' => '클라이언트와 브랜드 아이덴티티 구축하는 법', 'regdate' => '2025-01-20 10:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+    ];
+}
+
+$paginationTotal = (int) ($paginationTotal ?? 1);
+$paginationCurrent = (int) ($paginationCurrent ?? 1);
+$paginationQueryParams = is_array($paginationQueryParams ?? null) ? $paginationQueryParams : [];
+$categoryItems = $categoryItems ?? [];
+$searchQuery = (string) ($searchQuery ?? '');
+$listRouteName = (string) ($listRouteName ?? 'inside.insight');
+$listUrl = route($listRouteName, [], false);
+$activeCategoryNo = $activeCategoryNo ?? null;
+
+section('content');
+?>
+<?= include_view('components.sub-visual', [
+    'title' => 'INSIGHT',
+    'lines' => [
+        '더 나은 디지털 경험을 만들기 위한 나인원랩스의 생각과 실험을 만나보세요.',
+    ],
+]) ?>
+
+<section class="no-sub-insight">
+    <div class="no-container-2xl">
+        <div class="no-sub-insight__inner">
+            <div class="no-filter-bar">
+                <?= include_view('components.category', [
+                    'items' => $categoryItems,
+                ]) ?>
+                <form class="no-filter-bar__search" method="get" action="<?= e($listUrl) ?>" role="search">
+                    <?php if ($activeCategoryNo !== null && (int) $activeCategoryNo > 0) : ?>
+                    <input type="hidden" name="category" value="<?= (int) $activeCategoryNo ?>">
+                    <?php endif; ?>
+                    <?= include_view('components.search-bar', [
+                        'id' => 'search-bar-insight',
+                        'name' => 'q',
+                        'placeholder' => '검색어를 입력해주세요.',
+                        'show_label' => false,
+                        'value' => $searchQuery,
+                        'with_submit' => true,
+                    ]) ?>
+                </form>
+            </div>
+            <div class="--cnt">
+                <ul class="no-sub-gallery-list">
+                    <?php foreach ($posts as $row) :
+                        $viewUrl = route('inside.insight.view', ['no' => (string) ($row['no'] ?? '')], false);
+                        $thumb = inside_board_thumb_url($row['thumb_image'] ?? null);
+                        $badge = inside_board_notice_label($row);
+                        $dateDisp = inside_board_format_date($row['regdate'] ?? null);
+                        $dateAttr = inside_board_datetime_attr($row['regdate'] ?? null);
+                        $title = (string) ($row['title'] ?? '');
+                        ?>
+                    <li class="no-sub-gallery-item">
+                        <a href="<?= e($viewUrl) ?>" class="no-sub-gallery-list-item__link">
+                            <div class="no-sub-gallery-item__img-wrap">
+                                <?= include_view('components.button.corner-markup', ['class' => 'no-sub-gallery__corner']) ?>
+                                <div class="no-sub-gallery-item__img-inner">
+                                    <figure class="no-sub-gallery-item__img">
+                                        <?= render_uploaded_image($thumb, $title !== '' ? $title : '썸네일', '', 'lazy') ?>
+                                    </figure>
+                                </div>
+                            </div>
+                            <div class="no-sub-gallery-item__body">
+                                <div class="no-sub-gallery-item__head">
+                                    <div class="--badge"><?= e($badge) ?></div>
+                                    <?php if ($dateAttr !== '') : ?>
+                                    <time datetime="<?= e($dateAttr) ?>" class="--time"><?= e($dateDisp) ?></time>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="no-sub-gallery-item__title">
+                                    <h3 class="f-heading-4 --bold"><?= e($title) ?></h3>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                    <?php endforeach; ?>
+                    <?php if (count($posts) === 0) : ?>
+                    <li class="no-sub-gallery-item no-sub-gallery-item--empty">
+                        <p class="f-body-3">등록된 글이 없습니다.</p>
+                    </li>
+                    <?php endif; ?>
+                </ul>
+                <div class="no-view-more">
+                    <?= include_view('components.pagination', [
+                        'total' => max(1, $paginationTotal),
+                        'current' => max(1, min($paginationTotal, $paginationCurrent)),
+                        'queryParams' => $paginationQueryParams,
+                    ]) ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

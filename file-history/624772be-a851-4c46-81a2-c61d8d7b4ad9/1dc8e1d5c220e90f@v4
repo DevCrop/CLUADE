@@ -1,0 +1,7 @@
+# Memory Index — NINEONELABS Renewal
+
+- [Project Architecture](project_architecture.md) — custom MVC, scene structure, type rules, DB prefix
+- [Development Workflow](project_workflow.md) — verification commands, forbidden commands, skill/agent delegation
+- [CHOP mandatory prefix](feedback_chop.md) — all Bash commands must use chop prefix
+- [Never run npm build/watch/install](feedback_npm_build.md) — Vite dev server auto-builds on save
+- [--dangerously-skip-permissions active](feedback_dangerously_skip.md) — ~/.bashrc alias, no permission prompts

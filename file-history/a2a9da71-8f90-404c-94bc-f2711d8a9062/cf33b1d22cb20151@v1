@@ -1,0 +1,178 @@
+import type { Engine } from "./Engine.js";
+import { pageAbout, pageContact, pageMain } from "./setup.js";
+import type {
+  PageSceneSyncPort,
+  PageTheatreAdapter,
+  PageTheatreAdapterFactory,
+} from "../types/runtime.types.js";
+
+const PAGE_THEATRE_ADAPTER_FACTORIES: Readonly<
+  Partial<Record<string, PageTheatreAdapterFactory>>
+> = {
+  [pageMain]: async () => {
+    const theatreRuntime = await import(
+      "../pages/main/theatre/MainTheatreRuntime.js"
+    );
+    return {
+      applyBootStateIfNeeded: async (engine) =>
+        theatreRuntime.applyMainTheatreBootState(engine),
+      startPreviewIfNeeded: async (engine) => {
+        if (!theatreRuntime.isMainTheatrePreviewMode()) return;
+        await theatreRuntime.startMainTheatrePreview(engine);
+      },
+      startIntroIfNeeded: async () => undefined,
+      startAfterIntroIfNeeded: async (engine) =>
+        theatreRuntime.startMainTheatreAfterIntroAutoplay(engine),
+      startIntroActionPhaseOneIfNeeded: async (engine) =>
+        theatreRuntime.startMainTheatreIntroActionPhaseOneAutoplay(engine),
+      startIntroActionPhaseTwoIfNeeded: async (engine) =>
+        theatreRuntime.startMainTheatreIntroActionPhaseTwoAutoplay(engine),
+      stopPreview: async () => theatreRuntime.stopMainTheatrePreview(),
+      getSceneSyncPort: async () =>
+        theatreRuntime.createMainTheatreSceneSyncPort() as PageSceneSyncPort<
+          string,
+          string
+        >,
+    };
+  },
+  [pageAbout]: async () => {
+    const theatreRuntime = await import(
+      "../pages/about/theatre/AboutTheatreRuntime.js"
+    );
+    return {
+      startPreviewIfNeeded: async (engine) => {
+        if (!theatreRuntime.isAboutTheatrePreviewMode()) return;
+        await theatreRuntime.startAboutTheatrePreview(engine);
+      },
+      startIntroIfNeeded: async (engine) =>
+        theatreRuntime.startAboutTheatreIntroAutoplay(engine),
+      startAfterIntroIfNeeded: async (engine) =>
+        theatreRuntime.startAboutTheatreAfterIntroAutoplay(engine),
+      stopPreview: async () => theatreRuntime.stopAboutTheatrePreview(),
+      getSceneSyncPort: async () =>
+        theatreRuntime.createAboutTheatreSceneSyncPort() as PageSceneSyncPort<
+          string,
+          string
+        >,
+    };
+  },
+  [pageContact]: async () => {
+    const theatreRuntime = await import(
+      "../pages/contact/theatre/ContactTheatreRuntime.js"
+    );
+    return {
+      applyBootStateIfNeeded: async (engine) =>
+        theatreRuntime.applyContactTheatreBootState(engine),
+      startIntroIfNeeded: async (engine) =>
+        theatreRuntime.startContactTheatreIntroAutoplay(engine),
+      startAfterIntroIfNeeded: async (engine) =>
+        theatreRuntime.startContactTheatreOuttroAutoplay(engine),
+    };
+  },
+};
+
+export class PageTheatreBinder {
+  private _pageId: string | null;
+  private _sceneRequestId = 0;
+  private _adapterPromise: Promise<PageTheatreAdapter | null> | null = null;
+  private _sceneSyncPortPromise: Promise<PageSceneSyncPort<string, string> | null> | null =
+    null;
+
+  constructor(pageId?: string | null) {
+    this._pageId = pageId ?? null;
+  }
+
+  setPageId(pageId: string): void {
+    if (this._pageId === pageId) return;
+    this._pageId = pageId;
+    this._adapterPromise = null;
+    this._sceneSyncPortPromise = null;
+    this._sceneRequestId = 0;
+  }
+
+  async applyBootStateIfNeeded(engine: Engine): Promise<void> {
+    const adapter = await this._getAdapter();
+    await adapter?.applyBootStateIfNeeded?.(engine);
+  }
+
+  async startPreviewIfNeeded(engine: Engine): Promise<void> {
+    const adapter = await this._getAdapter();
+    await adapter?.startPreviewIfNeeded?.(engine);
+  }
+
+  async startAfterIntroIfNeeded(engine: Engine): Promise<void> {
+    const adapter = await this._getAdapter();
+    await adapter?.startAfterIntroIfNeeded?.(engine);
+  }
+
+  async startIntroIfNeeded(engine: Engine): Promise<void> {
+    const adapter = await this._getAdapter();
+    await adapter?.startIntroIfNeeded?.(engine);
+  }
+
+  async startIntroActionPhaseOneIfNeeded(engine: Engine): Promise<void> {
+    const adapter = await this._getAdapter();
+    await adapter?.startIntroActionPhaseOneIfNeeded?.(engine);
+  }
+
+  async startIntroActionPhaseTwoIfNeeded(engine: Engine): Promise<void> {
+    const adapter = await this._getAdapter();
+    await adapter?.startIntroActionPhaseTwoIfNeeded?.(engine);
+  }
+
+  dispose(): void {
+    void this._disposeAsync();
+  }
+
+  syncScene<TSceneKey extends string, TSheetId extends string>(
+    engine: Engine,
+    sceneKey: TSceneKey,
+    progress: number,
+    onSheetChange: (sheetId: TSheetId | null) => void,
+  ): void {
+    const requestId = ++this._sceneRequestId;
+    void this._syncScene(engine, sceneKey, progress, requestId, onSheetChange);
+  }
+
+  private _getAdapter(): Promise<PageTheatreAdapter | null> {
+    if (this._adapterPromise) return this._adapterPromise;
+    this._adapterPromise = this._createAdapter();
+    return this._adapterPromise;
+  }
+
+  private async _createAdapter(): Promise<PageTheatreAdapter | null> {
+    const pageType = this._pageId;
+    if (!pageType) return null;
+    const factory = PAGE_THEATRE_ADAPTER_FACTORIES[pageType];
+    if (!factory) return null;
+    return factory();
+  }
+
+  private async _getSceneSyncPort(): Promise<PageSceneSyncPort<string, string> | null> {
+    if (this._sceneSyncPortPromise) return this._sceneSyncPortPromise;
+    this._sceneSyncPortPromise = this._createSceneSyncPort();
+    return this._sceneSyncPortPromise;
+  }
+
+  private async _createSceneSyncPort(): Promise<PageSceneSyncPort<string, string> | null> {
+    const adapter = await this._getAdapter();
+    return (await adapter?.getSceneSyncPort?.()) ?? null;
+  }
+
+  private async _syncScene<TSceneKey extends string, TSheetId extends string>(
+    engine: Engine,
+    sceneKey: TSceneKey,
+    progress: number,
+    requestId: number,
+    onSheetChange: (sheetId: TSheetId | null) => void,
+  ): Promise<void> {
+    const port = await this._getSceneSyncPort();
+    if (!port || requestId !== this._sceneRequestId) return;
+    onSheetChange(port.apply(engine, sceneKey, progress) as TSheetId | null);
+  }
+
+  private async _disposeAsync(): Promise<void> {
+    const adapter = await this._getAdapter();
+    await adapter?.stopPreview?.();
+  }
+}

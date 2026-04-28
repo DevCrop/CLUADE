@@ -1,0 +1,300 @@
+import * as THREE from "three";
+import type {
+  WorkCardRenderOptions,
+  WorkCardSize,
+  WorkCardUserData,
+  WorkProjectItem,
+} from "../types/work.types.js";
+import {
+  WORK_PLACEHOLDER_IMAGE,
+  formatWorkCategoryLabel,
+} from "../pages/works/scene/works.scene.js";
+import { Helpers } from "../utils/Helpers.js";
+
+const texCache = new Map<string, THREE.CanvasTexture>();
+const IMAGE_ASPECT = 16 / 9;
+const FONT_KO = "Pretendard";
+const FONT_UI = "Geist Mono";
+const META_TOP_PAD = 22;
+const TITLE_LEFT_PAD = 0;
+const BADGE_RIGHT_PAD = 0;
+const TITLE_FONT = 34;
+const TITLE_WEIGHT = 600;
+const BADGE_FONT = 17;
+const BADGE_PAD_H = 18;
+const BADGE_PAD_V = 8;
+const BADGE_BORDER = 1;
+const BTN_FONT = 12;
+const ROW1_LINE_HEIGHT = 22;
+const ROW_GAP = 6;
+const VIEW_MODAL_LABEL = "View Modal";
+const CANVAS_W = 512;
+const CANVAS_DPI_SCALE = 3;
+const WORK_CARD_DEFAULT_RENDER_OPTIONS: WorkCardRenderOptions = {
+  showCategory: true,
+  showViewModal: false,
+};
+
+function drawTitleBar(
+  ctx: CanvasRenderingContext2D,
+  proj: WorkProjectItem,
+  width: number,
+  imageHeight: number,
+  renderOptions: WorkCardRenderOptions,
+): void {
+  const row1Y = imageHeight + META_TOP_PAD + ROW1_LINE_HEIGHT / 2;
+  let maxTitleWidth = width - TITLE_LEFT_PAD;
+  let badgeWidth = 0;
+  let badgeX = 0;
+  let badgeY = 0;
+  let badgeText = "";
+
+  if (renderOptions.showCategory) {
+    ctx.font = `500 ${BADGE_FONT}px ${FONT_UI}, sans-serif`;
+    badgeText = formatWorkCategoryLabel(proj.category);
+    const badgeTextWidth = ctx.measureText(badgeText).width;
+    badgeWidth = Math.max(64, badgeTextWidth + BADGE_PAD_H * 2);
+    const badgeHeight = BADGE_FONT + BADGE_PAD_V * 2;
+    badgeX = width - BADGE_RIGHT_PAD - badgeWidth;
+    badgeY = row1Y - badgeHeight / 2;
+    maxTitleWidth = width - TITLE_LEFT_PAD - 10 - badgeWidth;
+  }
+
+  ctx.font = `${TITLE_WEIGHT} ${TITLE_FONT}px ${FONT_KO}, sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,.95)";
+  ctx.textBaseline = "middle";
+  let titleText = proj.title;
+  if (ctx.measureText(titleText).width > maxTitleWidth) {
+    while (
+      titleText.length > 0 &&
+      ctx.measureText(`${titleText}...`).width > maxTitleWidth
+    ) {
+      titleText = titleText.slice(0, -1);
+    }
+    titleText += "...";
+  }
+  ctx.fillText(titleText, TITLE_LEFT_PAD, row1Y, maxTitleWidth);
+
+  if (renderOptions.showCategory) {
+    const badgeHeight = BADGE_FONT + BADGE_PAD_V * 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = BADGE_BORDER;
+    ctx.strokeRect(badgeX, badgeY, badgeWidth, badgeHeight);
+    ctx.font = `500 ${BADGE_FONT}px ${FONT_UI}, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(badgeText, badgeX + badgeWidth / 2, row1Y);
+    ctx.textAlign = "left";
+  }
+
+  if (!renderOptions.showViewModal) return;
+  const row2Y = imageHeight + META_TOP_PAD + ROW1_LINE_HEIGHT + ROW_GAP + BTN_FONT / 2;
+  ctx.font = `500 ${BTN_FONT}px ${FONT_UI}, sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,.9)";
+  ctx.textBaseline = "middle";
+  ctx.fillText(VIEW_MODAL_LABEL, TITLE_LEFT_PAD, row2Y);
+  const btnTextWidth = ctx.measureText(VIEW_MODAL_LABEL).width;
+  ctx.strokeStyle = "rgba(255,255,255,0.65)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(TITLE_LEFT_PAD, row2Y + 7);
+  ctx.lineTo(TITLE_LEFT_PAD + btnTextWidth, row2Y + 7);
+  ctx.stroke();
+}
+
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  width: number,
+  imageHeight: number,
+): void {
+  const ratio = width / imageHeight;
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  let sw: number;
+  let sh: number;
+  let sx: number;
+  let sy: number;
+  if (imageRatio > ratio) {
+    sh = image.naturalHeight;
+    sw = image.naturalHeight * ratio;
+    sx = (image.naturalWidth - sw) / 2;
+    sy = 0;
+  } else {
+    sw = image.naturalWidth;
+    sh = image.naturalWidth / ratio;
+    sx = 0;
+    sy = (image.naturalHeight - sh) / 2;
+  }
+  ctx.drawImage(image, sx, sy, sw, sh, 0, 0, width, imageHeight);
+}
+
+function drawCardToContext(
+  ctx: CanvasRenderingContext2D,
+  proj: WorkProjectItem,
+  size: WorkCardSize,
+  image?: HTMLImageElement | null,
+  renderOptions: WorkCardRenderOptions = WORK_CARD_DEFAULT_RENDER_OPTIONS,
+): void {
+  const width = CANVAS_W;
+  const height = Math.round((width * size.h) / size.w);
+  const imageHeight = Math.round(width / IMAGE_ASPECT);
+
+  ctx.save();
+  ctx.translate(0, height);
+  ctx.scale(1, -1);
+
+  if (image && image.complete && image.naturalWidth > 0) {
+    drawImageCover(ctx, image, width, imageHeight);
+  } else {
+    const gradient = ctx.createLinearGradient(0, 0, width, imageHeight);
+    gradient.addColorStop(0, proj.bg);
+    gradient.addColorStop(1, Helpers.lightenHex(proj.bg, 18));
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, imageHeight);
+    for (let index = 0; index < 6000; index += 1) {
+      ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.04})`;
+      ctx.fillRect(Math.random() * width, Math.random() * imageHeight, 1, 1);
+    }
+    const radial = ctx.createRadialGradient(
+      width * 0.25,
+      imageHeight * 0.2,
+      0,
+      width * 0.25,
+      imageHeight * 0.2,
+      width * 0.8,
+    );
+    radial.addColorStop(0, Helpers.hexToRgba(proj.ac, 0.28));
+    radial.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = radial;
+    ctx.fillRect(0, 0, width, imageHeight);
+  }
+
+  drawTitleBar(ctx, proj, width, imageHeight, renderOptions);
+  ctx.restore();
+}
+
+export class WorkCard {
+  static buildTexture(
+    proj: WorkProjectItem,
+    size: WorkCardSize,
+    image?: HTMLImageElement | null,
+    renderOptions: WorkCardRenderOptions = WORK_CARD_DEFAULT_RENDER_OPTIONS,
+  ): THREE.CanvasTexture {
+    const key = `${proj.title}_${proj.category}_${size.w}_${size.h}_${renderOptions.showCategory ? "category" : "title"}_${renderOptions.showViewModal ? "modal" : "plain"}`;
+    const cached = texCache.get(key);
+    if (cached) return cached;
+
+    const width = CANVAS_W;
+    const height = Math.round((width * size.h) / size.w);
+    const canvas = document.createElement("canvas");
+    canvas.width = width * CANVAS_DPI_SCALE;
+    canvas.height = height * CANVAS_DPI_SCALE;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2d context unavailable");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.setTransform(CANVAS_DPI_SCALE, 0, 0, CANVAS_DPI_SCALE, 0, 0);
+
+    drawCardToContext(ctx, proj, size, image, renderOptions);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.flipY = false;
+    texture.premultiplyAlpha = false;
+    texture.anisotropy = 16;
+    texCache.set(key, texture);
+    return texture;
+  }
+
+  static updateTextureImage(
+    texture: THREE.CanvasTexture,
+    proj: WorkProjectItem,
+    size: WorkCardSize,
+    image: HTMLImageElement,
+    renderOptions: WorkCardRenderOptions = WORK_CARD_DEFAULT_RENDER_OPTIONS,
+  ): void {
+    const canvas = texture.image as HTMLCanvasElement;
+    if (!canvas || !(canvas.getContext instanceof Function)) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const scale = canvas.width / CANVAS_W;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    drawCardToContext(ctx, proj, size, image, renderOptions);
+    texture.needsUpdate = true;
+  }
+
+  static redrawTextureForViewMode(
+    texture: THREE.CanvasTexture,
+    proj: WorkProjectItem,
+    size: WorkCardSize,
+    image: HTMLImageElement | null,
+    renderOptions: WorkCardRenderOptions,
+  ): void {
+    const canvas = texture.image as HTMLCanvasElement;
+    if (!canvas || !(canvas.getContext instanceof Function)) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const scale = canvas.width / CANVAS_W;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    drawCardToContext(ctx, proj, size, image, renderOptions);
+    texture.needsUpdate = true;
+  }
+
+  static createMesh(
+    proj: WorkProjectItem,
+    size: WorkCardSize,
+    detailPath: string,
+    renderOptions: WorkCardRenderOptions = WORK_CARD_DEFAULT_RENDER_OPTIONS,
+  ): THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> & {
+    userData: WorkCardUserData;
+  } {
+    const texture = WorkCard.buildTexture(proj, size, undefined, renderOptions);
+    const geometry = new THREE.PlaneGeometry(size.w, size.h);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0,
+    });
+    const mesh = new THREE.Mesh(geometry, material) as THREE.Mesh<
+      THREE.PlaneGeometry,
+      THREE.MeshBasicMaterial
+    > & { userData: WorkCardUserData };
+    mesh.userData = { proj, detailPath };
+    mesh.rotation.set(0, 0, 0);
+    return mesh;
+  }
+
+  static loadPlaceholderImage(
+    url: string = WORK_PLACEHOLDER_IMAGE,
+  ): Promise<HTMLImageElement> {
+    return WorkCard.loadImage(url);
+  }
+
+  /** 썸네일 등 임의 URL (CORS 가능 시 anonymous) */
+  static loadImage(url: string): Promise<HTMLImageElement> {
+    const trimmed = url.trim();
+    return new Promise((resolve, reject) => {
+      if (!trimmed) {
+        reject(new Error("WorkCard: empty image url"));
+        return;
+      }
+      const image = new Image();
+      if (!trimmed.startsWith("data:") && !trimmed.startsWith("blob:")) {
+        image.crossOrigin = "anonymous";
+      }
+      image.onload = () => resolve(image);
+      image.onerror = () =>
+        reject(new Error(`WorkCard: failed to load image ${trimmed}`));
+      image.src = trimmed;
+    });
+  }
+
+  static offTextures(): void {
+    texCache.forEach((texture) => texture.dispose());
+    texCache.clear();
+  }
+}

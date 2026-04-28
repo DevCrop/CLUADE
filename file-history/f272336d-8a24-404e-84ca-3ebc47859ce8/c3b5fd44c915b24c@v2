@@ -1,0 +1,302 @@
+<div class="no-legal-doc">
+
+    <p class="no-legal-doc__effective">현행 · 2026년 04월 01일 시행</p>
+
+    <p class="no-legal-doc__intro">
+        에버큐라 주식회사(이하 "회사"라고 합니다)는 개인정보 보호법 등 정보통신서비스제공자가 준수하여야 할 관련 법령상의 개인정보보호 규정을 준수하며, 관련 법령에 의거한 개인정보처리방침을 정하여 이용자 권익 보호에 최선을 다하고 있습니다. 본 개인정보처리방침은 회사가 제공하는 웹사이트 서비스 이용에 적용되며 다음과 같은 내용을 담고 있습니다.
+    </p>
+
+    <!-- ■ 1 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            수집하는 개인정보 항목 및 수집방법
+        </h3>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. 수집하는 개인정보의 항목</p>
+            <p class="no-legal-doc__body">회사는 별도의 회원가입 절차 없이, 서비스 문의 및 계약 이행을 위해 필요한 최소한의 개인정보를 수집하고 있습니다.</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>서비스 문의 시: 이름, 회사명, 연락처(휴대전화번호), 이메일, 문의내용</li>
+                <li>서비스 계약 및 결제 시: 주소(사업장), 대표자 성명, 세금계산서 발행용 정보(이메일 등), 결제 기록</li>
+                <li>서비스 이용 과정: 서비스 이용 기록, 접속 로그, 쿠키, 접속 IP 등이 생성되어 수집될 수 있습니다.</li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. 수집방법</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>홈페이지(문의하기 양식), 서면양식, 이메일, 전화, 팩스, 생성 정보 수집 툴을 통한 자동 수집</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ■ 2 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            개인정보의 수집 및 이용목적
+        </h3>
+        <p class="no-legal-doc__body">회사는 수집한 개인정보를 다음의 목적을 위해 활용합니다.</p>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. 서비스 제공에 관한 계약 이행 및 요금 정산</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>에버큐라 서비스 제공, 구매 및 요금 결제, 계약서 및 청구서 발송, 금융거래 본인 인증</li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. 고객 관리 및 상담 처리</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>문의 사항에 대한 본인 확인, 사실 조사를 위한 연락·통지, 처리 결과 통보 등 민원 처리 및 고지사항 전달</li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">3. 마케팅 및 광고에 활용 (동의 시)</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>에버큐라 서비스 관련 이벤트 등 광고성 정보 전달, 접속 빈도 파악 또는 고객의 서비스 이용에 대한 통계</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ■ 3 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            개인정보의 보유 및 이용기간
+        </h3>
+        <p class="no-legal-doc__body">고객의 개인정보는 원칙적으로 개인정보 수집 및 이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다. 단, 다음의 정보에 대해서는 아래의 보존이유를 위해 명시한 기간 동안 보존합니다.</p>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. 회사내부 방침에 의한 정보보유 사유</p>
+            <ul class="no-legal-doc__circle-list">
+                <li>
+                    <span>상담 및 문의 서비스 이용 기록</span>
+                    <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--square">
+                        <li><span class="sub-label">보존 항목:</span>&nbsp;이름, 회사명, 연락처, 이메일, 상담 내용</li>
+                        <li><span class="sub-label">보존 이유:</span>&nbsp;문의 이력 확인 및 재상담 시 원활한 서비스 제공</li>
+                        <li><span class="sub-label">보존 기간:</span>&nbsp;문의 처리 완료 후 3년 (또는 목적 달성 시까지)</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. 관련법령에 의한 정보보유 사유</p>
+            <p class="no-legal-doc__body">상법, 전자상거래 등에서의 소비자보호에 관한 법률 등 관계법령의 규정에 의하여 보존할 필요가 있는 경우 회사는 관계법령에서 정한 일정한 기간 동안 고객정보를 보관합니다.</p>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">가. 계약 또는 청약철회 등에 관한 기록</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">보존항목:</span>&nbsp;서비스 계약서(동의서 포함), 계약 이행 기록</li>
+                    <li><span class="sub-label">보존근거:</span>&nbsp;전자상거래 등에서의 소비자보호에 관한 법률</li>
+                    <li><span class="sub-label">보존기간:</span>&nbsp;5년</li>
+                </ul>
+            </div>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">나. 소비자불만 및 분쟁처리에 관한 기록</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">보존항목:</span>&nbsp;고객불만 및 분쟁관련 전자문서</li>
+                    <li><span class="sub-label">보존근거:</span>&nbsp;전자상거래 등에서의 소비자보호에 관한 법률</li>
+                    <li><span class="sub-label">보존기간:</span>&nbsp;5년</li>
+                </ul>
+            </div>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">다. 대금결제 및 재화 등의 공급에 관한 기록</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">보존항목:</span>&nbsp;결제 기록, 세금계산서 발행 기록</li>
+                    <li><span class="sub-label">보존근거:</span>&nbsp;전자상거래 등에서의 소비자보호에 관한 법률, 국세기본법</li>
+                    <li><span class="sub-label">보존기간:</span>&nbsp;5년</li>
+                </ul>
+            </div>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">라. 설문조사통계자료</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">보존항목:</span>&nbsp;설문조사 통계자료 작성 후 개인정보가 포함된 자료</li>
+                    <li><span class="sub-label">보존근거:</span>&nbsp;고객만족활동과 시스템 개선을 위한 자료수집</li>
+                    <li><span class="sub-label">보존기간:</span>&nbsp;5년</li>
+                </ul>
+            </div>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">마. 웹사이트 방문기록</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">보존항목:</span>&nbsp;웹사이트 방문기록</li>
+                    <li><span class="sub-label">보존근거:</span>&nbsp;통신비밀보호법</li>
+                    <li><span class="sub-label">보존기간:</span>&nbsp;3개월</li>
+                </ul>
+            </div>
+
+            <p class="no-legal-doc__note">
+                단, 서비스 이용 계약이 체결되어 유지 중인 고객의 경우, 해당 서비스 제공 및 계약 이행을 위해 필요한 정보에 한하여 계약 종료 시까지 보관할 수 있습니다. 다만, 관계법령에 따른 보존 의무가 있는 경우에는 해당 법령에서 정한 기간 동안 별도 보관합니다.
+            </p>
+        </div>
+    </div>
+
+    <!-- ■ 4 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            개인정보의 파기
+        </h3>
+        <p class="no-legal-doc__body">회사는 원칙적으로 개인정보 처리목적이 달성된 개인정보는 지체없이 파기합니다. 파기의 절차, 기한 및 방법은 아래와 같습니다.</p>
+
+        <ul class="no-legal-doc__bullet-list">
+            <li>
+                파기 절차: 이용자가 문의하기 또는 서비스 계약 등을 위해 입력한 정보는 목적이 달성된 후 별도의 DB로 옮겨져 내부방침 및 기타 관련 법령에 의한 정보보호 사유에 따라 일정 기간 저장된 후 파기됩니다. 동 개인정보는 법률에 의한 경우가 아니고서는 보유되는 이외의 다른 목적으로 이용되지 않습니다.
+            </li>
+            <li>
+                파기 기한 및 파기 방법: 보유기간이 만료되었거나 개인정보의 처리목적달성, 해당 업무의 폐지 등 그 개인정보가 불필요하게 되었을 때에는 지체없이 파기합니다. 전자적 파일형태의 정보는 기록을 재생할 수 없는 기술적 방법을 사용합니다. 종이에 출력된 개인정보는 분쇄기로 분쇄하거나 소각을 통하여 파기합니다.
+            </li>
+        </ul>
+    </div>
+
+    <!-- ■ 5 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            개인정보의 제3자 제공
+        </h3>
+        <p class="no-legal-doc__body">회사는 원칙적으로 정보주체의 개인정보를 수집·이용 목적으로 명시한 범위 내에서 처리하며, 아래의 경우를 제외하고는 정보주체의 사전 동의 없이는 본래의 목적 범위를 초과하여 처리하거나 제3자에게 제공하지 않습니다.</p>
+
+        <ol class="no-legal-doc__numbered-list">
+            <li>사전에 동의한 경우나 정보주체로부터 별도의 동의를 받는 경우</li>
+            <li>법률에 특별한 규정이 있거나 법령에 정해진 절차와 방법에 따라 수사기관 등의 요구가 있는 경우</li>
+            <li>정보주체가 의사표시를 할 수 없는 상태에 있거나 주소불명 등으로 사전 동의를 받을 수 없는 경우로서, 명백히 정보주체 또는 제3자의 급박한 생명, 신체, 재산의 이익을 위하여 필요하다고 인정되는 경우</li>
+            <li>통계작성 및 학술연구 등의 목적을 위하여 필요한 경우로서 특정 개인을 알아볼 수 없는 형태로 개인정보를 제공하는 경우</li>
+        </ol>
+    </div>
+
+    <!-- ■ 6 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            수집한 개인정보의 위탁
+        </h3>
+        <p class="no-legal-doc__body">회사는 원활한 서비스 제공을 위해 아래와 같이 개인정보 처리 업무를 외부 전문업체에 위탁하여 운영하고 있으며, 위탁계약 시 개인정보가 안전하게 관리될 수 있도록 필요한 사항을 규정하고 있습니다.</p>
+
+        <div class="no-legal-doc__table-wrap">
+            <table class="no-legal-doc__table">
+                <thead>
+                    <tr>
+                        <th>수탁 업체</th>
+                        <th>위탁 업무 내용</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Salesforce.com, Inc.</td>
+                        <td>고객 관계 관리(CRM) 시스템 운영 및 데이터 보관 (글로벌 클라우드 인프라 이용에 따른 국외 보관 포함)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ■ 7 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            이용자의 권리와 그 행사방법
+        </h3>
+
+        <ol class="no-legal-doc__numbered-list">
+            <li>이용자는 언제든지 회사에 대해 개인정보 열람·정정·삭제·처리정지 요구 등의 권리를 행사할 수 있습니다.</li>
+            <li>권리 행사는 회사에 대해 서면, 전자우편, 모바일 서신 등을 통하여 하실 수 있으며 회사는 이에 대해 지체 없이 조치하겠습니다.</li>
+            <li>이용자가 개인정보의 오류 등에 대한 정정 또는 삭제를 요구한 경우에는 회사는 정정 또는 삭제를 완료할 때까지 당해 개인정보를 이용하거나 제공하지 않습니다.</li>
+            <li>이용자의 권리 행사는 이용자의 법정대리인이나 위임을 받은 자 등 대리인을 통하여 하실 수 있습니다. 이 경우 개인정보 보호법 시행규칙 별지 제11호 서식에 따른 위임장을 제출하셔야 합니다.</li>
+            <li>회사는 이용자의 요청에 의해 해지 또는 삭제된 개인정보를 "개인정보의 보유 및 이용기간"에 명시된 바에 따라 처리하고 그 외의 용도로 열람 또는 이용할 수 없도록 처리하고 있습니다.</li>
+        </ol>
+    </div>
+
+    <!-- ■ 8 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            개인정보의 안전성 확보조치
+        </h3>
+        <p class="no-legal-doc__body">회사는 개인정보의 안전성 확보를 위해 다음과 같은 조치를 취하고 있습니다.</p>
+
+        <ol class="no-legal-doc__numbered-list">
+            <li>관리적 조치: 내부관리계획 수립·시행, 개인정보 취급 직원의 최소화 및 정기적 교육 등</li>
+            <li>기술적 조치: 개인정보처리시스템(Salesforce 등)의 접근권한 관리, 접속기록의 보관 및 위변조 방지, 개인정보의 암호화 전송, 보안프로그램 설치 및 갱신</li>
+            <li>물리적 조치: 외부인 출입통제 및 자료보관실 등의 잠금장치 운영</li>
+        </ol>
+    </div>
+
+    <!-- ■ 9 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            개인정보 자동수집 장치의 설치·운영 및 거부에 관한 사항
+        </h3>
+        <p class="no-legal-doc__body">회사는 귀하의 정보를 수시로 저장하고 찾아내는 "쿠키(cookie)" 등을 운용합니다. 쿠키란 웹사이트를 운영하는데 이용되는 서버가 귀하의 브라우저에 보내는 아주 작은 텍스트 파일로서 귀하의 컴퓨터 하드디스크에 저장됩니다.</p>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. 쿠키 등 사용 목적</p>
+            <p class="no-legal-doc__body">접속 빈도나 방문 시간 등을 분석, 이용자의 취향과 관심분야를 파악 및 자취 추적, 각종 이벤트 참여 정도 및 방문 회수 파악 등을 통한 타겟 마케팅 및 개인 맞춤 서비스 제공</p>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. 쿠키의 설치·운영 및 거부</p>
+            <p class="no-legal-doc__body">귀하는 쿠키 설치에 대한 선택권을 가지고 있습니다. 따라서, 귀하는 웹브라우저에서 옵션을 설정함으로써 모든 쿠키를 허용하거나, 쿠키가 저장될 때마다 확인을 거치거나, 아니면 모든 쿠키의 저장을 거부할 수도 있습니다.</p>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">3. 쿠키 설정 거부 방법</p>
+            <ul class="no-legal-doc__browser-list">
+                <li><strong>Chrome:</strong>&nbsp;설정 &gt; 개인정보 및 보안 &gt; 인터넷 사용 기록 삭제</li>
+                <li><strong>Edge:</strong>&nbsp;설정 &gt; 쿠키 및 사이트 권한 &gt; 쿠키 및 사이트 데이터 관리 및 삭제</li>
+                <li><strong>Safari:</strong>&nbsp;환경설정 &gt; 개인정보 보호 &gt; 쿠키 및 웹사이트 데이터 관리</li>
+            </ul>
+            <p class="no-legal-doc__note">
+                단, 쿠키 저장을 거부할 경우 맞춤형 서비스 이용에 어려움이 발생할 수 있습니다.
+            </p>
+        </div>
+    </div>
+
+    <!-- ■ 10 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            개인정보에 관한 민원서비스
+        </h3>
+        <p class="no-legal-doc__body">회사는 고객의 개인정보를 보호하고 개인정보와 관련한 불만을 처리하기 위하여 아래와 같이 관련 부서 및 개인정보보호책임자를 지정하고 있습니다.</p>
+
+        <dl class="no-legal-doc__contact-card">
+            <dt>개인정보보호책임자</dt><dd>&nbsp;</dd>
+            <dt>성명</dt><dd>차슬예나</dd>
+            <dt>소속</dt><dd>유통사업부</dd>
+            <dt>전화번호</dt><dd>010-2762-4324</dd>
+            <dt>이메일</dt><dd><a href="mailto:lina@ever-cura.com">lina@ever-cura.com</a></dd>
+        </dl>
+
+        <p class="no-legal-doc__body" style="margin-top:16px;">귀하께서는 회사의 서비스를 이용하시며 발생하는 모든 개인정보보호 관련 민원을 개인정보보호책임자 혹은 담당부서로 신고하실 수 있습니다. 회사는 이용자들의 신고사항에 대해 신속하게 충분한 답변을 드릴 것입니다.</p>
+        <p class="no-legal-doc__body">기타 개인정보침해에 대한 신고나 상담이 필요하신 경우에는 아래 기관에 문의하시기 바랍니다.</p>
+
+        <ul class="no-legal-doc__agency-list">
+            <li>개인정보침해신고센터 (<a href="https://privacy.kisa.or.kr" target="_blank" rel="noopener">privacy.kisa.or.kr</a> / 국번 없이 118)</li>
+            <li>개인정보분쟁조정위원회 (<a href="https://www.kopico.go.kr" target="_blank" rel="noopener">kopico.go.kr</a> / 1833-6972)</li>
+            <li>대검찰청 사이버수사과 (<a href="https://www.spo.go.kr" target="_blank" rel="noopener">spo.go.kr</a> / 지역번호+1301)</li>
+            <li>경찰청 사이버안전국 (<a href="https://cyberbureau.police.go.kr" target="_blank" rel="noopener">cyberbureau.police.go.kr</a> / 국번없이 182)</li>
+        </ul>
+    </div>
+
+    <!-- ■ 11 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            개인정보 처리방침 변경
+        </h3>
+        <p class="no-legal-doc__body">본 개인정보처리방침은 정부의 정책 또는 보안기술의 변경에 따라 내용의 추가, 삭제 및 수정이 있을 수 있으며, 이 경우 지체없이 홈페이지를 통해 고지할 것입니다.</p>
+        <ul class="no-legal-doc__bullet-list">
+            <li>이 개인정보 처리방침은 2026년 4월 1일부터 적용됩니다.</li>
+        </ul>
+    </div>
+
+</div>

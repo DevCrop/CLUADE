@@ -1,0 +1,931 @@
+<?php
+
+use Database\DB;
+
+$___worksVarPath = dirname(__DIR__) . '/inc/lib/var.php';
+if (is_file($___worksVarPath)) {
+    require_once $___worksVarPath;
+}
+
+final class worksData
+{
+    /** @var \PDO */
+    private $pdo;
+
+    private const ALL_CATEGORY_SLUG = 'all';
+    private const PLACEHOLDER_IMAGE_PATH = '/resource/images/placeholder/placeholder.jpg';
+    private const WORKS_UPLOAD_PATH = '/uploads/works';
+    private const MAX_LIMIT = 24;
+    private const VISIBLE_VALUE = 1;
+    private const DETAIL_IMAGE_FIELDS = [
+        'file_attach1',
+        'file_attach2',
+        'file_attach3',
+        'file_attach4',
+        'file_attach5',
+    ];
+    /** 수상 타입별 아이콘 (경로만; 라벨은 var.php $work_award_types) */
+    private const AWARD_ICON_MAP = [
+        1 => '/resource/images/logo/GDWEB.png',
+        2 => '/resource/images/logo/WEBAWARD.png',
+    ];
+
+    /**
+     * @param \PDO $pdo
+     */
+    public function __construct(\PDO $pdo)
+    {
+        $this->pdo = $pdo;
+    }
+
+    /**
+     * @return array<int, array{slug: string, label: string}>
+     */
+    private function categoryMap(): array
+    {
+        global $work_category_types, $work_category_slugs;
+        if (!is_array($work_category_types) || $work_category_types === []) {
+            return [];
+        }
+        $slugs = is_array($work_category_slugs ?? null) ? $work_category_slugs : [];
+        $map = [];
+        foreach ($work_category_types as $id => $label) {
+            $id = (int) $id;
+            $slug = isset($slugs[$id]) ? trim((string) $slugs[$id]) : '';
+            if ($slug === '') {
+                $slug = 'category-' . $id;
+            }
+            $map[$id] = [
+                'slug' => strtolower($slug),
+                'label' => (string) $label,
+            ];
+        }
+
+        return $map;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function serviceLabelMap(): array
+    {
+        global $work_service_types;
+        if (!is_array($work_service_types) || $work_service_types === []) {
+            return [];
+        }
+        $map = [];
+        foreach ($work_service_types as $k => $label) {
+            $map[(int) $k] = (string) $label;
+        }
+
+        return $map;
+    }
+
+    /**
+     * @return array<int, array{slug: string, label: string}>
+     */
+    public function getCategories(): array
+    {
+        $categories = [
+            [
+                'slug' => self::ALL_CATEGORY_SLUG,
+                'label' => '전체',
+            ],
+        ];
+
+        foreach ($this->categoryMap() as $row) {
+            $categories[] = [
+                'slug' => $row['slug'],
+                'label' => $row['label'],
+            ];
+        }
+
+        return $categories;
+    }
+
+    public function resolveCategory(?string $category): ?string
+    {
+        $value = strtolower(trim((string) $category));
+        if ($value === '' || $value === self::ALL_CATEGORY_SLUG) {
+            return null;
+        }
+
+        foreach ($this->categoryMap() as $row) {
+            if ($row['slug'] !== $value) {
+                continue;
+            }
+
+            return $value;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{
+     *   items: array<int, array{
+     *     no: string,
+     *     title: string,
+     *     thumbnailImage: string,
+     *     thumbnailVideo: ?string,
+     *     category: string,
+     *     categoryLabel: string,
+     *     tagLabels: array<int, string>,
+     *     detailPath: string,
+     *     modalPath: string,
+     *     client: ?string,
+     *     updatedAtLabel: ?string
+     *   }>,
+     *   nextOffset: ?int,
+     *   hasMore: bool
+     * }
+     */
+    public function getList(int $offset, int $limit, ?string $category = null): array
+    {
+        $normalizedOffset = max(0, $offset);
+        $normalizedLimit = max(1, min(self::MAX_LIMIT, $limit));
+        $rows = $this->selectRows($normalizedOffset, $normalizedLimit + 1, $category);
+        $hasMore = count($rows) > $normalizedLimit;
+        if ($hasMore) {
+            array_pop($rows);
+        }
+
+        $items = array_map(
+            fn(array $row): array => $this->mapListItem($row),
+            $rows
+        );
+
+        return [
+            'items' => array_values($items),
+            'nextOffset' => $hasMore ? $normalizedOffset + count($items) : null,
+            'hasMore' => $hasMore,
+        ];
+    }
+
+    /**
+     * @return array{
+     *   no: string,
+     *   title: string,
+     *   subTitle: ?string,
+     *   thumbnailImage: string,
+     *   thumbnailVideo: ?string,
+     *   heroType: string,
+     *   services: array<int, string>,
+     *   client: ?string,
+     *   categories: array<int, array{slug: string, label: string}>,
+     *   category: string,
+     *   categoryLabel: string,
+     *   linkUrl: ?string,
+     *   overviewText: ?string,
+     *   contentsHtml: ?string,
+     *   detailImages: array<int, string>,
+     *   tagLabels: array<int, string>,
+     *   updatedAtLabel: ?string,
+     *   award: ?array{label: string, icon: ?string, detail: ?string},
+     *   detailPath: string,
+     *   modalPath: string
+     * }|null
+     */
+    public function getDetail(string $no): ?array
+    {
+        $id = trim($no);
+        if ($id === '') {
+            return null;
+        }
+
+        $sql = <<<SQL
+SELECT
+    `id`,
+    `title`,
+    `sub_title`,
+    `is_awarded`,
+    `award_type`,
+    `award_detail`,
+    `thumb_image`,
+    `services`,
+    `client`,
+    `category`,
+    `link_url`,
+    `video`,
+    `overview`,
+    `contents`,
+    `file_attach1`,
+    `file_attach2`,
+    `file_attach3`,
+    `file_attach4`,
+    `file_attach5`,
+    `tag`,
+    `created_at`,
+    `updated_at`
+FROM `nb_works`
+WHERE `id` = :id
+  AND `is_visible` = :is_visible
+  AND `deleted_at` IS NULL
+LIMIT 1
+SQL;
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':id', $id, \PDO::PARAM_STR);
+        $statement->bindValue(':is_visible', self::VISIBLE_VALUE, \PDO::PARAM_INT);
+        $statement->execute();
+        $row = $statement->fetch();
+
+        if (!is_array($row)) {
+            return null;
+        }
+
+        return $this->mapDetailItem($row);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function selectRows(int $offset, int $limit, ?string $category): array
+    {
+        $conditions = [
+            '`is_visible` = :is_visible',
+            '`deleted_at` IS NULL',
+        ];
+        $bindings = [
+            ':is_visible' => [self::VISIBLE_VALUE, \PDO::PARAM_INT],
+        ];
+
+        $resolvedCategory = $this->resolveCategory($category);
+        if ($resolvedCategory !== null) {
+            $categoryId = $this->resolveCategoryId($resolvedCategory);
+            if ($categoryId === null) {
+                return [];
+            }
+
+            $conditions[] = 'JSON_CONTAINS(`category`, CAST(:category_json AS JSON))';
+            $bindings[':category_json'] = [(string) $categoryId, \PDO::PARAM_STR];
+        }
+
+        $whereClause = 'WHERE ' . implode(' AND ', $conditions);
+        $sql = <<<SQL
+SELECT
+    `id`,
+    `title`,
+    `thumb_image`,
+    `video`,
+    `client`,
+    `category`,
+    `tag`,
+    `updated_at`,
+    `created_at`,
+    `file_attach1`,
+    `file_attach2`,
+    `file_attach3`,
+    `file_attach4`,
+    `file_attach5`
+FROM `nb_works`
+{$whereClause}
+ORDER BY (`is_awarded` = 'Y') DESC, `sort_no` DESC, `id` DESC
+LIMIT :limit OFFSET :offset
+SQL;
+
+        $statement = $this->pdo->prepare($sql);
+        foreach ($bindings as $name => [$value, $type]) {
+            $statement->bindValue($name, $value, $type);
+        }
+        $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $statement->execute();
+
+        $rows = $statement->fetchAll();
+        return is_array($rows) ? $rows : [];
+    }
+
+    /**
+     * 프런트 목록과 동일: 노출 중이고 삭제되지 않은 nb_works 행 수.
+     */
+    public function getPublicWorksCount(): int
+    {
+        $sql = <<<'SQL'
+SELECT COUNT(*) AS `cnt`
+FROM `nb_works`
+WHERE `deleted_at` IS NULL
+  AND `is_visible` = :is_visible
+SQL;
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':is_visible', self::VISIBLE_VALUE, \PDO::PARAM_INT);
+        $statement->execute();
+        $row = $statement->fetch();
+        if (!is_array($row) || !array_key_exists('cnt', $row)) {
+            return 0;
+        }
+
+        return max(0, (int) $row['cnt']);
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array{
+     *   no: string,
+     *   title: string,
+     *   thumbnailImage: string,
+     *   thumbnailVideo: ?string,
+     *   category: string,
+     *   categoryLabel: string,
+     *   tagLabels: array<int, string>,
+     *   detailPath: string,
+     *   modalPath: string,
+     *   client: ?string,
+     *   updatedAtLabel: ?string
+     * }
+     */
+    private function mapListItem(array $row): array
+    {
+        $categoryItems = $this->resolveCategoryItems($row['category'] ?? null);
+        $primaryCategory = $categoryItems[0] ?? [
+            'slug' => 'other',
+            'label' => '기타',
+        ];
+
+        return [
+            'no' => (string) ($row['id'] ?? ''),
+            'title' => $this->normalizeText($row['title'] ?? null) ?? '',
+            'thumbnailImage' => $this->resolveThumbnailImage($row),
+            'thumbnailVideo' => $this->resolveVideoUrl($row['video'] ?? null),
+            'category' => $primaryCategory['slug'],
+            'categoryLabel' => $primaryCategory['label'],
+            'tagLabels' => $this->normalizeStringList($row['tag'] ?? null),
+            'detailPath' => '/works/view/' . rawurlencode((string) ($row['id'] ?? '')),
+            'modalPath' => '/works/modal-component/' . rawurlencode((string) ($row['id'] ?? '')),
+            'client' => $this->normalizeText($row['client'] ?? null),
+            'updatedAtLabel' => $this->formatDate($row['updated_at'] ?? $row['created_at'] ?? null),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array{
+     *   no: string,
+     *   title: string,
+     *   subTitle: ?string,
+     *   thumbnailImage: string,
+     *   thumbnailVideo: ?string,
+     *   heroType: string,
+     *   services: array<int, string>,
+     *   client: ?string,
+     *   categories: array<int, array{slug: string, label: string}>,
+     *   category: string,
+     *   categoryLabel: string,
+     *   linkUrl: ?string,
+     *   overviewText: ?string,
+     *   contentsHtml: ?string,
+     *   detailImages: array<int, string>,
+     *   tagLabels: array<int, string>,
+     *   updatedAtLabel: ?string,
+     *   award: ?array{label: string, icon: ?string, detail: ?string},
+     *   detailPath: string,
+     *   modalPath: string
+     * }
+     */
+    private function mapDetailItem(array $row): array
+    {
+        $id = (string) ($row['id'] ?? '');
+        $thumbnailImage = $this->resolveThumbnailImage($row);
+        $thumbnailVideo = $this->resolveVideoUrl($row['video'] ?? null);
+        $categoryItems = $this->resolveCategoryItems($row['category'] ?? null);
+        $primaryCategory = $categoryItems[0] ?? [
+            'slug' => 'other',
+            'label' => '기타',
+        ];
+
+        return [
+            'no' => $id,
+            'title' => $this->normalizeText($row['title'] ?? null) ?? '',
+            'subTitle' => $this->normalizeText($row['sub_title'] ?? null),
+            'thumbnailImage' => $thumbnailImage,
+            'thumbnailVideo' => $thumbnailVideo,
+            'heroType' => $thumbnailVideo !== null ? 'video' : 'image',
+            'services' => $this->resolveServiceLabels($row['services'] ?? null),
+            'client' => $this->normalizeText($row['client'] ?? null),
+            'categories' => $categoryItems,
+            'category' => $primaryCategory['slug'],
+            'categoryLabel' => $primaryCategory['label'],
+            'linkUrl' => $this->normalizeLink($row['link_url'] ?? null),
+            'overviewText' => $this->normalizeText($row['overview'] ?? null),
+            'contentsHtml' => $this->normalizeHtml($row['contents'] ?? null),
+            'detailImages' => $this->resolveDetailImages($row, $thumbnailImage),
+            'tagLabels' => $this->normalizeStringList($row['tag'] ?? null),
+            'updatedAtLabel' => $this->formatDate($row['updated_at'] ?? $row['created_at'] ?? null),
+            'award' => $this->resolveAward(
+                $row['is_awarded'] ?? null,
+                $row['award_type'] ?? null,
+                $row['award_detail'] ?? null
+            ),
+            'detailPath' => '/works/view/' . rawurlencode($id),
+            'modalPath' => '/works/modal-component/' . rawurlencode($id),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<int, string>
+     */
+    private function resolveDetailImages(array $row, string $thumbnailImage): array
+    {
+        $images = [];
+        foreach (self::DETAIL_IMAGE_FIELDS as $field) {
+            $url = $this->buildAssetUrl($row[$field] ?? null);
+            if ($url === null) {
+                continue;
+            }
+
+            $images[] = $url;
+        }
+
+        if ($images !== []) {
+            return array_values(array_unique($images));
+        }
+
+        return [$thumbnailImage];
+    }
+
+    /**
+     * @return array<int, array{slug: string, label: string}>
+     */
+    private function resolveCategoryItems($rawValue): array
+    {
+        $categoryIds = $this->normalizeIntegerList($rawValue);
+        $items = [];
+        $catMap = $this->categoryMap();
+        foreach ($categoryIds as $categoryId) {
+            if (!array_key_exists($categoryId, $catMap)) {
+                continue;
+            }
+
+            $items[] = $catMap[$categoryId];
+        }
+
+        if ($items !== []) {
+            return $items;
+        }
+
+        return [
+            [
+                'slug' => 'other',
+                'label' => '기타',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolveServiceLabels($rawValue): array
+    {
+        $map = $this->serviceLabelMap();
+        $serviceIds = $this->normalizeIntegerList($rawValue);
+        $labels = [];
+        foreach ($serviceIds as $serviceId) {
+            if (!array_key_exists($serviceId, $map)) {
+                continue;
+            }
+
+            $labels[] = $map[$serviceId];
+        }
+
+        return array_values(array_unique($labels));
+    }
+
+    /**
+     * @return array{label: string, icon: ?string, detail: ?string}|null
+     */
+    private function resolveAward($awardedValue, $awardTypeValue, $awardDetailValue = null): ?array
+    {
+        global $work_award_types;
+        $awardedFlag = strtoupper(trim((string) $awardedValue));
+        if (!in_array($awardedFlag, ['Y', '1'], true)) {
+            return null;
+        }
+
+        $awardType = (int) $awardTypeValue;
+        $labels = is_array($work_award_types ?? null) ? $work_award_types : [];
+        if (!array_key_exists($awardType, $labels)) {
+            return null;
+        }
+
+        $detail = $this->normalizeText($awardDetailValue);
+
+        return [
+            'label' => (string) $labels[$awardType],
+            'icon' => self::AWARD_ICON_MAP[$awardType] ?? null,
+            'detail' => $detail,
+        ];
+    }
+
+    private function resolveCategoryId(string $slug): ?int
+    {
+        $needle = strtolower(trim($slug));
+        foreach ($this->categoryMap() as $categoryId => $categoryData) {
+            if ($categoryData['slug'] !== $needle) {
+                continue;
+            }
+
+            return $categoryId;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function resolveThumbnailImage(array $row): string
+    {
+        $thumbnail = $this->buildAssetUrl($row['thumb_image'] ?? null);
+        if ($thumbnail !== null) {
+            return $thumbnail;
+        }
+
+        foreach (self::DETAIL_IMAGE_FIELDS as $field) {
+            $fallback = $this->buildAssetUrl($row[$field] ?? null);
+            if ($fallback === null) {
+                continue;
+            }
+
+            return $fallback;
+        }
+
+        return base_path(self::PLACEHOLDER_IMAGE_PATH);
+    }
+
+    private function resolveVideoUrl($rawValue): ?string
+    {
+        $decoded = $this->decodeJsonValue($rawValue);
+
+        if (is_string($decoded)) {
+            return $this->normalizeAssetOrUrl($decoded);
+        }
+
+        if (!is_array($decoded)) {
+            return null;
+        }
+
+        foreach ($decoded as $value) {
+            if (!is_string($value)) {
+                continue;
+            }
+
+            $url = $this->normalizeAssetOrUrl($value);
+            if ($url === null) {
+                continue;
+            }
+
+            return $url;
+        }
+
+        // TEST FALLBACK — video hover 동작 확인용, 실제 배포 전 제거
+        return '/resource/video/why_video_1.mp4';
+    }
+
+    private function normalizeAssetOrUrl(string $value): ?string
+    {
+        $normalized = trim($value);
+        if ($normalized === '') {
+            return null;
+        }
+
+        if ($this->isExternalUrl($normalized)) {
+            return $normalized;
+        }
+
+        return $this->buildAssetUrl($normalized);
+    }
+
+    private function normalizeLink($value): ?string
+    {
+        $link = $this->normalizeText($value);
+        if ($link === null) {
+            return null;
+        }
+
+        return $link;
+    }
+
+    private function normalizeHtml($value): ?string
+    {
+        $html = trim((string) $value);
+        if ($html === '') {
+            return null;
+        }
+
+        return $html;
+    }
+
+    private function normalizeText($value): ?string
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return null;
+        }
+
+        return $text;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function normalizeIntegerList($value): array
+    {
+        $decoded = $this->decodeJsonValue($value);
+        if (is_int($decoded)) {
+            return [$decoded];
+        }
+
+        if (is_string($decoded) && preg_match('/^\d+$/', $decoded) === 1) {
+            return [(int) $decoded];
+        }
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($decoded as $item) {
+            if (is_int($item)) {
+                $items[] = $item;
+                continue;
+            }
+
+            if (!is_string($item) || preg_match('/^\d+$/', $item) !== 1) {
+                continue;
+            }
+
+            $items[] = (int) $item;
+        }
+
+        return array_values(array_unique($items));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeStringList($value): array
+    {
+        $decoded = $this->decodeJsonValue($value);
+        if (is_string($decoded)) {
+            $normalized = trim($decoded, " \t\n\r\0\x0B\"'");
+            return $normalized === '' ? [] : [$normalized];
+        }
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($decoded as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+
+            $normalized = trim($item);
+            if ($normalized === '') {
+                continue;
+            }
+
+            $items[] = $normalized;
+        }
+
+        return array_values(array_unique($items));
+    }
+
+    private function decodeJsonValue($value)
+    {
+        if (is_array($value) || is_int($value)) {
+            return $value;
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $normalized = trim($value);
+        if ($normalized === '') {
+            return null;
+        }
+
+        $decoded = json_decode($normalized, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $decoded;
+        }
+
+        return $normalized;
+    }
+
+    private function buildAssetUrl($value): ?string
+    {
+        $filename = trim((string) $value);
+        if ($filename === '') {
+            return null;
+        }
+
+        if ($this->isExternalUrl($filename)) {
+            return $filename;
+        }
+
+        if (strpos($filename, '/') === 0) {
+            return base_path($filename);
+        }
+
+        return base_path(self::WORKS_UPLOAD_PATH . '/' . rawurlencode($filename));
+    }
+
+    private function isExternalUrl(string $value): bool
+    {
+        return preg_match('#^(https?:)?//#i', $value) === 1;
+    }
+
+    private function formatDate($value): ?string
+    {
+        $dateValue = trim((string) $value);
+        if ($dateValue === '') {
+            return null;
+        }
+
+        $timestamp = strtotime($dateValue);
+        if ($timestamp === false) {
+            return null;
+        }
+
+        return date('Y.m.d', $timestamp);
+    }
+
+    /**
+     * AWARDS 페이지용: 노출 중이고 수상 처리된 nb_works 행.
+     *
+     * @return list<array{
+     *   year: string,
+     *   title: string,
+     *   awardLabel: string,
+     *   awardIcon: ?string,
+     *   prize: string,
+     *   detailPath: string,
+     *   previewImage: string
+     * }>
+     */
+    public function getAwardPageRows(): array
+    {
+        $sql = <<<'SQL'
+SELECT
+    `id`,
+    `title`,
+    `is_awarded`,
+    `award_type`,
+    `award_detail`,
+    `thumb_image`,
+    `video`,
+    `created_at`
+FROM `nb_works`
+WHERE `deleted_at` IS NULL
+  AND `is_visible` = :visible
+  AND UPPER(TRIM(`is_awarded`)) = 'Y'
+  AND `award_type` IS NOT NULL
+  AND `award_type` > 0
+ORDER BY `created_at` DESC, `id` DESC
+SQL;
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':visible', self::VISIBLE_VALUE, \PDO::PARAM_INT);
+        $statement->execute();
+        $rows = $statement->fetchAll();
+        if (!is_array($rows)) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $award = $this->resolveAward(
+                $row['is_awarded'] ?? null,
+                $row['award_type'] ?? null,
+                $row['award_detail'] ?? null
+            );
+            if ($award === null) {
+                continue;
+            }
+            $created = $row['created_at'] ?? null;
+            $year = '';
+            if ($created !== null && (string) $created !== '') {
+                $ts = strtotime((string) $created);
+                if ($ts !== false) {
+                    $year = date('Y', $ts);
+                }
+            }
+            $detail = $award['detail'] ?? '';
+            $prize = $detail !== null && $detail !== '' ? $detail : '';
+            $out[] = [
+                'year' => $year,
+                'title' => $this->normalizeText($row['title'] ?? null) ?? '',
+                'awardLabel' => $award['label'],
+                'awardIcon' => $award['icon'],
+                'prize' => $prize,
+                'detailPath' => '/works/view/' . rawurlencode((string) ($row['id'] ?? '')),
+                'previewImage' => $this->resolveThumbnailImage($row),
+            ];
+        }
+
+        return $out;
+    }
+}
+
+function works_data(): worksData
+{
+    static $instance = null;
+
+    if ($instance instanceof worksData) {
+        return $instance;
+    }
+
+    $instance = new worksData(DB::getInstance());
+    return $instance;
+}
+
+/**
+ * @return array<int, array{slug: string, label: string}>
+ */
+function get_works_categories(): array
+{
+    return works_data()->getCategories();
+}
+
+function resolve_works_category(?string $category): ?string
+{
+    return works_data()->resolveCategory($category);
+}
+
+/**
+ * @return array{
+ *   items: array<int, array{
+ *     no: string,
+ *     title: string,
+ *     thumbnailImage: string,
+ *     thumbnailVideo: ?string,
+ *     category: string,
+ *     categoryLabel: string,
+ *     detailPath: string,
+ *     modalPath: string,
+ *     client: ?string,
+ *     updatedAtLabel: ?string
+ *   }>,
+ *   nextOffset: ?int,
+ *   hasMore: bool
+ * }
+ */
+function get_works_list(int $offset, int $limit, ?string $category = null): array
+{
+    return works_data()->getList($offset, $limit, $category);
+}
+
+/**
+ * @return array{
+ *   no: string,
+ *   title: string,
+ *   subTitle: ?string,
+ *   thumbnailImage: string,
+ *   thumbnailVideo: ?string,
+ *   heroType: string,
+ *   services: array<int, string>,
+ *   client: ?string,
+ *   categories: array<int, array{slug: string, label: string}>,
+ *   category: string,
+ *   categoryLabel: string,
+ *   linkUrl: ?string,
+ *   overviewText: ?string,
+ *   contentsHtml: ?string,
+ *   detailImages: array<int, string>,
+ *   tagLabels: array<int, string>,
+ *   updatedAtLabel: ?string,
+ *   award: ?array{label: string, icon: ?string, detail: ?string},
+ *   detailPath: string,
+ *   modalPath: string
+ * }|null
+ */
+function get_work_detail(string $no): ?array
+{
+    return works_data()->getDetail($no);
+}
+
+function get_works_public_count(): int
+{
+    return works_data()->getPublicWorksCount();
+}
+
+/**
+ * @return list<array{
+ *   year: string,
+ *   title: string,
+ *   awardLabel: string,
+ *   awardIcon: ?string,
+ *   prize: string,
+ *   detailPath: string,
+ *   previewImage: string
+ * }>
+ */
+function get_works_award_page_rows(): array
+{
+    return works_data()->getAwardPageRows();
+}

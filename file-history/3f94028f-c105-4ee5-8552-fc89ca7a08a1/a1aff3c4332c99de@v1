@@ -1,0 +1,429 @@
+import { Drawer } from "../ui/Drawer.js";
+import { Header } from "../ui/Header.js";
+import { Dropdown } from "../ui/Dropdown.js";
+import { WorkModal } from "../ui/WorkModal.js";
+import {
+  MagneticCornerTracker,
+  ShareButton,
+  updateStaticCornerSizes,
+} from "../components/Button.js";
+import { ContactFormValidation } from "../validation/ContactFormValidation.js";
+import { ContactWizard } from "../ui/ContactWizard.js";
+import { Suspense } from "../components/Suspense.js";
+import { Category } from "../components/Category.js";
+import { PageController } from "../controller/PageController.js";
+import { CloseAllExpanded } from "../utils/CloseAllExpanded.js";
+import { TextReveal } from "../animation/TextReveal.js";
+import { BlockReveal } from "../animation/BlockReveal.js";
+import { DOM_CONFIG } from "../config/dom.config.js";
+import { CustomCursor } from "../components/CustomCursor.js";
+import { TimelineRuntime } from "./TimelineRuntime.js";
+import { PINNED_REVEALS } from "../config/component.config.js";
+import { FEATURE_CARD_CANVAS } from "../config/component.config.js";
+import { PinnedRevealRuntime } from "./PinnedRevealRuntime.js";
+import { FrameScheduler } from "../utils/FrameScheduler.js";
+import { ImagePreview } from "../components/ImagePreview.js";
+import { Marquee } from "../components/Marquee.js";
+import { SubpageStarfieldRuntime } from "./SubpageStarfieldRuntime.js";
+import type {
+  FeatureCardCanvasInstance,
+  FeatureCardCanvasParticle,
+} from "../types/component.types.js";
+import { ResponsiveRuntime } from "./ResponsiveRuntime.js";
+import { QaManager } from "../manager/QaManager.js";
+
+const FEATURE_CARD_CUBE_VERTICES = [
+  [-1, -1, -1],
+  [1, -1, -1],
+  [1, 1, -1],
+  [-1, 1, -1],
+  [-1, -1, 1],
+  [1, -1, 1],
+  [1, 1, 1],
+  [-1, 1, 1],
+] as const;
+const FEATURE_CARD_CUBE_EDGES = [
+  [0, 1],
+  [1, 2],
+  [2, 3],
+  [3, 0],
+  [4, 5],
+  [5, 6],
+  [6, 7],
+  [7, 4],
+  [0, 4],
+  [1, 5],
+  [2, 6],
+  [3, 7],
+] as const;
+
+class PageGlobalUiRuntime {
+  private _headerUi: Header | null = null;
+  private _workModalUi: WorkModal | null = null;
+  private readonly _dropdownUis = new Set<Dropdown>();
+  private readonly _pinnedRevealRuntime = new PinnedRevealRuntime();
+  private readonly _qaManager = new QaManager();
+
+  init(root?: ParentNode | null): void {
+    this._initUiToggles(root);
+    Drawer.getInstance({
+      revealGroups: DOM_CONFIG.drawer.revealGroups,
+    }).init();
+    CustomCursor.init({ root });
+    MagneticCornerTracker.init({ root });
+    updateStaticCornerSizes(root);
+    TextReveal.init({
+      root,
+      excludeSelectors: DOM_CONFIG.maskingExcludeSelectors ?? [],
+    });
+    BlockReveal.init({ root });
+    ShareButton.init({ root });
+    ContactFormValidation.init({ root });
+    ContactWizard.init({ root });
+    this._qaManager.init({ root });
+    Suspense.init({ root });
+    Category.init(undefined, root ?? document);
+    Marquee.init({ root });
+    if (
+      typeof document !== "undefined" &&
+      document.querySelector("[data-award-hover-preview]") !== null
+    ) {
+      ImagePreview.init();
+    }
+    this._pinnedRevealRuntime.init(PINNED_REVEALS);
+  }
+
+  syncAfterContainerChange(): void {
+    Drawer.syncNavActiveState();
+    updateStaticCornerSizes();
+  }
+
+  dispose(): void {
+    this._disposeUiToggles();
+    MagneticCornerTracker.destroyAll();
+    CustomCursor.dispose();
+    TextReveal.dispose();
+    BlockReveal.dispose();
+    Marquee.dispose();
+    this._pinnedRevealRuntime.dispose();
+    this._qaManager.dispose();
+  }
+
+  private _initUiToggles(root?: ParentNode | null): void {
+    this._headerUi?.dispose();
+    this._headerUi = new Header();
+    this._headerUi.init();
+
+    this._workModalUi?.dispose();
+    this._workModalUi = new WorkModal({ root });
+    this._workModalUi.init();
+
+    this._dropdownUis.forEach((dropdown) => dropdown.dispose());
+    this._dropdownUis.clear();
+    const scope = root ?? document;
+    const roots = scope.querySelectorAll<HTMLElement>("[data-dropdown]");
+    roots.forEach((root) => {
+      const dropdown = new Dropdown(root, { openClass: "is-open" });
+      dropdown.init();
+      this._dropdownUis.add(dropdown);
+    });
+  }
+
+  private _disposeUiToggles(): void {
+    this._headerUi?.dispose();
+    this._headerUi = null;
+    this._workModalUi?.dispose();
+    this._workModalUi = null;
+    this._dropdownUis.forEach((dropdown) => dropdown.dispose());
+    this._dropdownUis.clear();
+    CloseAllExpanded.offCloseAllImmediate();
+  }
+}
+
+class FeatureCardCanvasRuntime {
+  private _instances: FeatureCardCanvasInstance[] = [];
+  private _rafId: number | null = null;
+  private _resizeListener: (() => void) | null = null;
+
+  init(root?: ParentNode | null): void {
+    this.dispose();
+    const scope = root ?? document;
+    const cardList = scope.querySelector<HTMLElement>(
+      FEATURE_CARD_CANVAS.listSelector,
+    );
+    if (!cardList) return;
+    const canvasElements = Array.from(
+      cardList.querySelectorAll<HTMLCanvasElement>(
+        FEATURE_CARD_CANVAS.canvasSelector,
+      ),
+    );
+    if (canvasElements.length === 0) return;
+
+    this._instances = canvasElements.flatMap((canvas, index) => {
+      const context = canvas.getContext("2d");
+      if (!context) return [];
+      return [
+        {
+          canvas,
+          context,
+          size: { width: 0, height: 0, dpr: 1 },
+          rotation: index * 0.45,
+          tilt: 0.6 + index * 0.18,
+          speed:
+            FEATURE_CARD_CANVAS.rotationSpeedBase +
+            index * FEATURE_CARD_CANVAS.rotationSpeedStep,
+          particles: this._createParticles(index),
+        },
+      ];
+    });
+
+    if (this._instances.length === 0) return;
+
+    this._resizeListener = () => this._resize();
+    window.addEventListener("resize", this._resizeListener);
+    this._resize();
+    this._startLoop();
+  }
+
+  dispose(): void {
+    if (this._rafId !== null) {
+      FrameScheduler.cancel(this._rafId);
+      this._rafId = null;
+    }
+    if (this._resizeListener) {
+      window.removeEventListener("resize", this._resizeListener);
+      this._resizeListener = null;
+    }
+    this._instances = [];
+  }
+
+  private _startLoop(): void {
+    const render = (): void => {
+      this._render();
+      this._rafId = FrameScheduler.request(render);
+    };
+    render();
+  }
+
+  private _resize(): void {
+    const dpr = Math.min(
+      ResponsiveRuntime.getDefault().getSnapshot().render.clampedPixelRatio,
+      FEATURE_CARD_CANVAS.pixelRatioMax,
+    );
+    this._instances.forEach((instance) => {
+      const bounds = instance.canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.round(bounds.width));
+      const height = Math.max(1, Math.round(bounds.height));
+      instance.size = { width, height, dpr };
+      instance.canvas.width = Math.round(width * dpr);
+      instance.canvas.height = Math.round(height * dpr);
+      instance.context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    });
+  }
+
+  private _render(): void {
+    this._instances.forEach((instance) => {
+      const { context, size } = instance;
+      if (size.width <= 0 || size.height <= 0) return;
+
+      instance.rotation += instance.speed;
+      context.clearRect(0, 0, size.width, size.height);
+      context.fillStyle = FEATURE_CARD_CANVAS.clearColor;
+      context.fillRect(0, 0, size.width, size.height);
+
+      this._drawParticles(instance);
+      this._drawCube(instance);
+    });
+  }
+
+  private _drawParticles(instance: FeatureCardCanvasInstance): void {
+    const { context, size, rotation, particles } = instance;
+    const halfWidth = size.width * 0.5;
+    const halfHeight = size.height * 0.5;
+    const scale =
+      Math.min(size.width, size.height) * FEATURE_CARD_CANVAS.cubeScale;
+
+    context.fillStyle = FEATURE_CARD_CANVAS.particleColor;
+    particles.forEach((particle) => {
+      const spin = rotation * (0.6 + particle.drift * 0.4);
+      const cos = Math.cos(spin);
+      const sin = Math.sin(spin);
+      const rotatedX = particle.x * cos - particle.z * sin;
+      const rotatedZ = particle.x * sin + particle.z * cos;
+      const depth = rotatedZ + 3.6;
+      const perspective = 1 / depth;
+      const drawX = halfWidth + rotatedX * scale * perspective;
+      const drawY =
+        halfHeight +
+        (particle.y + Math.sin(rotation + particle.drift) * 0.14) *
+          scale *
+          perspective;
+      const drawSize = particle.size * perspective * 4.5;
+      context.fillRect(drawX, drawY, drawSize, drawSize);
+    });
+  }
+
+  private _drawCube(instance: FeatureCardCanvasInstance): void {
+    const { context, size, rotation, tilt } = instance;
+    const halfWidth = size.width * 0.5;
+    const halfHeight = size.height * 0.5;
+    const scale =
+      Math.min(size.width, size.height) * FEATURE_CARD_CANVAS.cubeScale;
+    const projected = FEATURE_CARD_CUBE_VERTICES.map(([x, y, z]) => {
+      const rotatedY = this._rotateY(x, z, rotation);
+      const rotatedX = this._rotateX(y, rotatedY.z, tilt);
+      const depth = rotatedX.z + 4.2;
+      const perspective = 1 / depth;
+      return {
+        x: halfWidth + rotatedY.x * scale * perspective,
+        y: halfHeight + rotatedX.y * scale * perspective,
+      };
+    });
+
+    context.fillStyle = FEATURE_CARD_CANVAS.fillStyle;
+    context.beginPath();
+    context.moveTo(projected[4].x, projected[4].y);
+    context.lineTo(projected[5].x, projected[5].y);
+    context.lineTo(projected[6].x, projected[6].y);
+    context.lineTo(projected[7].x, projected[7].y);
+    context.closePath();
+    context.fill();
+
+    context.strokeStyle = FEATURE_CARD_CANVAS.strokeStyle;
+    context.lineWidth = 1.2;
+    FEATURE_CARD_CUBE_EDGES.forEach(([startIndex, endIndex]) => {
+      const start = projected[startIndex];
+      const end = projected[endIndex];
+      context.beginPath();
+      context.moveTo(start.x, start.y);
+      context.lineTo(end.x, end.y);
+      context.stroke();
+    });
+  }
+
+  private _createParticles(index: number): FeatureCardCanvasParticle[] {
+    return Array.from(
+      { length: FEATURE_CARD_CANVAS.particleCount },
+      (_, particleIndex) => {
+        const seed = (index + 1) * (particleIndex + 3);
+        const angle = seed * 0.73;
+        const radius = 1.2 + (particleIndex % 5) * 0.18;
+        return {
+          x: Math.cos(angle) * radius,
+          y: (((particleIndex % 7) - 3) / 3) * 1.35,
+          z: Math.sin(angle) * radius,
+          size:
+            FEATURE_CARD_CANVAS.particleSizeMin +
+            (particleIndex % 4) *
+              ((FEATURE_CARD_CANVAS.particleSizeMax -
+                FEATURE_CARD_CANVAS.particleSizeMin) /
+                3),
+          drift: 0.8 + (particleIndex % 6) * 0.12,
+        };
+      },
+    );
+  }
+
+  private _rotateY(
+    x: number,
+    z: number,
+    angle: number,
+  ): { x: number; z: number } {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    return {
+      x: x * cos - z * sin,
+      z: x * sin + z * cos,
+    };
+  }
+
+  private _rotateX(
+    y: number,
+    z: number,
+    angle: number,
+  ): { y: number; z: number } {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    return {
+      y: y * cos - z * sin,
+      z: y * sin + z * cos,
+    };
+  }
+}
+
+export class PageRuntime {
+  private controller: PageController | null = null;
+  private bootTask: Promise<void> | null = null;
+  private readonly _globalUiRuntime = new PageGlobalUiRuntime();
+  private readonly _featureCardCanvasRuntime = new FeatureCardCanvasRuntime();
+  private readonly _subpageStarfieldRuntime = new SubpageStarfieldRuntime();
+
+  async runPage(root?: HTMLElement): Promise<void> {
+    if (this.bootTask) return this.bootTask;
+
+    this.bootTask = (async () => {
+      this._disposePageRuntime();
+      this.disposeController();
+
+      if ("scrollRestoration" in history) {
+        history.scrollRestoration = "manual";
+      }
+      window.scrollTo({ top: 0, behavior: "auto" });
+
+      this._globalUiRuntime.init(root);
+      this._featureCardCanvasRuntime.init(root);
+      this._subpageStarfieldRuntime.init(root);
+
+      this.controller = new PageController();
+      await this.controller.init(root);
+    })().finally(() => {
+      this.bootTask = null;
+    });
+
+    return this.bootTask;
+  }
+
+  syncAfterContainerChange(): void {
+    this._globalUiRuntime.syncAfterContainerChange();
+  }
+
+  disposeController(): void {
+    this.controller?.dispose();
+    this.controller = null;
+    this.bootTask = null;
+    TimelineRuntime.clear();
+  }
+
+  dispose(): void {
+    this.disposeController();
+    this._disposePageRuntime();
+    TimelineRuntime.clear();
+  }
+
+  private _disposePageRuntime(): void {
+    try {
+      this._globalUiRuntime.dispose();
+    } catch (error) {
+      console.warn(
+        "[PageRuntime._disposePageRuntime] Global UI cleanup failed.",
+        error,
+      );
+    }
+    try {
+      this._featureCardCanvasRuntime.dispose();
+    } catch (error) {
+      console.warn(
+        "[PageRuntime._disposePageRuntime] Feature card canvas cleanup failed.",
+        error,
+      );
+    }
+    try {
+      this._subpageStarfieldRuntime.dispose();
+    } catch (error) {
+      console.warn(
+        "[PageRuntime._disposePageRuntime] Subpage starfield cleanup failed.",
+        error,
+      );
+    }
+  }
+}

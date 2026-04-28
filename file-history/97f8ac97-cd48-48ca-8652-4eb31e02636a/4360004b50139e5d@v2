@@ -1,0 +1,139 @@
+import * as THREE from "three";
+import { ABOUT_TERRIAN_FALLOFF } from "../../config/ground.config.js";
+import { astronaut as ASTRONAUT_ID } from "../../core/setup.js";
+import type { TerrianObjectOptions } from "../../types/object.types.js";
+import { Terrian } from "./Terrian.js";
+import aboutTerrianFalloffVertexShader from "../../../shaders/about-terrian/falloff.vertex.glsl?raw";
+import aboutTerrianFalloffBeginVertexShader from "../../../shaders/about-terrian/falloff.begin-vertex.glsl?raw";
+import aboutTerrianFalloffFragmentShader from "../../../shaders/about-terrian/falloff.fragment.glsl?raw";
+import aboutTerrianFalloffOutputFragmentShader from "../../../shaders/about-terrian/falloff.output-fragment.glsl?raw";
+
+export class AboutTerrian extends Terrian {
+  private _shaderRefs: Array<
+    Record<string, { value: number | THREE.Vector3 }>
+  > = [];
+  private _astronaut: THREE.Object3D | null = null;
+  private _falloffCenter = new THREE.Vector3();
+
+  override runUpdate(_deltaTime: number): void {
+    this._syncFalloffCenter();
+  }
+
+  override dispose(): void {
+    this._shaderRefs = [];
+    this._astronaut = null;
+    super.dispose();
+  }
+
+  protected override onModelReady(group: THREE.Group): void {
+    this._applyFalloffShader(group);
+    this._syncFalloffConfig();
+    this._syncFalloffCenter();
+  }
+
+  protected override onOptionsSynced(): void {
+    this._syncFalloffConfig();
+  }
+
+  private _applyFalloffShader(group: THREE.Group): void {
+    this._shaderRefs = [];
+    group.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const material = child.material;
+      if (!(material instanceof THREE.MeshStandardMaterial)) return;
+      const nextMaterial = material.clone();
+      child.material = nextMaterial;
+
+      nextMaterial.onBeforeCompile = (shader) => {
+        shader.uniforms.uAboutFalloffCenter = {
+          value: this._falloffCenter,
+        };
+        shader.uniforms.uAboutFalloffInnerRadius = {
+          value: ABOUT_TERRIAN_FALLOFF.innerRadius,
+        };
+        shader.uniforms.uAboutFalloffOuterRadius = {
+          value: ABOUT_TERRIAN_FALLOFF.outerRadius,
+        };
+        shader.uniforms.uAboutFalloffBrightness = {
+          value: ABOUT_TERRIAN_FALLOFF.brightness,
+        };
+        shader.uniforms.uAboutFalloffDarkness = {
+          value: ABOUT_TERRIAN_FALLOFF.darkness,
+        };
+        shader.uniforms.uAboutFalloffBlendPower = {
+          value: ABOUT_TERRIAN_FALLOFF.blendPower,
+        };
+
+        shader.vertexShader = shader.vertexShader
+          .replace(
+            "#include <common>",
+            aboutTerrianFalloffVertexShader,
+          )
+          .replace(
+            "#include <begin_vertex>",
+            aboutTerrianFalloffBeginVertexShader,
+          );
+
+        shader.fragmentShader = shader.fragmentShader
+          .replace(
+            "#include <common>",
+            aboutTerrianFalloffFragmentShader,
+          )
+          .replace(
+            "#include <output_fragment>",
+            aboutTerrianFalloffOutputFragmentShader,
+          );
+
+        this._shaderRefs.push(
+          shader.uniforms as Record<string, { value: number | THREE.Vector3 }>,
+        );
+      };
+
+      nextMaterial.needsUpdate = true;
+    });
+  }
+
+  private _syncFalloffConfig(): void {
+    if (this._shaderRefs.length === 0) return;
+    const falloff = this._resolveFalloffOptions();
+    for (const uniforms of this._shaderRefs) {
+      uniforms.uAboutFalloffInnerRadius.value = falloff.innerRadius;
+      uniforms.uAboutFalloffOuterRadius.value = falloff.outerRadius;
+      uniforms.uAboutFalloffBrightness.value = falloff.brightness;
+      uniforms.uAboutFalloffDarkness.value = falloff.darkness;
+      uniforms.uAboutFalloffBlendPower.value = falloff.blendPower;
+    }
+  }
+
+  private _syncFalloffCenter(): void {
+    if (this._shaderRefs.length === 0) return;
+    const astronaut = this._resolveAstronaut();
+    if (!astronaut) return;
+    const centerYOffset = this._resolveFalloffOptions().centerYOffset;
+    astronaut.getWorldPosition(this._falloffCenter);
+    this._falloffCenter.y += centerYOffset;
+  }
+
+  private _resolveAstronaut(): THREE.Object3D | null {
+    if (this._astronaut && this._astronaut.parent) return this._astronaut;
+    const candidate = this._context?.getObject(ASTRONAUT_ID);
+    if (!(candidate instanceof THREE.Object3D)) return null;
+    this._astronaut = candidate;
+    return candidate;
+  }
+
+  private _resolveFalloffOptions(): Required<
+    NonNullable<TerrianObjectOptions["aboutFalloff"]>
+  > {
+    const raw = this._options.aboutFalloff;
+    return {
+      enabled: raw?.enabled ?? ABOUT_TERRIAN_FALLOFF.enabled,
+      centerYOffset: raw?.centerYOffset ?? ABOUT_TERRIAN_FALLOFF.centerYOffset,
+      innerRadius: raw?.innerRadius ?? ABOUT_TERRIAN_FALLOFF.innerRadius,
+      outerRadius: raw?.outerRadius ?? ABOUT_TERRIAN_FALLOFF.outerRadius,
+      brightness: raw?.brightness ?? ABOUT_TERRIAN_FALLOFF.brightness,
+      darkness: raw?.darkness ?? ABOUT_TERRIAN_FALLOFF.darkness,
+      blendPower: raw?.blendPower ?? ABOUT_TERRIAN_FALLOFF.blendPower,
+    };
+  }
+}

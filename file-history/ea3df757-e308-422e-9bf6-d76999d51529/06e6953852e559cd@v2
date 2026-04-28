@@ -1,0 +1,47 @@
+@use "../components/masking-text" as mt;
+
+// =============================================================================
+// Reveal state layer — driven by TS via data attributes.
+// - [data-mask]  : applied to `.mask-target` wrappers
+// - [data-reveal]: applied to `.masking-text` elements
+// Values are mutually exclusive per attribute, so adjacent states cannot pile
+// up the way class-based states used to.
+// =============================================================================
+
+// mask-target wrapper becomes visible when TS finishes wrapping.
+.mask-target[data-mask="ready"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+// Reveal-in: observer or manual trigger sets data-reveal="inview".
+.masking-text[data-reveal="inview"] {
+  .masking-text__line,
+  .line {
+    @include mt.text-reveal-line-visible();
+  }
+}
+
+// Reveal-out with downward drop.
+.masking-text[data-reveal="down"] {
+  opacity: 1;
+  visibility: visible;
+
+  .masking-text__line,
+  .line {
+    @include mt.text-reveal-line-down();
+    transition-duration: var(--duration-slower);
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+// Explicit hidden — wrapper stays mounted but content is clipped.
+.masking-text[data-reveal="hidden"] {
+  opacity: 0;
+  visibility: hidden;
+
+  .masking-text__line,
+  .line {
+    @include mt.text-reveal-line-hidden();
+  }
+}

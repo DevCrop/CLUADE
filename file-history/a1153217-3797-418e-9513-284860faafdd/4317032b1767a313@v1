@@ -1,0 +1,192 @@
+import type {
+  MainPerformanceProfile,
+  PerformanceTier,
+  ResponsiveEnvironmentInput,
+} from "../types/runtime.types.js";
+
+const HIGH_PROFILE: MainPerformanceProfile = {
+  tier: "high",
+  rendererPowerPreference: "high-performance",
+  rendererAntialias: true,
+  enginePixelRatioMax: 1.5,
+  backgroundResolutionScale: 1,
+  heroRaymarchSteps: 50,
+  transitionEnabled: true,
+  attitudeMaxDpr: 1.1,
+  cloudCount: 3600,
+  svgSampleStep: 6,
+  svgPixelRatioMax: 1.25,
+  svgTargetFps: 40,
+  svgAntialias: false,
+  svgEnableMouseTracking: false,
+  svgPowerPreference: "default",
+  bloom: {
+    strength: 0.08,
+    radius: 0.28,
+    threshold: 1.0,
+    compositeStrength: 0.42,
+    selective: true,
+  },
+};
+
+const MID_PROFILE: MainPerformanceProfile = {
+  tier: "mid",
+  rendererPowerPreference: "default",
+  rendererAntialias: false,
+  enginePixelRatioMax: 1.25,
+  backgroundResolutionScale: 0.85,
+  heroRaymarchSteps: 40,
+  transitionEnabled: true,
+  attitudeMaxDpr: 0.95,
+  cloudCount: 2400,
+  svgSampleStep: 7,
+  svgPixelRatioMax: 1.0,
+  svgTargetFps: 34,
+  svgAntialias: false,
+  svgEnableMouseTracking: false,
+  svgPowerPreference: "low-power",
+  bloom: {
+    strength: 0.06,
+    radius: 0.24,
+    threshold: 1.0,
+    compositeStrength: 0.34,
+    selective: false,
+  },
+};
+
+const LOW_PROFILE: MainPerformanceProfile = {
+  tier: "low",
+  rendererPowerPreference: "low-power",
+  rendererAntialias: false,
+  enginePixelRatioMax: 1.0,
+  backgroundResolutionScale: 0.65,
+  heroRaymarchSteps: 28,
+  transitionEnabled: false,
+  attitudeMaxDpr: 0.85,
+  cloudCount: 1400,
+  svgSampleStep: 8,
+  svgPixelRatioMax: 0.9,
+  svgTargetFps: 28,
+  svgAntialias: false,
+  svgEnableMouseTracking: false,
+  svgPowerPreference: "low-power",
+  bloom: {
+    strength: 0.05,
+    radius: 0.2,
+    threshold: 1.02,
+    compositeStrength: 0.28,
+    selective: false,
+  },
+};
+
+function getNavigatorInfo(): {
+  hardwareConcurrency: number;
+  deviceMemory?: number;
+} {
+  if (typeof navigator === "undefined") {
+    return { hardwareConcurrency: 8 };
+  }
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  return {
+    hardwareConcurrency: nav.hardwareConcurrency ?? 8,
+    deviceMemory: nav.deviceMemory,
+  };
+}
+
+function prefersReducedMotion(): boolean {
+  if (
+    typeof window === "undefined" ||
+    typeof window.matchMedia !== "function"
+  ) {
+    return false;
+  }
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function getViewportInfo(): {
+  width: number;
+  height: number;
+  dpr: number;
+  isCompact: boolean;
+} {
+  if (typeof window === "undefined") {
+    return { width: 1440, height: 900, dpr: 1, isCompact: false };
+  }
+  const width = window.innerWidth ?? 1440;
+  const height = window.innerHeight ?? 900;
+  return {
+    width,
+    height,
+    dpr: window.devicePixelRatio ?? 1,
+    isCompact: width <= 1024 || height <= 768,
+  };
+}
+
+function resolveTierFromEnvironment(
+  environment: ResponsiveEnvironmentInput,
+): PerformanceTier {
+  const nav = {
+    hardwareConcurrency: environment.hardwareConcurrency,
+    deviceMemory: environment.deviceMemory,
+  };
+  const view = {
+    width: environment.viewportWidth,
+    height: environment.viewportHeight,
+    dpr: environment.devicePixelRatio,
+    isCompact:
+      environment.viewportWidth <= 1024 || environment.viewportHeight <= 768,
+  };
+  const reducedMotion = environment.reducedMotion;
+
+  let score = 0;
+
+  if (reducedMotion) score += 4;
+  if (nav.hardwareConcurrency <= 4) score += 2;
+  else if (nav.hardwareConcurrency <= 6) score += 1;
+
+  const memory = nav.deviceMemory;
+  if (typeof memory === "number" && memory <= 4) score += 2;
+  else if (typeof memory === "number" && memory <= 8) score += 1;
+
+  if (view.isCompact) score += 1;
+  if (view.dpr >= 2.5) score += 1;
+
+  if (score >= 5) return "low";
+  if (score >= 2) return "mid";
+  return "high";
+}
+
+function getDefaultEnvironment(): ResponsiveEnvironmentInput {
+  const nav = getNavigatorInfo();
+  const view = getViewportInfo();
+  return {
+    viewportWidth: view.width,
+    viewportHeight: view.height,
+    devicePixelRatio: view.dpr,
+    isMobile: view.width <= 1024,
+    reducedMotion: prefersReducedMotion(),
+    hardwareConcurrency: nav.hardwareConcurrency,
+    deviceMemory: nav.deviceMemory,
+  };
+}
+
+export class PerformanceProfile {
+  static getMainProfile(
+    environment?: ResponsiveEnvironmentInput,
+  ): MainPerformanceProfile {
+    const tier = resolveTierFromEnvironment(
+      environment ?? getDefaultEnvironment(),
+    );
+    const profile =
+      tier === "low"
+        ? LOW_PROFILE
+        : tier === "mid"
+          ? MID_PROFILE
+          : HIGH_PROFILE;
+
+    return {
+      ...profile,
+      bloom: { ...profile.bloom },
+    };
+  }
+}

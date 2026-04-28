@@ -1,0 +1,174 @@
+# Plan: Services Tools Marquee + Shared Chip Component + Icon Library
+
+## Context
+
+`no-main-services__item-tools`의 각 서비스 툴 목록을 개별 마퀴로 전환하고, 툴 아이템과 포트폴리오 카테고리 칩을 공통 chip 모듈로 통합한다. 현재 CDN 기반 SimpleIcons 아이콘은 npm `simple-icons` 패키지 + TypeScript 하이드레이션으로 교체한다.
+
+---
+
+## Phase 1 — npm icon library 설치
+
+```bash
+npm install simple-icons
+```
+
+사용 아이콘(총 20개 슬러그): `threedotjs`, `greensock`, `typescript`, `react`, `php`, `mysql`, `flutter`, `swift`, `kotlin`, `figma`, `adobeillustrator`, `adobephotoshop`, `adobeaftereffects`, `framer`, `webflow`, `zeplin`, `docker`, `apache`, `git`, `githubactions`
+
+---
+
+## Phase 2 — 공통 Chip SCSS 컴포넌트 생성
+
+**파일 생성:** `resource/scss/components/_chip.scss`
+
+두 variant:
+- `.no-chip--tool` — 기존 `__item-tool` 스타일 (border 1px, no border-radius, 낮은 opacity 색상, 아이콘 SVG 포함)
+- `.no-chip--category` — 기존 `__item-category-chip` 스타일 (border-radius: 999px, glass effect, text only)
+
+구조:
+```scss
+.no-chip { /* base: inline-flex, align-items: center */ }
+.no-chip--tool { /* border, gap, padding, font-size fluid */ 
+  .no-chip__icon { /* svg width/height, opacity */ }
+  .no-chip__label { /* white-space: nowrap */ }
+}
+.no-chip--category { /* border-radius: 999px, glass backdrop-filter */ }
+```
+
+**파일 수정:** `resource/scss/components/index.scss`
+- `@forward "./_chip"` 추가
+
+---
+
+## Phase 3 — PHP chip 컴포넌트 생성
+
+**파일 생성:** `views/components/chip.php`
+
+Props:
+- `$variant`: `'tool'` | `'category'`
+- `$label`: 표시 텍스트
+- `$icon`: (tool variant만) SimpleIcons 슬러그 (e.g. `'threedotjs'`)
+- `$marqueeItem`: bool — `data-marquee-item` 추가 여부 (기본 false)
+
+```php
+<<?= $tag ?? 'span' ?> class="no-chip no-chip--<?= e($variant) ?>"
+  <?= $marqueeItem ? 'data-marquee-item' : '' ?>>
+  <?php if ($variant === 'tool' && !empty($icon)): ?>
+    <span class="no-chip__icon" data-icon="<?= e($icon) ?>" aria-hidden="true"></span>
+  <?php endif; ?>
+  <span class="no-chip__label"><?= e($label) ?></span>
+</<?= $tag ?? 'span' ?>>
+```
+
+---
+
+## Phase 4 — TypeScript 아이콘 하이드레이션 유틸리티
+
+**파일 생성:** `resource/ts/utils/hydrateIcons.ts`
+
+```ts
+// simple-icons에서 필요한 20개만 named import (tree-shake)
+import { siThreedotjs, siGreensock, ... } from 'simple-icons';
+
+const ICON_MAP: Record<string, string> = {
+  threedotjs: siThreedotjs.svg,
+  greensock: siGreensock.svg,
+  // ... 20개 매핑
+};
+
+export function hydrateIcons(root: Element | Document = document): void {
+  root.querySelectorAll<HTMLElement>('[data-icon]').forEach((el) => {
+    const slug = el.dataset.icon ?? '';
+    const svg = ICON_MAP[slug];
+    if (svg) el.innerHTML = svg;
+  });
+}
+```
+
+**와이어업:** `resource/ts/runtime/PageRuntime.ts`
+- `Marquee.init()` 호출 근처에 `hydrateIcons()` 호출 추가 (init + reinit 양쪽)
+
+---
+
+## Phase 5 — 서비스 섹션 마퀴 리팩터링
+
+**파일 수정:** `views/pages/index.php` (lines 417–427)
+
+현재 `<ul class="no-main-services__item-tools">` → 마퀴 래퍼 구조로 교체:
+
+```php
+<?php if (!empty($service['tools'])): ?>
+<div class="no-main-services__item-tools" data-marquee data-marquee-speed="50">
+  <div class="no-main-services__item-tools-viewport" data-marquee-viewport>
+    <ul class="no-main-services__item-tools-track" data-marquee-track>
+      <?php foreach ($service['tools'] as $tool): ?>
+        <?= include_view('components.chip', [
+            'variant'     => 'tool',
+            'tag'         => 'li',
+            'label'       => $tool['label'],
+            'icon'        => $tool['icon'],
+            'marqueeItem' => true,
+        ]) ?>
+      <?php endforeach; ?>
+    </ul>
+  </div>
+</div>
+<?php endif; ?>
+```
+
+**SCSS 수정:** `resource/scss/pages/_main.scss`
+- `&__item-tools` 규칙: `flex-wrap` 제거 → `overflow: hidden` 추가 (마퀴 래퍼로 변경)
+- `&__item-tool` 규칙 제거 → `_chip.scss`의 `.no-chip--tool`로 대체
+
+---
+
+## Phase 6 — 포트폴리오 카테고리 칩 리팩터링
+
+**파일 수정:** `views/pages/index.php` (lines 533–536)
+
+현재 `<li class="no-main-portfolio__item-category-chip">` → chip 컴포넌트 사용:
+
+```php
+<?php foreach ($workTags as $tagLabel): ?>
+  <?= include_view('components.chip', [
+      'variant' => 'category',
+      'tag'     => 'li',
+      'label'   => $tagLabel,
+  ]) ?>
+<?php endforeach; ?>
+```
+
+**SCSS 수정:** `resource/scss/pages/_main.scss`
+- `&-category-chip` 규칙 제거 → `_chip.scss`의 `.no-chip--category`로 대체
+
+---
+
+## 수정 파일 목록
+
+| 파일 | 작업 |
+|------|------|
+| `resource/scss/components/_chip.scss` | 신규 생성 |
+| `resource/scss/components/index.scss` | `@forward "./_chip"` 추가 |
+| `resource/scss/pages/_main.scss` | 구 tool/chip 스타일 제거, tools 마퀴 래퍼 스타일 추가 |
+| `views/components/chip.php` | 신규 생성 |
+| `views/pages/index.php` | 서비스 tools 마퀴화 + portfolio chip 컴포넌트화 |
+| `resource/ts/utils/hydrateIcons.ts` | 신규 생성 |
+| `resource/ts/runtime/PageRuntime.ts` | `hydrateIcons()` 호출 추가 |
+
+---
+
+## Verification
+
+```bash
+# PHP 문법 검사
+rtk docker compose exec web php -l views/pages/index.php
+rtk docker compose exec web php -l views/components/chip.php
+
+# TypeScript 타입 체크
+rtk tsc --noEmit
+
+# 시각 확인: http://localhost:8888
+# - 각 서비스 item의 tool 칩들이 개별 마퀴로 좌→우 스크롤
+# - (아이콘 SVG) + (텍스트) 구조 확인
+# - 포트폴리오 카테고리 칩 pill 스타일 유지
+# - 아이콘이 CDN이 아닌 인라인 SVG로 렌더링 확인 (DevTools에서 확인)
+```

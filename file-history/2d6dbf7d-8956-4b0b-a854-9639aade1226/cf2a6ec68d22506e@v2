@@ -1,0 +1,16 @@
+---
+paths:
+  - "**/*.scss"
+---
+
+# SCSS Rules
+
+- Use BEM pattern for class naming
+- Source: `resource/scss/` → compiled output: `resource/dist/`
+- Do NOT run build commands — dev server reflects changes on save automatically
+
+## Token Contract
+
+- Reusable tokens → `resource/scss/abstract/` or `base/_root.scss`
+- Use `var(--clr-*)`, `var(--duration-*)` etc. in consumers — no raw hex when semantic token exists upstream
+- Admin CSS (`admin/resource/css/`) is separate — do not import from public SCSS entry

@@ -1,0 +1,176 @@
+﻿
+
+import { Drawer } from "../ui/Drawer.js";
+import { TextReveal } from "../animation/TextReveal.js";
+import { STATE_CLASSES } from "../config/dom.config.js";
+import { MASKING_ANIM, CLOSE_ALL_EXPANDED } from "../config/component.config.js";
+import { Aria } from "./Aria.js";
+
+const HEADER_SELECTOR = "#main-header";
+
+export class CloseAllExpanded {
+  
+  static runDrawerTextOutIfOpen(): Promise<void> {
+    const expanded = document.querySelectorAll<HTMLElement>(
+      '[aria-expanded="true"]',
+    );
+    for (const el of expanded) {
+      const panel = CloseAllExpanded.resolvePanel(el);
+      const isDrawer =
+        el.hasAttribute("data-drawer-trigger") &&
+        panel?.classList.contains("no-drawer");
+      if (isDrawer && panel) {
+        const header = document.querySelector<HTMLElement>(HEADER_SELECTOR);
+        return Drawer.runTextOutOnly(
+          panel,
+          el as HTMLButtonElement,
+          header,
+          STATE_CLASSES.open,
+        );
+      }
+    }
+    return Promise.resolve();
+  }
+
+  
+  static async runCloseAllTransition(): Promise<void> {
+    const expanded = document.querySelectorAll<HTMLElement>(
+      '[aria-expanded="true"]',
+    );
+    if (expanded.length === 0) return Promise.resolve();
+
+    const promises: Promise<void>[] = [];
+    expanded.forEach((el) => {
+      const panel = CloseAllExpanded.resolvePanel(el);
+      const isDrawer =
+        el.hasAttribute("data-drawer-trigger") &&
+        panel?.classList.contains("no-drawer");
+
+      if (isDrawer && panel) {
+        const header = document.querySelector<HTMLElement>(HEADER_SELECTOR);
+        promises.push(
+          Drawer.runTextOutThenClose(
+            panel,
+            el as HTMLButtonElement,
+            header,
+            STATE_CLASSES.open,
+          ),
+        );
+      } else {
+        CloseAllExpanded.closeOneSync(el);
+      }
+    });
+    await Promise.all(promises);
+  }
+
+  
+  static offCloseAllImmediate(): void {
+    const expanded = document.querySelectorAll<HTMLElement>(
+      '[aria-expanded="true"]',
+    );
+    expanded.forEach((el) => CloseAllExpanded.closeOneSync(el));
+  }
+
+  static async runCloseAllWait(): Promise<void> {
+    const expanded = document.querySelectorAll<HTMLElement>(
+      '[aria-expanded="true"]',
+    );
+    if (expanded.length === 0) return;
+
+    await Promise.all(
+      Array.from(expanded).map((el) => CloseAllExpanded.closeOne(el)),
+    );
+    await new Promise<void>((r) => setTimeout(r, CLOSE_ALL_EXPANDED.closeAnimationMs));
+  }
+
+  private static closeOneSync(el: HTMLElement): void {
+    const panel = CloseAllExpanded.resolvePanel(el);
+    const isDrawer =
+      el.hasAttribute("data-drawer-trigger") &&
+      panel?.classList.contains("no-drawer");
+
+    if (isDrawer && panel) {
+      CloseAllExpanded.closeDrawerPanelSync(el, panel);
+      return;
+    }
+
+    Aria.setExpanded(el, false);
+    if (panel) CloseAllExpanded.hidePanel(panel);
+    const root = el.closest(".no-dropdown");
+    if (root) root.classList.remove(STATE_CLASSES.open);
+  }
+
+  private static finalizeDrawerClose(
+    trigger: HTMLElement,
+    drawerPanel: HTMLElement,
+  ): void {
+    if (
+      document.activeElement &&
+      drawerPanel.contains(document.activeElement)
+    ) {
+      trigger.focus();
+    }
+    drawerPanel.classList.remove(STATE_CLASSES.open);
+    Aria.setHidden(drawerPanel, true);
+    Drawer.releaseLock(drawerPanel);
+    trigger.classList.remove(STATE_CLASSES.open);
+    Aria.setExpanded(trigger, false);
+    CloseAllExpanded.unsetHeaderOpen(trigger);
+  }
+
+  private static closeDrawerPanelSync(
+    trigger: HTMLElement,
+    drawerPanel: HTMLElement,
+  ): void {
+    TextReveal.setVisibleOff(drawerPanel);
+    CloseAllExpanded.finalizeDrawerClose(trigger, drawerPanel);
+  }
+
+  private static async closeOne(el: HTMLElement): Promise<void> {
+    const panel = CloseAllExpanded.resolvePanel(el);
+    const isDrawer =
+      el.hasAttribute("data-drawer-trigger") &&
+      panel?.classList.contains("no-drawer");
+
+    if (isDrawer && panel) {
+      await CloseAllExpanded.closeDrawerPanel(el, panel);
+      return;
+    }
+
+    Aria.setExpanded(el, false);
+    if (panel) CloseAllExpanded.hidePanel(panel);
+    const root = el.closest(".no-dropdown");
+    if (root) root.classList.remove(STATE_CLASSES.open);
+  }
+
+  private static resolvePanel(el: HTMLElement): HTMLElement | null {
+    const controlsId = Aria.getControls(el);
+    return controlsId ? document.getElementById(controlsId) : null;
+  }
+
+  private static closeDrawerPanel(
+    trigger: HTMLElement,
+    drawerPanel: HTMLElement,
+  ): Promise<void> {
+    TextReveal.setVisibleOff(drawerPanel);
+
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        CloseAllExpanded.finalizeDrawerClose(trigger, drawerPanel);
+        resolve();
+      }, MASKING_ANIM.textOutMs);
+    });
+  }
+
+  private static hidePanel(panel: HTMLElement): void {
+    Aria.setHidden(panel, true);
+    panel.hidden = true;
+  }
+
+  private static unsetHeaderOpen(el: HTMLElement): void {
+    const header = el.closest("header");
+    if (!header?.classList.contains(STATE_CLASSES.open)) return;
+    header.classList.remove(STATE_CLASSES.open);
+    Aria.setExpanded(header, false);
+  }
+}

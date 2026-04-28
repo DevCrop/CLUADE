@@ -1,0 +1,266 @@
+# NINEONELABS TypeScript 리팩토링 플랜
+
+## Context
+
+`resource/ts/` 전체를 OOP/SOLID, 사이드이펙트, 갓오브젝트, THREE.js 성능 관점으로 감사한 결과, 아키텍처 골격(PageRuntime, PageTheatreBinder, types/ 조직)은 **건강하나**, 특정 갓오브젝트 2종(`AppManager`, `ContactWizard`)과 THREE.js 리소스 처분 누락 6종이 **프로덕션 메모리 누수 및 GPU 리소스 누출**을 유발하고 있다. 또한 렌더 루프 hot path에 프레임당 객체 할당이 다수 존재한다.
+
+프로젝트 규칙(`.claude/rules/frontend.md`) 준수:
+- 모든 타입/인터페이스/enum → `resource/ts/types/*.types.ts`
+- 상수/색상/URL → config 파일
+- `dispose()` 필수, 렌더 루프 내 객체 생성 금지
+- `addEventListener` ↔ `removeEventListener` 쌍
+- THREE.js API 몽키패치 금지
+
+목표: 구조적 건강성 회복, 렌더 성능 회복, 메모리 안정성 확보. 리팩토링은 **위험도가 높은 순**으로 Phase 분할.
+
+---
+
+## Phase 1 — THREE.js 리소스 / GPU 메모리 누수 (Critical, 즉시)
+
+런타임 안정성을 위협하므로 가장 먼저. **테스트**: Chrome DevTools Memory 탭 → 페이지 5회 왕복 후 Detached nodes / GPU 메모리 증가분 < 5MB이면 성공.
+
+### 1-1. `ModelLoader` 캐시 deep-dispose
+- **파일**: [ModelLoader.ts](resource/ts/core/ModelLoader.ts) (150줄)
+- **현재 문제**: `dispose()` (line 56-61)가 `_modelMap.clear()`만 호출. 캐시된 `THREE.Group` 내부의 geometry/material/texture가 **영구 GPU 점유**. 또한 `cached.clone(true)` (line 70)가 material을 공유하므로, `Ground._applyGroundShader`가 공유 material을 `ShaderMaterial`로 교체하면 **모든 페이지가 오염**된다.
+- **조치**:
+  - `dispose()`에서 `_modelMap` 순회 → `traverse`로 각 Mesh의 `geometry.dispose()`, `material.dispose()` (texture 포함 slot: `map`, `normalMap`, `roughnessMap`, `bumpMap`, `emissiveMap`, `metalnessMap`, `aoMap`), `_draco.dispose()`
+  - `loadGLTF`에서 cache hit 시 `SkeletonUtils.clone()` 또는 수동 material 복제로 material 공유 차단 (또는 호출자가 material을 교체하지 않도록 불변성 보장)
+  - 공용 유틸 `utils/disposeObject3D.ts` 신설 → `traverse` + 모든 map slot 자동 처분
+- **재사용**: 신설 `disposeObject3D` 헬퍼는 Phase 1-2/1-3/1-5에서도 사용
+
+### 1-2. `SceneLights` / `AboutLights` orphan light 제거
+- **파일**:
+  - [SceneLights.ts:168-173](resource/ts/objects/env/SceneLights.ts#L168-L173)
+  - [AboutLights.ts:128-135](resource/ts/objects/sub/AboutLights.ts#L128-L135)
+- **현재 문제**: `dispose()`가 `_lights.clear()`만 하고 `parent.remove(light)` 미실행 → 씬 그래프에 orphan Light 잔존, 매 페이지마다 증가.
+- **조치**: `dispose()`에서 `_lights` 순회 → `light.parent?.remove(light)`, `light.dispose?.()` (SpotLight/DirectionalLight는 shadow map dispose), `_lightDecorators` (geometry/material) dispose. Group 노드 `_groups.ground`도 제거.
+- `_rebuildFromSpecs` (SceneLights line 152-154)에서도 동일 로직으로 이전 light 정리 후 rebuild.
+
+### 1-3. `Ground._applyGroundShader` 재실행 방지
+- **파일**: [Ground.ts:282-291](resource/ts/objects/main/Ground.ts)
+- **현재 문제**: cache에서 복제된 모델에 shader swap이 다시 일어나면 live ShaderMaterial을 dispose하려다 실패.
+- **조치**: `material.userData.__groundShaderApplied = true` 태그 → 재실행 시 early return. ModelLoader 1-1 fix와 조합.
+
+### 1-4. `PostProcessor` dead code 제거
+- **파일**: [PostProcessor.ts:199-206](resource/ts/core/PostProcessor.ts)
+- **현재 문제**: `_appendFullscreenShaderPass`가 `void composer; void fullscreenShaderOpt; return;` stub. `render`/`dispose`에 `_fullscreenShaderPass` 분기(line 209, 375-384, 453-455, 517-520) 있으나 절대 할당 안 됨.
+- **조치**: 옵션 타입(`FullscreenShaderOptions`)과 분기 전부 삭제, 또는 실제 구현. **삭제 권장** (사용처 없음을 grep으로 확인 후).
+
+### 1-5. `WorksSceneManager.dispose()` 딥 처분
+- **파일**: [WorksSceneManager.ts:483-499](resource/ts/pages/works/render/WorksSceneManager.ts) (820줄)
+- **현재 문제**: `scene.clear()`만 호출 — Three.Scene.clear()는 children만 detach, dispose 안 함. 또한 **독립 `WebGLRenderer` 사용** (line 593-600)으로 main Engine과 2중 렌더.
+- **조치**:
+  - `dispose()`에서 `traverse` + 1-1의 `disposeObject3D` 호출
+  - `this._renderer.dispose()`, `this._renderer.forceContextLoss()` 호출
+  - window resize 핸들러 `removeEventListener` 확실히 페어링
+  - 검토: 별도 renderer가 반드시 필요한가? Main Engine에 attach 가능한지 Phase 3에서 재평가
+
+### 1-6. `PageTheatreBinder.setPageId` 이전 adapter 정리
+- **파일**: [PageTheatreBinder.ts:85-91](resource/ts/core/PageTheatreBinder.ts)
+- **현재 문제**: `_adapterPromise` 교체 시 이전 adapter의 `stopPreview()` 미호출 → Theatre sequence 재생 지속 + Object3D 참조 잔존.
+- **조치**: `setPageId` 내부에서 이전 `_adapterPromise`를 `await`하고 `stopPreview` 실행 후 교체. race 방지 `_generation` 카운터 도입.
+
+---
+
+## Phase 2 — 렌더 루프 Hot Path 최적화 (High)
+
+**테스트**: Chrome DevTools Performance → 60fps, GC 빈도 < 2/sec, allocation profiler에서 프레임당 Vector2/Vector3/Object 할당 = 0.
+
+### 2-1. `CloudPlane._resolvePlaneOptions` 프레임당 객체 할당 제거
+- **파일**: [CloudPlane.ts:253-261, 311-316, 369-388](resource/ts/objects/env/CloudPlane.ts)
+- **현재**: `runUpdate` → `_applyDynamicUniforms` → `_applyRocketUniforms` → `_resolvePlaneOptions()` 매 프레임 객체 리터럴 반환.
+- **조치**:
+  - `setOptions()` 호출 시 `this._resolvedPlaneOptions` 캐시 (private field, 단일 객체 in-place 갱신)
+  - `runUpdate`는 캐시 읽기만
+  - `rocketUv instanceof Vector2` fallback의 `new Vector2()`는 사전에 `_rocketUvFallback = new Vector2()` 상수 필드로
+
+### 2-2. `Rocket._resolveFlameRotation` / `_resolveFlamePosition` 할당 제거
+- **파일**: [Rocket.ts:336-358, 459-483, 491-498](resource/ts/objects/rocket/Rocket.ts)
+- **조치**: `_flameRotationScratch` (plain object), `_flamePositionScratch = new THREE.Vector3()` module-scope 재사용 객체 도입.
+
+### 2-3. `BackgroundManager._resolveLook` 캐시
+- **파일**: [BackgroundManager.ts:437-487, 489-541](resource/ts/manager/BackgroundManager.ts)
+- **조치**: 입력 key(`pageId + variant`) 해시로 결과 lookup 캐시. 입력 변경 시에만 재계산.
+
+### 2-4. `AboutLights` / `SceneLights` `_applyProfileByProgress` Set/Array 할당 제거
+- **파일**:
+  - [AboutLights.ts:466](resource/ts/objects/sub/AboutLights.ts)
+  - [SceneLights.ts:312-339](resource/ts/objects/env/SceneLights.ts)
+- **조치**: `new Set()` / `Object.keys(values)` 를 생성자에서 한번만 계산 후 필드 보관. `runUpdate`는 읽기만.
+
+### 2-5. `AboutTerrian._resolveAstronaut` 매 프레임 traversal 제거
+- **파일**: [AboutTerrian.ts:108-124](resource/ts/objects/sub/AboutTerrian.ts)
+- **현재**: `scene.getObjectByName(ABOUT_ASTRONAUT_ROOT_NAME)` 매 프레임 traversal.
+- **조치**: Scene 등록 이벤트(`Scene.onObjectAdded(name, cb)`)를 `Scene.ts`에 추가 → pub/sub 구독으로 교체. `parent` null 체크 fallback 유지.
+
+### 2-6. `Ground._syncShaderUniforms` 텍스처 재할당 제거
+- **파일**: [Ground.ts:346-374](resource/ts/objects/main/Ground.ts)
+- **조치**: 텍스처 uniform은 생성 시 한 번만 할당. 프레임당은 scalar/vector만 갱신.
+
+### 2-7. `Ground._updateResolution` 중복 snapshot 호출 제거
+- **파일**: [Ground.ts:405-422](resource/ts/objects/main/Ground.ts)
+- **조치**: `ResponsiveRuntime.getSnapshot()`을 변수에 1회 캐시 후 재사용.
+
+### 2-8. `Engine` / `CameraTargetRuntime` matrixWorld 1프레임 staleness
+- **파일**: [Engine.ts:478-480, 515-520](resource/ts/core/Engine.ts), [CameraTargetRuntime.ts:82](resource/ts/runtime/CameraTargetRuntime.ts), [CloudPlane.ts:291-293](resource/ts/objects/env/CloudPlane.ts)
+- **현재**: `object3D.matrixWorld` 참조 전에 `updateMatrixWorld()` 미호출 → 전 프레임 값 사용.
+- **조치**: follow 대상 Object3D에 `updateWorldMatrix(true, false)` 명시 호출 후 `matrixWorld` 읽기. `AnimationLoop`의 renderCallback 순서를 `pre-render matrix sync → onRender → renderer.render`로 정렬.
+
+---
+
+## Phase 3 — 갓오브젝트 해체 (High, 아키텍처)
+
+**테스트**: 각 분해 클래스가 독립 단위 테스트 가능. AppManager 라인수 < 600. ContactWizard 라인수 < 400.
+
+### 3-1. `AppManager` 분해 (1950줄 → 4개 coordinator)
+- **파일**: [AppManager.ts](resource/ts/manager/AppManager.ts)
+- **현재 다중 책임** (5가지 변경 이유):
+  1. Intro/after-intro 상태 오케스트레이션
+  2. About/Main 쇼케이스 애니메이션 (slogan/who/why)
+  3. Contact flow 성공/에러 이벤트 처리
+  4. 전역 UI 초기화(Header/Drawer/Dropdown/WorkModal)
+  5. Debug 패널, Feature card, Starfield 관리
+- **분해 설계** (coordinator pattern):
+  ```
+  AppManager (얇은 coordinator, ~200줄)
+    ├─ manager/PageBootManager.ts      : PageRuntime + PageTheatreBinder + Intro 바인딩
+    ├─ manager/PageShowcaseManager.ts  : About/Main 쇼케이스 (AboutShowcaseRuntime, MainShowcaseRuntime 내부)
+    ├─ manager/GlobalUiLifecycleManager.ts : Header/Drawer/Dropdown/WorkModal init+dispose
+    └─ manager/ContactFlowManager.ts   : contact success/error 이벤트 페이로드 처리
+  ```
+- **절차**: 현재 `AppManagerDomRuntime` 내부 클래스를 먼저 public 모듈로 승격 → 영역별로 잘라냄. 각 manager는 `init()`/`dispose()` 대칭 API.
+
+### 3-2. `ContactWizard` 분해 (1384줄 → 4개 runtime) + dispose 추가
+- **파일**: [ContactWizard.ts](resource/ts/ui/ContactWizard.ts)
+- **현재 문제**: `mount()`에서 3개 이상 `addEventListener` (line 89-104) 붙이고 **`dispose()` 부재** → 재마운트 시 listener 누적.
+- **분해 설계**:
+  ```
+  ContactWizard (coordinator, ~250줄)
+    ├─ ui/contact/ContactWizardStepRuntime.ts    : prev/next/visibility
+    ├─ ui/contact/ContactWizardChipRuntime.ts    : chip 렌더/애니메이션 (WeakMap 타이머)
+    ├─ ui/contact/ContactWizardFormSync.ts       : value ↔ DOM 바인딩, debounce
+    └─ ui/contact/ContactWizardSubmission.ts     : submit, error, success flow
+  ```
+- **`dispose()` 추가**: 모든 runtime의 `dispose()` 체인 호출 + chip WeakMap 타이머 `clearTimeout`, chip animation `.cancel()`.
+- **PageRuntime**에서 ContactWizard mount/dispose 호출 연결 확인.
+
+### 3-3. `WorksSceneManager` 분해 (820줄 → 4개)
+- **파일**: [WorksSceneManager.ts](resource/ts/pages/works/render/WorksSceneManager.ts)
+- **분해**:
+  ```
+  WorksSceneManager (coordinator)
+    ├─ pages/works/render/WorksLayoutRuntime.ts    : scatter/grid 계산
+    ├─ pages/works/render/WorksCardRenderRuntime.ts: canvas/mesh 렌더
+    ├─ pages/works/render/WorksPointerRuntime.ts   : 호버/선택
+    └─ pages/works/render/WorksViewModeRuntime.ts  : scatter↔grid 토글
+  ```
+
+### 3-4. `MainTheatreRuntime` sheet effect 분리 (919줄 → ~600)
+- **파일**: [MainTheatreRuntime.ts](resource/ts/pages/main/theatre/MainTheatreRuntime.ts)
+- **조치**: Scene sheet effect 로직을 `pages/main/theatre/MainSheetEffectRuntime.ts`로 분리.
+
+---
+
+## Phase 4 — SOLID 원칙 정렬 (Medium)
+
+### 4-1. OCP — pageId switch 제거
+- **위치**: `AppManager`, `PageController` 내부 `pageId` 분기
+- **조치**: `PageTheatreBinder`가 이미 factory 패턴 적용 중 — 동일 패턴을 `AppManager` showcase/flow 분기에도 적용. 페이지별 adapter 레지스트리: `pages/<page>/PageShowcaseAdapter.ts`.
+
+### 4-2. ISP — `PageTheatreAdapter` 인터페이스 쪼개기
+- **위치**: `core/PageTheatreBinder.ts`의 6-optional-method 인터페이스
+- **조치** (types/runtime.types.ts에 정의):
+  ```ts
+  interface PageTheatreBootAdapter      { applyBootStateIfNeeded(): void; }
+  interface PageTheatrePlaybackAdapter  { startIntroIfNeeded(): Promise<void>; stopPreview(): void; }
+  interface PageTheatreSceneSyncAdapter { subscribeSceneSync(port: SceneSyncPort): () => void; }
+  // 실제 adapter = 위 3개 중 필요한 것만 implement, binder는 타입 가드로 존재 여부 확인
+  ```
+
+### 4-3. DIP — `Engine` factory 주입
+- **위치**: [Engine.ts:73-100](resource/ts/core/Engine.ts)
+- **현재**: `new Scene()`, `new AnimationLoop()`, `new ModelLoader()`, `new BackgroundManager()` 생성자 내부 직접 생성.
+- **조치**: `EngineDependencies` 타입을 types/core.types.ts에 정의, 생성자가 factory 받도록. 기본값은 `setup.ts`의 `AppBootstrap`에서 주입. 테스트 mock 가능.
+
+### 4-4. ISP — `EngineOptions` 분리
+- **조치**: `WebGLEngineOptions`/`CanvasEngineOptions` 분리 (types/core.types.ts).
+
+---
+
+## Phase 5 — 타입 시스템 강화 (Medium)
+
+### 5-1. 인라인 타입 이주
+- [WhySkillPreview.ts:6](resource/ts/components/WhySkillPreview.ts)의 `WhySkillBinding` → `types/component.types.ts`
+
+### 5-2. 약한 `Record<string, unknown>` → discriminated union
+- **위치**: [object.types.ts:74, 94, 95](resource/ts/types/object.types.ts)의 `WindowTweenProps`, `PlanetTweenProps`, `AstronautTweenProps`
+- **조치**: `TweenProps = { kind: "window", ... } | { kind: "planet", ... } | { kind: "astronaut", ... }` 태그드 union.
+
+### 5-3. `any` 450개 감사
+- 대부분 GSAP 외부 lib interop이라 허용 가능. **기준**: 내부 코드의 `any` = 0, 외부 lib boundary의 `any` = 주석 필수 (`// gsap API is unknown-shape`).
+- grep으로 내부 any 목록화 → 구체 타입으로 교체.
+
+---
+
+## Phase 6 — 라이프사이클 & 사이드이펙트 정리 (Medium)
+
+### 6-1. `TextReveal` RAF 핸들 누수 방지
+- **파일**: [TextReveal.ts:16-17, 92-104](resource/ts/animation/TextReveal.ts)
+- **현재**: `_observeFrameId`, `_observeManager`가 static class field.
+- **조치**: 인스턴스 필드로 전환. 또는 `init()` 진입 시 반드시 이전 handle `cancelAnimationFrame` 후 재할당.
+
+### 6-2. `WorksPageRuntime` wheel 리스너 페어링 검증
+- **파일**: [WorksPageRuntime.ts:1043](resource/ts/pages/works/runtime/WorksPageRuntime.ts)
+- **조치**: `dispose()`에서 동일 옵션(`{ passive: true }`)으로 `removeEventListener` 확인. 핸들러 참조 필드 저장 필수.
+
+### 6-3. 공통 `Lifecycle` 베이스 클래스 (선택)
+- `init()`/`dispose()` + `_cleanupFns: (() => void)[]` + `track(fn)`/`disposeAll()` 헬퍼 → 모든 runtime이 상속. 현 구조와 호환되도록 mixin 형태 고려.
+
+---
+
+## Phase 7 — Web API 정책 정렬 (Low)
+
+### 7-1. `MouseEvent` → `PointerEvent`
+- `WorksPageRuntime` 및 기타 `MouseEvent` 힌트 위치 → `PointerEvent` + `onpointermove`. 터치 장치 대응.
+- CustomCursor는 이미 PointerEvent로 전환 완료.
+
+### 7-2. `innerHTML` 감사
+- [TextReveal.ts:159-169](resource/ts/animation/TextReveal.ts)의 `segmentHtml`은 자체 `el.innerHTML` 출처 — 안전.
+- [WorksPageRuntime.ts:668, 691](resource/ts/pages/works/runtime/WorksPageRuntime.ts)는 정적 SVG 리터럴 — 안전.
+- **정책**: 동적 데이터는 `textContent` 또는 DOM API로 이행. 현재는 OK.
+
+---
+
+## 우선순위 및 커밋 전략
+
+| Phase | 위험 해소 | 권장 커밋 단위 |
+|-------|-----------|----------------|
+| 1. GPU 누수 | Critical | 각 fix 개별 커밋 (1-1 ~ 1-6) |
+| 2. 렌더 루프 | High (fps/GC) | 객체별 커밋 (2-1, 2-2, ...) |
+| 3. 갓오브젝트 | High (유지보수) | coordinator별 feature 브랜치 권장 |
+| 4. SOLID | Medium | 인터페이스 PR → 구현 PR 분리 |
+| 5. 타입 | Medium | PR 1개로 충분 |
+| 6. 라이프사이클 | Medium | 컴포넌트별 |
+| 7. Web API | Low | PR 1개 |
+
+---
+
+## 검증 (end-to-end)
+
+1. **GPU/메모리**: Chrome DevTools Memory → 페이지 5회 왕복 후 Detached nodes / GPU 메모리 증가분 < 5MB
+2. **프레임**: DevTools Performance → 60fps 유지, major GC < 2/sec, 프레임당 신규 allocation 0
+3. **타입**: `chop node_modules/.bin/tsc --noEmit` 0 errors
+4. **단위 테스트**: `npm run test` 통과 + Phase 3 분해된 클래스에 테스트 추가
+5. **런타임**: `http://localhost:8888` 전 페이지(main/about/works/contact) 인트로→본편→페이지전환 정상
+6. **console**: 콘솔 경고/에러 0
+7. **수동 회귀**:
+   - Intro 진입/종료 2회 반복 → leak 없음
+   - Works 카드 scatter ↔ grid 토글 10회 → 렌더러 context loss 없음
+   - Contact 폼 mount/unmount 3회 → listener 중복 없음 (DevTools Event Listeners 탭)
+
+## 건드리지 않을 것
+
+- `PageRuntime`, `PageTheatreBinder`(except 1-6), Theatre bridge들 — 이미 구조적으로 건강함
+- `types/` 전체 조직(19 파일 체계) — 유지
+- `config/` 체계 — 유지
+- Barba.js 재도입 / SPA 네비게이션 계약 변경 금지 (CLAUDE.md)

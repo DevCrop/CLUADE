@@ -1,0 +1,56 @@
+# cors-test root .htaccess
+# 자기 디렉토리 한정. 운영 영역 영향 0.
+
+Options -Indexes
+
+# Gabia Imunify360 / mod_security — cors-test 디렉토리 한정 비활성화
+# POST JSON 바디의 키워드(cors, probe 등)가 WAF 룰에 걸리는 것 방지
+<IfModule mod_security.c>
+  SecFilterEngine Off
+  SecFilterScanPOST Off
+</IfModule>
+<IfModule security2_module>
+  SecRuleEngine Off
+</IfModule>
+
+# 상위 webroot의 RewriteRule 상속 차단 (운영 .htaccess가 모든 요청을
+# index.php로 라우팅하는 경우 방어). 이 한 줄이 cors-test/* 의 정상 동작 보장.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^ - [L]
+</IfModule>
+
+# robots.txt 는 일반 차단 룰을 통과시켜야 노출됨
+<Files "robots.txt">
+  Order allow,deny
+  Allow from all
+</Files>
+
+# 시크릿/로그/SQL/스크립트/ledger 직접 다운로드 차단
+<Files "config.local.php">
+  Order allow,deny
+  Deny from all
+</Files>
+
+# IDE 전용 stub — 런타임 실행 안 됨 (if(false) 가드). 직접 노출 차단.
+<Files "_ide_stubs.php">
+  Order allow,deny
+  Deny from all
+</Files>
+
+<FilesMatch "\.(log|sql|md|sh|example|jsonl)$">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+# 검색엔진 색인 방지 (mod_headers 있을 때만)
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow, noarchive"
+</IfModule>
+
+# 보안 헤더 (mod_headers 있을 때만)
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "DENY"
+  Header set Referrer-Policy "no-referrer"
+</IfModule>

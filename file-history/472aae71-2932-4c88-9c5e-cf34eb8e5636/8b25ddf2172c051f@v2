@@ -1,0 +1,14 @@
+---
+description: Core NINEONELABS project rules for Cursor agents.
+alwaysApply: true
+---
+
+# NINEONELABS Core Rules
+
+- Read `BRAND.md` first for brand, copy, design language, homepage flow, and review algorithm routing.
+- Do not load every `brand/*.md` file by default. Use the smallest relevant set from `BRAND.md`.
+- Official display name: `NINEONELABS`; technical lowercase: `nineonelabs`; Korean: `나인원랩스`. Never use mixed camel case naming.
+- NINEONELABS is a digital web agency. Space is metaphor, not the business category.
+- Do not run `npm run build`, `npm run watch`, or `npm install` during normal work. Only `npm install <package>` is allowed when explicitly adding a dependency.
+- Use existing custom MVC, SCSS, TypeScript, Three.js, and Vite patterns. Do not introduce Laravel, Symfony, Barba.js, or SPA navigation contracts.
+- For verification, prefer the smallest relevant check: `rtk tsc --noEmit`, `rtk docker compose exec web php -l <file>`, and `rtk git diff`.

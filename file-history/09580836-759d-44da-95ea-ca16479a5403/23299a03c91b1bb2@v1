@@ -1,0 +1,73 @@
+<?php
+$post = $post ?? [];
+$listUrl = is_string($listUrl ?? null) && $listUrl !== '' ? $listUrl : '/inside/insight';
+$prevUrl = $prevUrl ?? null;
+$nextUrl = $nextUrl ?? null;
+$prevTitle = (string) ($prevTitle ?? '');
+$nextTitle = (string) ($nextTitle ?? '');
+
+$title = (string) ($post['title'] ?? '');
+$contents = (string) ($post['contents'] ?? '');
+$thumb = inside_board_thumb_url($post['thumb_image'] ?? null);
+$badge = inside_board_notice_label($post);
+$dateDisp = inside_board_format_date($post['regdate'] ?? null);
+$dateAttr = inside_board_datetime_attr($post['regdate'] ?? null);
+
+section('content');
+?>
+
+<section class="no-sub-news-view">
+    <div class="no-container-lg">
+        <div class="no-sub-news-view__inner">
+            <?= include_view('components.button', [
+                  'variant' => 'prev-button',
+                  'text' => 'Previous',
+                  'href' => $listUrl,
+                  'class' => 'no-sub-insight-view__prev',
+              ]) ?>
+
+            <article class="no-sub-news-view__article">
+                <div class="no-sub-news-view__head">
+                    <div class="--badge"><?= e($badge) ?></div>
+                    <h2 class="no-sub-news-view__title "><?= e($title) ?></h2>
+                    <?php if ($dateAttr !== '') : ?>
+                    <div class="no-sub-news-view__info">
+                        <time class="no-sub-news-view__date" datetime="<?= e($dateAttr) ?>"><?= e($dateDisp) ?></time>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="no-sub-news-view__body">
+                    <?php if (trim((string) ($post['thumb_image'] ?? '')) !== '') : ?>
+                    <img src="<?= e($thumb) ?>" alt="<?= e($title !== '' ? $title : '') ?>">
+                    <?php endif; ?>
+                    <?= $contents ?>
+                </div>
+            </article>
+            <?= include_view('components.prevnext', [
+                  'basePath' => $listUrl,
+                  'prevUrl' => $prevUrl,
+                  'prevTitle' => $prevTitle,
+                  'nextUrl' => $nextUrl,
+                  'nextTitle' => $nextTitle,
+              ]) ?>
+            <div class="no-view-more">
+                <?= include_view('components.button', [
+                    'variant' => 'corner',
+                    'tag' => 'a',
+                    'text' => 'Go To List',
+                    'href' => $listUrl,
+                    'class' => 'no-sub-insight-view__list-btn',
+                    'iconName' => 'plus',
+                    'iconPosition' => 'before',
+                    'icon_action' => 'rotate',
+                ]) ?>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

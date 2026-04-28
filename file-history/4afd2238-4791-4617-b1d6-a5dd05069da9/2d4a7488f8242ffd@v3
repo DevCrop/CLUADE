@@ -1,0 +1,81 @@
+# Plan: TransitionVeil 깜박임 수정 + 클라우드 시각 개선
+
+## Status: IMPLEMENTED — 테스트 대기 중
+
+---
+
+## Context
+
+인트로→히어로 전환 시 두 가지 문제:
+1. **깜박임(flicker)**: hold 페이즈(progress=0)에서 원형 reveal 로직의 수학적 오차 + 왼쪽 40% 삼각형 아티팩트
+2. **시각 품질**: 원형으로 확장/축소되는 reveal이 구름 느낌 없음. 덮였을 때도 뿌연 단면 느낌.
+
+### 근본 원인 (최종 진단)
+
+- 기존 radial reveal: `centerDistance - revealRadius - noise` → 원의 기하학 구조가 noise 계수가 커질수록 왼쪽에서 삼각형 아티팩트 유발
+- 수정 불가 — radial 방식 자체가 원형이므로 완전 교체 필요
+
+---
+
+## 구현된 변경 사항
+
+### `resource/shaders/who-reveal/fragment.glsl`
+
+**1. density pipeline 개선**
+
+```glsl
+// L144 — blanket 0.42→0.24: 하부 균일 fill 감소, 구름 덩어리 간 간격 확보
+float density = max(blanket * 0.24, cloudMass * 0.82);
+
+// L153 — gapMask 0.52→0.36: 간격 영역 density 낮춰 하늘 구멍 뚜렷하게
+density *= mix(1.0, 0.36, cloudGapMask);
+
+// L160 — threshold 0.18→0.24: gap 영역 더 투명, 구름 경계 선명하게
+density = smoothstep(0.24, 0.90, density);
+```
+
+**2. Radial reveal → Noise threshold dissolve (완전 교체)**
+
+기존 radial 방식 전체 제거 후 순수 노이즈 임계값 방식으로 교체:
+
+```glsl
+float dissolveNoiseA = texture2D(tNoise, screenUv * vec2(0.62, 0.44) + vec2(0.0, -0.014 * time)).r;
+float dissolveNoiseB = texture2D(tPerlin, screenUv * vec2(1.1, 0.78) + vec2(0.008 * time, 0.005 * time)).r;
+float dissolveField = dissolveNoiseA * 0.55 + dissolveNoiseB * 0.45;
+float dissolveThreshold = mix(1.4, -0.4, saturateFloat(uProgress));
+float reveal = smoothstep(
+  dissolveThreshold - max(uRevealSoftness, 0.0001),
+  dissolveThreshold + max(uRevealSoftness, 0.0001),
+  dissolveField
+);
+```
+
+수학적 보장:
+- progress=0: threshold=1.4, low=1.08 > max dissolveField(1.0) → **reveal=0 전체 픽셀** (flicker 없음)
+- progress=1: threshold=-0.4, high=-0.08 < min dissolveField(0) → **reveal=1 전체 픽셀**
+
+**3. Alpha + Color 개선**
+
+```glsl
+float coverage = smoothstep(0.12, 0.62, density);
+float coverFloor = saturateFloat(1.0 - uProgress * 8.0) * uOpacity;  // hold 페이즈 안전 바닥
+float alpha = max(mix(0.94, 1.0, coverage) * (1.0 - reveal) * uOpacity, coverFloor);
+color = mix(vec3(0.62, 0.68, 0.78), vec3(1.0), smoothstep(0.20, 0.90, density));
+// ↑ 청회색 shadow로 구름 입체감/깊이 추가 (기존 밝은 회색 대비 명암 20% → 구름 느낌)
+```
+
+### `resource/ts/config/transition.config.ts`
+
+```typescript
+revealSoftness: 0.32,      // 0.24 → 0.32: reveal 엣지 더 부드럽게
+size: { x: 3.0, y: 2.2 }, // 2.4×1.8 → 3.0×2.2: 구름 스케일 키워 큰 덩어리/간격 형성
+```
+
+---
+
+## Verification
+
+1. `http://localhost:8888` 인트로 재생
+2. hold 페이즈(뷰가 꽉 찼을 때) — 깜박임/삼각 아티팩트 없는지 확인
+3. reveal 단계 — 원형 아닌 구름 노이즈 패턴으로 해체되는지 확인
+4. 덮인 상태 — 청회색 shadow로 구름 입체감 느껴지는지 확인

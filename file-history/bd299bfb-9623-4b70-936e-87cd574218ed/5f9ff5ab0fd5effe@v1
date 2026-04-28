@@ -1,0 +1,369 @@
+<?php section('content') ?>
+
+<?php
+$b = __('pages.brands');
+$b = is_array($b) ? $b : [];
+$focusCards = $b['focus_cards'] ?? [];
+$whatCards = $b['what_cards'] ?? [];
+$pricingHighlights = $b['pricing_highlights'] ?? [];
+$pricingPlans = $b['pricing_plans'] ?? [];
+$worksSteps = $b['works']['steps'] ?? [];
+$isKoBrands = locale() === 'ko';
+$brandFaqItems = $b['faq_items'] ?? [];
+$who = $b['who_serve'] ?? [];
+$tc = $b['target_categories'] ?? [];
+$whatSec = $b['what_section'] ?? [];
+$mkt = $b['market'] ?? [];
+$ps = $b['pricing_section'] ?? [];
+$shortCta = $b['short_cta'] ?? [];
+$worksMeta = $b['works'] ?? [];
+?>
+
+<?= include_view('components.sub-visual', [
+    'i18n' => 'pages.brands.sub_visual',
+    'image_src' => '/resource/images/sub/sub-visual_img_1.jpg',
+]) ?>
+
+<section class="no-sub-who no-section-md">
+    <div class="no-container-xl">
+        <div class="no-sub-who__inner">
+            <div class="no-sub-who__txt" <?= AOS_TITLE ?>>
+                <span>
+                    <?= e($who['kicker'] ?? '') ?>
+                </span>
+                <h2 class="f-heading-1 --fm-en">
+                    <?= e_nl2br_html($who['heading'] ?? '') ?>
+                </h2>
+            </div>
+            <div class="--cnt" <?= AOS_CONTENTS ?>>
+                <ul>
+                    <?php foreach ($focusCards as $card): ?>
+                    <li>
+                        <h4 class="f-heading-5 --bold">
+                            <?= e_nl2br_html($card['title'] ?? '') ?>
+                        </h4>
+                        <p class="f-body-3 --regular clr-text-body">
+                            <?= e_nl2br_html($card['problem'] ?? '') ?>
+                        </p>
+                        <div class="--arrow">
+                            <i class="fa-regular fa-arrow-down"></i>
+                        </div>
+                        <div class="--desc clr-text-body">
+                            <span class="<?= $isKoBrands ? 'f-body-3' : 'f-body-1' ?> --regular"><?= e_nl2br_html($card['solution'] ?? '') ?></span><?php
+                            $solutionNote = trim((string) ($card['solution_note'] ?? ''));
+                            if ($solutionNote !== ''): ?>
+                            <span class="no-sub-who__solution-note f-body-4 --regular"><?= e($solutionNote) ?></span><?php
+                            endif; ?>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <div class="--info">
+                <h4 class="f-heading-3 --fm-en" <?= AOS_TITLE ?>><?= e_nl2br_html($tc['heading'] ?? '') ?></h4>
+                <ul <?= AOS_CONTENTS ?>>
+                    <?php foreach (($tc['items'] ?? []) as $item): ?>
+                    <li>
+                        <div class="icon">
+                            <lord-icon src="https://cdn.lordicon.com/<?= e($item['icon'] ?? 'qnufcwtc') ?>.json"
+                                trigger="loop" speed="0.1" colors="primary:#000000,secondary:#000000">
+                            </lord-icon>
+                        </div>
+                        <div class="txt">
+                            <h4 class="f-heading-5 --semibold"><?= e_nl2br_html($item['title'] ?? '') ?></h4>
+                            <p class="f-body-2">
+                                <?= e_nl2br_html($item['desc'] ?? '') ?>
+                            </p>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="no-sub-what no-section-md">
+    <div class="no-container-xl">
+        <div class="no-sub-what__inner">
+            <div class="no-sub-what__txt" <?= AOS_TITLE ?>>
+                <span>
+                    <?= e($whatSec['kicker'] ?? '') ?>
+                </span>
+                <h2 class="f-heading-1 --fm-en">
+                    <?= e_nl2br_html($whatSec['heading'] ?? '') ?>
+                </h2>
+            </div>
+            <div class="--cnt" <?= AOS_CONTENTS ?>>
+                <ul>
+                    <?php foreach ($whatCards as $card): ?>
+                    <li class="<?= !empty($card['featured']) ? 'is-featured' : '' ?>">
+                        <div class="no-sub-what-card">
+                            <div class="no-sub-what-card__face no-sub-what-card__face--front">
+                                <h4 class="f-heading-5 --semibold">
+                                    <?= e_nl2br_html($card['front_title'] ?? '') ?>
+                                </h4>
+                                <p class="f-body-2 --regular">
+                                    <?= e_nl2br_html($card['front_desc'] ?? '') ?>
+                                </p>
+                            </div>
+                            <div class="no-sub-what-card__face no-sub-what-card__face--back">
+                                <p class="f-body-1 --regular">
+                                    <?= e_nl2br_html($card['back_desc'] ?? '') ?>
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="no-sub-market no-section-md">
+    <div class="no-container-xl">
+        <div class="no-sub-market__inner">
+            <div class="no-sub-market__txt" <?= AOS_TITLE ?>>
+                <span>
+                    <?= e($mkt['kicker'] ?? '') ?>
+                </span>
+                <h2 class="f-heading-1 --fm-en">
+                    <?= e_nl2br_html($mkt['heading'] ?? '') ?>
+                </h2>
+                <p class="f-body-1 --regular">
+                    <?= e_nl2br_html($mkt['intro'] ?? '') ?>
+                </p>
+            </div>
+            <div class="--cnt" <?= AOS_CONTENTS ?>>
+                <?php $mktBlocks = $mkt['blocks'] ?? []; ?>
+                <?php foreach (array_slice($mktBlocks, 0, 2) as $block): ?>
+                <div class="block">
+                    <span><?= e($block['step'] ?? '') ?></span>
+                    <h4 class="f-heading-5 --semibold">
+                        <?= e_nl2br_html($block['title'] ?? '') ?>
+                    </h4>
+                    <p><span><?= e_nl2br_html($block['body'] ?? '') ?></span></p>
+                </div>
+                <?php endforeach; ?>
+                <div class="circles">
+                    <div class="no-market-orbit">
+                        <div class="no-market-orbit__ring no-market-orbit__ring--outer"></div>
+                        <div class="no-market-orbit__ring no-market-orbit__ring--lv3"></div>
+                        <div class="no-market-orbit__ring no-market-orbit__ring--lv2"></div>
+                        <div class="no-market-orbit__ring no-market-orbit__ring--lv1"></div>
+
+                        <div class="no-market-orbit__center">
+                            <img src="<?= base_path('/resource/images/logo/logo_white_col.svg') ?>" alt="EverCura"
+                                class="no-market-orbit__center-logo-img">
+                        </div>
+
+                        <ul class="no-market-orbit__satellites" aria-label="<?= e($mkt['orbit_aria'] ?? '') ?>">
+                            <li class="no-market-orbit__satellite" style="--angle: 0deg;">
+                                <span class="no-market-orbit__satellite-icon" aria-hidden="true">
+                                    <lord-icon src="https://cdn.lordicon.com/vqkbajkd.json" trigger="loop" speed="0.1"
+                                        colors="primary:#ffffff,secondary:#ffffff">
+                                    </lord-icon>
+                                </span>
+                            </li>
+                            <li class="no-market-orbit__satellite" style="--angle: 90deg;">
+                                <span class="no-market-orbit__satellite-icon" aria-hidden="true">
+                                    <lord-icon src="https://cdn.lordicon.com/mzzzwwvl.json" trigger="loop" speed="0.1"
+                                        colors="primary:#ffffff,secondary:#ffffff">
+                                    </lord-icon>
+                                </span>
+                            </li>
+                            <li class="no-market-orbit__satellite" style="--angle: 180deg;">
+                                <span class="no-market-orbit__satellite-icon" aria-hidden="true">
+                                    <lord-icon src="https://cdn.lordicon.com/gjlzobte.json" trigger="loop" speed="0.1"
+                                        colors="primary:#ffffff,secondary:#ffffff">
+                                    </lord-icon>
+                                </span>
+                            </li>
+                            <li class="no-market-orbit__satellite" style="--angle: 270deg;">
+                                <span class="no-market-orbit__satellite-icon" aria-hidden="true">
+                                    <lord-icon src="https://cdn.lordicon.com/euaablbm.json" trigger="loop" speed="0.1"
+                                        colors="primary:#ffffff,secondary:#ffffff">
+                                    </lord-icon>
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <?php foreach (array_slice($mktBlocks, 2) as $block): ?>
+                <div class="block">
+                    <span><?= e($block['step'] ?? '') ?></span>
+                    <h4 class="f-heading-5 --semibold">
+                        <?= e_nl2br_html($block['title'] ?? '') ?>
+                    </h4>
+                    <p><span><?= e_nl2br_html($block['body'] ?? '') ?></span></p>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="--info">
+                <?php
+                $outcomeHeading = (string) ($mkt['outcome_heading'] ?? '');
+                $outcomeHeading = str_replace(
+                    'Target Categories for Emerging Markets',
+                    "Target Categories\nfor Emerging Markets",
+                    $outcomeHeading
+                );
+                ?>
+                <h4 class="f-heading-4 --semibold --fm-en" <?= AOS_TITLE ?>>
+                    <?= e_nl2br_html($outcomeHeading) ?>
+                </h4>
+                <ul <?= AOS_CONTENTS ?>>
+                    <?php foreach (($mkt['outcomes'] ?? []) as $out): ?>
+                    <li>
+                        <h5 class="f-body-1 --semibold"><?= e_nl2br_html($out['title'] ?? '') ?></h5>
+                        <p class="f-body-2 --regular">
+                            <?= e_nl2br_html($out['desc'] ?? '') ?>
+                        </p>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="no-sub-pricing no-section-md">
+    <div class="no-container-xl">
+        <div class="no-sub-pricing__inner">
+            <div class="no-sub-pricing__txt" <?= AOS_TITLE ?>>
+                <span><?= e($ps['kicker'] ?? '') ?></span>
+                <h2 class="f-heading-1 --fm-en">
+                    <?= e_nl2br_html($ps['heading'] ?? '') ?>
+                </h2>
+                <p class="f-body-1 --regular">
+                    <?= e_nl2br_html($ps['intro'] ?? '') ?>
+                </p>
+            </div>
+
+            <ul class="no-sub-pricing__highlights" <?= AOS_CONTENTS ?>>
+                <?php foreach ($pricingHighlights as $highlight): ?>
+                <li>
+                    <h4 class="f-body-1 --semibold"><?= e_nl2br_html($highlight['title'] ?? '') ?></h4>
+                    <p class="f-body-2 --regular"><?= e_nl2br_html($highlight['desc'] ?? '') ?></p>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+
+            <ul class="no-sub-pricing__plans" <?= AOS_CONTENTS ?>>
+                <?php foreach ($pricingPlans as $plan): ?>
+                <?php $priceParts = split_price_parts((string) ($plan['price'] ?? '')); ?>
+                <li class="no-sub-pricing-card">
+                    <div class="no-sub-pricing-card__kicker-wrap">
+                        <span class="no-sub-pricing-card__kicker f-body-2 --medium"><?= e($plan['kicker'] ?? '') ?></span>
+                    </div>
+                    <h3 class="no-sub-pricing-card__title f-heading-2 --semibold"><?= e($plan['name'] ?? '') ?></h3>
+                    <p class="no-sub-pricing-card__summary f-body-3 --regular">
+                        <?= e_nl2br_html($plan['summary'] ?? '') ?></p>
+
+                    <div class="no-sub-pricing-card__price-line">
+                        <p class="no-sub-pricing-card__price">
+                            <?php if ($priceParts['prefix_text'] !== ''): ?><span
+                                class="no-sub-pricing-card__price-prefix"><?= e($priceParts['prefix_text']) ?></span><?php endif; ?>
+                            <strong><?php if ($priceParts['currency'] !== ''): ?><span
+                                    class="no-sub-pricing-card__price-currency"><?= e($priceParts['currency']) ?></span><?php endif; ?><?= e($priceParts['amount']) ?><?php if ($priceParts['suffix'] !== ''): ?><span
+                                    class="no-sub-pricing-card__price-suffix"><?= e($priceParts['suffix']) ?></span><?php endif; ?></strong>
+                            <?php if (!empty($plan['unit'])): ?><span
+                                class="no-sub-pricing-card__price-unit"><?= e($plan['unit']) ?></span><?php endif; ?>
+                        </p>
+                    </div>
+
+                    <a href="<?= e(localized_path('/pricing') . '?audience=brand') ?>"
+                        class="no-sub-pricing-card__link no-button no-button--md no-button--primary no-button--block"><?= e((string) __('pages.brands.cta_view_pricing')) ?></a>
+
+                    <div class="no-sub-pricing-card__group">
+                        <h5 class="f-body-1 --semibold"><?= e(__('pages.brands.pricing_card_heading_ideal')) ?></h5>
+                        <p class="f-body-2 --regular"><?= e_nl2br_html($plan['ideal_for'] ?? '') ?></p>
+                    </div>
+
+                    <div class="no-sub-pricing-card__group">
+                        <h5 class="f-body-1 --semibold"><?= e(__('pages.brands.pricing_card_heading_deliverables')) ?>
+                        </h5>
+                        <ul class="--checklist">
+                            <?php foreach (($plan['deliverables'] ?? []) as $item): ?>
+                            <li>
+                                <i class="fa-regular fa-check" aria-hidden="true"></i>
+                                <p><?= e($item) ?></p>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </div>
+
+    <section class="no-sub-short">
+        <div class="no-container-xl">
+            <div class="no-sub-short__inner">
+                <div class="no-sub-short__txt" <?= AOS_TITLE ?>>
+                    <h2 class="f-heading-1 ">
+                        <?= e_nl2br_html($shortCta['heading'] ?? '') ?>
+                    </h2>
+                    <p class="f-body-2 --regular">
+                        <?= e_nl2br_html($shortCta['lead'] ?? '') ?>
+                    </p>
+
+                </div>
+                <a href="<?= e(localized_path('/request-a-meeting')) ?>"
+                    class="no-button no-button--md no-button--primary" <?= AOS_CONTENTS ?>>
+                    <span class="no-button__text"><?= e($shortCta['button'] ?? __('cta.request_meeting')) ?></span>
+                    <span class="no-button__icon" aria-hidden="true">
+                        <i class="fa-regular fa-arrow-right"></i>
+                    </span>
+                </a>
+            </div>
+        </div>
+    </section>
+</section>
+
+
+
+<section class="no-sub-works no-section-md">
+    <div class="no-container-xl">
+        <div class="no-sub-works__inner">
+            <div class="no-sub-works__txt" data-aos="fade-up" data-aos-duration="700">
+                <span><?= e($worksMeta['kicker'] ?? '') ?></span>
+                <h2 class="f-heading-1 --fm-en">
+                    <?= e_nl2br_html($worksMeta['heading'] ?? '') ?>
+                </h2>
+                <p class="f-body-2 --regular">
+                    <?= e_nl2br_html($worksMeta['intro'] ?? '') ?>
+                </p>
+            </div>
+            <div class="--cnt" data-aos="fade-up" data-aos-duration="850">
+                <ul class="no-sub-works__list">
+                    <?php foreach ($worksSteps as $i => $step): ?>
+                    <li class="no-sub-works__step<?= $i === 0 ? ' is-active' : '' ?>">
+                        <div class="no-sub-works__step-head">
+                            <span class="no-sub-works__num"><?= e($step['num'] ?? '') ?></span>
+                            <div class="no-sub-works__step-copy">
+                                <h3 class="no-sub-works__title"><?= e_nl2br_html($step['title'] ?? '') ?></h3>
+                                <p class="no-sub-works__desc"><?= e_nl2br_html($step['desc'] ?? '') ?></p>
+                            </div>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?= include_view('components.faq', [
+    'faq_items' => $brandFaqItems,
+    'faq_prefix' => 'brands-faq',
+]) ?>
+
+<?= include_view('components.common-form'); ?>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?= include_view('components.popup'); ?>
+<?php end_section() ?>

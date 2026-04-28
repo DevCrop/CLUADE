@@ -1,0 +1,325 @@
+import {
+  pageAbout,
+  mainBackground,
+  sceneTransitionVeil,
+} from "../core/setup.js";
+import { ABOUT_AFTER_INTRO_AUTOPLAY_ENABLED } from "../pages/about/theatre/AboutTheatreConfig.js";
+import { EnvSetup } from "../app/EnvSetup.js";
+import { ScrollLock } from "../utils/ScrollLock.js";
+import { HudPanel } from "../ui/HudPanel.js";
+import { Panel } from "../ui/Panel.js";
+import { IntroOverlay } from "../ui/IntroOverlay.js";
+import { TextReveal } from "../animation/TextReveal.js";
+import { BlockReveal } from "../animation/BlockReveal.js";
+import { DOM_CONFIG } from "../config/dom.config.js";
+import { SCENE_TRANSITION_VEIL_SEQUENCE } from "../config/transition.config.js";
+import type { GsapGlobal } from "../types/gsap.types.js";
+import type {
+  AboutPageConfig,
+  AboutSceneSectionKey,
+} from "../types/about.types.js";
+import type { ContactPageConfig } from "../types/contact.types.js";
+import type {
+  MainPageConfig,
+  MainSceneSectionKey,
+} from "../types/main.types.js";
+import type { AppPageConfig } from "../types/runtime.types.js";
+import type { IntroConfig } from "../types/core.types.js";
+import type { IntroControllerDependencies } from "../types/intro.types.js";
+
+const MAIN_FLOW = DOM_CONFIG.keys.mainFlow;
+const INTRO_ACTION_CONTENT_SELECTOR =
+  MAIN_FLOW?.introActionContent ?? ".no-main-intro-action__content";
+const INTRO_ACTION_TO_HERO_DURATION = 1.18;
+const INTRO_ACTION_TO_HERO_OFFSET_Y = -32;
+const ABOUT_HERO_INTRO_TEXT_SELECTOR =
+  ".no-sub-about-hero-intro .mask-target";
+const ABOUT_HERO_INTRO_TOP_SELECTOR =
+  ".no-sub-about-hero-intro__top.is-block-reveal";
+const ABOUT_HERO_INTRO_BOTTOM_BLOCK_SELECTOR =
+  ".no-sub-about-hero-intro__desc.is-block-reveal, .no-sub-about-hero-intro__info.is-block-reveal";
+const ABOUT_HERO_INTRO_REVEAL_STAGGER_MS = 140;
+const MAIN_DEBUG_WHO_TEXT_SELECTOR = ".no-main-who .mask-target";
+const MAIN_DEBUG_WHY_TEXT_SELECTOR = ".no-main-why .mask-target";
+const MAIN_DEBUG_WHY_BODY_SELECTOR = ".no-main-why__body";
+const MAIN_DEBUG_WHY_VISUAL_SELECTOR = ".no-main-why__visual";
+const MAIN_DEBUG_WHY_CARD_SELECTOR = ".no-main-why__card";
+const MAIN_DEBUG_WORKS_DETAIL_HEAD_SELECTOR = ".no-main-portfolio__head";
+const MAIN_DEBUG_WORKS_DETAIL_TEXT_SELECTOR = ".no-main-portfolio__head .mask-target";
+const MAIN_DEBUG_CONTACT_HEAD_SELECTOR = ".no-main-contact__head";
+const MAIN_DEBUG_CONTACT_TEXT_SELECTOR = ".no-main-contact .mask-target";
+
+export class IntroController {
+  private readonly _dependencies: IntroControllerDependencies;
+
+  constructor(dependencies: IntroControllerDependencies) {
+    this._dependencies = dependencies;
+  }
+
+  hasIntro(pageConfig: AppPageConfig, gsap: GsapGlobal | null): boolean {
+    return !!this._resolveIntroOverlay(pageConfig)?.tl && !!gsap;
+  }
+
+  async runMainIntro(
+    pageConfig: MainPageConfig,
+    objectSetupPromise: Promise<void>,
+    gsap: GsapGlobal,
+  ): Promise<void> {
+    const introConfig = this._resolveIntroOverlay(pageConfig);
+    if (!introConfig) return;
+    const isDebugMode = EnvSetup.hasQueryFlag("debug", "1");
+
+    await this._dependencies.introFlowRuntime.run({
+      introConfig,
+      gsap,
+      loadPromise: this._dependencies.runAfterLoad(
+        pageConfig,
+        objectSetupPromise,
+        { deferScrollSync: true },
+      ),
+      root: this._dependencies.getRoot(),
+      disableScrollLock: isDebugMode,
+      showDebugDomState: isDebugMode,
+      keepIntroActionVisible: isDebugMode,
+      onAfterIntroAutoplay: isDebugMode
+        ? undefined
+        : async () => {
+            const engine = this._dependencies.getEngine();
+            if (!engine) return;
+            await this._dependencies.startPageTheatreAfterIntro(engine);
+          },
+      onIntroDomRevealComplete: () => {
+        this._dependencies.onMainIntroDomRevealComplete();
+        if (isDebugMode) {
+          this._dependencies.dom.setHeroHandoffVisible(true);
+          TextReveal.setVisibleOn(MAIN_DEBUG_WHO_TEXT_SELECTOR);
+          TextReveal.setVisibleOn(MAIN_DEBUG_WHY_TEXT_SELECTOR);
+          document
+            .querySelector<HTMLElement>(MAIN_DEBUG_WHY_BODY_SELECTOR)
+            ?.style.setProperty("opacity", "1");
+          document
+            .querySelector<HTMLElement>(MAIN_DEBUG_WHY_BODY_SELECTOR)
+            ?.style.setProperty("visibility", "visible");
+          document
+            .querySelector<HTMLElement>(MAIN_DEBUG_WHY_BODY_SELECTOR)
+            ?.style.setProperty("transform", "translate3d(-50%, -50%, 0)");
+          document
+            .querySelector<HTMLElement>(MAIN_DEBUG_WHY_VISUAL_SELECTOR)
+            ?.style.setProperty("opacity", "1");
+          document
+            .querySelector<HTMLElement>(MAIN_DEBUG_WHY_VISUAL_SELECTOR)
+            ?.style.setProperty("visibility", "visible");
+          document
+            .querySelector<HTMLElement>(MAIN_DEBUG_WHY_VISUAL_SELECTOR)
+            ?.style.setProperty("transform", "translate3d(-50%, -50%, 0)");
+          document
+            .querySelectorAll<HTMLElement>(MAIN_DEBUG_WHY_CARD_SELECTOR)
+            .forEach((card) => {
+              card.style.setProperty("--card-opacity", "1");
+            });
+          document
+            .querySelector<HTMLElement>(MAIN_DEBUG_WORKS_DETAIL_HEAD_SELECTOR)
+            ?.setAttribute("data-active", "true");
+          TextReveal.setVisibleOn(MAIN_DEBUG_WORKS_DETAIL_TEXT_SELECTOR);
+          document
+            .querySelector<HTMLElement>(MAIN_DEBUG_CONTACT_HEAD_SELECTOR)
+            ?.setAttribute("data-active", "true");
+          TextReveal.setVisibleOn(MAIN_DEBUG_CONTACT_TEXT_SELECTOR);
+        }
+      },
+          onIntroActionAutoplay: isDebugMode
+        ? undefined
+        : async () => {
+            const engine = this._dependencies.getEngine();
+            if (!engine) return;
+            const hudPanel = HudPanel.getInstance();
+            hudPanel.setVisibleOn();
+            hudPanel.setIntroActionFlightEnabled(false);
+            this._dependencies.syncMainIntroBackground(pageConfig, "introAction", 1);
+            await this._dependencies.startMainIntroActionPhaseOne(engine);
+            const wasSkipped =
+              await this._dependencies.introFlowRuntime.playIntroActionCountdown(
+                this._dependencies.getGsap(),
+              );
+            if (wasSkipped) {
+              hudPanel.setIntroActionFlightEnabled(false);
+              hudPanel.syncFlightProgress("hero", 0, "hero");
+              return;
+            }
+            hudPanel.startIntroActionFlight();
+            await Promise.all([
+              this._dependencies.startMainIntroActionPhaseTwo(engine),
+              this._dependencies.introFlowRuntime.playIntroActionStorySequence(
+                this._dependencies.getGsap(),
+              ),
+            ]);
+          },
+      onIntroActionTransition: isDebugMode
+        ? undefined
+        : async () => {
+            await this._transitionMainIntroToHero(pageConfig);
+          },
+      onPreviewStart: isDebugMode
+        ? undefined
+        : this._dependencies.startPagePreviewIfNeeded,
+    });
+  }
+
+  async runAboutIntro(
+    pageConfig: AboutPageConfig,
+    objectSetupPromise: Promise<void>,
+    gsap: GsapGlobal,
+  ): Promise<void> {
+    const introConfig = this._resolveIntroOverlay(pageConfig);
+    if (!introConfig) return;
+
+    this._dependencies.dom.setAboutScenePlanesVisible(pageConfig, false);
+    this._dependencies.dom.setAboutUiPhase("intro");
+
+    const introRunner = new IntroOverlay(introConfig);
+    let releaseAboutScrollLock: (() => void) | null = null;
+    try {
+      await introRunner.run({
+        gsap,
+        loadPromise: this._dependencies.runAfterLoad(
+          pageConfig,
+          objectSetupPromise,
+          { deferScrollSync: true },
+        ),
+      });
+
+      const engine = this._dependencies.getEngine();
+      if (!engine) return;
+
+      releaseAboutScrollLock = ScrollLock.lock({ pauseLenis: true });
+      this._prepareAboutHeroIntroDomReveal();
+      await this._dependencies.dom.revealAboutScenePlanes(pageConfig, gsap);
+      await this._dependencies.startPageTheatreIntro(engine);
+      Panel.getInstance().setVisibleOn();
+      await this._playAboutHeroIntroDomReveal();
+      await this._dependencies.syncAboutSceneState(pageConfig, "heroIntro", 1);
+      if (ABOUT_AFTER_INTRO_AUTOPLAY_ENABLED) {
+        await this._dependencies.startPageTheatreAfterIntro(engine);
+        await this._dependencies.syncAboutSceneState(pageConfig, "heroSlogan", 1);
+      }
+      this._finishAboutIntro(pageConfig, releaseAboutScrollLock);
+      releaseAboutScrollLock = null;
+      await this._dependencies.startPagePreviewIfNeeded();
+    } finally {
+      releaseAboutScrollLock?.();
+      introRunner.dispose();
+    }
+  }
+
+  async runContactIntro(
+    pageConfig: ContactPageConfig,
+    objectSetupPromise: Promise<void>,
+  ): Promise<void> {
+    await this._dependencies.runAfterLoad(
+      pageConfig,
+      objectSetupPromise,
+      { deferScrollSync: true },
+    );
+
+    const engine = this._dependencies.getEngine();
+    if (!engine) {
+      this._dependencies.syncContactDomState(null);
+      return;
+    }
+
+    await this._dependencies.runContactIntroSequence(engine);
+    Panel.getInstance().setVisibleOff();
+    HudPanel.getInstance().setVisibleOff();
+    ScrollLock.unlock();
+  }
+
+  private async _transitionMainIntroToHero(
+    pageConfig: MainPageConfig,
+  ): Promise<void> {
+    this._dependencies.onMainIntroTransitionStateChange(true);
+    try {
+      this._dependencies.introHandoffRuntime.setHeroTextVisible(false);
+      this._dependencies.dom.setHeroHandoffVisible(false);
+      await this._dependencies.introHandoffRuntime.transitionToHero({
+        gsap: this._dependencies.getGsap(),
+        transitionRuntime: this._dependencies.sceneTransitionRuntime,
+        veil: this._dependencies.resolveTransitionVeil(sceneTransitionVeil),
+        steps: [
+          SCENE_TRANSITION_VEIL_SEQUENCE.cover,
+          SCENE_TRANSITION_VEIL_SEQUENCE.reveal,
+        ],
+        inactiveProgress: SCENE_TRANSITION_VEIL_SEQUENCE.inactiveProgress,
+        actionContentSelector: INTRO_ACTION_CONTENT_SELECTOR,
+        actionContentOffsetY: INTRO_ACTION_TO_HERO_OFFSET_Y,
+        actionContentDuration: INTRO_ACTION_TO_HERO_DURATION,
+        onCoverComplete: async () => {
+          this._dependencies
+            .getEngine()
+            ?.getBackgroundManager()
+            ?.startTransition(mainBackground);
+          await this._dependencies.syncMainSceneState(pageConfig, "hero", 0);
+        },
+      });
+      this._dependencies.dom.setHeroHandoffVisible(true);
+      await this._dependencies.introHandoffRuntime.playHeroTextRise();
+      this._finishMainIntro(pageConfig);
+    } finally {
+      this._dependencies.onMainIntroTransitionStateChange(false);
+    }
+  }
+
+  private _finishMainIntro(pageConfig: MainPageConfig): void {
+    HudPanel.getInstance().setVisibleOn();
+    Panel.getInstance().setVisibleOff();
+    window.scrollTo({ top: 0, behavior: "auto" });
+    this._dependencies.introFlowRuntime.releaseScrollLock();
+    this._dependencies.startMainScrollSyncAfterIntro(pageConfig);
+  }
+
+  private _finishAboutIntro(
+    pageConfig: AboutPageConfig,
+    releaseScrollLock: (() => void) | null,
+  ): void {
+    HudPanel.getInstance().setVisibleOff();
+    this._dependencies.startAboutScrollSyncAfterIntro(pageConfig);
+    releaseScrollLock?.();
+    window.requestAnimationFrame(() => {
+      this._dependencies.dom.scrollToAboutSceneProgress(pageConfig, "heroIntro", 0);
+    });
+  }
+
+  private _resolveIntroOverlay(pageConfig: AppPageConfig): IntroConfig | null {
+    return pageConfig.introOverlay ?? pageConfig.intro ?? null;
+  }
+
+  private _prepareAboutHeroIntroDomReveal(): void {
+    TextReveal.setVisibleOff(ABOUT_HERO_INTRO_TEXT_SELECTOR);
+    BlockReveal.hide(ABOUT_HERO_INTRO_TOP_SELECTOR);
+    BlockReveal.hide(ABOUT_HERO_INTRO_BOTTOM_BLOCK_SELECTOR);
+  }
+
+  private async _playAboutHeroIntroDomReveal(): Promise<void> {
+    BlockReveal.reveal(ABOUT_HERO_INTRO_TOP_SELECTOR);
+    const textItems = Array.from(
+      document.querySelectorAll<HTMLElement>(ABOUT_HERO_INTRO_TEXT_SELECTOR),
+    );
+    if (textItems.length > 0) {
+      await new Promise<void>((resolve) => {
+        let completed = 0;
+        textItems.forEach((item, index) => {
+          window.setTimeout(() => {
+            TextReveal.riseUp(item);
+            completed += 1;
+            if (completed === textItems.length) {
+              resolve();
+            }
+          }, index * ABOUT_HERO_INTRO_REVEAL_STAGGER_MS);
+        });
+      });
+    }
+    BlockReveal.reveal(ABOUT_HERO_INTRO_BOTTOM_BLOCK_SELECTOR);
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, ABOUT_HERO_INTRO_REVEAL_STAGGER_MS * 2);
+    });
+  }
+}

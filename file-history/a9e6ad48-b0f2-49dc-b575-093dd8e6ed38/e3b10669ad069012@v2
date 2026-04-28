@@ -1,0 +1,769 @@
+import type {
+  MainBackgroundLookState,
+  MainBackgroundState,
+  MainBloomState,
+  MainCloudState,
+  MainJetEngineState,
+  MainPostProcessingState,
+  MainRocketFlameState,
+  MainRocketState,
+  MainSceneLightsState,
+  MainSceneShakeState,
+  MainTheatreState,
+  MainTransformState,
+  SceneVec3,
+  MainVignetteState,
+} from "../../../types/main.types.js";
+import {
+  OBJECT_CONFIG,
+} from "../../../config/object.config.js";
+import { MAIN_SCENE_LIGHT_STATE_DEFAULTS } from "../../../config/scene-light.config.js";
+
+const ZERO_VEC3: SceneVec3 = { x: 0, y: 0, z: 0 };
+const UNIT_VEC3: SceneVec3 = { x: 1, y: 1, z: 1 };
+const DEFAULT_MAIN_BLOOM_STATE: MainBloomState = {
+  strength: 3.35,
+  radius: 0.39,
+  threshold: 0.83,
+  compositeStrength: 1,
+};
+const DEFAULT_MAIN_VIGNETTE_STATE: MainVignetteState = {
+  offset: 1,
+  darkness: 0,
+};
+const DEFAULT_MAIN_POST_PROCESSING_STATE: MainPostProcessingState = {
+  bloom: { ...DEFAULT_MAIN_BLOOM_STATE },
+  vignette: { ...DEFAULT_MAIN_VIGNETTE_STATE },
+  exposure: 2.8,
+};
+
+function cloneVec3(vector: SceneVec3): SceneVec3 {
+  return { x: vector.x, y: vector.y, z: vector.z };
+}
+
+function cloneTransformState(state: MainTransformState): MainTransformState {
+  return {
+    position: cloneVec3(state.position),
+    rotation: cloneVec3(state.rotation),
+    scale: cloneVec3(state.scale),
+    visible: state.visible,
+  };
+}
+
+export function cloneRocketFlameState(
+  state: MainRocketFlameState,
+): MainRocketFlameState {
+  return {
+    visible: state.visible,
+    offset: cloneVec3(state.offset),
+    rotation: cloneVec3(state.rotation),
+    scale: cloneVec3(state.scale),
+    opacity: state.opacity,
+    renderOrder: state.renderOrder,
+    speed: state.speed,
+    wave: state.wave,
+  };
+}
+
+export function cloneRocketState(state: MainRocketState): MainRocketState {
+  return {
+    position: cloneVec3(state.position),
+    rotation: cloneVec3(state.rotation),
+    scale: cloneVec3(state.scale),
+    visible: state.visible,
+    flame: cloneRocketFlameState(state.flame),
+  };
+}
+
+function cloneSceneLightsState(
+  state: MainSceneLightsState,
+): MainSceneLightsState {
+  return {
+    visible: state.visible,
+    intensity: state.intensity,
+    flightProgress: state.flightProgress,
+    groundLight: state.groundLight,
+    rocketFillLight: state.rocketFillLight,
+    rocketRimLightLeft: state.rocketRimLightLeft,
+    rocketRimLightRight: state.rocketRimLightRight,
+    ground: cloneTransformState(state.ground),
+  };
+}
+
+function cloneBackgroundState(state: MainBackgroundState): MainBackgroundState {
+  return {
+    position: cloneVec3(state.position),
+    rotation: cloneVec3(state.rotation),
+    scale: cloneVec3(state.scale),
+    visible: state.visible,
+    exposure: state.exposure,
+    look: cloneBackgroundLookState(state.look),
+  };
+}
+
+function cloneBackgroundLookState(
+  state: MainBackgroundLookState,
+): MainBackgroundLookState {
+  return { ...state };
+}
+
+function cloneCloudState(
+  state: MainCloudState,
+): MainCloudState {
+  return {
+    position: cloneVec3(state.position),
+    rotation: cloneVec3(state.rotation),
+    scale: cloneVec3(state.scale),
+    visible: state.visible,
+    chapter: state.chapter,
+    transition: state.transition,
+  };
+}
+
+function cloneBloomState(state: MainBloomState): MainBloomState {
+  return { ...state };
+}
+
+function cloneVignetteState(state: MainVignetteState): MainVignetteState {
+  return { ...state };
+}
+
+function clonePostProcessingState(
+  state: MainPostProcessingState,
+): MainPostProcessingState {
+  return {
+    bloom: cloneBloomState(state.bloom),
+    vignette: cloneVignetteState(state.vignette),
+    exposure: state.exposure,
+  };
+}
+
+function cloneSceneShakeState(state: MainSceneShakeState): MainSceneShakeState {
+  return {
+    intensity: state.intensity,
+  };
+}
+
+function createTransformState(): MainTransformState {
+  return {
+    position: cloneVec3(ZERO_VEC3),
+    rotation: cloneVec3(ZERO_VEC3),
+    scale: cloneVec3(UNIT_VEC3),
+    visible: false,
+  };
+}
+
+function createWindowStateFromConfig(): MainTransformState {
+  return createTransformState();
+}
+
+function createGravityBallsStateFromConfig(): MainTransformState {
+  const gb = OBJECT_CONFIG.gravityBalls;
+  const off = gb?.offset;
+  const rot = gb?.rotation;
+  const sca = gb?.scale;
+  const num = (v: unknown, fallback: number): number =>
+    typeof v === "number" && Number.isFinite(v) ? v : fallback;
+  return {
+    position: {
+      x: num(off?.x, 0),
+      y: num(off?.y, 0),
+      z: num(off?.z, 0),
+    },
+    rotation: {
+      x: num(rot?.x, 0),
+      y: num(rot?.y, 0),
+      z: num(rot?.z, 0),
+    },
+    scale: {
+      x: num(sca?.x, 1),
+      y: num(sca?.y, 1),
+      z: num(sca?.z, 1),
+    },
+    visible: gb?.visible ?? true,
+  };
+}
+
+function createRocketFlameStateFromConfig(): MainRocketFlameState {
+  const flame = OBJECT_CONFIG.rocket?.flame;
+  return {
+    visible: flame?.visible ?? true,
+    offset: {
+      x: typeof flame?.offset?.x === "number" ? flame.offset.x : 0,
+      y: typeof flame?.offset?.y === "number" ? flame.offset.y : 0,
+      z: typeof flame?.offset?.z === "number" ? flame.offset.z : 0,
+    },
+    rotation: {
+      x: typeof flame?.rotation?.x === "number" ? flame.rotation.x : 0,
+      y: typeof flame?.rotation?.y === "number" ? flame.rotation.y : 0,
+      z: typeof flame?.rotation?.z === "number" ? flame.rotation.z : 0,
+    },
+    scale: {
+      x: typeof flame?.scale?.x === "number" ? flame.scale.x : 1,
+      y: typeof flame?.scale?.y === "number" ? flame.scale.y : 1,
+      z: typeof flame?.scale?.z === "number" ? flame.scale.z : 1,
+    },
+    opacity: typeof flame?.opacity === "number" ? flame.opacity : 1,
+    renderOrder:
+      typeof flame?.renderOrder === "number" ? flame.renderOrder : 0,
+    speed: typeof flame?.speed === "number" ? flame.speed : 2,
+    wave: typeof flame?.wave === "number" ? flame.wave : 1.2,
+  };
+}
+
+function createJetEngineStateFromConfig(): MainJetEngineState {
+  const jc = OBJECT_CONFIG.jetEngine;
+  const off = jc?.offset;
+  const objectRotation = jc?.rotation;
+  const objectScale = jc?.scale;
+  const num = (v: unknown, fallback: number): number =>
+    typeof v === "number" && Number.isFinite(v) ? v : fallback;
+  return {
+    position: {
+      x: num(off?.x, 0),
+      y: num(off?.y, 0),
+      z: num(off?.z, 0),
+    },
+    rotation: {
+      x: num(objectRotation?.x, 0),
+      y: num(objectRotation?.y, 0),
+      z: num(objectRotation?.z, 0),
+    },
+    scale: {
+      x: num(objectScale?.x, 1),
+      y: num(objectScale?.y, 1),
+      z: num(objectScale?.z, 1),
+    },
+    visible: jc?.visible ?? true,
+    intensity: num(jc?.intensity, 0.78),
+    length: num(jc?.length, 2.4),
+    nozzleRadius: num(jc?.nozzleRadius, 0.028),
+    nozzleGap: num(jc?.nozzleGap, 2.2),
+    noise: num(jc?.noise, 1),
+    bloom: num(jc?.bloom, 1),
+  };
+}
+
+export function cloneJetEngineState(
+  state: MainJetEngineState,
+): MainJetEngineState {
+  return {
+    position: cloneVec3(state.position),
+    rotation: cloneVec3(state.rotation),
+    scale: cloneVec3(state.scale),
+    visible: state.visible,
+    intensity: state.intensity,
+    length: state.length,
+    nozzleRadius: state.nozzleRadius,
+    nozzleGap: state.nozzleGap,
+    noise: state.noise,
+    bloom: state.bloom,
+  };
+}
+
+export function mergeJetEngineState(
+  target: MainJetEngineState,
+  source?: Partial<MainJetEngineState> | null,
+): MainJetEngineState {
+  if (!source) return cloneJetEngineState(target);
+  const num = (s: number | undefined, t: number): number =>
+    typeof s === "number" && Number.isFinite(s) ? s : t;
+  const legacy = source as Partial<MainJetEngineState> & {
+    baseLength?: number;
+  };
+  const lengthFromSource =
+    typeof source.length === "number"
+      ? source.length
+      : typeof legacy.baseLength === "number"
+        ? legacy.baseLength
+        : undefined;
+  return {
+    position: mergeVec3(target.position, source.position),
+    rotation: mergeVec3(target.rotation, source.rotation),
+    scale: mergeVec3(target.scale, source.scale),
+    visible:
+      typeof source.visible === "boolean" ? source.visible : target.visible,
+    intensity: num(source.intensity, target.intensity),
+    length: num(lengthFromSource, target.length),
+    nozzleRadius: num(source.nozzleRadius, target.nozzleRadius),
+    nozzleGap: num(source.nozzleGap, target.nozzleGap),
+    noise: num(source.noise, target.noise),
+    bloom: num(source.bloom, target.bloom),
+  };
+}
+
+function createRocketStateFromConfig(): MainRocketState {
+  const objectPosition = OBJECT_CONFIG.rocket?.position;
+  const objectRotation = OBJECT_CONFIG.rocket?.rotation;
+  const objectScale = OBJECT_CONFIG.rocket?.scale;
+  return {
+    position: {
+      x: typeof objectPosition?.x === "number" ? objectPosition.x : 0,
+      y: typeof objectPosition?.y === "number" ? objectPosition.y : 0,
+      z: typeof objectPosition?.z === "number" ? objectPosition.z : 0,
+    },
+    rotation: {
+      x: typeof objectRotation?.x === "number" ? objectRotation.x : 0,
+      y: typeof objectRotation?.y === "number" ? objectRotation.y : 0,
+      z: typeof objectRotation?.z === "number" ? objectRotation.z : 0,
+    },
+    scale: {
+      x: typeof objectScale?.x === "number" ? objectScale.x : 1,
+      y: typeof objectScale?.y === "number" ? objectScale.y : 1,
+      z: typeof objectScale?.z === "number" ? objectScale.z : 1,
+    },
+    visible: OBJECT_CONFIG.rocket?.visible ?? true,
+    flame: createRocketFlameStateFromConfig(),
+  };
+}
+
+function createCloudState(): MainCloudState {
+  const objectPosition = OBJECT_CONFIG.cloud?.position;
+  const objectScale = OBJECT_CONFIG.cloud?.scale;
+  return {
+    position: {
+      x: typeof objectPosition?.x === "number" ? objectPosition.x : 0,
+      y: typeof objectPosition?.y === "number" ? objectPosition.y : 0,
+      z: typeof objectPosition?.z === "number" ? objectPosition.z : 0,
+    },
+    rotation: cloneVec3(ZERO_VEC3),
+    scale: {
+      x: typeof objectScale?.x === "number" ? objectScale.x : 1,
+      y: typeof objectScale?.y === "number" ? objectScale.y : 1,
+      z: typeof objectScale?.z === "number" ? objectScale.z : 1,
+    },
+    visible: OBJECT_CONFIG.cloud?.visible ?? true,
+    chapter: 0,
+    transition: 0,
+  };
+}
+
+function createCloudStateFromConfig(
+  objectId: "cloud" | "cloud2" | "cloud3" | "cloud4" | "cloud5" | "cloud6",
+): MainCloudState {
+  const objectPosition = OBJECT_CONFIG[objectId]?.position;
+  const objectScale = OBJECT_CONFIG[objectId]?.scale;
+  return {
+    position: {
+      x: typeof objectPosition?.x === "number" ? objectPosition.x : 0,
+      y: typeof objectPosition?.y === "number" ? objectPosition.y : 0,
+      z: typeof objectPosition?.z === "number" ? objectPosition.z : 0,
+    },
+    rotation: cloneVec3(ZERO_VEC3),
+    scale: {
+      x: typeof objectScale?.x === "number" ? objectScale.x : 1,
+      y: typeof objectScale?.y === "number" ? objectScale.y : 1,
+      z: typeof objectScale?.z === "number" ? objectScale.z : 1,
+    },
+    visible: OBJECT_CONFIG[objectId]?.visible ?? true,
+    chapter: 0,
+    transition: 0,
+  };
+}
+
+function createBackgroundStateFromConfig(): MainBackgroundState {
+  const objectPosition = OBJECT_CONFIG.mainBackground?.position;
+  const objectRotation = OBJECT_CONFIG.mainBackground?.rotation;
+  const objectScale = OBJECT_CONFIG.mainBackground?.scale;
+  const objectLook = OBJECT_CONFIG.mainBackground?.look;
+  return {
+    position: {
+      x: typeof objectPosition?.x === "number" ? objectPosition.x : 0,
+      y: typeof objectPosition?.y === "number" ? objectPosition.y : 0,
+      z: typeof objectPosition?.z === "number" ? objectPosition.z : 0,
+    },
+    rotation: {
+      x: typeof objectRotation?.x === "number" ? objectRotation.x : 0,
+      y: typeof objectRotation?.y === "number" ? objectRotation.y : 0,
+      z: typeof objectRotation?.z === "number" ? objectRotation.z : 0,
+    },
+    scale: {
+      x: typeof objectScale?.x === "number" ? objectScale.x : 1,
+      y: typeof objectScale?.y === "number" ? objectScale.y : 1,
+      z: typeof objectScale?.z === "number" ? objectScale.z : 1,
+    },
+    visible: OBJECT_CONFIG.mainBackground?.visible ?? true,
+    exposure:
+      typeof OBJECT_CONFIG.mainBackground?.exposure === "number"
+        ? OBJECT_CONFIG.mainBackground.exposure
+        : 0.56,
+    look: {
+      topColor: typeof objectLook?.topColor === "number" ? objectLook.topColor : 0,
+      bottomColor:
+        typeof objectLook?.bottomColor === "number" ? objectLook.bottomColor : 0,
+      accentColor:
+        typeof objectLook?.accentColor === "number" ? objectLook.accentColor : 0,
+      starIntensity:
+        typeof objectLook?.starIntensity === "number"
+          ? objectLook.starIntensity
+          : 0,
+      starDensity:
+        typeof objectLook?.starDensity === "number" ? objectLook.starDensity : 0,
+      nebulaStrength:
+        typeof objectLook?.nebulaStrength === "number"
+          ? objectLook.nebulaStrength
+          : 0,
+      motionStrength:
+        typeof objectLook?.motionStrength === "number"
+          ? objectLook.motionStrength
+          : 0,
+      legacyMix:
+        typeof objectLook?.legacyMix === "number" ? objectLook.legacyMix : 0,
+    },
+  };
+}
+
+export const DEFAULT_MAIN_SCENE_STATE: MainTheatreState = {
+  camera: {
+    position: { x: 0, y: 0, z: 0 },
+    target: { x: 0, y: 0, z: 0 },
+    fov: 64,
+  },
+  rocket: createRocketStateFromConfig(),
+  jetEngine: createJetEngineStateFromConfig(),
+  gravityBalls: createGravityBallsStateFromConfig(),
+  ground: createTransformState(),
+  planet: createTransformState(),
+  earth: createTransformState(),
+  terrian: createTransformState(),
+  window: createWindowStateFromConfig(),
+  background: createBackgroundStateFromConfig(),
+  cloud: createCloudState(),
+  cloud2: createCloudStateFromConfig("cloud2"),
+  cloud3: createCloudStateFromConfig("cloud3"),
+  cloud4: createCloudStateFromConfig("cloud4"),
+  cloud5: createCloudStateFromConfig("cloud5"),
+  cloud6: createCloudStateFromConfig("cloud6"),
+  postProcessing: clonePostProcessingState(DEFAULT_MAIN_POST_PROCESSING_STATE),
+  sceneLights: cloneSceneLightsState(MAIN_SCENE_LIGHT_STATE_DEFAULTS),
+  sceneShake: {
+    intensity: 0,
+  },
+};
+
+export function createMainInitialSceneState(): MainTheatreState {
+  return cloneMainSceneState(DEFAULT_MAIN_SCENE_STATE);
+}
+
+export function createMainPostProcessingOptions(
+  state: MainPostProcessingState = DEFAULT_MAIN_POST_PROCESSING_STATE,
+): {
+  bloom: MainBloomState;
+  vignette: MainVignetteState;
+} {
+  return {
+    bloom: cloneBloomState(state.bloom),
+    vignette: cloneVignetteState(state.vignette),
+  };
+}
+
+export function cloneMainSceneState(
+  state: MainTheatreState = DEFAULT_MAIN_SCENE_STATE,
+): MainTheatreState {
+  return {
+    camera: {
+      position: cloneVec3(state.camera.position),
+      target: cloneVec3(state.camera.target),
+      fov: state.camera.fov,
+    },
+    rocket: cloneRocketState(state.rocket),
+    jetEngine: cloneJetEngineState(state.jetEngine),
+    gravityBalls: cloneTransformState(state.gravityBalls),
+    ground: cloneTransformState(state.ground),
+    planet: cloneTransformState(state.planet),
+    earth: cloneTransformState(state.earth),
+    terrian: cloneTransformState(state.terrian),
+    window: cloneTransformState(state.window),
+    background: cloneBackgroundState(state.background),
+    cloud: cloneCloudState(state.cloud),
+    cloud2: cloneCloudState(state.cloud2),
+    cloud3: cloneCloudState(state.cloud3),
+    cloud4: cloneCloudState(state.cloud4),
+    cloud5: cloneCloudState(state.cloud5),
+    cloud6: cloneCloudState(state.cloud6),
+    postProcessing: clonePostProcessingState(state.postProcessing),
+    sceneLights: cloneSceneLightsState(state.sceneLights),
+    sceneShake: cloneSceneShakeState(state.sceneShake),
+  };
+}
+
+function mergeVec3(
+  target: SceneVec3,
+  source?: Partial<SceneVec3> | null,
+): SceneVec3 {
+  if (!source) return cloneVec3(target);
+  return {
+    x: typeof source.x === "number" ? source.x : target.x,
+    y: typeof source.y === "number" ? source.y : target.y,
+    z: typeof source.z === "number" ? source.z : target.z,
+  };
+}
+
+function mergeTransformState(
+  target: MainTransformState,
+  source?: Partial<MainTransformState> | null,
+): MainTransformState {
+  if (!source) return cloneTransformState(target);
+  return {
+    position: mergeVec3(target.position, source.position),
+    rotation: mergeVec3(target.rotation, source.rotation),
+    scale: mergeVec3(target.scale, source.scale),
+    visible:
+      typeof source.visible === "boolean" ? source.visible : target.visible,
+  };
+}
+
+export function mergeRocketFlameState(
+  target: MainRocketFlameState,
+  source?: Partial<MainRocketFlameState> | null,
+): MainRocketFlameState {
+  if (!source) return cloneRocketFlameState(target);
+  return {
+    visible:
+      typeof source.visible === "boolean" ? source.visible : target.visible,
+    offset: mergeVec3(target.offset, source.offset),
+    rotation: mergeVec3(target.rotation, source.rotation),
+    scale: mergeVec3(target.scale, source.scale),
+    opacity: typeof source.opacity === "number" ? source.opacity : target.opacity,
+    renderOrder:
+      typeof source.renderOrder === "number"
+        ? source.renderOrder
+        : target.renderOrder,
+    speed: typeof source.speed === "number" ? source.speed : target.speed,
+    wave: typeof source.wave === "number" ? source.wave : target.wave,
+  };
+}
+
+export function mergeRocketState(
+  target: MainRocketState,
+  source?: Partial<MainRocketState> | null,
+): MainRocketState {
+  if (!source) return cloneRocketState(target);
+  return {
+    position: mergeVec3(target.position, source.position),
+    rotation: mergeVec3(target.rotation, source.rotation),
+    scale: mergeVec3(target.scale, source.scale),
+    visible:
+      typeof source.visible === "boolean" ? source.visible : target.visible,
+    flame: mergeRocketFlameState(target.flame, source.flame),
+  };
+}
+
+function mergeBackgroundState(
+  target: MainBackgroundState,
+  source?: Partial<MainBackgroundState> | null,
+): MainBackgroundState {
+  if (!source) return cloneBackgroundState(target);
+  return {
+    position: mergeVec3(target.position, source.position),
+    rotation: mergeVec3(target.rotation, source.rotation),
+    scale: mergeVec3(target.scale, source.scale),
+    visible:
+      typeof source.visible === "boolean" ? source.visible : target.visible,
+    exposure:
+      typeof source.exposure === "number" ? source.exposure : target.exposure,
+    look: {
+      topColor:
+        typeof source.look?.topColor === "number"
+          ? source.look.topColor
+          : target.look.topColor,
+      bottomColor:
+        typeof source.look?.bottomColor === "number"
+          ? source.look.bottomColor
+          : target.look.bottomColor,
+      accentColor:
+        typeof source.look?.accentColor === "number"
+          ? source.look.accentColor
+          : target.look.accentColor,
+      starIntensity:
+        typeof source.look?.starIntensity === "number"
+          ? source.look.starIntensity
+          : target.look.starIntensity,
+      starDensity:
+        typeof source.look?.starDensity === "number"
+          ? source.look.starDensity
+          : target.look.starDensity,
+      nebulaStrength:
+        typeof source.look?.nebulaStrength === "number"
+          ? source.look.nebulaStrength
+          : target.look.nebulaStrength,
+      motionStrength:
+        typeof source.look?.motionStrength === "number"
+          ? source.look.motionStrength
+          : target.look.motionStrength,
+      legacyMix:
+        typeof source.look?.legacyMix === "number"
+          ? source.look.legacyMix
+          : target.look.legacyMix,
+    },
+  };
+}
+
+function mergeCloudState(
+  target: MainCloudState,
+  source?: Partial<MainCloudState> | null,
+): MainCloudState {
+  if (!source) return cloneCloudState(target);
+  return {
+    position: mergeVec3(target.position, source.position),
+    rotation: mergeVec3(target.rotation, source.rotation),
+    scale: mergeVec3(target.scale, source.scale),
+    visible:
+      typeof source.visible === "boolean" ? source.visible : target.visible,
+    chapter: typeof source.chapter === "number" ? source.chapter : target.chapter,
+    transition:
+      typeof source.transition === "number"
+        ? source.transition
+        : target.transition,
+  };
+}
+
+function mergeBloomState(
+  target: MainBloomState,
+  source?: Partial<MainBloomState> | null,
+): MainBloomState {
+  if (!source) return cloneBloomState(target);
+  return {
+    strength:
+      typeof source.strength === "number" ? source.strength : target.strength,
+    radius: typeof source.radius === "number" ? source.radius : target.radius,
+    threshold:
+      typeof source.threshold === "number"
+        ? source.threshold
+        : target.threshold,
+    compositeStrength:
+      typeof source.compositeStrength === "number"
+        ? source.compositeStrength
+        : target.compositeStrength,
+  };
+}
+
+function mergeVignetteState(
+  target: MainVignetteState,
+  source?: Partial<MainVignetteState> | null,
+): MainVignetteState {
+  if (!source) return cloneVignetteState(target);
+  return {
+    offset: typeof source.offset === "number" ? source.offset : target.offset,
+    darkness:
+      typeof source.darkness === "number" ? source.darkness : target.darkness,
+  };
+}
+
+function mergePostProcessingState(
+  target: MainPostProcessingState,
+  source?: Partial<MainPostProcessingState> | null,
+): MainPostProcessingState {
+  if (!source) return clonePostProcessingState(target);
+  return {
+    bloom: mergeBloomState(target.bloom, source.bloom),
+    vignette: mergeVignetteState(target.vignette, source.vignette),
+    exposure:
+      typeof source.exposure === "number" ? source.exposure : target.exposure,
+  };
+}
+
+function mergeSceneLightsState(
+  target: MainSceneLightsState,
+  source?: Partial<MainSceneLightsState> | null,
+): MainSceneLightsState {
+  if (!source) return cloneSceneLightsState(target);
+  return {
+    visible:
+      typeof source.visible === "boolean" ? source.visible : target.visible,
+    intensity:
+      typeof source.intensity === "number"
+        ? source.intensity
+        : target.intensity,
+    flightProgress:
+      typeof source.flightProgress === "number"
+        ? source.flightProgress
+        : target.flightProgress,
+    rocketFillLight:
+      typeof source.rocketFillLight === "number"
+        ? source.rocketFillLight
+        : target.rocketFillLight,
+    rocketRimLightLeft:
+      typeof source.rocketRimLightLeft === "number"
+        ? source.rocketRimLightLeft
+        : target.rocketRimLightLeft,
+    rocketRimLightRight:
+      typeof source.rocketRimLightRight === "number"
+        ? source.rocketRimLightRight
+        : target.rocketRimLightRight,
+    groundLight:
+      typeof source.groundLight === "number"
+        ? source.groundLight
+        : target.groundLight,
+    ground: mergeTransformState(target.ground, source.ground),
+  };
+}
+
+function mergeSceneShakeState(
+  target: MainSceneShakeState,
+  source?: Partial<MainSceneShakeState> | null,
+): MainSceneShakeState {
+  if (!source) return cloneSceneShakeState(target);
+  return {
+    intensity:
+      typeof source.intensity === "number"
+        ? source.intensity
+        : target.intensity,
+  };
+}
+
+export function mergeMainSceneState(
+  source?: Partial<MainTheatreState> | null,
+): MainTheatreState {
+  const target = DEFAULT_MAIN_SCENE_STATE;
+  if (!source) return cloneMainSceneState(target);
+  return {
+    camera: {
+      position: mergeVec3(target.camera.position, source.camera?.position),
+      target: mergeVec3(target.camera.target, source.camera?.target),
+      fov:
+        typeof source.camera?.fov === "number"
+          ? source.camera.fov
+          : target.camera.fov,
+    },
+    rocket: mergeRocketState(target.rocket, source.rocket),
+    jetEngine: mergeJetEngineState(target.jetEngine, source.jetEngine),
+    gravityBalls: mergeTransformState(target.gravityBalls, source.gravityBalls),
+    ground: mergeTransformState(target.ground, source.ground),
+    planet: mergeTransformState(target.planet, source.planet),
+    earth: mergeTransformState(target.earth, source.earth),
+    terrian: mergeTransformState(target.terrian, source.terrian),
+    window: mergeTransformState(target.window, source.window),
+    background: mergeBackgroundState(target.background, source.background),
+    cloud: mergeCloudState(
+      target.cloud,
+      source.cloud,
+    ),
+    cloud2: mergeCloudState(
+      target.cloud2,
+      source.cloud2,
+    ),
+    cloud3: mergeCloudState(
+      target.cloud3,
+      source.cloud3,
+    ),
+    cloud4: mergeCloudState(
+      target.cloud4,
+      source.cloud4,
+    ),
+    cloud5: mergeCloudState(
+      target.cloud5,
+      source.cloud5,
+    ),
+    cloud6: mergeCloudState(
+      target.cloud6,
+      source.cloud6,
+    ),
+    postProcessing: mergePostProcessingState(
+      target.postProcessing,
+      source.postProcessing,
+    ),
+    sceneLights: mergeSceneLightsState(target.sceneLights, source.sceneLights),
+    sceneShake: mergeSceneShakeState(target.sceneShake, source.sceneShake),
+  };
+}

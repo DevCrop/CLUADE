@@ -1,0 +1,578 @@
+import type { SuspenseConfig } from "../types/component.types.js";
+import type { PinnedRevealConfig } from "../types/component.types.js";
+import type { DomStyleEntries } from "../types/runtime.types.js";
+import type { FeatureCardCanvasConfig } from "../types/component.types.js";
+import type { MarqueeConfig } from "../types/component.types.js";
+import type { SubpageStarfieldConfig } from "../types/component.types.js";
+import type {
+  AboutHeroSloganConfig,
+  AboutWhoShowcaseConfig,
+} from "../types/about.types.js";
+
+export const SHARE_BUTTON = {
+  selector: "[data-share-url-button]",
+  successText: "URL을 복사했습니다.",
+  failText: "복사에 실패했습니다.",
+  boundAttr: "shareButtonBound",
+} as const;
+
+export const MAGNETIC_CORNER_ENABLED = false as const;
+
+export const MAGNETIC_CORNER_DEFAULTS = {
+  gap: 10,
+  pull: 0.16,
+  pullText: 0.07,
+  color: "var(--clr-border-strong)",
+} as const;
+
+const LINK_CORNER_OPTIONS = {
+  ...MAGNETIC_CORNER_DEFAULTS,
+  pull: 0,
+  pullText: 0,
+  cornerFollow: 0.16,
+} as const;
+
+export const MAGNETIC_CORNER_ENTRIES: readonly {
+  selector: string;
+  options: {
+    gap?: number;
+    pull?: number;
+    pullText?: number;
+    cornerFollow?: number;
+    color?: string;
+  };
+}[] = [
+  { selector: ".no-magnetic-corner-btn", options: MAGNETIC_CORNER_DEFAULTS },
+  { selector: ".no-sub-list-item__link", options: LINK_CORNER_OPTIONS },
+  { selector: ".no-sub-award-item__link", options: LINK_CORNER_OPTIONS },
+  { selector: ".no-sub-news-list-item__link", options: LINK_CORNER_OPTIONS },
+];
+
+export const MAGNETIC_CORNER_DRAWER_LINK_SELECTOR =
+  ".no-drawer__gnb-link[href], .no-drawer__gnb-sub-link[href], .no-drawer__address-link[href]";
+
+export const MAGNETIC_CORNER_ARM_IDS = [
+  "tl-h",
+  "tl-v",
+  "tr-h",
+  "tr-v",
+  "bl-h",
+  "bl-v",
+  "br-h",
+  "br-v",
+] as const;
+
+import { MASKING } from "./dom.config.js";
+
+export const MAGNETIC_CORNER_TEXT_SELECTOR = `.no-magnetic-corner-btn__text, ${MASKING.selector}`;
+
+export const MAGNETIC_CORNER_SIZE_THRESHOLD = 80;
+
+export const MAGNETIC_CORNER_ARM_FIXED = 14;
+
+export const MAGNETIC_CORNER_ARM_RATIO_SMALL = 0.2;
+
+export const MAGNETIC_CORNER_ARM_MIN = 6;
+
+export const MAGNETIC_CORNER_STROKE_WIDTH = "3";
+
+export const CORNER_BRACKET_SIZE_FIXED = 16;
+
+export const CORNER_BRACKET_SIZE_MIN = 8;
+
+export const CORNER_SIZE_THRESHOLD = 80;
+
+export const MAGNETIC_CORNER_ACTIVE_EXCLUDE = [
+  ".active",
+  ".is-active",
+] as const;
+
+export const IMAGE_PREVIEW = {
+  listSelector: "[data-award-preview-list]",
+  itemSelector: "[data-award-preview-item]",
+  previewSelector: "[data-award-hover-preview]",
+  imageDataAttr: "data-preview-image",
+  offset: 20,
+  boundFlag: "imagePreviewBound",
+  switchDelayMs: 220,
+  closeAnimationMs: 220,
+  moveThrottleMs: 32,
+  visibleClass: "is-visible",
+  closingClass: "is-closing",
+} as const;
+
+export const WHY_SKILL_PREVIEW = {
+  listSelector: "[data-why-skill-list]",
+  itemSelector: "[data-why-skill-item]",
+  previewSelector: "[data-why-skill-preview]",
+  videoSelector: "[data-why-skill-video]",
+  videoDataAttr: "data-skill-video",
+  boundFlag: "whySkillPreviewBound",
+  closeDelayMs: 120,
+  closeAnimationMs: 400,
+  switchAnimMs: 240,
+  visibleClass: "is-visible",
+  closingClass: "is-closing",
+  switchingClass: "is-switching",
+} as const;
+
+export const SUSPENSE: Readonly<SuspenseConfig> = {
+  overlayId: "no-loading-overlay",
+  overlayClass: "no-loading-overlay",
+  panelClass: "no-loading-overlay__panel",
+  spinnerClass: "no-loading-overlay__spinner",
+  textClass: "no-loading-overlay__text f-body-2 --regular",
+  textSelector: ".no-loading-overlay__text",
+  bodyLoadingClass: "is-loading-action",
+  defaultText: "페이지를 불러오는 중입니다.",
+  defaultDelayMs: 120,
+  defaultMinVisibleMs: 320,
+};
+
+export const CONTACT_WIZARD = {
+  selector: "[data-contact-wizard]",
+  previousActionWrapperSelector: "[data-wizard-prev-wrap]",
+  transitionMs: 420,
+  transitionBufferMs: 60,
+  summaryInputDebounceMs: 160,
+  overviewScrollPadding: 12,
+  loadingOn: "on",
+  loadingOff: "off",
+  detailPreviewLength: 56,
+  attachmentImageExtensions: [
+    "avif",
+    "bmp",
+    "gif",
+    "heic",
+    "heif",
+    "jpeg",
+    "jpg",
+    "png",
+    "svg",
+    "tif",
+    "tiff",
+    "webp",
+  ],
+  attachmentPdfExtensions: ["pdf"],
+  attachmentExcelExtensions: ["csv", "xls", "xlsx"],
+  attachmentIconClass: {
+    file: "fa-light fa-file",
+    image: "fa-regular fa-image",
+    pdf: "fa-light fa-file-pdf",
+    excel: "fa-light fa-file-excel",
+  },
+  chipStaggerMs: 45,
+  chipLeaveMs: 260,
+  chipMoveMs: 320,
+  chipMoveEase: "cubic-bezier(0.2, 0, 0, 1)",
+} as const;
+
+export const QA_MANAGER = {
+  pageRootSelector: "main[data-page]",
+  canvasHostSelector: "#canvas",
+  sceneShellSelector: ".scene-shell",
+  scrollLockClass: "is-scroll-locked",
+  contactWizardSelector: CONTACT_WIZARD.selector,
+  stepSelector: "[data-wizard-step]",
+  activeStepSelector: "[data-wizard-step].is-active",
+  currentCounterSelector: "[data-wizard-current]",
+  totalCounterSelector: "[data-wizard-total]",
+  overviewListSelector: "[data-wizard-overview-list]",
+  overviewItemSelector: "[data-wizard-nav-item]",
+  currentOverviewItemSelector: "[data-wizard-nav-item].is-current",
+  primaryActionSelector: "[data-wizard-primary-action]",
+  previousActionSelector: "[data-wizard-prev]",
+  previousActionWrapperSelector: CONTACT_WIZARD.previousActionWrapperSelector,
+  projectOtherToggleSelector: "[data-project-other-toggle]",
+  projectOtherPanelSelector: "[data-project-other-panel]",
+  projectOtherInputSelector: "[data-project-other-input]",
+  privacyFieldSelector: 'input[name="agree_privacy"]',
+  attachmentFieldSelector: 'input[name="attachment"]',
+  detailsStepIndex: 5,
+  debounceMs: 120,
+  mutationObserver: {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["class", "hidden", "type", "disabled", "aria-hidden", "style"],
+  },
+} as const;
+
+export const CATEGORY = {
+  selector: ".no-category__swiper",
+  boundAttr: "categorySwiperInit",
+  swiper: {
+    slidesPerView: "auto",
+    spaceBetween: 0,
+    freeMode: true,
+    watchOverflow: true,
+    observer: true,
+    observeParents: true,
+  },
+} as const;
+
+export const ABOUT_HERO_SLOGAN: Readonly<AboutHeroSloganConfig> = {
+  viewportSelector: ".no-sub-about-hero-slogan__keyword-viewport",
+  trackSelector: ".no-sub-about-hero-slogan__keyword-track",
+  keywordSelector: ".no-sub-about-hero-slogan__keyword",
+  keywordCount: 4,
+  progressWindowStart: 0.08,
+  progressWindowEnd: 0.92,
+  duration: 0.42,
+  ease: "power3.out",
+  inactiveOpacity: 0.4,
+  activeOpacity: 1,
+  inactiveBlurPx: 0,
+  activeBlurPx: 0,
+  inactiveTextShadow: "0 0 0 rgba(255, 255, 255, 0)",
+  activeTextShadow:
+    "0 0 10px rgba(255, 255, 255, 0.38), 0 0 24px rgba(255, 255, 255, 0.16)",
+};
+
+export const ABOUT_WHO_SHOWCASE: Readonly<AboutWhoShowcaseConfig> = {
+  stageSelector: ".no-sub-about-who__stage",
+  titleSelector: ".no-sub-about-who__title-layer",
+  ringSelector: ".no-sub-about-who__ring",
+  cardSelector: ".no-sub-about-who__card",
+  cardRevealWindowStart: 0,
+  cardRevealWindowEnd: 0.56,
+  spawnEnd: 0.24,
+  mergeEnd: 0.8,
+  scatterEnd: 1,
+  orbitVerticalScale: 0.82,
+  titleScaleStart: 0.88,
+  titleScalePeak: 1.04,
+  titleScaleEnd: 0.92,
+  titleOpacityStart: 0.42,
+  titleOpacityEnd: 1,
+  titleExitOpacity: 0.72,
+  titleYOffsetPx: 72,
+  titleExitYOffsetPx: -36,
+  ringOpacityMax: 0.24,
+  ringScaleStart: 0.72,
+  ringScaleEnd: 1.18,
+  cardOpacityStart: 0,
+  cardOpacityEnd: 1,
+  cardScatterOpacity: 0.84,
+  cardRevealOvershoot: 1.18,
+  cardMergeScaleFactor: 0.92,
+  cardScatterScaleFactor: 1.02,
+  cardPoses: [
+    {
+      orbitAngleDeg: -132,
+      orbitRadiusVmin: 24,
+      orbitRotateDeg: -14,
+      stackXvmin: 0,
+      stackYvmin: 0,
+      stackRotateDeg: -7,
+      scatterXvmin: -88,
+      scatterYvmin: -78,
+      scatterRotateDeg: -18,
+      scale: 0.92,
+      zIndex: 6,
+    },
+    {
+      orbitAngleDeg: -72,
+      orbitRadiusVmin: 24,
+      orbitRotateDeg: -8,
+      stackXvmin: 0,
+      stackYvmin: 0,
+      stackRotateDeg: -4,
+      scatterXvmin: -20,
+      scatterYvmin: -96,
+      scatterRotateDeg: -10,
+      scale: 0.88,
+      zIndex: 4,
+    },
+    {
+      orbitAngleDeg: -12,
+      orbitRadiusVmin: 24,
+      orbitRotateDeg: 9,
+      stackXvmin: 0,
+      stackYvmin: 0,
+      stackRotateDeg: 5,
+      scatterXvmin: 62,
+      scatterYvmin: -84,
+      scatterRotateDeg: 12,
+      scale: 0.94,
+      zIndex: 8,
+    },
+    {
+      orbitAngleDeg: 48,
+      orbitRadiusVmin: 24,
+      orbitRotateDeg: 12,
+      stackXvmin: 0,
+      stackYvmin: 0,
+      stackRotateDeg: 7,
+      scatterXvmin: 94,
+      scatterYvmin: 8,
+      scatterRotateDeg: 16,
+      scale: 0.9,
+      zIndex: 7,
+    },
+    {
+      orbitAngleDeg: 108,
+      orbitRadiusVmin: 24,
+      orbitRotateDeg: 8,
+      stackXvmin: 0,
+      stackYvmin: 0,
+      stackRotateDeg: 4,
+      scatterXvmin: 32,
+      scatterYvmin: 92,
+      scatterRotateDeg: 10,
+      scale: 0.88,
+      zIndex: 5,
+    },
+    {
+      orbitAngleDeg: 192,
+      orbitRadiusVmin: 24,
+      orbitRotateDeg: -7,
+      stackXvmin: 0,
+      stackYvmin: 0,
+      stackRotateDeg: -3,
+      scatterXvmin: -84,
+      scatterYvmin: 70,
+      scatterRotateDeg: -14,
+      scale: 0.9,
+      zIndex: 3,
+    },
+  ],
+};
+
+export const MAIN_WHY_SHOWCASE: Readonly<AboutWhoShowcaseConfig> = {
+  stageSelector: ".no-main-why__stage",
+  titleSelector: ".no-main-why__title-layer",
+  ringSelector: ".no-main-why__ring",
+  cardSelector: ".no-main-why__card",
+  cardRevealWindowStart: 0,
+  cardRevealWindowEnd: ABOUT_WHO_SHOWCASE.cardRevealWindowEnd,
+  spawnEnd: ABOUT_WHO_SHOWCASE.spawnEnd,
+  mergeEnd: ABOUT_WHO_SHOWCASE.mergeEnd,
+  scatterEnd: ABOUT_WHO_SHOWCASE.scatterEnd,
+  orbitVerticalScale: ABOUT_WHO_SHOWCASE.orbitVerticalScale,
+  titleScaleStart: ABOUT_WHO_SHOWCASE.titleScaleStart,
+  titleScalePeak: ABOUT_WHO_SHOWCASE.titleScalePeak,
+  titleScaleEnd: ABOUT_WHO_SHOWCASE.titleScaleEnd,
+  titleOpacityStart: ABOUT_WHO_SHOWCASE.titleOpacityStart,
+  titleOpacityEnd: ABOUT_WHO_SHOWCASE.titleOpacityEnd,
+  titleExitOpacity: ABOUT_WHO_SHOWCASE.titleExitOpacity,
+  titleYOffsetPx: ABOUT_WHO_SHOWCASE.titleYOffsetPx,
+  titleExitYOffsetPx: ABOUT_WHO_SHOWCASE.titleExitYOffsetPx,
+  ringOpacityMax: ABOUT_WHO_SHOWCASE.ringOpacityMax,
+  ringScaleStart: ABOUT_WHO_SHOWCASE.ringScaleStart,
+  ringScaleEnd: ABOUT_WHO_SHOWCASE.ringScaleEnd,
+  cardOpacityStart: ABOUT_WHO_SHOWCASE.cardOpacityStart,
+  cardOpacityEnd: ABOUT_WHO_SHOWCASE.cardOpacityEnd,
+  cardScatterOpacity: ABOUT_WHO_SHOWCASE.cardScatterOpacity,
+  cardRevealOvershoot: ABOUT_WHO_SHOWCASE.cardRevealOvershoot,
+  cardMergeScaleFactor: ABOUT_WHO_SHOWCASE.cardMergeScaleFactor,
+  cardScatterScaleFactor: ABOUT_WHO_SHOWCASE.cardScatterScaleFactor,
+  cardPoses: ABOUT_WHO_SHOWCASE.cardPoses,
+};
+
+export const SUBPAGE_STARFIELD: Readonly<SubpageStarfieldConfig> = {
+  rootSelector: ".no-subpage-starfield",
+  canvasSelector: "[data-subpage-starfield-canvas]",
+  pagePrefixes: ["/contact", "/careers", "/inside"],
+  pixelRatioMax: 1.5,
+  starCount: 300,
+  speed: 4,
+  clearAlpha: 0.92,
+  radiusMin: 0.3,
+  radiusMax: 2.5,
+  depthRangeFactor: 1,
+  scrollBoostFactor: 16,
+  scrollBoostMax: 8,
+  scrollBoostDecayPerSecond: 3.2,
+  scrollBoostLerpPerSecond: 10,
+  strokeColor: "#ffffff",
+};
+
+export const TOAST = {
+  durationMs: 1800,
+  enterDelayMs: 24,
+  exitDurationMs: 240,
+  viewportClass: "no-toast-viewport",
+  toastClass: "no-toast",
+  visibleClass: "is-visible",
+} as const;
+
+export const MASKING_ANIM = {
+  staggerMs: 70,
+
+  groupGapMs: 120,
+
+  textOutMs: 420,
+
+  lineStaggerS: 0.08,
+} as const;
+
+export const DRAWER_ANIM = {
+  openMaskingDelayMs: 140,
+} as const;
+
+export const CUSTOM_CURSOR = {
+  enabled: true,
+  block: "no-custom-cursor",
+  modifierIdle: "no-custom-cursor--idle",
+  modifierInteractive: "no-custom-cursor--interactive",
+  reducedMotionClass: "no-custom-cursor--reduced-motion",
+  bodyClass: "has-custom-cursor",
+  interactiveCursorValues: ["pointer", "grab"] as const,
+  interactiveSelector:
+    "a, button, [role='button'], input[type='submit'], input[type='button'], [tabindex]:not([tabindex='-1'])",
+} as const;
+
+export const BLOCK_OVERLAY = {
+  overlayClass: "no-block-overlay",
+  blockClass: "no-block-overlay__block",
+} as const;
+
+export const BLOCK_OVERLAY_STYLE = {
+  overlay: [
+    ["position", "fixed"],
+    ["inset", "0"],
+    ["pointer-events", "none"],
+    ["z-index", "9999"],
+    ["display", "grid"],
+  ] as DomStyleEntries,
+  block: [
+    ["background-color", "#000"],
+    ["transform-origin", "left"],
+    ["transform", "scaleX(0)"],
+    ["transition", "none"],
+  ] as DomStyleEntries,
+} as const;
+
+export const BLOCK_OVERLAY_ANIM = {
+  rows: 4,
+
+  staggerMs: 30,
+
+  durationMs: 250,
+
+  ease: "cubic-bezier(0.7, 0, 0.3, 1)",
+} as const;
+
+export const THEATRE_AUTHOR_UI = {
+  controlBaseStyles: [
+    ["position", "fixed"],
+    ["left", "18px"],
+    ["z-index", "10002"],
+    ["padding", "8px 12px"],
+    ["border-radius", "999px"],
+    ["border", "1px solid rgba(82, 214, 255, 0.35)"],
+    ["background", "rgba(8, 15, 20, 0.88)"],
+    ["color", "#d9f7ff"],
+    ["font", '11px "Geist Mono", monospace'],
+    ["letter-spacing", "0.08em"],
+    ["text-transform", "uppercase"],
+    ["cursor", "pointer"],
+  ] as DomStyleEntries,
+  statusStyles: [
+    ["position", "fixed"],
+    ["right", "18px"],
+    ["top", "12px"],
+    ["z-index", "10002"],
+    ["padding", "6px 10px"],
+    ["border-radius", "999px"],
+    ["background", "rgba(8, 15, 20, 0.88)"],
+    ["border", "1px solid rgba(82, 214, 255, 0.35)"],
+    ["color", "#d9f7ff"],
+    ["font", '11px "Geist Mono", monospace'],
+    ["letter-spacing", "0.08em"],
+    ["text-transform", "uppercase"],
+  ] as DomStyleEntries,
+} as const;
+
+export const DRAWER_CLASSES = {
+  linkActive: "is-active",
+  /** 블록 오버레이 playOut 이후 — GNB/주소 reveal-inner stagger 시작 */
+  textRevealReady: "is-drawer-text-reveal",
+} as const;
+
+export const HUD_PANEL = {
+  selector: ".no-hud-panel",
+  innerSelector: ".no-hud-panel__inner",
+  visibleClass: "is-visible",
+  flight: {
+    maxAltitudeKm: 100,
+    maxSpeedKmh: 12000,
+    introActionDurationMs: 22000,
+    introActionStartProgress: 0,
+    heroStartProgress: 0.28,
+    heroProgressShare: 0.27,
+    storyProgressShare: 0.45,
+  },
+} as const;
+
+export const UI_PANEL = {
+  selector: ".no-ui-panel",
+  visibleClass: "is-visible",
+} as const;
+
+export const UI_PANEL_AUTOPLAY = {
+  progressSelector: "[data-panel-init-progress]",
+  progressSegmentSelector: ".no-ui-panel__progress-segment",
+  rulerSelector: "[data-panel-ruler]",
+  rulerTickSelector: ".no-ui-panel__ruler-tick",
+  activeClass: "is-active",
+  progressIntervalMs: 180,
+  rulerDurationMs: 5600,
+} as const;
+
+export const NORMAL_OVERLAY = {
+  selector: ".no-overlay",
+  defaultOpacity: 0.3,
+  defaultDuration: 0.45,
+  defaultEase: "power2.out",
+  hiddenVisibility: "hidden",
+  visibleVisibility: "visible",
+  hiddenOpacity: "0",
+} as const;
+
+export const PINNED_REVEALS: readonly PinnedRevealConfig[] = [] as const;
+
+export const CLOSE_ALL_EXPANDED = {
+  closeAnimationMs: 420,
+} as const;
+
+export const FEATURE_CARD_CANVAS: Readonly<FeatureCardCanvasConfig> = {
+  listSelector: ".no-main-feature-card-list",
+  canvasSelector: ".no-main-feature-card__canvas",
+  pixelRatioMax: 1.5,
+  particleCount: 18,
+  particleSizeMin: 1.2,
+  particleSizeMax: 3.2,
+  cubeScale: 0.34,
+  strokeStyle: "rgba(255,255,255,0.88)",
+  fillStyle: "rgba(87,143,255,0.08)",
+  particleColor: "rgba(143,196,255,0.72)",
+  clearColor: "rgba(3,7,18,0.28)",
+  rotationSpeedBase: 0.008,
+  rotationSpeedStep: 0.002,
+} as const;
+
+export const MARQUEE: Readonly<MarqueeConfig> = {
+  selector: "[data-marquee]",
+  viewportSelector: "[data-marquee-viewport]",
+  trackSelector: "[data-marquee-track]",
+  itemSelector: "[data-marquee-item]",
+  speed: 90,
+  pauseOnHover: false,
+  fallbackClass: "is-marquee-fallback",
+  fallbackDurationVar: "--marquee-duration",
+} as const;
+
+export const CHAR_BTN = {
+  selector: ".no-btn-char",
+  boundAttr: "charBtnBound",
+  textClass: "no-btn-char__text",
+  cellClass: "no-btn-char__cell",
+  charClass: "no-btn-char__char",
+  origClass: "no-btn-char__char--orig",
+  cloneClass: "no-btn-char__char--clone",
+  duration: 0.45,
+  ease: "power3.inOut",
+  stagger: 0.03,
+} as const;

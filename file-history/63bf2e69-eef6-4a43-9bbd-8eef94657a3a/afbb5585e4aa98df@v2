@@ -1,0 +1,130 @@
+{
+  "env": {
+    "ENABLE_PROMPT_CACHING_1H": "1"
+  },
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(rm -rf $HOME*)",
+      "Bash(rm -rf /c/*)",
+      "Bash(rm -rf //c/*)",
+      "Bash(rm -rf C:/*)",
+      "Bash(rm -rf C:\\*)",
+      "Bash(rm -rf %USERPROFILE%*)",
+      "Bash(git push --force *)",
+      "Bash(git push --force)",
+      "Bash(git push -f *)",
+      "Bash(git push -f)",
+      "Bash(git reset --hard *)",
+      "Bash(git reset --hard)",
+      "Bash(git clean -f *)",
+      "Bash(git clean -fd *)",
+      "Bash(git clean -fdx *)",
+      "Bash(git checkout -- *)",
+      "Bash(git checkout .)",
+      "Bash(git restore .)",
+      "Bash(git restore --staged .)",
+      "Read(.credentials*)",
+      "Read(**/.env*)",
+      "Read(**/credentials.json)"
+    ],
+    "defaultMode": "bypassPermissions"
+  },
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": [],
+  "disabledMcpjsonServers": [],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/hooks/session-start.ps1\"",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/cleanup.ps1\"",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/hooks/drift-detect-worker.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/hooks/drift-enqueue.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/hooks/inject-runtime-ctx.ps1\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/hooks/precompact-snapshot.ps1\"",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/hooks/postcompact-verify.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/hooks/token-report.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/statusline.ps1\""
+  },
+  "effortLevel": "high",
+  "autoUpdatesChannel": "latest",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "agentPushNotifEnabled": false
+}

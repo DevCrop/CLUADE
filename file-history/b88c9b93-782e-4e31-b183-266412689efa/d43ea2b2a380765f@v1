@@ -1,0 +1,111 @@
+@use "../abstract" as *;
+
+.no-category {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+
+  &__swiper {
+    width: 100%;
+    overflow: visible;
+    touch-action: pan-x;
+  }
+
+  &__list {
+    align-items: stretch;
+  }
+
+  &__item {
+    display: flex;
+    width: auto !important;
+    flex-shrink: 0;
+  }
+
+  &__link {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: fluid(12, 16) fluid(20, 32);
+    border: 1px solid var(--clr-border-default);
+    color: var(--clr-text-desc);
+    font-family: var(--family-ui);
+    @include font("f-body-3");
+    font-weight: 500;
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition:
+      color var(--transition-fast),
+      border-color var(--transition-fast),
+      background var(--transition-fast);
+
+    &:hover {
+      color: var(--clr-text-title);
+      border-color: var(--clr-border-strong);
+    }
+
+    &.is-active {
+      color: var(--clr-text-title);
+      border-color: var(--clr-text-title);
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  &__text {
+    display: inline-block;
+  }
+
+  &__prev,
+  &__next {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    width: fluid(40, 64);
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    appearance: none;
+    pointer-events: auto;
+    transition: opacity var(--transition-fast);
+
+    &.swiper-button-disabled {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    svg {
+      width: fluid(16, 20);
+      height: fluid(16, 20);
+      fill: currentColor;
+      color: var(--clr-text-title);
+    }
+  }
+
+  &__prev {
+    left: 0;
+    justify-content: flex-start;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0));
+  }
+
+  &__next {
+    right: 0;
+    justify-content: flex-end;
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0));
+  }
+
+  @include mq(md) {
+    &__swiper {
+      overflow: hidden;
+    }
+
+    &__link {
+      min-height: fluid(40, 44);
+      padding-inline: fluid(16, 20);
+    }
+  }
+}

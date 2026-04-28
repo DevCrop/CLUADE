@@ -1,0 +1,383 @@
+import { MagneticCornerTracker } from "../components/Button.js";
+import { BlockOverlay } from "./BlockOverlay.js";
+import { TextReveal } from "../animation/TextReveal.js";
+import { DOM_CONFIG, MASKING, STATE_CLASSES } from "../config/dom.config.js";
+import {
+  MASKING_ANIM,
+  DRAWER_ANIM,
+  DRAWER_CLASSES,
+} from "../config/component.config.js";
+import { UI } from "../ui/UI.js";
+import { Aria } from "../utils/Aria.js";
+import type { DrawerConfig } from "../types/dom.types.js";
+import type { MagneticCornerGsap } from "../types/component.types.js";
+import type {
+  GsapGlobal,
+  GsapTweenLike,
+  WindowWithGsap,
+} from "../types/gsap.types.js";
+import type { ITimelineActionTarget } from "../types/engine.types.js";
+import { drawer } from "../core/setup.js";
+
+const activeTweens = new WeakMap<
+  HTMLElement,
+  { open?: GsapTweenLike; close?: GsapTweenLike }
+>();
+function getGsap(): GsapGlobal | undefined {
+  return (window as WindowWithGsap).gsap;
+}
+
+export class Drawer extends UI implements ITimelineActionTarget {
+  private static _lockReleases = new WeakMap<HTMLElement, () => void>();
+  declare config: DrawerConfig;
+
+  private _triggerSelector: string | undefined;
+  private _revealGroups: string[] | undefined;
+  private _triggerEl: HTMLButtonElement | null = null;
+  private _magneticCorner: MagneticCornerTracker | null = null;
+  private _boundFlipVisibility: () => void;
+  private _boundKeydown: (e: KeyboardEvent) => void;
+
+  static getInstance(options: Partial<DrawerConfig> = {}): Drawer {
+    const selector = options.selector ?? DOM_CONFIG.drawer.selector;
+    return UI.getOrCreate(Drawer, { ...options, selector });
+  }
+
+  constructor(config: DrawerConfig = { selector: DOM_CONFIG.drawer.selector }) {
+    const selector = config.selector ?? DOM_CONFIG.drawer.selector;
+    super({ ...config, selector });
+    this._triggerSelector = config.triggerSelector;
+    this._revealGroups = config.revealGroups ?? DOM_CONFIG.drawer.revealGroups;
+    this._boundFlipVisibility = this._flipVisibility.bind(this);
+    this._boundKeydown = this._onKeydown.bind(this);
+    this.updateOptions(config);
+  }
+
+  override updateOptions(config: Partial<DrawerConfig>): void {
+    super.updateOptions(config);
+    if (config.triggerSelector !== undefined) {
+      this._triggerSelector = config.triggerSelector;
+    }
+    if (config.revealGroups !== undefined) {
+      this._revealGroups = config.revealGroups;
+    } else {
+      this._revealGroups = DOM_CONFIG.drawer.revealGroups;
+    }
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    if (visible) {
+      this._show();
+      return;
+    }
+    this._hide();
+  }
+
+  readonly timelineKey = drawer;
+
+  getTimelineCallback(vars: Record<string, unknown>): (() => void) | null {
+    if (typeof vars.visible === "boolean") {
+      return vars.visible
+        ? () => this.setVisibleOn()
+        : () => this.setVisibleOff();
+    }
+    if (vars.show) return () => this.setVisibleOn();
+    if (vars.hide) return () => this.setVisibleOff();
+    return null;
+  }
+
+  override init(): void {
+    super.init();
+  }
+
+  protected mount(): void {
+    if (this.isDisposed) return;
+    const root = this.getElement();
+    if (!root) return;
+
+    this._mountTrigger(root);
+    document.addEventListener("keydown", this._boundKeydown);
+    this._mountMagneticCorner(root);
+  }
+
+  private _mountTrigger(root: HTMLElement): void {
+    if (!this._triggerSelector) return;
+    const trigger = document.querySelector<HTMLButtonElement>(
+      this._triggerSelector,
+    );
+    if (!trigger) return;
+    this._triggerEl = trigger;
+    trigger.addEventListener("click", this._boundFlipVisibility);
+    this._syncAria(root.classList.contains("is-open"));
+  }
+
+  private _mountMagneticCorner(root: HTMLElement): void {
+    const gsap = getGsap();
+    if (!gsap || typeof gsap.killTweensOf !== "function") return;
+    this._magneticCorner = MagneticCornerTracker.createForDrawer(
+      root,
+      gsap as MagneticCornerGsap,
+    );
+  }
+
+  private _syncAria(isVisible: boolean): void {
+    Aria.setExpanded(this._triggerEl, isVisible);
+    Aria.setControls(this._triggerEl, this.element?.id ?? "drawer-panel");
+    Aria.setHidden(this.element ?? null, !isVisible);
+  }
+
+  private _onKeydown(e: KeyboardEvent): void {
+    if (e.key !== "Escape") return;
+    if (!this.element?.classList.contains("is-open")) return;
+    this.setVisibleOff();
+  }
+
+  private _show(): void {
+    if (!this.element) return;
+    this.element.classList.add("is-open");
+    this._syncAria(true);
+    this._visible = true;
+  }
+
+  private _hide(): void {
+    if (!this.element) return;
+    this.element.classList.remove("is-open");
+    this._syncAria(false);
+    this._visible = false;
+  }
+
+  private _flipVisibility(): void {
+    if (!this.element) return;
+    const isVisible = this.element.classList.toggle("is-open");
+    this._syncAria(isVisible);
+    this._visible = isVisible;
+  }
+
+  override getVisibleState(): boolean {
+    return this.element?.classList.contains("is-open") ?? false;
+  }
+
+  override animateIn(): void {
+    if (!this.element || !this._triggerEl) return;
+    Drawer.runOpenTransition(
+      this.element,
+      this._triggerEl,
+      "is-open",
+      this._revealGroups,
+    );
+  }
+
+  override animateOut(): void {
+    if (!this.element || !this._triggerEl) return;
+    const header = document.querySelector<HTMLElement>("#main-header");
+    Drawer.runCloseTransition(
+      this.element,
+      this._triggerEl,
+      header,
+      "is-open",
+      () => undefined,
+    );
+  }
+
+  static runOpenTransition(
+    drawer: HTMLElement,
+    _trigger: HTMLButtonElement,
+    _openClass: string,
+    revealGroups?: string[],
+    onTransitionDone?: () => void,
+  ): void {
+    const inner = drawer.querySelector<HTMLElement>(
+      DOM_CONFIG.drawer.innerSelector,
+    );
+    const bag = activeTweens.get(drawer) ?? {};
+    bag.open?.kill?.();
+    bag.close?.kill?.();
+    activeTweens.set(drawer, bag);
+
+    drawer.style.opacity = "";
+    drawer.classList.remove(DRAWER_CLASSES.textRevealReady);
+    drawer.classList.add(STATE_CLASSES.animatingIn);
+
+    (async () => {
+      await BlockOverlay.playIn();
+      drawer.classList.remove(STATE_CLASSES.animatingIn);
+      drawer.style.opacity = "1";
+      if (inner) {
+        inner.style.opacity = "1";
+        inner.style.transform = "translateY(0)";
+      }
+      await BlockOverlay.playOut();
+      drawer.classList.add(DRAWER_CLASSES.textRevealReady);
+      setTimeout(
+        () =>
+          Drawer.revealMaskingInOrder(
+            drawer,
+            revealGroups ?? DOM_CONFIG.drawer.revealGroups,
+          ),
+        DRAWER_ANIM.openMaskingDelayMs,
+      );
+    })()
+      .catch(() => {
+      })
+      .finally(() => {
+        onTransitionDone?.();
+      });
+  }
+
+  static runCloseTransition(
+    drawer: HTMLElement,
+    trigger: HTMLButtonElement,
+    header: HTMLElement | null,
+    openClass: string,
+    onComplete: () => void,
+    onTransitionDone?: () => void,
+  ): void {
+    const bag = activeTweens.get(drawer) ?? {};
+    bag.open?.kill?.();
+    bag.close?.kill?.();
+    drawer.style.opacity = "";
+    activeTweens.set(drawer, bag);
+
+    drawer.classList.remove(DRAWER_CLASSES.textRevealReady);
+    TextReveal.setVisibleOff(drawer);
+
+    (async () => {
+      await new Promise<void>((r) =>
+        window.setTimeout(r, MASKING_ANIM.textOutMs),
+      );
+
+      await BlockOverlay.playIn();
+
+      if (drawer.contains(document.activeElement)) trigger.focus();
+      drawer.classList.remove(openClass);
+      trigger.classList.remove(openClass);
+      header?.classList.remove(openClass);
+      Aria.setExpanded(trigger, false);
+      Aria.setHidden(drawer, true);
+      Aria.setExpanded(header ?? null, false);
+      Drawer.releaseLock(drawer);
+      onComplete();
+
+      await BlockOverlay.playOut();
+    })()
+      .catch(() => {
+      })
+      .finally(() => {
+        onTransitionDone?.();
+      });
+  }
+
+  private static revealMaskingInOrder(
+    drawer: HTMLElement,
+    groups: string[],
+  ): void {
+    let delay = 0;
+
+    for (const groupSel of groups) {
+      const items = Array.from(
+        drawer.querySelectorAll<HTMLElement>(`${groupSel} ${MASKING.selector}`),
+      );
+      items.forEach((el) => {
+        setTimeout(() => TextReveal.setVisibleOn(el), delay);
+        delay += MASKING_ANIM.staggerMs;
+      });
+      delay += MASKING_ANIM.groupGapMs;
+    }
+  }
+
+  static runTextOutOnly(
+    drawerPanel: HTMLElement,
+    _trigger: HTMLButtonElement,
+    _header: HTMLElement | null,
+    _openClass: string,
+  ): Promise<void> {
+    TextReveal.setVisibleOff(drawerPanel);
+    drawerPanel.classList.add(STATE_CLASSES.barbaLeaving);
+    return new Promise<void>((resolve) => {
+      window.setTimeout(() => resolve(), MASKING_ANIM.textOutMs);
+    });
+  }
+
+  static runTextOutThenClose(
+    drawerPanel: HTMLElement,
+    trigger: HTMLButtonElement,
+    header: HTMLElement | null,
+    openClass: string,
+  ): Promise<void> {
+    TextReveal.setVisibleOff(drawerPanel);
+    drawerPanel.classList.add(STATE_CLASSES.barbaLeaving);
+
+    return new Promise<void>((resolve) => {
+      window.setTimeout(() => {
+        drawerPanel.classList.remove(STATE_CLASSES.barbaLeaving);
+        if (
+          document.activeElement &&
+          drawerPanel.contains(document.activeElement)
+        ) {
+          trigger.focus();
+        }
+        drawerPanel.classList.remove(openClass);
+        Aria.setHidden(drawerPanel, true);
+        Drawer.releaseLock(drawerPanel);
+        trigger.classList.remove(openClass);
+        Aria.setExpanded(trigger, false);
+        header?.classList.remove(openClass);
+        Aria.setExpanded(header ?? null, false);
+        const h = trigger.closest("header");
+        if (h?.classList.contains(openClass)) {
+          h.classList.remove(openClass);
+          Aria.setExpanded(h, false);
+        }
+        resolve();
+      }, MASKING_ANIM.textOutMs);
+    });
+  }
+
+  static syncNavActiveState(): void {
+    const currentPath = window.location.pathname || "/";
+
+    const setActive = (link: HTMLAnchorElement): void => {
+      const href = link.getAttribute("href");
+      if (href == null) return;
+      const hrefPath = href.startsWith("http") ? new URL(href).pathname : href;
+      const isActive =
+        hrefPath === "/"
+          ? currentPath === "/" || currentPath === ""
+          : currentPath === hrefPath ||
+            currentPath.startsWith(hrefPath.replace(/\/$/, "") + "/");
+      link.classList.toggle(DRAWER_CLASSES.linkActive, isActive);
+    };
+
+    document
+      .querySelectorAll<HTMLAnchorElement>(DOM_CONFIG.drawer.gnbLinkSelector)
+      .forEach((el) => setActive(el));
+    document
+      .querySelectorAll<HTMLAnchorElement>(DOM_CONFIG.drawer.gnbSubLinkSelector)
+      .forEach((el) => setActive(el));
+  }
+
+  static attachLock(drawer: HTMLElement, release: () => void): void {
+    const prev = Drawer._lockReleases.get(drawer);
+    if (prev) prev();
+    Drawer._lockReleases.set(drawer, release);
+  }
+
+  static releaseLock(drawer: HTMLElement): void {
+    const release = Drawer._lockReleases.get(drawer);
+    if (!release) return;
+    Drawer._lockReleases.delete(drawer);
+    release();
+  }
+
+  override dispose(): void {
+    this._magneticCorner?.destroy();
+    this._magneticCorner = null;
+    if (this._triggerEl) {
+      this._triggerEl.removeEventListener("click", this._boundFlipVisibility);
+      this._triggerEl = null;
+    }
+    document.removeEventListener("keydown", this._boundKeydown);
+
+    super.dispose();
+  }
+}

@@ -1,0 +1,631 @@
+import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import { THREE_LAYER_ROCKET } from "../../core/setup.js";
+import type {
+  JetEngineObjectOptions,
+  JetEngineTweenProps,
+  RGB,
+} from "../../types/object.types.js";
+import type {
+  EaseFn,
+  JetEngineBloomLayer,
+  JetEngineRecord,
+  JetEngineResolvedConfig,
+} from "../../types/object-runtime.types.js";
+import { Helpers } from "../../utils/Helpers.js";
+import noiseRaw from "../../../shaders/jet-engine/noise.glsl?raw";
+import bloomVertRaw from "../../../shaders/jet-engine/bloom.vertex.glsl?raw";
+import bloomFragRaw from "../../../shaders/jet-engine/bloom.fragment.glsl?raw";
+import innerVertRaw from "../../../shaders/jet-engine/inner.vertex.glsl?raw";
+import innerFragRaw from "../../../shaders/jet-engine/inner.fragment.glsl?raw";
+import parentVertRaw from "../../../shaders/jet-engine/parent.vertex.glsl?raw";
+import parentFragRaw from "../../../shaders/jet-engine/parent.fragment.glsl?raw";
+
+class CombustionSim {
+  private elapsed = 0;
+  private phase = 0;
+  private surgeTimer = 0;
+  private nextBurst = 0.05;
+  private surgeAmp = 0;
+  private riseLen = 0;
+  private fallLen = 0;
+  private smoothLen = 0.78;
+
+  constructor(
+    private cfg: JetEngineResolvedConfig,
+    private easeOutExpo: EaseFn,
+    private easeOutCubic: EaseFn,
+  ) {}
+
+  applyConfig(cfg: JetEngineResolvedConfig): void {
+    this.cfg = cfg;
+  }
+
+  update(dt: number): { flameLen: number; throttle: number; elapsed: number } {
+    const c = this.cfg;
+    const spd = Math.max(0.01, c.burstSpeed);
+    const base = c.baseIdle;
+
+    this.elapsed += dt;
+    this.surgeTimer += dt;
+
+    const breath =
+      0.04 * Math.sin(this.elapsed * 6.0 * spd) +
+      0.02 * Math.sin(this.elapsed * 11.0 * spd);
+    let target = base + breath;
+
+    if (this.phase === 0 && this.surgeTimer >= this.nextBurst) {
+      this.phase = 1;
+      this.surgeTimer = 0;
+      this.riseLen = (0.02 + Math.random() * 0.04) / spd;
+      this.surgeAmp =
+        base + c.burstAmpMin + Math.random() * (c.burstAmpMax - c.burstAmpMin);
+    }
+
+    if (this.phase === 1) {
+      const p = Math.min(this.surgeTimer / this.riseLen, 1);
+      target = base + this.easeOutExpo(p) * (this.surgeAmp - base);
+      if (p >= 1) {
+        this.phase = 2;
+        this.surgeTimer = 0;
+        this.fallLen = (0.05 + Math.random() * 0.12) / spd;
+      }
+    } else if (this.phase === 2) {
+      const p = Math.min(this.surgeTimer / this.fallLen, 1);
+      target = base + this.easeOutCubic(1 - p) * (this.surgeAmp - base);
+      if (p >= 1) {
+        this.phase = 0;
+        this.surgeTimer = 0;
+        this.nextBurst = (0.01 + Math.random() * 0.08) / spd;
+      }
+    }
+
+    this.smoothLen += (target - this.smoothLen) * c.smoothing;
+    const flameLen = Math.max(
+      base - 0.02,
+      Math.min(base + 0.3, this.smoothLen),
+    );
+    return { flameLen, throttle: Math.min(1, flameLen), elapsed: this.elapsed };
+  }
+}
+
+export class JetEngine extends SceneObject<JetEngineTweenProps> {
+  private static readonly DEFAULT_INTENSITY = 0.78;
+  private static readonly DEFAULT_LENGTH = 2.4;
+  private static readonly DEFAULT_NOZZLE_RADIUS = 0.028;
+  private static readonly DEFAULT_NOZZLE_GAP = 2.2;
+  private static readonly DEFAULT_INNER_RGB: RGB = [0.4, 0.75, 1.0];
+  private static readonly DEFAULT_OUTER_RGB: RGB = [1.0, 0.92, 0.78];
+  /** Outer shell length = core length × this (was 3.2 / 2.4 in author defaults). */
+  private static readonly PARENT_LENGTH_RATIO = 3.2 / 2.4;
+  private static readonly SIM_BURST_SPEED = 1.2;
+  private static readonly SIM_BURST_AMP_MIN = 0.08;
+  private static readonly SIM_BURST_AMP_MAX = 0.22;
+  private static readonly SIM_SMOOTHING = 0.14;
+  private static readonly TIP_MUL_INNER = 0.42;
+  private static readonly TIP_MUL_OUTER = 0.88;
+  /** Slightly above `Rocket` billboard flame (`renderOrder` 5). */
+  private static readonly MESH_RENDER_ORDER = 6;
+  private _options: Partial<JetEngineObjectOptions> = {};
+  private _cfg: JetEngineResolvedConfig = JetEngine.resolveConfig({});
+  private _sim: CombustionSim = new CombustionSim(
+    this._cfg,
+    JetEngine.easeOutExpo,
+    JetEngine.easeOutCubic,
+  );
+
+  private static sameRGB(a: RGB, b: RGB): boolean {
+    return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+  }
+
+  private static needsRebuild(
+    prev: JetEngineResolvedConfig,
+    next: JetEngineResolvedConfig,
+  ): boolean {
+    return (
+      prev.nozzleRadius !== next.nozzleRadius ||
+      prev.nozzleGap !== next.nozzleGap ||
+      prev.baseLength !== next.baseLength ||
+      prev.innerNoiseSpeed !== next.innerNoiseSpeed ||
+      prev.parentNoiseSpeed !== next.parentNoiseSpeed ||
+      prev.turbulence !== next.turbulence ||
+      !JetEngine.sameRGB(prev.innerColor.top, next.innerColor.top) ||
+      !JetEngine.sameRGB(prev.parentColor.top, next.parentColor.top)
+    );
+  }
+
+  private static darkenTip(c: RGB, mul: number): RGB {
+    return [
+      Math.min(1, c[0] * mul),
+      Math.min(1, c[1] * mul),
+      Math.min(1, c[2] * mul),
+    ];
+  }
+
+  private static glslVec3(c: RGB): string {
+    return `vec3(${c[0].toFixed(4)},${c[1].toFixed(4)},${c[2].toFixed(4)})`;
+  }
+
+  private static applyShaderTemplate(
+    template: string,
+    values: Record<string, string>,
+  ): string {
+    let out = template;
+    for (const [key, value] of Object.entries(values)) {
+      out = out.split(`__${key}__`).join(value);
+    }
+    return out;
+  }
+
+  private static easeOutExpo(x: number): number {
+    return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
+  }
+
+  private static easeOutCubic(x: number): number {
+    return 1 - Math.pow(1 - x, 3);
+  }
+
+  private static resolveConfig(
+    o: Partial<JetEngineObjectOptions>,
+  ): JetEngineResolvedConfig {
+    const intensity =
+      typeof o.intensity === "number"
+        ? Math.max(0, Math.min(1, o.intensity))
+        : JetEngine.DEFAULT_INTENSITY;
+    const gap =
+      typeof o.nozzleGap === "number" && Number.isFinite(o.nozzleGap)
+        ? o.nozzleGap
+        : JetEngine.DEFAULT_NOZZLE_GAP;
+    const length =
+      typeof o.length === "number" && Number.isFinite(o.length)
+        ? o.length
+        : JetEngine.DEFAULT_LENGTH;
+    const noise =
+      typeof o.noise === "number" && Number.isFinite(o.noise)
+        ? Math.max(0, o.noise)
+        : 1;
+    const bloom =
+      typeof o.bloom === "number" && Number.isFinite(o.bloom)
+        ? Math.max(0, o.bloom)
+        : 1;
+    const innerTop = o.innerColor ?? JetEngine.DEFAULT_INNER_RGB;
+    const outerTop = o.outerColor ?? JetEngine.DEFAULT_OUTER_RGB;
+    const nr =
+      typeof o.nozzleRadius === "number" && Number.isFinite(o.nozzleRadius)
+        ? o.nozzleRadius
+        : JetEngine.DEFAULT_NOZZLE_RADIUS;
+
+    return {
+      nozzleRadius: nr,
+      nozzleGapX: gap,
+      nozzleGapZ: gap,
+      nozzleGap: gap,
+      baseLength: length,
+      parentLength: length * JetEngine.PARENT_LENGTH_RATIO,
+      burstSpeed: JetEngine.SIM_BURST_SPEED,
+      baseIdle: intensity,
+      burstAmpMin: JetEngine.SIM_BURST_AMP_MIN,
+      burstAmpMax: JetEngine.SIM_BURST_AMP_MAX,
+      smoothing: JetEngine.SIM_SMOOTHING,
+      innerNoiseSpeed: noise,
+      parentNoiseSpeed: noise * 0.85,
+      turbulence: noise,
+      innerColor: {
+        top: innerTop,
+        tip: JetEngine.darkenTip(innerTop, JetEngine.TIP_MUL_INNER),
+      },
+      parentColor: {
+        top: outerTop,
+        tip: JetEngine.darkenTip(outerTop, JetEngine.TIP_MUL_OUTER),
+      },
+      innerBloom: bloom,
+      parentBloom: bloom * 0.92,
+    };
+  }
+
+  private static innerVertGLSL(cfg: JetEngineResolvedConfig): string {
+    return JetEngine.applyShaderTemplate(innerVertRaw as string, {
+      NOISE_GLSL: noiseRaw as string,
+      INNER_RS: (2.8 * cfg.innerNoiseSpeed).toFixed(3),
+      INNER_LS: (2.2 * cfg.innerNoiseSpeed).toFixed(3),
+      INNER_RT: (0.1 * cfg.turbulence).toFixed(4),
+      INNER_LT: (0.22 * cfg.turbulence).toFixed(4),
+    });
+  }
+
+  private static innerFragGLSL(cfg: JetEngineResolvedConfig): string {
+    const flash = JetEngine.glslVec3(
+      cfg.innerColor.top.map((v) => Math.min(1, v + 0.2)) as RGB,
+    );
+    return JetEngine.applyShaderTemplate(innerFragRaw as string, {
+      NOISE_GLSL: noiseRaw as string,
+      INNER_FS1: (7.0 * cfg.innerNoiseSpeed).toFixed(3),
+      INNER_FS2: (4.5 * cfg.innerNoiseSpeed).toFixed(3),
+      INNER_C_TOP: JetEngine.glslVec3(cfg.innerColor.top),
+      INNER_C_TIP: JetEngine.glslVec3(cfg.innerColor.tip),
+      INNER_FLASH: flash,
+    });
+  }
+
+  private static parentVertGLSL(cfg: JetEngineResolvedConfig): string {
+    return JetEngine.applyShaderTemplate(parentVertRaw as string, {
+      NOISE_GLSL: noiseRaw as string,
+      PARENT_RS: (2.4 * cfg.parentNoiseSpeed).toFixed(3),
+      PARENT_LS: (1.8 * cfg.parentNoiseSpeed).toFixed(3),
+      PARENT_RT: (0.18 * cfg.turbulence).toFixed(4),
+      PARENT_LT: (0.3 * cfg.turbulence).toFixed(4),
+    });
+  }
+
+  private static parentFragGLSL(cfg: JetEngineResolvedConfig): string {
+    return JetEngine.applyShaderTemplate(parentFragRaw as string, {
+      NOISE_GLSL: noiseRaw as string,
+      PARENT_FS1: (1.2 * cfg.parentNoiseSpeed).toFixed(3),
+      PARENT_FS2: (0.7 * cfg.parentNoiseSpeed).toFixed(3),
+      PARENT_C_TOP: JetEngine.glslVec3(cfg.parentColor.top),
+      PARENT_C_TIP: JetEngine.glslVec3(cfg.parentColor.tip),
+    });
+  }
+  private static readonly FRUSTUM_CULL_RADIUS = 1.5;
+  private _inner: JetEngineRecord[] = [];
+  private _parent: JetEngineRecord | null = null;
+  private _innerGeo: THREE.BufferGeometry | null = null;
+  private _built = false;
+  private _intensity = JetEngine.DEFAULT_INTENSITY;
+  private _frustum = new THREE.Frustum();
+  private _projScreenMatrix = new THREE.Matrix4();
+  private _frustumSphere = new THREE.Sphere();
+
+  setOptions(props: Partial<JetEngineObjectOptions> | undefined): this {
+    if (props != null) this._options = { ...this._options, ...props };
+    return this;
+  }
+
+  override getAnimationTarget(): THREE.Object3D | null {
+    return this.getTimelineRoot();
+  }
+
+  override getTweenApplyMode(): "mergeAndSync" {
+    return "mergeAndSync";
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    root.visible = visible;
+  }
+
+  protected override syncFromOptions(): void {
+    const nextCfg = JetEngine.resolveConfig(this._options);
+    this._intensity = Math.max(0, Math.min(1, nextCfg.baseIdle));
+    const shouldRebuild =
+      this._built && JetEngine.needsRebuild(this._cfg, nextCfg);
+    this._cfg = nextCfg;
+    this._sim.applyConfig(this._cfg);
+    if (shouldRebuild) this._build();
+  }
+
+  override runObject(): void {
+    const ctx = this._context;
+    if (!ctx?.scene) return;
+
+    const root = this.ensureTimelineRoot("jetEngineRoot");
+    if (!root) return;
+    this._cfg = JetEngine.resolveConfig(this._options);
+    this._intensity = Math.max(0, Math.min(1, this._cfg.baseIdle));
+    this._sim.applyConfig(this._cfg);
+    this._build();
+
+    const attachTo = this._options.attachTo;
+    const offset = this._options.offset ?? { x: 0, y: 0, z: 0 };
+    const p = this._options.position ?? { x: 0, y: 0, z: 0 };
+    const r = this._options.rotation ?? { x: 0, y: 0, z: 0 };
+    const s = this._options.scale ?? { x: 1, y: 1, z: 1 };
+
+    if (attachTo && typeof ctx.getObject === "function") {
+      const target = ctx.getObject(attachTo);
+      if (target instanceof THREE.Object3D) {
+        target.add(root);
+        root.position.set(offset.x ?? 0, offset.y ?? 0, offset.z ?? 0);
+      } else {
+        root.position.set(p.x ?? 0, p.y ?? 0, p.z ?? 0);
+      }
+    } else {
+      root.position.set(p.x ?? 0, p.y ?? 0, p.z ?? 0);
+    }
+
+    Helpers.applyRotationDeg(root, r);
+    root.scale.set(s.x ?? 1, s.y ?? 1, s.z ?? 1);
+    root.traverse((child) => {
+      child.layers.set(THREE_LAYER_ROCKET);
+    });
+    this._built = true;
+  }
+
+  override runUpdate(deltaTime: number): void {
+    if (!this._built) return;
+    const root = this.getTimelineRoot();
+    if (!root?.visible) return;
+    const camera = this._context?.camera as THREE.PerspectiveCamera | undefined;
+    if (!camera) return;
+
+    this._projScreenMatrix.multiplyMatrices(
+      camera.projectionMatrix,
+      camera.matrixWorldInverse,
+    );
+    this._frustum.setFromProjectionMatrix(this._projScreenMatrix);
+    root.getWorldPosition(this._frustumSphere.center);
+    this._frustumSphere.radius = JetEngine.FRUSTUM_CULL_RADIUS;
+    if (!this._frustum.intersectsSphere(this._frustumSphere)) return;
+
+    const { flameLen, throttle, elapsed } = this._sim.update(deltaTime);
+    const flameLenScaled = flameLen * this._intensity;
+    const throttleScaled = throttle * this._intensity;
+    const camQ = camera.quaternion;
+    const innerBloomScale =
+      this._cfg.innerBloom * throttleScaled * (0.8 + flameLenScaled * 0.5);
+    for (const eng of this._inner) {
+      eng.group.scale.y = this._cfg.baseLength * flameLenScaled;
+      eng.mat.uniforms.uTime.value = elapsed;
+      eng.mat.uniforms.uFlameLen.value = flameLenScaled;
+      eng.mat.uniforms.uThrottle.value = throttleScaled;
+      for (const b of eng.blooms) {
+        b.mesh.quaternion.copy(camQ);
+        b.mat.uniforms.uTime.value = elapsed;
+        b.mat.uniforms.uIntensity.value = b.baseIntensity * innerBloomScale;
+      }
+    }
+
+    const parent = this._parent;
+    if (!parent) return;
+    parent.group.scale.y = this._cfg.parentLength * flameLenScaled;
+    parent.mat.uniforms.uTime.value = elapsed;
+    parent.mat.uniforms.uFlameLen.value = flameLenScaled;
+    parent.mat.uniforms.uThrottle.value = throttleScaled;
+    const parentBloomScale =
+      this._cfg.parentBloom * throttleScaled * (0.7 + flameLenScaled * 0.5);
+    for (const b of parent.blooms) {
+      b.mesh.quaternion.copy(camQ);
+      b.mat.uniforms.uTime.value = elapsed;
+      b.mat.uniforms.uIntensity.value = b.baseIntensity * parentBloomScale;
+    }
+  }
+
+  override dispose(): void {
+    this.releaseShaders(this.getShaderOwnerId());
+    this._teardown();
+    this._inner = [];
+    this._parent = null;
+    this._built = false;
+    super.dispose();
+  }
+
+  private _build(): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    const shaderOwnerId = this.getShaderOwnerId();
+    this.releaseShaders(shaderOwnerId);
+    this._teardown();
+    const cfg = this._cfg;
+    const nr = cfg.nozzleRadius;
+    const gridStepX = nr * Math.max(0.2, cfg.nozzleGapX);
+    const gridStepZ = nr * Math.max(0.2, cfg.nozzleGapZ);
+    const tipY = -(cfg.baseLength * 0.85);
+    const parentR = Math.max(gridStepX, gridStepZ) * 1.9 + nr;
+    const innerVert = JetEngine.innerVertGLSL(cfg);
+    const innerFrag = JetEngine.innerFragGLSL(cfg);
+    const parentVert = JetEngine.parentVertGLSL(cfg);
+    const parentFrag = JetEngine.parentFragGLSL(cfg);
+
+    const layout: ReadonlyArray<readonly [number, number]> = [
+      [-1, 2],
+      [0, 2],
+      [1, 2],
+      [-0.5, 1],
+      [0.5, 1],
+      [-1, 0],
+      [0, 0],
+      [1, 0],
+      [-0.5, -1],
+      [0.5, -1],
+      [-1, -2],
+      [0, -2],
+      [1, -2],
+    ];
+
+    layout.forEach(([gx, gz], i) => {
+      const pos = new THREE.Vector3(gx * gridStepX, 0, gz * gridStepZ);
+      const isCenter = gx === 0 && gz === 0;
+      if (!this._innerGeo) {
+        this._innerGeo = new THREE.CylinderGeometry(0.004, nr, 1.0, 24, 20, true);
+      }
+      const geo = this._innerGeo;
+      const mat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uFlameLen: { value: 1 },
+          uThrottle: { value: 1 },
+          uSeed: { value: i * 2.71828 + 0.5 },
+        },
+        vertexShader: innerVert,
+        fragmentShader: innerFrag,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      this.registerShader({
+        key: this.createShaderKey(`inner.${i}`),
+        ownerId: shaderOwnerId,
+        material: mat,
+        autoResolution: false,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.x = Math.PI;
+      mesh.position.y = -0.5;
+      mesh.layers.set(THREE_LAYER_ROCKET);
+      mesh.renderOrder = JetEngine.MESH_RENDER_ORDER;
+      const group = new THREE.Group();
+      group.add(mesh);
+      group.position.copy(pos);
+      if (!isCenter) {
+        const dir = new THREE.Vector3(0, tipY, 0).sub(pos).normalize();
+        group.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
+      }
+      root.add(group);
+      const blooms = this._buildBlooms(group, [
+        {
+          color: [0.3, 0.6, 1.0],
+          radius: 6.0,
+          size: nr * 5,
+          baseI: 0.55,
+          y: -0.05,
+        },
+        {
+          color: [0.15, 0.4, 1.0],
+          radius: 2.5,
+          size: nr * 10,
+          baseI: 0.35,
+          y: -0.35,
+        },
+      ]);
+      if (isCenter) {
+        blooms.push(
+          ...this._buildBlooms(group, [
+            {
+              color: cfg.innerColor.top,
+              radius: 6.8,
+              size: nr * 10.5,
+              baseI: 0.42,
+              y: 0.04,
+            },
+          ]),
+        );
+      }
+      this._inner.push({ group, mat, blooms });
+    });
+
+    const pGeo = new THREE.CylinderGeometry(0.01, parentR, 1.0, 32, 20, true);
+    const pMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uFlameLen: { value: 1 },
+        uThrottle: { value: 1 },
+        uSeed: { value: 99.9 },
+      },
+      vertexShader: parentVert,
+      fragmentShader: parentFrag,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.registerShader({
+      key: this.createShaderKey("parent"),
+      ownerId: shaderOwnerId,
+      material: pMat,
+      autoResolution: false,
+    });
+    const pMesh = new THREE.Mesh(pGeo, pMat);
+    pMesh.rotation.x = Math.PI;
+    pMesh.position.y = -0.5;
+    pMesh.layers.set(THREE_LAYER_ROCKET);
+    pMesh.renderOrder = JetEngine.MESH_RENDER_ORDER;
+    const pGroup = new THREE.Group();
+    pGroup.add(pMesh);
+    root.add(pGroup);
+    const pBlooms = this._buildBlooms(pGroup, [
+      {
+        color: [1.0, 0.95, 0.85],
+        radius: 5.0,
+        size: parentR * 4.5,
+        baseI: 0.22,
+        y: -0.05,
+      },
+      {
+        color: [0.9, 0.95, 1.0],
+        radius: 2.0,
+        size: parentR * 7.0,
+        baseI: 0.14,
+        y: -0.4,
+      },
+    ]);
+    this._parent = { group: pGroup, mat: pMat, blooms: pBlooms };
+  }
+
+  private _teardown(): void {
+    this._innerGeo?.dispose();
+    this._innerGeo = null;
+    for (const eng of this._inner) {
+      eng.group.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          (obj.material as THREE.Material).dispose();
+        }
+      });
+      for (const b of eng.blooms) {
+        b.mesh.geometry.dispose();
+        b.mat.dispose();
+      }
+      eng.group.parent?.remove(eng.group);
+    }
+    if (this._parent) {
+      this._parent.group.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          obj.geometry.dispose();
+          (obj.material as THREE.Material).dispose();
+        }
+      });
+      for (const b of this._parent.blooms) {
+        b.mesh.geometry.dispose();
+        b.mat.dispose();
+      }
+      this._parent.group.parent?.remove(this._parent.group);
+    }
+  }
+
+  private _buildBlooms(
+    parent: THREE.Group,
+    layers: Array<{
+      color: RGB;
+      radius: number;
+      size: number;
+      baseI: number;
+      y: number;
+    }>,
+  ): JetEngineBloomLayer[] {
+    return layers.map((l, index) => {
+      const geo = new THREE.PlaneGeometry(l.size, l.size);
+      const mat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColor: { value: new THREE.Color(...l.color) },
+          uIntensity: { value: l.baseI },
+          uRadius: { value: l.radius },
+        },
+        vertexShader: bloomVertRaw as string,
+        fragmentShader: bloomFragRaw as string,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+      });
+      this.registerShader({
+        key: this.createShaderKey(`bloom.${parent.uuid}.${index}`),
+        ownerId: this.getShaderOwnerId(),
+        material: mat,
+        autoResolution: false,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.y = l.y;
+      mesh.layers.set(THREE_LAYER_ROCKET);
+      mesh.renderOrder = JetEngine.MESH_RENDER_ORDER;
+      parent.add(mesh);
+      return { mesh, mat, baseIntensity: l.baseI, yOffset: l.y };
+    });
+  }
+
+}

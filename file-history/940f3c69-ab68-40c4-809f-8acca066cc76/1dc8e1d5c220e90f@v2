@@ -1,0 +1,14 @@
+# Memory Index — NINEONELABS Renewal
+
+- [Project Architecture](project_architecture.md) — custom MVC, scene structure, bfcache pattern, SEO files, new shared utils
+- [TS Map](project_ts_map.md) — resource/ts/ 전체 디렉토리·AppManager/PageRuntime/PageTheatreBinder 경계·runtime 목록·페이지 흐름
+- [PHP Map](project_php_map.md) — routes/render/views/admin/api/migration·src 네임스페이스·inc/lib·nb_ 테이블 목록
+- [SCSS Map](project_scss_map.md) — abstract/base/components 구조·fluid/mq 시그니처·브레이크포인트·root 토큰 ~200개·컴포넌트 클래스 목록
+- [Docs Index](reference_docs_index.md) — .claude/rules·skills·agents·BEST_PRACTICES, brand/* 13개 파일, .codex/ 한 줄 요약
+- [Development Workflow](project_workflow.md) — verification commands, forbidden commands, skill/agent delegation
+- [Works Page Improvements](project_works_improvements.md) — 모두 구현 완료: hover-to-video, 무한스크롤, 필터 모달, scatter 반응형, API 확장 (260424)
+- [260424 신규 패턴](project_today_260424.md) — shiny-cta/char 버튼, no-wizard 폼, SubpageStarfield 공통화, sitemap.php
+- [Spatie Image 설치 가이드](reference_spatie_image.md) — PHP 7.4~8.2 설치·WebP sibling 패턴 (타 프로젝트 재사용)
+- [CHOP mandatory prefix](feedback_chop.md) — all Bash commands must use chop prefix
+- [Never run npm build/watch/install](feedback_npm_build.md) — Vite dev server auto-builds on save
+- [--dangerously-skip-permissions active](feedback_dangerously_skip.md) — VS Code setting (allowDangerouslySkipPermissions), no permission prompts

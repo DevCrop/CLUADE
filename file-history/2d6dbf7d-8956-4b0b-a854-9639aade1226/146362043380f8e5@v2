@@ -1,0 +1,310 @@
+# TS_CORE
+
+Last audited: 2026-04-03
+Scope: TypeScript ownership map, runtime layering, extension rules, and page domain boundaries
+
+## 1. Purpose
+
+- This document is the TypeScript ownership map.
+- It answers:
+  - which layer owns startup
+  - which layer owns page orchestration
+  - which pages are managed versus page-local
+  - where page scene config lives
+  - where theatre integration lives
+  - where shared types belong
+
+## 2. Core Layering
+
+### Entry
+
+- App entry: [`resource/ts/app.ts`](../resource/ts/app.ts)
+- Entry does only three things:
+  - defer startup until the browser is ready
+  - call `AppManager.init()`
+  - register unload cleanup
+
+### Bootstrap
+
+- Bootstrap shell: [`resource/ts/core/AppBootstrap.ts`](../resource/ts/core/AppBootstrap.ts)
+- Bootstrap owns:
+  - creation of `PageRuntime`
+  - creation of `LenisRuntime`
+  - initialization of `ResponsiveRuntime`
+- Bootstrap does not own page-specific scene logic.
+
+### Shared page runtime
+
+- Shared page runtime: [`resource/ts/runtime/PageRuntime.ts`](../resource/ts/runtime/PageRuntime.ts)
+- `PageRuntime` owns:
+  - shared DOM/UI init
+  - shared DOM/UI dispose
+  - page controller handoff
+  - container-aware initialization for shared features
+
+### Page strategy resolution
+
+- Page strategy resolver: [`resource/ts/controller/PageController.ts`](../resource/ts/controller/PageController.ts)
+- Strategy selection is the contract boundary between:
+  - config-driven managed pages
+  - page-local runtimes
+  - DOM-only/no-op pages
+
+## 3. Current Page Ownership
+
+### Managed pages
+
+- Managed pages are:
+  - `main`
+  - `about`
+  - `contact`
+- Managed pages are defined by page config and executed by `AppManager`.
+
+Managed page config owners:
+
+- [`resource/ts/pages/main/scene/main.scene.ts`](../resource/ts/pages/main/scene/main.scene.ts)
+- [`resource/ts/pages/about/scene/about.scene.ts`](../resource/ts/pages/about/scene/about.scene.ts)
+- [`resource/ts/pages/contact/scene/contact.scene.ts`](../resource/ts/pages/contact/scene/contact.scene.ts)
+
+### Page-local runtime
+
+- `works` remains page-local by design.
+- Owner:
+  - [`resource/ts/pages/works/runtime/WorksPageRuntime.ts`](../resource/ts/pages/works/runtime/WorksPageRuntime.ts)
+
+### Why the split exists
+
+- `main`, `about`, and `contact` share:
+  - config-driven object setup
+  - shared engine boot path
+  - theatre binder path
+  - shared background and orbit coordination
+- `works` has different needs:
+  - grid/scatter UI state
+  - works feed and pagination
+  - dedicated scatter rendering path
+  - separate theatre authoring model
+
+## 4. AppManager Ownership
+
+### AppManager is the managed-page orchestrator
+
+- Owner: [`resource/ts/manager/AppManager.ts`](../resource/ts/manager/AppManager.ts)
+- `AppManager` owns:
+  - page run lifecycle for managed pages
+  - engine boot coordination
+  - object boot coordination
+  - theatre boot/apply handoff
+  - orbit coordination
+  - scroll scene runtime coordination
+  - scene policy runtime coordination
+  - intro sequencing
+  - contact stage sequencing
+
+### AppManager does not own
+
+- raw renderer internals
+- page route selection
+- shared DOM utility boot
+- works page runtime
+
+Those belong to:
+
+- `Engine`
+- `PageController`
+- `PageRuntime`
+- `WorksPageRuntime`
+
+## 5. Theatre Ownership
+
+### Binder
+
+- Theatre lazy-loading boundary: [`resource/ts/core/PageTheatreBinder.ts`](../resource/ts/core/PageTheatreBinder.ts)
+- `PageTheatreBinder` owns:
+  - adapter resolution by page id
+  - boot state application hook
+  - preview hook
+  - intro/outtro hook
+  - scroll scene sync port handoff
+
+### Page-local theatre folders
+
+- `resource/ts/pages/main/theatre`
+- `resource/ts/pages/about/theatre`
+- `resource/ts/pages/contact/theatre`
+- `resource/ts/pages/works/theatre`
+
+### Contact theatre rule
+
+- `contact` no longer owns its own detached page runtime.
+- `contact` theatre is now a managed-page adapter behind `PageTheatreBinder`.
+- `AppManager` owns the DOM stage lifecycle around contact intro/outtro.
+
+## 6. Engine and Object Ownership
+
+### Engine
+
+- Engine kernel: [`resource/ts/core/Engine.ts`](../resource/ts/core/Engine.ts)
+- `Engine` owns:
+  - renderer
+  - scene wrapper
+  - camera
+  - camera target
+  - animation loop
+  - background manager attachment
+  - model loader integration
+
+### Object setup
+
+- Object composition owner: [`resource/ts/app/ObjectSetup.ts`](../resource/ts/app/ObjectSetup.ts)
+- Object defaults owner: [`resource/ts/config/object.config.ts`](../resource/ts/config/object.config.ts)
+- Scene object factories are registered once and consumed from page config.
+
+### Page scene config ownership
+
+- Page scene config owns:
+  - enabled objects
+  - initial scene state
+  - orbit config
+  - background policy input
+  - scroll selector maps
+  - runtime policy input
+
+Page scene config does not own:
+
+- shared engine boot
+- shared DOM feature boot
+- savefile import/export logic
+
+## 7. Background Ownership
+
+### Layer split
+
+- Scene object proxy:
+  - `resource/ts/objects/env/Background.ts`
+- fullscreen render/runtime owner:
+  - `resource/ts/manager/BackgroundManager.ts`
+- state resolution owner:
+  - `resource/ts/controller/BackgroundController.ts`
+
+### Rule
+
+- Background look is runtime state, not page-template state.
+- Policy source of truth comes from page config.
+- `ScenePolicyRuntime` resolves active background state and forwards it to the background controller.
+
+## 8. Type Ownership
+
+### Rule
+
+- Shared types belong in `resource/ts/types/*.types.ts`.
+- Implementation files may import and compose those types.
+- Shared runtime shapes must not be redefined inline in implementation files.
+
+### Current important type files
+
+- [`resource/ts/types/runtime.types.ts`](../resource/ts/types/runtime.types.ts)
+  - shared runtime contracts
+  - page theatre adapter contracts
+  - scene policy contracts
+- [`resource/ts/types/main.types.ts`](../resource/ts/types/main.types.ts)
+  - main page domain shapes
+- [`resource/ts/types/about.types.ts`](../resource/ts/types/about.types.ts)
+  - about page domain shapes
+- [`resource/ts/types/contact.types.ts`](../resource/ts/types/contact.types.ts)
+  - contact page domain shapes
+- [`resource/ts/types/object.types.ts`](../resource/ts/types/object.types.ts)
+  - object state and option contracts
+- [`resource/ts/types/object-runtime.types.ts`](../resource/ts/types/object-runtime.types.ts)
+  - runtime-only object ports and transitions
+- [`resource/ts/types/theatre.types.ts`](../resource/ts/types/theatre.types.ts)
+  - theatre bridge/runtime contracts
+
+### Contact-specific current truth
+
+- Contact state stages:
+  - `idle`
+  - `intro`
+  - `ready`
+  - `outtro`
+  - `success`
+- Contact DOM states:
+  - `pending`
+  - `ready`
+  - `leaving`
+  - `success`
+- These are owned by [`contact.types.ts`](../resource/ts/types/contact.types.ts), not by implementation files.
+
+## 9. HTML and TS Contract
+
+### Contract boundary
+
+- PHP views own DOM markup.
+- TypeScript runtimes bind to stable selectors and data attributes.
+- Shared UI components must work with container-scoped roots because the runtime can be re-initialized against a page root.
+
+### Important runtime implications
+
+- Do not hardcode `document` queries when root scope is available.
+- Use the current page root for page-local DOM binding.
+- Keep layout-owned chrome selectors in layout files.
+- Keep page-owned selectors in page templates.
+
+## 10. Config Ownership
+
+### Config-first rule
+
+- Constants, toggles, selectors, durations, and authored defaults should live in config or typed savefile sources when reusable or page-authored.
+
+Current owners:
+
+- DOM and UI selectors:
+  - `resource/ts/config/dom.config.ts`
+  - `resource/ts/config/component.config.ts`
+- scene/object defaults:
+  - `resource/ts/config/object.config.ts`
+  - `resource/ts/config/scene-light.config.ts`
+- page scene config:
+  - `resource/ts/pages/*/scene/*.scene.ts`
+- authored theatre state:
+  - `resource/json/*.json`
+
+## 11. Extension Rules
+
+### Add a new managed page only when
+
+- it fits the config-driven page model
+- it can share `AppManager`
+- it benefits from `PageTheatreBinder`
+- it uses shared engine and object setup
+
+### Add a page-local runtime only when
+
+- the page has runtime needs that do not fit the managed page pipeline
+- the page has its own rendering or data model boundary
+- sharing `AppManager` would make the core less coherent
+
+### Add a new SCSS token only when
+
+- the meaning is reusable across multiple consumers
+- the token belongs to semantic design language, not a one-off effect
+- the token is placed in `abstract` or `base/_root.scss`
+
+## 12. Prohibited Patterns
+
+- Reintroducing frontend controller-class MVC assumptions into public route flow
+- Reintroducing page-local theatre boot logic when the page already belongs behind `PageTheatreBinder`
+- Re-declaring shared runtime types inline in implementation files
+- Duplicating global UI boot inside page runtimes
+- Duplicating existing root CSS token semantics as local Sass aliases
+
+## 13. Documents and Scope
+
+- [`ROLE.MD`](ROLE.MD)
+  - repo-wide contract
+- [`TS_FLOW.md`](TS_FLOW.md)
+  - execution flow and sequencing
+- This file
+  - ownership map and extension rules
+
+All three files must move together when architecture changes.

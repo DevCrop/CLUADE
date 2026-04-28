@@ -1,0 +1,132 @@
+# Contact — Backdrop Order-Guarantee + Next Button Effect
+
+## Context
+
+두 가지 미완성 작업:
+
+1. **Backdrop 순서 보장** — `_sub.scss` 수정은 완료됨 (base opacity:0/transition:560ms, ready 상태 opacity:1/blur:16px). 남은 것: AppManager.ts에서 `_wait(760ms)` → `transitionend` 감시로 교체해 backdrop이 사라진 뒤에 outtro가 실행되도록 순서 보장.
+
+2. **Next 버튼 shimmer 이펙트** — `.no-wizard-overview__item.is-current .no-wizard-overview__button`에 시네마틱한 shimmer sweep 추가. 현재는 `translateX(fluid(2,4))` 시프트만 존재 (border/bg 변화 없음). 버튼에 `overflow: hidden`이 이미 있어 `::before` 클리핑 준비 완료.
+
+---
+
+## Critical Files
+
+| 파일 | 변경 내용 |
+|---|---|
+| `resource/ts/manager/AppManager.ts` | line 912 replace + `_waitContactBackdropHidden()` 추가 |
+| `resource/scss/components/_form.scss` | `.is-current &__button` 강화 + shimmer keyframe 추가 |
+
+참조 (read-only):
+- `resource/scss/pages/_sub.scss` lines 43–74 — backdrop 기존 완료 상태 확인
+- `resource/ts/pages/contact/theatre/ContactTheatreConfig.ts` — `CONTACT_THEATRE_DOM_EXIT_DELAY_MS = 760`
+
+---
+
+## Step 1 — AppManager.ts backdrop 순서 보장
+
+**파일:** `resource/ts/manager/AppManager.ts`
+
+### 1a. line 912 교체
+
+```typescript
+// 기존
+await this._wait(CONTACT_THEATRE_DOM_EXIT_DELAY_MS);
+// 변경
+await this._waitContactBackdropHidden();
+```
+
+### 1b. `_wait()` 바로 뒤 (line 1702 이후) 신규 메서드 추가
+
+```typescript
+private _waitContactBackdropHidden(): Promise<void> {
+  const el = document.querySelector<HTMLElement>(".no-sub-contact .backdrop");
+  if (!el) return this._wait(CONTACT_THEATRE_DOM_EXIT_DELAY_MS);
+  return new Promise<void>((resolve) => {
+    const timer = window.setTimeout(resolve, CONTACT_THEATRE_DOM_EXIT_DELAY_MS);
+    const onEnd = (e: TransitionEvent) => {
+      if (e.propertyName !== "opacity") return;
+      clearTimeout(timer);
+      el.removeEventListener("transitionend", onEnd);
+      resolve();
+    };
+    el.addEventListener("transitionend", onEnd);
+  });
+}
+```
+
+동작: `leaving` 상태 진입 → backdrop CSS transition (opacity 0) 발생 → `transitionend` fires → resolve → outtro 실행. fallback 760ms는 element 없을 때 또는 transition이 발생하지 않는 경우 보호.
+
+---
+
+## Step 2 — `_form.scss` `.is-current` 버튼 shimmer
+
+**파일:** `resource/scss/components/_form.scss`
+
+### 2a. `.is-current &__button` 블록 교체 (line 784–786)
+
+현재:
+```scss
+&-overview__item.is-current &-overview__button {
+  transform: translateX(fluid(2, 4));
+}
+```
+
+변경:
+```scss
+&-overview__item.is-current &-overview__button {
+  transform: translateX(fluid(2, 4));
+  border-color: color-mix(in srgb, var(--clr-white-100) 14%, transparent);
+  background: color-mix(in srgb, var(--clr-white-100) 5%, transparent);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 30%;
+    height: 100%;
+    background: linear-gradient(
+      105deg,
+      transparent 0%,
+      color-mix(in srgb, var(--clr-white-100) 9%, transparent) 50%,
+      transparent 100%
+    );
+    transform: translateX(-200%) skewX(-12deg);
+    animation: no-wizard-overview-shimmer 4s ease-in-out 0.4s infinite;
+    pointer-events: none;
+  }
+}
+```
+
+### 2b. `@keyframes` 추가 — 기존 chip keyframes 블록 근처 (line ~1048)
+
+```scss
+@keyframes no-wizard-overview-shimmer {
+  0% {
+    transform: translateX(-200%) skewX(-12deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  28% {
+    opacity: 1;
+  }
+  36%, 100% {
+    transform: translateX(450%) skewX(-12deg);
+    opacity: 0;
+  }
+}
+```
+
+동작: 4초 주기 중 첫 ~1.4s(0–36%)에 스윕 완료 → 나머지 ~2.6s 정지(invisible). button `overflow: hidden`이 좌우 클리핑 처리. `skewX(-12deg)`로 빛 반사 각도 표현. `pointer-events: none` → 클릭 방해 없음.
+
+---
+
+## Verification
+
+1. `rtk tsc --noEmit` — 0 errors
+2. `http://localhost:8888/contact` — 폼 submit 후 backdrop 먼저 사라지는지 확인 (outtro 시작 전 검은 오버레이 fade-out)
+3. Wizard 진행 → 현재 스텝 버튼에 shimmer sweep 애니메이션 확인
+4. 다음 스텝으로 이동 시 shimmer 즉시 중단 확인 (`.is-current` 클래스 제거로 자동)

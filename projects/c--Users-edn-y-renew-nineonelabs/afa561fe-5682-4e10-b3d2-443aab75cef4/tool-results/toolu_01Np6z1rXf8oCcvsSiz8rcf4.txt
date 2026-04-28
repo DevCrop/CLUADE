@@ -1,0 +1,252 @@
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-1-import { Rocket } from "../objects/rocket/Rocket.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts:2:import { JetEngine } from "../objects/rocket/JetEngine.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-3-import { GravityBalls } from "../objects/main/GravityBalls.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-4-import { Background } from "../objects/env/Background.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-5-import { CloudPlane } from "../objects/env/CloudPlane.js";
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-65-function createDefaultRegistry(): ObjectFactoryRegistry {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-66-  return {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-67-    [rocket]: createSetOptionsSpec(rocket, () => new Rocket()),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts:68:    [jetEngine]: createSetOptionsSpec(jetEngine, () => new JetEngine()),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-69-    [gravityBalls]: createSetOptionsSpec(gravityBalls, () => new GravityBalls()),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-70-    [mainBackground]: createSetOptionsSpec(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts-71-      mainBackground,
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-3-  AboutTheatreValue,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-4-} from "../../../types/about.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-5-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:6:  MainJetEngineState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-7-  MainRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-8-  MainRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-9-} from "../../../types/main.types.js";
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-19-import { ABOUT_BACKGROUND_STATE_DEFAULTS } from "../../../config/background.config.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-20-import { ABOUT_LIGHT_STATE_DEFAULTS } from "../../../config/scene-light.config.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-21-import {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:22:  cloneJetEngineState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-23-  cloneRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-24-  cloneRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-25-  DEFAULT_MAIN_SCENE_STATE,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:26:  mergeJetEngineState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-27-  mergeRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-28-  mergeRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-29-} from "../../main/theatre/MainSceneState.js";
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-58-      { visible: true },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-59-    ),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-60-  },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:61:  jetEngine: cloneJetEngineState(DEFAULT_MAIN_SCENE_STATE.jetEngine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-62-  astronaut: resolveAboutObjectTransformDefaults(astronaut),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-63-  terrian: resolveAboutObjectTransformDefaults(terrian, {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-64-    position: { x: 0, y: -42, z: -120 },
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-102-      visible: state.earth.visible,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-103-    },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-104-    rocket: cloneRocketState(state.rocket),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:105:    jetEngine: cloneJetEngineState(state.jetEngine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-106-    astronaut: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-107-      position: { ...state.astronaut.position },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-108-      rotation: { ...state.astronaut.rotation },
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-211-    },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-212-    earth: mergeAboutTransformState(state?.earth, defaults.earth),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-213-    rocket: mergeRocketState(defaults.rocket, state?.rocket),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:214:    jetEngine: mergeJetEngineState(defaults.jetEngine, state?.jetEngine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-215-    astronaut: mergeAboutTransformState(state?.astronaut, defaults.astronaut),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-216-    terrian: mergeAboutTransformState(state?.terrian, defaults.terrian),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-217-  };
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-250-  };
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-251-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-252-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:253:function blendAboutJetEngineState(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:254:  from: MainJetEngineState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:255:  to: MainJetEngineState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-256-  alpha: number,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:257:): MainJetEngineState {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-258-  const mix = clampBlendAlpha(alpha);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-259-  return {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-260-    position: blendAboutVec3State(from.position, to.position, mix),
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-363-    },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-364-    earth: blendAboutTransformState(from.earth, to.earth, mix),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-365-    rocket: blendAboutRocketState(from.rocket, to.rocket, mix),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:366:    jetEngine: blendAboutJetEngineState(from.jetEngine, to.jetEngine, mix),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-367-    astronaut: blendAboutTransformState(from.astronaut, to.astronaut, mix),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-368-    terrian: blendAboutTransformState(from.terrian, to.terrian, mix),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-369-  };
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-395-    },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-396-    earth: mergeAboutTransformState(state.earth, state.earth),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-397-    rocket: cloneRocketState(state.rocket),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:398:    jetEngine: cloneJetEngineState(state.jetEngine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-399-    astronaut: mergeAboutTransformState(state.astronaut, state.astronaut),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-400-    terrian: mergeAboutTransformState(state.terrian, state.terrian),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts-401-  };
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-19-  AboutTransformState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-20-} from "../../../types/about.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-21-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:22:  MainJetEngineState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-23-  MainRocketPort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-24-  MainRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-25-} from "../../../types/main.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:26:import type { JetEngineTweenProps } from "../../../types/object.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-27-import { Helpers } from "../../../utils/Helpers.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-28-import { ABOUT_DEFAULT_SCENE_STATE } from "./AboutSceneState.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-29-import { DEFAULT_MAIN_SCENE_STATE } from "../../main/theatre/MainSceneState.js";
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-58-    camera.lookAt(engine.getCameraTarget().position);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-59-    this._applyLight(engine, state.light);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-60-    this._applyRocket(engine, state.rocket);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:61:    this._applyJetEngine(engine, state.jetEngine);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-62-  }
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-63-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-64-  read(engine: Engine): AboutSceneState {
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-82-      background: this._readBackground(engine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-83-      earth: this._readTransform(engine, earthId),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-84-      rocket: this._readRocket(engine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:85:      jetEngine: this._readJetEngine(engine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-86-      astronaut: this._readTransform(engine, astronautId),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-87-      terrian: this._readTransform(engine, terrianId),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-88-    };
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-104-    rocket.setFlameState(state.flame);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-105-  }
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-106-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:107:  private _applyJetEngine(engine: Engine, state: MainJetEngineState): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-108-    const jet = engine.getSceneObjectById(jetEngineId) as SceneObject<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:109:      JetEngineTweenProps
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-110-    > | null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-111-    if (!jet || typeof jet.setTimelineVars !== "function") return;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-112-    const { position: _p, rotation: _r, scale: _s, ...rest } = state;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-113-    jet.setTimelineVars(rest, "to");
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-114-  }
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-115-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:116:  private _readJetEngine(engine: Engine): MainJetEngineState {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-117-    const transform = this._readTransform(engine, jetEngineId);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-118-    const defaults = DEFAULT_MAIN_SCENE_STATE.jetEngine;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts-119-    const object = engine.getSceneObjectById(jetEngineId) as
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-219-  camera: CameraTweenProps;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-220-  cameraTarget: CameraTargetTweenProps;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-221-  rocket: RocketTweenProps;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:222:  jetEngine: JetEngineTweenProps;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-223-  gravityBalls: GravityBallsTweenProps;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-224-  clouds: CloudsTweenProps;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-225-  cloudScene: CloudSceneTweenProps;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-430-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-431-export type RGB = [number, number, number];
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-432-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:433:export interface JetEngineObjectOptions extends BaseObjectOptions {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-434-  /** Scene object id to parent under (e.g. `"rocket"`). Uses animation root. */
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-435-  attachTo?: string;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-436-  offset?: Vector3Optional;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-452-  bloom?: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-453-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-454-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:455:export type JetEngineTweenProps = ObjectTweenProps<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-456-  Pick<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:457:    JetEngineObjectOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-458-    | "intensity"
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-459-    | "length"
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-460-    | "nozzleRadius"
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-709-  cloudScene: CloudSceneObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-710-  earth: EarthObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-711-  rocket: RocketObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:712:  jetEngine: JetEngineObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-713-  gravityBalls: GravityBallsObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-714-  mainBackground: BackgroundObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-715-  aboutBackground: BackgroundObjectOptions;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-740-export type SceneSettings = {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-741-  clouds?: Required<CloudsObjectOptions>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-742-  rocket?: RocketObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:743:  jetEngine?: JetEngineObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-744-  mainBackground?: BackgroundObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-745-  aboutBackground?: BackgroundObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-746-  cloud?: CloudPlaneObjectOptions;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-218-  detail: THREE.Texture;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-219-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-220-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts:221:export interface JetEngineResolvedConfig {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-222-  nozzleRadius: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-223-  nozzleGapX: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-224-  nozzleGapZ: number;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-239-  parentBloom: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-240-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-241-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts:242:export interface JetEngineBloomLayer {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-243-  mesh: THREE.Mesh;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-244-  mat: THREE.ShaderMaterial;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-245-  baseIntensity: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-246-  yOffset: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-247-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-248-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts:249:export interface JetEngineRecord {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-250-  group: THREE.Group;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-251-  mat: THREE.ShaderMaterial;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts:252:  blooms: JetEngineBloomLayer[];
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts-253-}
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-2-import { SceneObject } from "../../core/SceneObject.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-3-import { THREE_LAYER_ROCKET } from "../../core/setup.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-4-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:5:  JetEngineObjectOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:6:  JetEngineTweenProps,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-7-  RGB,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-8-} from "../../types/object.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-9-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-10-  EaseFn,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:11:  JetEngineBloomLayer,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:12:  JetEngineRecord,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:13:  JetEngineResolvedConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-14-} from "../../types/object-runtime.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-15-import { Helpers } from "../../utils/Helpers.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-16-import noiseRaw from "../../../shaders/jet-engine/noise.glsl?raw";
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-32-  private smoothLen = 0.78;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-33-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-34-  constructor(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:35:    private cfg: JetEngineResolvedConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-36-    private easeOutExpo: EaseFn,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-37-    private easeOutCubic: EaseFn,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-38-  ) {}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-39-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:40:  applyConfig(cfg: JetEngineResolvedConfig): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-41-    this.cfg = cfg;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-42-  }
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-43-
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-89-  }
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-90-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-91-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:92:export class JetEngine extends SceneObject<JetEngineTweenProps> {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-93-  private static readonly DEFAULT_INTENSITY = 0.78;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-94-  private static readonly DEFAULT_LENGTH = 2.4;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-95-  private static readonly DEFAULT_NOZZLE_RADIUS = 0.028;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-106-  private static readonly TIP_MUL_OUTER = 0.88;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-107-  /** Slightly above `Rocket` billboard flame (`renderOrder` 5). */
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-108-  private static readonly MESH_RENDER_ORDER = 6;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:109:  private _options: Partial<JetEngineObjectOptions> = {};
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:110:  private _cfg: JetEngineResolvedConfig = JetEngine.resolveConfig({});
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-111-  private _sim: CombustionSim = new CombustionSim(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-112-    this._cfg,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:113:    JetEngine.easeOutExpo,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:114:    JetEngine.easeOutCubic,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-115-  );
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-116-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-117-  private static sameRGB(a: RGB, b: RGB): boolean {
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-119-  }
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-120-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts-121-  private static needsRebuild(
+
+[Showing results with pagination = limit: 250]

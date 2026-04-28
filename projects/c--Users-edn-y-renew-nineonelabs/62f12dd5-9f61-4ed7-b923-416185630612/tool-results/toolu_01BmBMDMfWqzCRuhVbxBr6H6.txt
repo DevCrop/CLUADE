@@ -1,0 +1,187 @@
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\runtime\WorksPageRuntime.ts-1299-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\runtime\WorksPageRuntime.ts-1300-  private _showPanel(): void {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\runtime\WorksPageRuntime.ts-1301-    const snapshot = ResponsiveRuntime.getDefault().getSnapshot();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\runtime\WorksPageRuntime.ts:1302:    if (snapshot.isMobile) return;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\runtime\WorksPageRuntime.ts-1303-    this._setPanelVisible(true);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\runtime\WorksPageRuntime.ts-1304-  }
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\runtime\WorksPageRuntime.ts-1305-
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-68-  showViewModal: false,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-69-};
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-70-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:71:const CARD_SCALE_BASE_WIDTH = 1440;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-72-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-73-class WorksHoverVideoRuntime {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-74-  private readonly _video: HTMLVideoElement;
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-180-  read(): WorksViewportSnapshot {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-181-    const snapshot = ResponsiveRuntime.getDefault().getSnapshot();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-182-    return {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:183:      width: snapshot.viewportWidth,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:184:      height: snapshot.viewportHeight,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-185-      dpr: Math.min(snapshot.render.clampedPixelRatio, this._pixelRatioMax),
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-186-    };
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-187-  }
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-209-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-210-  resolve(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-211-    camera: THREE.Camera,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:212:    viewport: WorksViewportSnapshot,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-213-    pointer: WorksPointerSample,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-214-    meshes: THREE.Mesh[],
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-215-  ): THREE.Mesh | null {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-216-    this._mouse2d.set(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:217:      (pointer.x / viewport.width) * 2 - 1,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:218:      -(pointer.y / viewport.height) * 2 + 1,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-219-    );
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-220-    this._raycaster.setFromCamera(this._mouse2d, camera);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-221-    const hit = this._raycaster.intersectObjects(meshes, false)[0];
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-325-  }
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-326-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-327-  updateDrag(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:328:    viewport: WorksViewportSnapshot,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-329-    halfView: WorksHalfViewBounds,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-330-    pointer: WorksPointerSample,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-331-    velMultiplier = 1,
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-333-    if (!this._isDragging) return;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-334-    const dx = pointer.x - this._dragPrevious.x;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-335-    const dy = pointer.y - this._dragPrevious.y;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:336:    this._targetX += (-dx * (halfView.hW * 2)) / viewport.width;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:337:    this._targetY += (dy * (halfView.hH * 2)) / viewport.height;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:338:    this._velocityX = ((-dx * (halfView.hW * 2)) / viewport.width) * 0.7 * velMultiplier;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:339:    this._velocityY = ((dy * (halfView.hH * 2)) / viewport.height) * 0.7 * velMultiplier;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-340-    this._targetX = Math.max(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-341-      this._dynClampMinX + halfView.hW,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-342-      Math.min(this._dynClampMaxX - halfView.hW, this._targetX),
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-483-  private readonly rendererConfig: WorksRendererConfig;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-484-  private readonly placeholderImage: string;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-485-  private readonly introEntryState: WorksSceneManagerOptions["introEntryState"];
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:486:  private readonly viewportRuntime: WorksViewportRuntime;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-487-  private readonly hitRuntime = new WorksHitRuntime();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-488-  private readonly meshRuntime = new WorksMeshRuntime();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-489-  private readonly thumbnailRuntime = new WorksThumbnailRuntime();
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-502-  private activePointerId: number | null = null;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-503-  private hovered: THREE.Mesh | null = null;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-504-  private _prevHovered: THREE.Mesh | null = null;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:505:  private _cardScale = 1;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-506-  private _cardSize: WorkCardSize = { w: 10, h: 6.9 };
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-507-  private _isTouchPointer = false;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-508-  private readonly _hoverVideo = new WorksHoverVideoRuntime();
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-535-    this.activeCategory = options.initialCategory ?? null;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-536-    this.camPadX = options.config.spreadX * 0.5 + 5;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-537-    this.camPadY = options.config.spreadY * 0.5 + 5;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:538:    this.viewportRuntime = new WorksViewportRuntime(options.pixelRatioMax);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-539-    this.cameraMotionRuntime = new WorksCameraMotionRuntime(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-540-      options.layout,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-541-      this.camPadX,
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-552-  }
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-553-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-554-  private _rebuildScatterPositions(): void {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:555:    const scale = this._cardScale;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-556-    this.scatterPositions = buildScatterPositions(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-557-      this.config.totalCards,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-558-      this.config.spreadX * scale,
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-736-      }
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-737-      const material = mesh.material as THREE.MeshBasicMaterial;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-738-      material.opacity += (targetOpacity - material.opacity) * opacityFactor;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:739:      const steadyScale = (hover === mesh ? 1.06 : 1) * this._cardScale;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-740-      mesh.scale.x += (steadyScale - mesh.scale.x) * scaleFactor;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-741-      mesh.scale.y += (steadyScale - mesh.scale.y) * scaleFactor;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-742-    }
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-747-    if (!this.canvas) return;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-748-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-749-    this.scene = new THREE.Scene();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:750:    const viewport = this.viewportRuntime.read();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-751-    const halfHeight =
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-752-      Math.tan((this.config.camFov * Math.PI) / 360) * this.config.camZ;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:753:    const halfWidth = halfHeight * (viewport.width / viewport.height);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-754-    this.camera = new THREE.OrthographicCamera(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-755-      -halfWidth,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-756-      halfWidth,
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-779-      alpha: this.rendererConfig.alpha,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-780-      powerPreference: this.rendererConfig.powerPreference,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-781-    });
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:782:    this.renderer.setSize(viewport.width, viewport.height);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:783:    this.renderer.setPixelRatio(viewport.dpr);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-784-    this.renderer.setClearColor(0x000000, 0);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-785-    this.renderer.shadowMap.enabled = false;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-786-
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-794-    );
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-795-    this.meshes = cardResources.meshes;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-796-    this._cardSize = cardResources.cardSize;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:797:    this._cardScale = Math.min(1, viewport.width / CARD_SCALE_BASE_WIDTH);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-798-    this._rebuildScatterPositions();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-799-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-800-    this.bindEvents();
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-819-    if (!canvas) return;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-820-
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-821-    const onPointerMove = (event: PointerEvent): void => {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:822:      const viewport = this.viewportRuntime.read();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-823-      if (this.viewMode !== "scatter") {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-824-        this.hovered = null;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-825-        return;
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-829-        if (this.activePointerId === null) {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-830-          this.hovered = this.hitRuntime.resolve(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-831-            this.camera,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:832:            viewport,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-833-            { x: event.clientX, y: event.clientY },
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-834-            this.interactiveMeshes,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-835-          );
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-846-          this.onInteractionStart?.();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-847-        }
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-848-        this.cameraMotionRuntime.updateDrag(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:849:          viewport,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:850:          this.viewportRuntime.readHalfView(this.camera),
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-851-          { x: event.clientX, y: event.clientY },
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-852-          this._isTouchPointer ? 2.0 : 1.0,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-853-        );
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-856-      }
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-857-      this.hovered = this.hitRuntime.resolve(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-858-        this.camera,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:859:        viewport,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-860-        { x: event.clientX, y: event.clientY },
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-861-        this.interactiveMeshes,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-862-      );
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-871-      this._isTouchPointer = event.pointerType === "touch";
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-872-      this.mouseDownMesh = this.hitRuntime.resolve(
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-873-        this.camera,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:874:        this.viewportRuntime.read(),
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-875-        { x: event.clientX, y: event.clientY },
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-876-        this.interactiveMeshes,
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-877-      );
+--
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-905-    };
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-906-    const onResize = (): void => {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-907-      if (!this.camera || !this.renderer) return;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:908:      const viewport = this.viewportRuntime.read();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-909-      if (this.camera instanceof THREE.OrthographicCamera) {
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-910-        const halfHeight =
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-911-          Math.tan((this.config.camFov * Math.PI) / 360) * this.config.camZ;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:912:        const halfWidth = halfHeight * (viewport.width / viewport.height);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-913-        this.camera.left = -halfWidth;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-914-        this.camera.right = halfWidth;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-915-        this.camera.top = halfHeight;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-916-        this.camera.bottom = -halfHeight;
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-917-        this.camera.updateProjectionMatrix();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-918-      }
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:919:      this.renderer.setPixelRatio(viewport.dpr);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:920:      this.renderer.setSize(viewport.width, viewport.height);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts:921:      this._cardScale = Math.min(1, viewport.width / CARD_SCALE_BASE_WIDTH);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-922-      this._rebuildScatterPositions();
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-923-      this.applyCategory(this.activeCategory);
+C:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\render\WorksSceneManager.ts-924-    };

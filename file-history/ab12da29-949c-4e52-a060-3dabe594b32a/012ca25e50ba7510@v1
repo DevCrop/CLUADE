@@ -1,0 +1,232 @@
+# Contact Theatre Panel Expansion
+
+## Context
+
+CONTACT 페이지 씬을 ABOUT 수준으로 확장한다. 현재 Theatre 패널에는 `camera`, `light`, `earth` 3개 그룹만 있다. 새 씬에는 ROCKET · JETFLAME · JET ENGINE · SMOKE · TERRAIN · CAMERA · EARTH · LIGHT 8개 오브젝트가 필요하고, 이 모두가 Theatre 패널에 노출되어야 한다.
+
+- SMOKE = `gravityBalls` (exhaust particle) — `visible` 토글만 Theatre 추적
+- JETFLAME = `rocket.flame` (rocket 그룹 내 서브그룹)
+- JET ENGINE = `jetEngine` (별도 그룹)
+- LIGHT = ABOUT 라이트와 동일 스펙 (ambient 0.34 / key 3.2 / fill 0.62 / rim 0.24)
+- Sheets: `contact` · `outtro` (변경 없음)
+
+---
+
+## Critical Files
+
+| 파일 | 변경 내용 |
+|---|---|
+| `resource/ts/types/contact.types.ts` | ContactSceneState / ContactTheatreProps / ContactInitialState 확장 |
+| `resource/ts/pages/contact/scene/contact.scene.ts` | objects 추가, 라이트 디폴트 수정, 새 오브젝트 디폴트 state 추가 |
+| `resource/ts/pages/contact/theatre/ContactSceneRig.ts` | compose / apply / read / readObjectValue 확장 |
+| `resource/json/contact.json` | 새 Theatre 트랙 스텁 추가 (기존 keyframe 보존) |
+
+참조 (read-only):
+- `resource/ts/types/about.types.ts` — AboutTheatreValue / AboutTheatreProps 패턴
+- `resource/ts/pages/about/theatre/AboutSceneRig.ts` — _applyRocket / _applyJetEngine 구현
+- `resource/ts/types/main.types.ts` — MainRocketState / MainJetEngineState
+- `resource/ts/config/scene-light.config.ts` — ABOUT_LIGHT_AUTHOR_DEFAULTS
+- `resource/ts/core/setup.ts` — 오브젝트 ID 상수
+
+---
+
+## Step 1 — `contact.types.ts` 확장
+
+`ContactSceneState`에 4개 필드 추가:
+
+```typescript
+import type { MainJetEngineState, MainRocketState } from "./main.types.js";
+
+export interface ContactSceneState {
+  camera: ContactCameraState;
+  light: AboutLightState;
+  earth: ContactTransformState;
+  rocket: MainRocketState;       // 추가
+  jetEngine: MainJetEngineState; // 추가
+  smoke: { visible: boolean };   // 추가 (gravityBalls)
+  terrian: ContactTransformState; // 추가
+}
+```
+
+`ContactInitialState`에 동일 필드 추가:
+
+```typescript
+export type ContactInitialState = NonNullable<ContactPageConfig["initialState"]> & {
+  aboutLights: AboutLightState;
+  earth: ContactTransformState;
+  rocket: Pick<MainRocketState, "position" | "rotation" | "scale" | "visible" | "flame">;
+  terrian: ContactTransformState;
+  // jetEngine은 attachTo:rocket 이므로 initialState 불필요
+};
+```
+
+`ContactTheatreValue = ContactSceneState` (alias 그대로 — 자동 반영)
+
+`ContactTheatreProps`는 현재 `= ContactSceneState`로 aliased.  
+About 패턴처럼 `unknown`-leaf 별도 interface가 없으면 그대로 두고, 실제 타입 오류가 발생하면 About의 `AboutTheatreProps` 구조를 참고해 동일하게 분리한다.
+
+---
+
+## Step 2 — `contact.scene.ts` 수정
+
+### 2a. objects 블록 확장
+
+```typescript
+import {
+  aboutBackground, aboutLights, earth,
+  rocket, jetEngine, gravityBalls, terrian,   // 추가
+} from "../../../core/setup.js";
+
+objects: {
+  [aboutBackground]: true,
+  [aboutLights]: true,
+  [earth]: true,
+  [rocket]: true,       // 추가
+  [jetEngine]: true,    // 추가
+  [gravityBalls]: true, // 추가 (SMOKE)
+  [terrian]: true,      // 추가
+},
+```
+
+### 2b. 라이트 디폴트 수정
+
+CONTACT_DEFAULT_SCENE_STATE.light에서 intensity / ambientLight / keyLight / fillLight / rimLight 오버라이드 제거 → ABOUT_LIGHT_STATE_DEFAULTS 스프레드만 사용:
+
+```typescript
+light: {
+  ...ABOUT_LIGHT_STATE_DEFAULTS,   // ambient:0.34 / key:3.2 / fill:0.62 / rim:0.24
+  rig: { position:{x:0,y:0,z:0}, rotation:{x:0,y:0,z:0}, scale:{x:1,y:1,z:1}, visible:true },
+},
+```
+
+### 2c. 새 오브젝트 디폴트 state 추가
+
+About의 DEFAULT_ABOUT_SCENE_STATE 패턴을 참고해 작성:
+
+```typescript
+rocket: { visible: false, position:{x:0,y:1,z:0}, rotation:{x:0,y:0,z:0}, scale:{x:1,y:1,z:1},
+  flame:{ visible:false, offset:{x:0,y:-0.35,z:0}, rotation:{x:0,y:0,z:0}, scale:{x:1.65,y:3.4,z:1},
+    opacity:0.9, renderOrder:5, speed:2, wave:1.2 } },
+jetEngine: { visible: false, position:{x:0,y:-0.34,z:0}, rotation:{x:0,y:0,z:0}, scale:{x:1,y:1,z:1},
+  intensity:0.78, length:2.4, nozzleRadius:0.028, nozzleGap:2.2, noise:1, bloom:1 },
+smoke: { visible: false },
+terrian: { visible: false, position:{x:0,y:-1,z:0}, rotation:{x:0,y:0,z:0}, scale:{x:1.5,y:1.5,z:1.5} },
+```
+
+### 2d. `createContactInitialState`에 rocket / terrian 추가
+
+```typescript
+rocket: {
+  position: { ...sceneState.rocket.position },
+  rotation: { ...sceneState.rocket.rotation },
+  scale: { ...sceneState.rocket.scale },
+  visible: sceneState.rocket.visible,
+  flame: { ...sceneState.rocket.flame },
+},
+terrian: { ...sceneState.terrian },
+```
+
+---
+
+## Step 3 — `ContactSceneRig.ts` 확장
+
+### 3a. import 추가
+
+```typescript
+import {
+  aboutLights as aboutLightsId, earth as earthId,
+  rocket as rocketId, jetEngine as jetEngineId,
+  gravityBalls as gravityBallsId, terrian as terrianId,
+} from "../../../core/setup.js";
+import type { MainJetEngineState, MainRocketPort, MainRocketState } from "../../../types/main.types.js";
+import type { JetEngineTweenProps } from "../../../types/object.types.js";
+```
+
+### 3b. `createDefaultValue()` — 새 필드 추가
+
+CONTACT_DEFAULT_SCENE_STATE의 rocket / jetEngine / smoke / terrian 클론 반환.
+
+### 3c. `compose()` 확장
+
+```typescript
+compose(state: ContactSceneState): SceneFromState {
+  return {
+    camera: { position:{...state.camera.position}, fov:state.camera.fov },
+    cameraTarget: { position:{...state.camera.target} },
+    [earthId]: state.earth,
+    [rocketId]: state.rocket,
+    [jetEngineId]: {
+      position:{...state.jetEngine.position},
+      rotation:{...state.jetEngine.rotation},
+      scale:{...state.jetEngine.scale},
+      visible:state.jetEngine.visible,
+    },
+    [terrianId]: state.terrian,
+  } as unknown as SceneFromState;
+}
+```
+
+### 3d. `apply()` 확장
+
+```typescript
+apply(engine: Engine, state: ContactSceneState): void {
+  engine.setState(this.compose(state));
+  engine.getCamera().lookAt(engine.getCameraTarget().position);
+  this._applyLight(engine, state.light);
+  this._applyRocket(engine, state.rocket);
+  this._applyJetEngine(engine, state.jetEngine);
+  this._applySmoke(engine, state.smoke);
+}
+```
+
+`_applyRocket`, `_applyJetEngine` — AboutSceneRig에서 그대로 복사 (타입만 ContactSceneState로).
+
+`_applySmoke` (신규):
+```typescript
+private _applySmoke(engine: Engine, state: { visible: boolean }): void {
+  const obj = engine.getObjectById(gravityBallsId);
+  if (obj) obj.visible = state.visible;
+}
+```
+
+### 3e. `read()` 확장
+
+rocket, jetEngine, smoke, terrian 읽기 추가. `_readRocket`, `_readJetEngine` — AboutSceneRig 패턴 그대로. fallback은 CONTACT_DEFAULT_SCENE_STATE.
+
+### 3f. `readObjectValue()` 확장
+
+모든 새 필드 deepClone 추가.
+
+---
+
+## Step 4 — `contact.json` 트랙 추가
+
+기존 camera / light / earth keyframe 보존.  
+두 시트(`contact`, `outtro`) 각각의 `sequence.tracksByObject.orbitCamera`에 아래 빈 트랙 스텁 추가:
+
+**rocket** (18 tracks): position.x/y/z, rotation.x/y/z, scale.x/y/z, visible, flame.visible, flame.offset.x/y/z, flame.rotation.x/y/z, flame.scale.x/y/z, flame.opacity, flame.renderOrder, flame.speed, flame.wave
+
+**jetEngine** (10 tracks): position.x/y/z, rotation.x/y/z, scale.x/y/z, visible, intensity, length, nozzleRadius, nozzleGap, noise, bloom
+
+**terrian** (7 tracks): position.x/y/z, rotation.x/y/z, scale.x/y/z, visible
+
+**smoke** (1 track): visible
+
+각 스텁 형식:
+```json
+"<uniqueId>": {
+  "type": "BasicKeyframedTrack",
+  "__debugName": "orbitCamera:[\"rocket\",\"position\",\"x\"]",
+  "keyframes": []
+}
+```
+ID는 기존 패턴(10자리 영숫자) 신규 생성. `staticOverrides` 보존.
+
+---
+
+## Verification
+
+1. `rtk tsc --noEmit` — 타입 오류 0개 확인
+2. `http://localhost:8888/contact?theatre=1` 접속 → Theatre Studio 패널에서 orbitCamera 오브젝트 하위에 `rocket`, `jetEngine`, `smoke`, `terrian` 그룹 노출 확인
+3. 각 그룹 visible 토글 동작 확인 (rocket/terrian 기본 false)
+4. `rtk npm run test` — 기존 테스트 통과 확인

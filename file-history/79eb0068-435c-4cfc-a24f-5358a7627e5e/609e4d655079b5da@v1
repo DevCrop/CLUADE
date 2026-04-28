@@ -1,0 +1,262 @@
+import * as THREE from "three";
+import {
+  aboutBackground as aboutBackgroundId,
+  aboutLights as aboutLightsId,
+  astronaut as astronautId,
+  earth as earthId,
+  jetEngine as jetEngineId,
+  rocket as rocketId,
+  terrian as terrianId,
+} from "../../../core/setup.js";
+import type { SceneObject } from "../../../core/SceneObject.js";
+import type { Engine } from "../../../core/Engine.js";
+import type { SceneFromState } from "../../../types/core.types.js";
+import type {
+  AboutBackgroundState,
+  AboutLightState,
+  AboutLightsPort,
+  AboutSceneState,
+  AboutTransformState,
+} from "../../../types/about.types.js";
+import type {
+  MainJetEngineState,
+  MainRocketPort,
+  MainRocketState,
+} from "../../../types/main.types.js";
+import type { JetEngineTweenProps } from "../../../types/object.types.js";
+import { Helpers } from "../../../utils/Helpers.js";
+import { ABOUT_DEFAULT_SCENE_STATE } from "./AboutSceneState.js";
+import { DEFAULT_MAIN_SCENE_STATE } from "../../main/theatre/MainSceneState.js";
+
+export class AboutSceneRig {
+  compose(state: AboutSceneState): SceneFromState {
+    return {
+      camera: {
+        position: { ...state.camera.position },
+        fov: state.camera.fov,
+      },
+      cameraTarget: {
+        position: { ...state.camera.target },
+      },
+      [aboutBackgroundId]: state.background,
+      [earthId]: state.earth,
+      [rocketId]: state.rocket,
+      [jetEngineId]: {
+        position: { ...state.jetEngine.position },
+        rotation: { ...state.jetEngine.rotation },
+        scale: { ...state.jetEngine.scale },
+        visible: state.jetEngine.visible,
+      },
+      [astronautId]: state.astronaut,
+      [terrianId]: state.terrian,
+    } as unknown as SceneFromState;
+  }
+
+  apply(engine: Engine, state: AboutSceneState): void {
+    engine.setState(this.compose(state));
+    const camera = engine.getCamera();
+    camera.lookAt(engine.getCameraTarget().position);
+    this._applyLight(engine, state.light);
+    this._applyRocket(engine, state.rocket);
+    this._applyJetEngine(engine, state.jetEngine);
+  }
+
+  read(engine: Engine): AboutSceneState {
+    const camera = engine.getCamera();
+    const target = engine.getCameraTarget();
+    return {
+      camera: {
+        position: {
+          x: this._toFinite(camera.position.x, 0),
+          y: this._toFinite(camera.position.y, 0),
+          z: this._toFinite(camera.position.z, 18),
+        },
+        target: {
+          x: this._toFinite(target.position.x, 0),
+          y: this._toFinite(target.position.y, 0),
+          z: this._toFinite(target.position.z, 0),
+        },
+        fov: this._toFinite(camera.fov, 64),
+      },
+      light: this._readLight(engine),
+      background: this._readBackground(engine),
+      earth: this._readTransform(engine, earthId),
+      rocket: this._readRocket(engine),
+      jetEngine: this._readJetEngine(engine),
+      astronaut: this._readTransform(engine, astronautId),
+      terrian: this._readTransform(engine, terrianId),
+    };
+  }
+
+  private _readRocket(engine: Engine): MainRocketState {
+    const transform = this._readTransform(engine, rocketId);
+    const defaults = DEFAULT_MAIN_SCENE_STATE.rocket;
+    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+    return {
+      ...transform,
+      flame: rocket?.getFlameState() ?? defaults.flame,
+    };
+  }
+
+  private _applyRocket(engine: Engine, state: MainRocketState): void {
+    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+    if (!rocket) return;
+    rocket.setFlameState(state.flame);
+  }
+
+  private _applyJetEngine(engine: Engine, state: MainJetEngineState): void {
+    const jet = engine.getSceneObjectById(jetEngineId) as SceneObject<
+      JetEngineTweenProps
+    > | null;
+    if (!jet || typeof jet.setTimelineVars !== "function") return;
+    const { position: _p, rotation: _r, scale: _s, ...rest } = state;
+    jet.setTimelineVars(rest, "to");
+  }
+
+  private _readJetEngine(engine: Engine): MainJetEngineState {
+    const transform = this._readTransform(engine, jetEngineId);
+    const defaults = DEFAULT_MAIN_SCENE_STATE.jetEngine;
+    const object = engine.getSceneObjectById(jetEngineId) as
+      | { getRuntimeOptions?: () => Record<string, unknown> }
+      | null;
+    const runtime = object?.getRuntimeOptions?.() ?? {};
+    return {
+      ...transform,
+      intensity: this._toFinite(runtime.intensity, defaults.intensity),
+      length: this._toFinite(runtime.length, defaults.length),
+      nozzleRadius: this._toFinite(runtime.nozzleRadius, defaults.nozzleRadius),
+      nozzleGap: this._toFinite(runtime.nozzleGap, defaults.nozzleGap),
+      noise: this._toFinite(runtime.noise, defaults.noise),
+      bloom: this._toFinite(runtime.bloom, defaults.bloom),
+    };
+  }
+
+  private _applyLight(engine: Engine, state: AboutLightState): void {
+    const light = engine.getSceneObjectById(
+      aboutLightsId,
+    ) as AboutLightsPort | null;
+    if (!light) return;
+    light.setState(state);
+  }
+
+  private _readLight(engine: Engine): AboutLightState {
+    const light = engine.getSceneObjectById(
+      aboutLightsId,
+    ) as AboutLightsPort | null;
+    if (!light) {
+      return {
+        visible: ABOUT_DEFAULT_SCENE_STATE.light.visible,
+        rig: {
+          position: { ...ABOUT_DEFAULT_SCENE_STATE.light.rig.position },
+          rotation: { ...ABOUT_DEFAULT_SCENE_STATE.light.rig.rotation },
+          scale: { ...ABOUT_DEFAULT_SCENE_STATE.light.rig.scale },
+          visible: ABOUT_DEFAULT_SCENE_STATE.light.rig.visible,
+        },
+        travelProgress: ABOUT_DEFAULT_SCENE_STATE.light.travelProgress,
+        intensity: ABOUT_DEFAULT_SCENE_STATE.light.intensity,
+        ambientLight: ABOUT_DEFAULT_SCENE_STATE.light.ambientLight,
+        keyLight: ABOUT_DEFAULT_SCENE_STATE.light.keyLight,
+        fillLight: ABOUT_DEFAULT_SCENE_STATE.light.fillLight,
+        rimLight: ABOUT_DEFAULT_SCENE_STATE.light.rimLight,
+      };
+    }
+    return light.getState();
+  }
+
+  private _readTransform(engine: Engine, id: string): AboutTransformState {
+    const target = engine.getObjectById(id) as THREE.Object3D | null;
+    const rotation = Helpers.readRotationDeg(target);
+    const defaults = this._resolveTransformDefaults(id);
+    return {
+      position: {
+        x: this._toFinite(target?.position.x, defaults.position.x),
+        y: this._toFinite(target?.position.y, defaults.position.y),
+        z: this._toFinite(target?.position.z, defaults.position.z),
+      },
+      rotation: {
+        x: this._toFinite(rotation.x, defaults.rotation.x),
+        y: this._toFinite(rotation.y, defaults.rotation.y),
+        z: this._toFinite(rotation.z, defaults.rotation.z),
+      },
+      scale: {
+        x: this._toFinite(target?.scale.x, defaults.scale.x),
+        y: this._toFinite(target?.scale.y, defaults.scale.y),
+        z: this._toFinite(target?.scale.z, defaults.scale.z),
+      },
+      visible: target?.visible ?? defaults.visible,
+    };
+  }
+
+  private _readBackground(engine: Engine): AboutBackgroundState {
+    const defaults = ABOUT_DEFAULT_SCENE_STATE.background;
+    const transform = this._readTransform(engine, aboutBackgroundId);
+    const object = engine.getSceneObjectById(aboutBackgroundId) as
+      | { getRuntimeOptions?: () => Record<string, unknown> }
+      | null;
+    const runtimeOptions = object?.getRuntimeOptions?.() ?? {};
+    const look = runtimeOptions.look as Record<string, unknown> | undefined;
+    return {
+      ...transform,
+      exposure: this._toFinite(runtimeOptions.exposure, defaults.exposure),
+      look: {
+        topColor: this._toFinite(look?.topColor, defaults.look.topColor),
+        bottomColor: this._toFinite(
+          look?.bottomColor,
+          defaults.look.bottomColor,
+        ),
+        accentColor: this._toFinite(
+          look?.accentColor,
+          defaults.look.accentColor,
+        ),
+        starIntensity: this._toFinite(
+          look?.starIntensity,
+          defaults.look.starIntensity,
+        ),
+        starDensity: this._toFinite(
+          look?.starDensity,
+          defaults.look.starDensity,
+        ),
+        nebulaStrength: this._toFinite(
+          look?.nebulaStrength,
+          defaults.look.nebulaStrength,
+        ),
+        motionStrength: this._toFinite(
+          look?.motionStrength,
+          defaults.look.motionStrength,
+        ),
+        legacyMix: this._toFinite(look?.legacyMix, defaults.look.legacyMix),
+      },
+    };
+  }
+
+  private _resolveTransformDefaults(id: string): AboutTransformState {
+    if (id === earthId) return ABOUT_DEFAULT_SCENE_STATE.earth;
+    if (id === rocketId) {
+      const r = ABOUT_DEFAULT_SCENE_STATE.rocket;
+      return {
+        position: { ...r.position },
+        rotation: { ...r.rotation },
+        scale: { ...r.scale },
+        visible: r.visible,
+      };
+    }
+    if (id === jetEngineId) {
+      const j = ABOUT_DEFAULT_SCENE_STATE.jetEngine;
+      return {
+        position: { ...j.position },
+        rotation: { ...j.rotation },
+        scale: { ...j.scale },
+        visible: j.visible,
+      };
+    }
+    if (id === astronautId) return ABOUT_DEFAULT_SCENE_STATE.astronaut;
+    if (id === terrianId) return ABOUT_DEFAULT_SCENE_STATE.terrian;
+    return ABOUT_DEFAULT_SCENE_STATE.background;
+  }
+
+  private _toFinite(value: unknown, fallback: number): number {
+    if (typeof value !== "number") return fallback;
+    if (!Number.isFinite(value)) return fallback;
+    return value;
+  }
+}

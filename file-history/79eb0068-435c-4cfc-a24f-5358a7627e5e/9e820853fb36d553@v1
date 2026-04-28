@@ -1,0 +1,307 @@
+import type {
+  TheatreAuthorBridgeHooks,
+  TheatreObjectPort,
+  TheatreScrubPort,
+  TheatreSequencePort,
+} from "./theatre.types.js";
+import type { PageConfig } from "./core.types.js";
+import type { MainJetEngineState, MainRocketState } from "./main.types.js";
+import type { BackgroundLookOptions } from "./object-visual.types.js";
+import type {
+  AboutLightsPort as AboutLightsObjectPort,
+  AboutLightsStateSnapshot,
+} from "./object.types.js";
+
+export interface AboutVec3State {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface AboutTransformState {
+  position: AboutVec3State;
+  rotation: AboutVec3State;
+  scale: AboutVec3State;
+  visible: boolean;
+}
+
+export interface AboutCameraState {
+  position: AboutVec3State;
+  target: AboutVec3State;
+  fov: number;
+}
+
+export type AboutLightState = AboutLightsStateSnapshot;
+export type AboutLightsPort = AboutLightsObjectPort;
+
+export interface AboutBackgroundLookState
+  extends Required<BackgroundLookOptions> {}
+
+export interface AboutBackgroundState extends AboutTransformState {
+  exposure: number;
+  look: AboutBackgroundLookState;
+}
+
+export interface AboutSceneState {
+  camera: AboutCameraState;
+  light: AboutLightState;
+  background: AboutBackgroundState;
+  earth: AboutTransformState;
+  rocket: MainRocketState;
+  jetEngine: MainJetEngineState;
+  astronaut: AboutTransformState;
+  terrian: AboutTransformState;
+  gravityBalls: AboutTransformState;
+}
+
+export type AboutPageConfig = PageConfig<
+  "about",
+  AboutSceneSectionKey,
+  AboutTheatreSheetId
+>;
+
+export type AboutInitialState = NonNullable<AboutPageConfig["initialState"]> & {
+  aboutLights: AboutLightState;
+  terrian: AboutTransformState;
+};
+
+export interface AboutTheatreLightValue {
+  visible: boolean;
+  rig: AboutTransformState;
+  travelProgress: number;
+  intensity: number;
+  ambientLight: number;
+  keyLight: number;
+  fillLight: number;
+  rimLight: number;
+}
+
+export type AboutTheatreValue = {
+  camera: AboutSceneState["camera"];
+  light: AboutTheatreLightValue;
+  earth: AboutSceneState["earth"];
+  rocket: AboutSceneState["rocket"];
+  jetEngine: AboutSceneState["jetEngine"];
+  astronaut: AboutSceneState["astronaut"];
+  terrian: AboutSceneState["terrian"];
+  gravityBalls: AboutSceneState["gravityBalls"];
+};
+
+export type AboutTheatreSheetId =
+  | "heroIntro"
+  | "heroSlogan"
+  | "missionVision"
+  | "services"
+  | "awards"
+  | "client"
+  | "contact";
+
+export type AboutSceneSectionKey =
+  | "heroIntro"
+  | "heroSlogan"
+  | "missionVision"
+  | "services"
+  | "awards"
+  | "client"
+  | "contact";
+
+export type AboutUiPhase = "idle" | "intro" | "scroll";
+
+export interface AboutHeroSloganConfig {
+  viewportSelector: string;
+  trackSelector: string;
+  keywordSelector: string;
+  keywordCount: number;
+  progressWindowStart: number;
+  progressWindowEnd: number;
+  duration: number;
+  ease: string;
+  inactiveOpacity: number;
+  activeOpacity: number;
+  inactiveBlurPx: number;
+  activeBlurPx: number;
+  inactiveTextShadow: string;
+  activeTextShadow: string;
+}
+
+export interface AboutWhoShowcaseCardPose {
+  orbitAngleDeg: number;
+  orbitRadiusVmin: number;
+  orbitRotateDeg: number;
+  stackXvmin: number;
+  stackYvmin: number;
+  stackRotateDeg: number;
+  scatterXvmin: number;
+  scatterYvmin: number;
+  scatterRotateDeg: number;
+  scale: number;
+  zIndex: number;
+}
+
+export interface AboutWhoShowcaseConfig {
+  stageSelector: string;
+  titleSelector: string;
+  ringSelector: string;
+  cardSelector: string;
+  cardRevealWindowStart: number;
+  cardRevealWindowEnd: number;
+  spawnEnd: number;
+  mergeEnd: number;
+  scatterEnd: number;
+  orbitVerticalScale: number;
+  titleScaleStart: number;
+  titleScalePeak: number;
+  titleScaleEnd: number;
+  titleOpacityStart: number;
+  titleOpacityEnd: number;
+  titleExitOpacity: number;
+  titleYOffsetPx: number;
+  titleExitYOffsetPx: number;
+  ringOpacityMax: number;
+  ringScaleStart: number;
+  ringScaleEnd: number;
+  cardOpacityStart: number;
+  cardOpacityEnd: number;
+  cardScatterOpacity: number;
+  cardRevealOvershoot: number;
+  cardMergeScaleFactor: number;
+  cardScatterScaleFactor: number;
+  cardPoses: readonly AboutWhoShowcaseCardPose[];
+}
+
+export interface AboutCameraTheatreValue {
+  camera: AboutTheatreValue["camera"];
+}
+
+export interface AboutTheatreProps {
+  camera: {
+    position: { x: unknown; y: unknown; z: unknown };
+    target: { x: unknown; y: unknown; z: unknown };
+    fov: unknown;
+  };
+  light: {
+    visible: unknown;
+    rig: {
+      position: { x: unknown; y: unknown; z: unknown };
+      rotation: { x: unknown; y: unknown; z: unknown };
+      scale: { x: unknown; y: unknown; z: unknown };
+      visible: unknown;
+    };
+    travelProgress: unknown;
+    intensity: unknown;
+    ambientLight: unknown;
+    keyLight: unknown;
+    fillLight: unknown;
+    rimLight: unknown;
+  };
+  earth: {
+    position: { x: unknown; y: unknown; z: unknown };
+    rotation: { x: unknown; y: unknown; z: unknown };
+    scale: { x: unknown; y: unknown; z: unknown };
+    visible: unknown;
+  };
+  rocket: {
+    position: { x: unknown; y: unknown; z: unknown };
+    rotation: { x: unknown; y: unknown; z: unknown };
+    scale: { x: unknown; y: unknown; z: unknown };
+    visible: unknown;
+    flame: {
+      visible: unknown;
+      offset: { x: unknown; y: unknown; z: unknown };
+      rotation: { x: unknown; y: unknown; z: unknown };
+      scale: { x: unknown; y: unknown; z: unknown };
+      opacity: unknown;
+      renderOrder: unknown;
+      speed: unknown;
+      wave: unknown;
+    };
+  };
+  jetEngine: {
+    position: { x: unknown; y: unknown; z: unknown };
+    rotation: { x: unknown; y: unknown; z: unknown };
+    scale: { x: unknown; y: unknown; z: unknown };
+    visible: unknown;
+    intensity: unknown;
+    length: unknown;
+    nozzleRadius: unknown;
+    nozzleGap: unknown;
+    noise: unknown;
+    bloom: unknown;
+  };
+  astronaut: {
+    position: { x: unknown; y: unknown; z: unknown };
+    rotation: { x: unknown; y: unknown; z: unknown };
+    scale: { x: unknown; y: unknown; z: unknown };
+    visible: unknown;
+  };
+  terrian: {
+    position: { x: unknown; y: unknown; z: unknown };
+    rotation: { x: unknown; y: unknown; z: unknown };
+    scale: { x: unknown; y: unknown; z: unknown };
+    visible: unknown;
+  };
+}
+
+export interface AboutCameraTheatreProps {
+  camera: AboutTheatreProps["camera"];
+}
+
+export type AboutTheatreObject = TheatreObjectPort<
+  AboutTheatreValue,
+  AboutTheatreProps
+>;
+
+export type AboutTheatreSequence = TheatreSequencePort;
+
+export interface AboutTheatreSheetBinding {
+  object: AboutTheatreObject;
+  sequence: TheatreSequencePort;
+  length: number;
+}
+
+export type AboutTheatreScrub = TheatreScrubPort<
+  AboutTheatreValue,
+  AboutTheatreProps
+>;
+
+export interface AboutTheatreScrubCameraApi {
+  set: (
+    props: AboutCameraTheatreProps["camera"],
+    values: AboutCameraTheatreValue["camera"],
+  ) => void;
+}
+
+export interface AboutTheatreScrubCameraPort {
+  capture: (
+    callback: (api: AboutTheatreScrubCameraApi) => void,
+  ) => void;
+}
+
+export interface AboutTheatrePlaybackRange {
+  start: number;
+  end: number;
+}
+
+export interface AboutSceneProgressRange {
+  start: number;
+  end: number;
+}
+
+export interface AboutSceneProgressState {
+  sheetId: AboutTheatreSheetId;
+  localProgress: number;
+}
+
+export interface AboutTheatrePlaybackStep {
+  sheetId: AboutTheatreSheetId;
+  progressRange?: AboutSceneProgressRange;
+  playbackRange?: AboutTheatrePlaybackRange;
+}
+
+export interface AboutResolvedTheatrePlaybackStep {
+  sheetId: AboutTheatreSheetId;
+  range: AboutTheatrePlaybackRange;
+  progressRange: AboutSceneProgressRange;
+}
+
+export type AboutTheatreBridgeHooks = TheatreAuthorBridgeHooks;

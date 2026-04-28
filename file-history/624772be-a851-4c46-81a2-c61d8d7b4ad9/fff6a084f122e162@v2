@@ -1,0 +1,11 @@
+---
+name: npm build/watch/install 실행 금지
+description: 일반 개발 중 npm run build, npm run watch, npm install 실행 금지 — Vite dev 서버가 저장 시 자동 빌드
+type: feedback
+originSessionId: 624772be-a851-4c46-81a2-c61d8d7b4ad9
+---
+`npm run build`, `npm run watch`, `npm install`은 일반 개발 중 실행 금지.
+
+**Why:** 파일 저장 시 Vite dev 서버(`http://localhost:8888`)가 자동으로 번들을 재생성함. 실행해도 이득 없고 컨텍스트/시간만 낭비. 검증 단계, PR 노트, 플랜에도 포함 금지.
+
+**How to apply:** `npm install <package>`는 새 패키지를 추가할 때만 허용. 그 외 모든 npm build/watch/install 커맨드는 제안하거나 실행하지 말 것.

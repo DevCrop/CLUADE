@@ -1,0 +1,5 @@
+# Global AI Rules
+
+**RTK 필수**: 출력이 몇 줄을 초과할 Bash 명령은 `rtk` 프리픽스. WSL Remote = hook 자동 재작성. native Windows = 명시 prefix.
+
+@RTK.md

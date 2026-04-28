@@ -1,0 +1,39 @@
+# BRAND
+
+AI entry point for NINEONELABS brand, copy, design language, homepage flow, and review algorithms. Do not treat this file as the full brand manual. Read this file first, then open only the `brand/*.md` files needed for the task.
+
+## Fast Identity
+
+| Item | Rule |
+|---|---|
+| Official EN name | `NINEONELABS` |
+| Technical lowercase | `nineonelabs` only for files, slugs, package/code context |
+| Korean name | `나인원랩스` |
+| Type | Digital web agency |
+| Core values | Experiment · Challenge · Proof / 실험 · 도전 · 증명 |
+| Slogan | `JOIN THE JOURNEY` |
+| Services | WEB · APP · BRANDING · UI/UX · MAINTENANCE |
+
+## Hard Rules
+
+- Never use mixed camel case brand naming.
+- Treat missing-final-`B` spellings as errors. The correct display name is `NINEONELABS`.
+- NINEONELABS builds digital products. Space is metaphor, not the business category.
+- The client is the main character. NINEONELABS is the companion, crew, and architecture builder.
+- The slogan `JOIN THE JOURNEY` must not be abbreviated, remixed, or rewritten in display contexts.
+- Activate exactly two personas for brand/copy work: Language Editor and Brand Reviewer.
+- Every homepage section must pass usefulness, section-definition, context, vocabulary, and line-break checks.
+
+## Read Only What You Need
+
+| Task | Read |
+|---|---|
+| Any brand/copy task | `brand/README.md`, `brand/identity.md`, `brand/personas.md` |
+| Writing or editing copy | `brand/voice.md`, `brand/vocabulary.md` |
+| Homepage section work | `brand/homepage-flow.md`, `brand/review-algorithm.md` |
+| Word choice / naming | `brand/vocabulary.md`, `brand/voice.md` |
+| Review or approval | `brand/personas.md`, `brand/review-algorithm.md` |
+
+## Token Rule
+
+Do not load every brand document by default. Start here, select the smallest relevant set from the table above, then proceed.

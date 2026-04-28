@@ -1,0 +1,327 @@
+# NINEONELABS RENEWALD
+
+NineOneLabs 웹에이전시 사이트 리뉴얼 프로젝트입니다.
+
+## 📚 문서
+
+**모든 상세 문서는 [`docs/`](./docs/) 디렉토리에서 확인하실 수 있습니다.**
+
+- [프로젝트 구조 및 아키텍처](./docs/ARCHITECTURE.md)
+- [개발 가이드](./docs/DEVELOPMENT.md)
+- [데이터베이스 마이그레이션 가이드](./docs/MIGRATION_USAGE.md)
+- [관리자 가이드](./docs/ADMIN_GUIDE_PROMPT.md)
+- [WEB_GUIDE](./docs/WEB_GUIDE.md) — 웹·디자인·SCSS·접근성
+- [JS_GUIDE](./docs/JS_GUIDE.md) — JS·Three.js 아키텍처·금지 규칙 (신규 개발자 온보딩 필수)
+
+## 🚀 빠른 시작
+
+### 필수 요구사항
+
+- Docker & Docker Compose
+- Node.js 22.15+ (로컬에 설치 필요)
+- PHP 7.4+ (Docker 컨테이너 내에서 실행)
+
+### 설치 및 실행
+
+```bash
+# 1. Docker 컨테이너 시작
+make up
+
+# 2. 의존성 설치
+make install      # 모든 패키지 설치 (npm + composer)
+
+# 3. 빌드
+npm run build     # 또는 npm run watch (개발 모드, 로컬에서 실행)
+
+# 4. 데이터베이스 마이그레이션
+make migrate
+```
+
+### 접속 정보
+
+- **웹사이트**: http://localhost:8080
+- **phpMyAdmin**: http://localhost:8081
+- **데이터베이스**:
+  - Host: localhost:3306
+  - Database: nineonelabs
+  - User: user
+  - Password: password
+
+## 📦 사용하는 라이브러리
+
+### 프론트엔드
+
+- **esbuild** (^0.25.9): JavaScript 번들러
+- **esbuild-sass-plugin** (^3.3.1): SCSS 컴파일러
+- **Swiper**: 슬라이더 라이브러리
+- **Fontello**: 아이콘 폰트
+
+### 백엔드
+
+- **PHP 7.4**: 서버 사이드 언어
+- **MySQL 8.0**: 데이터베이스
+- **Apache**: 웹 서버
+- **Composer**: PHP 패키지 관리자
+- **PHPMailer**: 이메일 전송 라이브러리
+
+## 📁 프로젝트 구조
+
+```
+nineonelabs/
+├── admin/              # 관리자 페이지
+│   ├── Controller/     # 컨트롤러
+│   ├── core/          # 인증, 권한 관리
+│   └── lib/           # 관리자 라이브러리
+├── bootstrap/         # 애플리케이션 부트스트랩
+├── config/            # 설정 파일
+├── docs/              # 문서
+├── inc/               # 공통 라이브러리
+├── lang/              # 다국어 파일
+├── module/            # 모듈
+├── resource/          # 정적 리소스
+│   ├── css/          # 컴파일된 CSS
+│   ├── dist/         # 빌드 결과물
+│   ├── images/       # 이미지
+│   ├── js/           # JavaScript 소스
+│   ├── scss/         # SCSS 소스
+│   └── vendor/       # 서드파티 라이브러리
+├── routes/            # 라우팅 정의
+├── src/               # 핵심 소스 코드
+│   ├── Core/         # 애플리케이션 코어
+│   ├── Database/     # 데이터베이스 관련
+│   ├── Http/         # HTTP 요청/응답
+│   ├── Menu/         # 메뉴 시스템
+│   ├── Routing/      # 라우팅 시스템
+│   └── View/         # 뷰 엔진
+├── uploads/          # 업로드 파일
+└── views/            # 뷰 템플릿
+    ├── components/   # 재사용 컴포넌트
+    ├── errors/       # 에러 페이지
+    ├── layouts/      # 레이아웃
+    └── pages/        # 페이지 뷰
+```
+
+## 🔧 주요 파일 경로
+
+### 진입점
+
+- `index.php`: 프론트엔드 진입점
+- `admin/index.php`: 관리자 페이지 진입점
+
+### 설정
+
+- `config/setup.php`: 기본 설정 (DB, 환경 변수)
+- `config/functions.php`: 전역 함수
+- `config/helpers.php`: 헬퍼 함수
+- `config/configuration.php`: 추가 설정
+
+### 라우팅
+
+- `routes/web.php`: 웹 라우트 정의
+- `bootstrap/menu.php`: 메뉴 구조 정의
+
+### 빌드
+
+- `build.js`: esbuild 설정 및 빌드 스크립트
+- `package.json`: Node.js 의존성 및 스크립트
+
+### Docker
+
+- `dockerfile`: PHP/Apache 이미지 설정
+- `docker-compose.yml`: 서비스 구성
+
+## 🎯 주요 기능
+
+### 프론트엔드
+
+- 반응형 웹 디자인
+- 다국어 지원 (한국어/영어)
+- SEO 최적화 (메타 태그, Open Graph, Twitter Card)
+- 메뉴 시스템
+- 게시판 시스템
+- FAQ 관리
+- 문의 관리
+- 배너/팝업 관리
+
+### 관리자
+
+- 역할 기반 접근 제어 (RBAC)
+- 게시판 관리
+- 디자인 요소 관리 (배너, 팝업)
+- FAQ 관리
+- 문의 관리
+- SEO 설정
+- 사이트 정보 관리
+- 접속 통계
+
+### 데이터베이스
+
+- 마이그레이션 시스템
+- 자동 스키마 생성
+- 롤백 지원
+
+## 🛠️ 개발 명령어
+
+### Docker
+
+```bash
+make up          # 컨테이너 시작
+make build        # 이미지 빌드 후 시작
+make stop         # 컨테이너 중지
+make down         # 컨테이너 제거
+make bash         # 웹 컨테이너 접속
+```
+
+### 의존성 설치
+
+```bash
+make install      # 모든 패키지 설치 (npm + composer)
+make composer     # PHP 패키지만 설치
+```
+
+### 빌드
+
+```bash
+npm run build     # 프로덕션 빌드
+npm run watch     # 개발 모드 (자동 재빌드)
+```
+
+### 데이터베이스 마이그레이션
+
+```bash
+make m                    # 마이그레이션 생성 (대화형)
+make migrate              # 마이그레이션 실행
+make migrate-status       # 상태 확인
+make migrate-rollback     # 롤백 (대화형)
+make migrate-rollback-all # 전체 롤백
+```
+
+## 📋 기술 스펙
+
+### 백엔드
+
+- **언어**: PHP 7.4
+- **프레임워크**: 커스텀 MVC 프레임워크
+- **데이터베이스**: MySQL 8.0
+- **웹 서버**: Apache
+- **아키텍처**: MVC 패턴
+
+### 프론트엔드
+
+- **빌드 도구**: esbuild
+- **스타일**: SCSS
+- **언어**: JavaScript (ES6+)
+
+### 개발 환경
+
+- **컨테이너**: Docker & Docker Compose
+- **패키지 관리**: Composer (PHP, Docker), npm (Node.js, 로컬)
+
+## 🔐 보안
+
+- 역할 기반 접근 제어 (RBAC)
+- SQL 인젝션 방지 (PDO 사용)
+- XSS 방지
+- CSRF 보호
+
+## 📝 코딩 패턴
+
+### 네임스페이스
+
+- `Core\`: 애플리케이션 코어
+- `Database\`: 데이터베이스 관련
+- `Http\`: HTTP 요청/응답
+- `Routing\`: 라우팅
+- `View\`: 뷰 엔진
+- `Menu\`: 메뉴 시스템
+
+### 네이밍 컨벤션
+
+- **클래스**: PascalCase (예: `Application`, `Router`)
+- **메서드**: camelCase (예: `handleRequest()`, `getInstance()`)
+- **변수**: camelCase (예: `$request`, `$response`)
+- **상수**: UPPER_SNAKE_CASE (예: `ROOT_PATH`, `DEFAULT_LOCALE`)
+- **테이블**: `nb_` 접두사 (예: `nb_siteinfo`, `nb_admin`)
+
+### 라우팅 패턴
+
+```php
+$router->get('/', function () {
+    return render('pages.index');
+})->name('home');
+```
+
+### 뷰 렌더링
+
+```php
+render('pages.index');              // views/pages/index.php
+render('pages.works.view', ['no' => $no]);  // views/pages/works/view.php
+```
+
+## 🗄️ 데이터베이스
+
+### 주요 테이블
+
+- `nb_siteinfo`: 사이트 정보
+- `nb_admin`: 관리자 계정
+- `nb_roles`: 권한
+- `nb_branches`: 지점
+- `nb_branch_seos`: 지점별 SEO
+- `nb_migrations`: 마이그레이션 기록
+
+### 마이그레이션
+
+자세한 내용은 [마이그레이션 가이드](./docs/MIGRATION_USAGE.md)를 참고하세요.
+
+## 🚢 배포
+
+### 서버 배포 시 주의사항
+
+**중요**: 서버 배포 시 `vendor/` 폴더가 프로젝트에 포함되어야 합니다.
+
+```bash
+# 1. 프로덕션 빌드
+npm run build
+
+# 2. Composer 패키지 설치 (vendor/ 폴더 생성)
+make composer
+# 또는
+composer install --no-dev --optimize-autoloader
+
+# 3. 프로젝트 전체를 서버에 업로드
+# - vendor/ 폴더 포함
+# - node_modules/ 폴더는 제외 가능 (프론트엔드 빌드 결과물만 필요)
+```
+
+### 배포 시 포함해야 할 파일/폴더
+
+- ✅ `vendor/` - Composer 패키지 (필수)
+- ✅ `resource/dist/` - 빌드된 JavaScript/CSS
+- ✅ 모든 PHP 파일
+- ✅ `composer.json`, `composer.lock` - 의존성 정보
+- ❌ `node_modules/` - 서버에서 불필요 (로컬 빌드만 필요)
+
+### 서버에서 Composer 설치 (선택사항)
+
+서버에 Composer가 설치되어 있다면:
+
+```bash
+# 서버에서 직접 설치
+composer install --no-dev --optimize-autoloader
+```
+
+하지만 **권장 방법**은 로컬에서 `make composer` 실행 후 `vendor/` 폴더를 함께 배포하는 것입니다.
+
+## 📖 추가 문서
+
+더 자세한 내용은 [`docs/`](./docs/) 디렉토리를 확인해주세요:
+
+- [프로젝트 구조 및 아키텍처](./docs/ARCHITECTURE.md)
+- [개발 가이드](./docs/DEVELOPMENT.md)
+- [데이터베이스 마이그레이션](./docs/MIGRATION_USAGE.md)
+- [관리자 가이드](./docs/ADMIN_GUIDE_PROMPT.md)
+- [WEB_GUIDE](./docs/WEB_GUIDE.md)
+
+## 📄 라이선스
+
+Copyright © Nol Universe Co., Ltd. All rights reserved.

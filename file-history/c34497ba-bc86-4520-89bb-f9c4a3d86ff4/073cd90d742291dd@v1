@@ -1,0 +1,200 @@
+import { SUBPAGE_STARFIELD } from "../config/component.config.js";
+import { FrameScheduler } from "../utils/FrameScheduler.js";
+import { ResponsiveRuntime } from "./ResponsiveRuntime.js";
+import type { SubpageStarfieldStar } from "../types/component.types.js";
+
+export class SubpageStarfieldRuntime {
+  private _canvas: HTMLCanvasElement | null = null;
+  private _context: CanvasRenderingContext2D | null = null;
+  private _stars: SubpageStarfieldStar[] = [];
+  private _width = 0;
+  private _height = 0;
+  private _centerX = 0;
+  private _centerY = 0;
+  private _rafId: number | null = null;
+  private _resizeListener: (() => void) | null = null;
+  private _scrollListener: (() => void) | null = null;
+  private _scrollBoost = 0;
+  private _targetScrollBoost = 0;
+  private _lastScrollY = 0;
+  private _lastFrameTime = 0;
+
+  init(root?: ParentNode | null): void {
+    this.dispose();
+    if (!this._isEligible()) return;
+    const scope = root ?? document;
+    const canvas = scope.querySelector<HTMLCanvasElement>(
+      SUBPAGE_STARFIELD.canvasSelector,
+    );
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    this._canvas = canvas;
+    this._context = context;
+    this._lastScrollY = window.scrollY ?? window.pageYOffset ?? 0;
+    this._bindEvents();
+    this._resize();
+    this._seedStars();
+    this._lastFrameTime = performance.now();
+    this._startLoop();
+  }
+
+  dispose(): void {
+    if (this._rafId !== null) {
+      FrameScheduler.cancel(this._rafId);
+      this._rafId = null;
+    }
+    if (this._resizeListener) {
+      window.removeEventListener("resize", this._resizeListener);
+      this._resizeListener = null;
+    }
+    if (this._scrollListener) {
+      window.removeEventListener("scroll", this._scrollListener);
+      this._scrollListener = null;
+    }
+    this._canvas = null;
+    this._context = null;
+    this._stars = [];
+    this._width = 0;
+    this._height = 0;
+    this._centerX = 0;
+    this._centerY = 0;
+    this._scrollBoost = 0;
+    this._targetScrollBoost = 0;
+    this._lastScrollY = 0;
+    this._lastFrameTime = 0;
+  }
+
+  private _isEligible(): boolean {
+    const pathname = window.location.pathname || "/";
+    return SUBPAGE_STARFIELD.pagePrefixes.some((prefix) =>
+      pathname.startsWith(prefix),
+    );
+  }
+
+  private _bindEvents(): void {
+    this._resizeListener = () => this._resize();
+    this._scrollListener = () => this._syncScrollBoost();
+    window.addEventListener("resize", this._resizeListener);
+    window.addEventListener("scroll", this._scrollListener, { passive: true });
+  }
+
+  private _resize(): void {
+    if (!this._canvas || !this._context) return;
+    const bounds = this._canvas.getBoundingClientRect();
+    const width = Math.max(1, Math.round(bounds.width));
+    const height = Math.max(1, Math.round(bounds.height));
+    const dpr = Math.min(
+      ResponsiveRuntime.getDefault().getSnapshot().render.clampedPixelRatio,
+      SUBPAGE_STARFIELD.pixelRatioMax,
+    );
+    this._width = width;
+    this._height = height;
+    this._centerX = width * 0.5;
+    this._centerY = height * 0.5;
+    this._canvas.width = Math.round(width * dpr);
+    this._canvas.height = Math.round(height * dpr);
+    this._context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  private _syncScrollBoost(): void {
+    const nextY = window.scrollY ?? window.pageYOffset ?? 0;
+    const delta = Math.abs(nextY - this._lastScrollY);
+    this._lastScrollY = nextY;
+    const viewportHeight = Math.max(window.innerHeight || 0, 1);
+    const normalizedBoost = Math.min(
+      (delta / viewportHeight) * SUBPAGE_STARFIELD.scrollBoostFactor,
+      SUBPAGE_STARFIELD.scrollBoostMax,
+    );
+    this._targetScrollBoost = Math.max(this._targetScrollBoost, normalizedBoost);
+  }
+
+  private _seedStars(): void {
+    this._stars = Array.from(
+      { length: SUBPAGE_STARFIELD.starCount },
+      () => this._createStar(),
+    );
+  }
+
+  private _startLoop(): void {
+    const render = (): void => {
+      this._render();
+      this._rafId = FrameScheduler.request(render);
+    };
+    render();
+  }
+
+  private _render(): void {
+    if (!this._context || this._width <= 0 || this._height <= 0) {
+      return;
+    }
+    const now = performance.now();
+    const delta = Math.min((now - this._lastFrameTime) / 1000, 1 / 24);
+    this._lastFrameTime = now;
+    this._targetScrollBoost = Math.max(
+      0,
+      this._targetScrollBoost - delta * SUBPAGE_STARFIELD.scrollBoostDecayPerSecond,
+    );
+    const lerpFactor = Math.min(
+      1,
+      delta * SUBPAGE_STARFIELD.scrollBoostLerpPerSecond,
+    );
+    this._scrollBoost +=
+      (this._targetScrollBoost - this._scrollBoost) * lerpFactor;
+
+    const context = this._context;
+    const speed = SUBPAGE_STARFIELD.speed + this._scrollBoost;
+    context.fillStyle = `rgba(0, 0, 0, ${SUBPAGE_STARFIELD.clearAlpha})`;
+    context.fillRect(0, 0, this._width, this._height);
+
+    for (const star of this._stars) {
+      star.z -= speed;
+      if (star.z <= 0) {
+        this._resetStar(star);
+      }
+
+      const screenX = (star.x / star.z) * this._width + this._centerX;
+      const screenY = (star.y / star.z) * this._height + this._centerY;
+      const previousX = (star.x / star.previousZ) * this._width + this._centerX;
+      const previousY = (star.y / star.previousZ) * this._height + this._centerY;
+      const brightness = Math.max(
+        0,
+        Math.min(
+          255,
+          Math.floor((1 - star.z / (this._width * SUBPAGE_STARFIELD.depthRangeFactor)) * 255),
+        ),
+      );
+      const radius = Math.max(
+        SUBPAGE_STARFIELD.radiusMin,
+        (1 - star.z / (this._width * SUBPAGE_STARFIELD.depthRangeFactor)) *
+          SUBPAGE_STARFIELD.radiusMax,
+      );
+
+      context.beginPath();
+      context.moveTo(previousX, previousY);
+      context.lineTo(screenX, screenY);
+      context.strokeStyle = `rgba(${brightness}, ${brightness}, ${brightness}, 1)`;
+      context.lineWidth = radius;
+      context.stroke();
+
+      star.previousZ = star.z;
+    }
+  }
+
+  private _createStar(): SubpageStarfieldStar {
+    return this._resetStar({
+      x: 0,
+      y: 0,
+      z: 0,
+      previousZ: 0,
+    });
+  }
+
+  private _resetStar(star: SubpageStarfieldStar): SubpageStarfieldStar {
+    star.x = (Math.random() - 0.5) * this._width;
+    star.y = (Math.random() - 0.5) * this._height;
+    star.z = Math.random() * (this._width * SUBPAGE_STARFIELD.depthRangeFactor);
+    star.previousZ = star.z;
+    return star;
+  }
+}

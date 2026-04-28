@@ -1,0 +1,123 @@
+# Context
+
+ABOUT 페이지에서 GPU/CPU 과부하로 인한 프레임 저하 원인을 분석한 결과 보고서.
+구현 변경 없이 탐색·분석만 수행.
+
+---
+
+# ABOUT 페이지 GPU/CPU 부하 분석
+
+## 파일 경로 기준
+`resource/ts/pages/about/` 이하 및 관련 shader/engine 파일.
+
+---
+
+## 🔴 CRITICAL — 즉시 개선 필요
+
+### 1. 배경 셰이더 `pow(noise, 40)` 폭발적 연산
+- **파일:** `resource/shaders/background/about/hero-*.fragment.glsl`
+- **내용:** 매 프래그먼트마다 `pow(noise(fragCoord.xy), 40.0) * 20.0` + 중첩 sin/cos noise 호출
+- **영향:** 풀스크린, 매 프레임, GPU 시간의 ~30% 잠식
+- **원인:** 실시간 노이즈 계산을 텍스처 룩업으로 대체하지 않음
+
+### 2. InfiniteGalleryRenderer — 5×5 블러 커널 (25 텍스처 샘플/픽셀)
+- **파일:** `resource/ts/pages/about/render/InfiniteGalleryRenderer.ts:82-96`
+- **내용:** fragment shader에 25-tap blur loop → 6개 플레인 × 해상도만큼 실행
+- **영향:** `blurAmount > 0` 구간 전체에서 GPU 과부하. 스크롤/오토플레이 내내 발동
+
+### 3. GravityBalls 파티클 스폰 (200개/초, 풀 업데이트)
+- **파일:** `resource/ts/objects/main/GravityBalls.ts:127-232`
+- **내용:** 15ms 틱마다 3개 스폰, 150개 동시 활성, 파티클당 6+ float 연산
+- **영향:** CPU ~25% 점유. 가시성 컬링 없음
+
+---
+
+## 🟠 HIGH
+
+### 4. PointerMove 레이캐스터 — 스로틀 없음
+- **파일:** `resource/ts/pages/about/render/InfiniteGalleryRenderer.ts:240-247`
+- **내용:** `pointermove`마다 `raycaster.intersectObjects()` + `findIndex()` O(n) 검색
+- **영향:** 마우스 이동 시 60fps 기준 초당 60회 CPU 히트
+
+### 5. AboutProofRenderer — 4개 복합 조명
+- **파일:** `resource/ts/pages/about/render/AboutProofRenderer.ts:171-193`
+- **내용:** AmbientLight + SpotLight×2 + DirectionalLight. 카드 8-12개 × 4조명 = 프래그먼트당 조명 계산 폭증
+- **추가:** ShadowMap PCFSoft + 4조명 → 조명당 depth pass 실행
+
+### 6. 카드 geometry 생성 시 `computeVertexNormals()` per-card
+- **파일:** `resource/ts/pages/about/render/AboutProofRenderer.ts:49-65`
+- **내용:** 카드마다 20세그먼트 PlaneGeometry 생성 → 42 vertex 수동 변형 → `computeVertexNormals()` 개별 호출
+- **개선:** base geometry 1개 재사용 가능
+
+### 7. onBeforeCompile — 카드별 셰이더 개별 컴파일
+- **파일:** `resource/ts/pages/about/render/AboutProofRenderer.ts:95-104`
+- **내용:** 텍스처 있는 카드마다 `shader.fragmentShader.replace()` → 고유 셰이더 변종 8-12개 생성
+- **개선:** uniform flag 1개로 대체 가능
+
+---
+
+## 🟡 MEDIUM
+
+### 8. 복잡한 버텍스 셰이더 — trig 4회 이상/vertex
+- **파일:** `resource/ts/pages/about/render/InfiniteGalleryRenderer.ts:34-69`
+- **내용:** 6 plane × 1024 vertex → sin/sin/length/smoothstep 조합 매 프레임
+- **hover 시:** 추가 sin×2 + smoothstep
+
+### 9. Theatre.js 상태 동기화 per-frame
+- **파일:** `resource/ts/pages/about/theatre/AboutTheatreRuntime.ts:374-409`
+- **내용:** 스크롤마다 `resolveSceneState()` O(n) 탐색 + 객체 merge + rig.apply() 전부 실행
+- **개선:** progress 변화량 임계값 이하면 스킵 가능
+
+### 10. DOM 스타일 per-frame 업데이트
+- **파일:** `resource/ts/pages/about/scene/about.scene.ts:159-231`
+- **내용:** `document.querySelector()` + `style.filter = blur(...)` 매 스크롤 프레임마다 실행
+- **영향:** 강제 reflow 트리거
+
+### 11. 글로벌 cloud-overlay 풀스크린 포스트프로세싱
+- **파일:** `resource/shaders/post-processing/global-cloud-overlay.fragment.glsl`
+- **내용:** 4 텍스처 샘플 + rotateUV(trig) + smoothstep 캐스케이드 × 전체 프레임
+
+### 12. About 지형(terrain) falloff 셰이더 — per-mesh 클론
+- **파일:** `resource/ts/objects/sub/AboutTerrian.ts:47-90`
+- **내용:** `onBeforeCompile`로 자식 메시마다 material 클론 + 6개 uniform 매 프레임 sync
+
+### 13. VideoTexture GPU 동기화 리스크
+- **파일:** `resource/ts/pages/about/render/AboutProofRenderer.ts:334-351`
+- **내용:** HTMLVideoElement 텍스처 → 매 프레임 GPU 업로드 필요 (WebGL stall 가능)
+
+---
+
+## 🟢 LOW
+
+### 14. DoubleSide 카드 재질
+- **파일:** `resource/ts/pages/about/render/AboutProofRenderer.ts:88-93`
+- **내용:** `THREE.DoubleSide` → 후면도 렌더링. FrontSide로 충분
+
+### 15. 4K 달 텍스처 (moonmap4k + moonbump4k)
+- **파일:** `resource/ts/pages/about/render/AboutProofRenderer.ts:276-282`
+- **내용:** 4096×4096 × 2 = ~64MB VRAM. 뷰포트 내 크기 대비 과도
+
+### 16. SphereGeometry 48×32 세그먼트
+- **파일:** `resource/ts/pages/about/render/AboutProofRenderer.ts:294,306`
+- **내용:** planet + atmosphere 각각 3072 tri. 24~32 세그먼트로 축소 가능
+
+### 17. 빈 프레임 이중 render() 호출
+- **파일:** `resource/ts/pages/about/render/InfiniteGalleryRenderer.ts:415-417`
+- **내용:** `_imageCount === 0`일 때 `renderer.render()` 호출 후 즉시 또 RAF 예약
+
+---
+
+## 우선순위 요약
+
+| 등급 | 항목 | 종류 | 예상 효과 |
+|------|------|------|----------|
+| 🔴 | 배경 pow(noise,40) | GPU | -30% GPU |
+| 🔴 | GravityBalls 파티클 | CPU | -25% CPU |
+| 🔴 | 5×5 blur 커널 | GPU | -15% GPU |
+| 🟠 | PointerMove 레이캐스터 무제한 | CPU | -10% CPU |
+| 🟠 | 4개 복합 조명 + shadow | GPU | -10% GPU |
+| 🟠 | per-card 셰이더 컴파일 | GPU | -8% GPU |
+| 🟡 | Theatre per-frame sync | CPU | -5% CPU |
+| 🟡 | DOM per-frame reflow | CPU | -5% CPU |
+| 🟡 | cloud-overlay postproc | GPU | -5% GPU |
+| 🟢 | DoubleSide / 4K tex / 48seg | GPU | 소폭 |

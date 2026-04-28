@@ -1,0 +1,55 @@
+import type {
+  WorksListResponse,
+} from "../types/work.types.js";
+
+const WORKS_MODAL_PATH = "/works/modal-component";
+const WORKS_LIST_PATH = "/works/list";
+
+export async function fetchWorksModalHtml(
+  no: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  const path = `${WORKS_MODAL_PATH}/${encodeURIComponent(no)}`;
+  const response = await fetch(path, {
+    method: "GET",
+    signal,
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Works modal request failed: ${response.status}`);
+  }
+  return response.text();
+}
+
+export async function fetchWorksList(
+  offset: number,
+  limit: number,
+  category: string | null,
+  signal?: AbortSignal,
+  featured?: boolean,
+): Promise<WorksListResponse> {
+  const params = new URLSearchParams({
+    offset: String(offset),
+    limit: String(limit),
+  });
+  if (category) {
+    params.set("category", category);
+  }
+  if (featured) {
+    params.set("featured", "true");
+  }
+  const response = await fetch(`${WORKS_LIST_PATH}?${params.toString()}`, {
+    method: "GET",
+    signal,
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      Accept: "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Works list request failed: ${response.status}`);
+  }
+  return (await response.json()) as WorksListResponse;
+}

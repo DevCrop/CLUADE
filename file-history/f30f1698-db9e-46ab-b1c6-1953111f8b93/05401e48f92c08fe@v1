@@ -1,0 +1,373 @@
+import type * as THREE from "three";
+import {
+  cloud as cloudId,
+  cloud2 as cloud2Id,
+  cloud3 as cloud3Id,
+  cloud4 as cloud4Id,
+  cloud5 as cloud5Id,
+  cloud6 as cloud6Id,
+  mainBackground as backgroundId,
+  earth as earthId,
+  ground as groundId,
+  planet as planetId,
+  rocket as rocketId,
+  jetEngine as jetEngineId,
+  sceneLights as sceneLightsId,
+  terrian as terrianId,
+  windowObj as windowId,
+} from "../../../core/setup.js";
+import type { SceneObject } from "../../../core/SceneObject.js";
+import type { Engine } from "../../../core/Engine.js";
+import type {
+  MainBackgroundState,
+  MainCloudState,
+  MainPostProcessingState,
+  MainRocketPort,
+  MainRocketState,
+  MainSceneLightsPort,
+  MainSceneLightsState,
+  MainJetEngineState,
+  MainSceneShakeState,
+  MainTheatreState,
+  MainTransformState,
+} from "../../../types/main.types.js";
+import type { JetEngineTweenProps } from "../../../types/object.types.js";
+import type { SceneFromState } from "../../../types/core.types.js";
+import type { GsapGlobal, WindowWithGsap } from "../../../types/gsap.types.js";
+import { SceneShake } from "../../../animation/SceneShake.js";
+import { Helpers } from "../../../utils/Helpers.js";
+import { DEFAULT_MAIN_SCENE_STATE } from "./MainSceneState.js";
+
+export class MainSceneRig {
+  private _sceneShake: SceneShake | null = null;
+  private _sceneShakeEngine: Engine | null = null;
+
+  compose(state: MainTheatreState): SceneFromState {
+    return {
+      camera: {
+        position: { ...state.camera.position },
+        fov: state.camera.fov,
+      },
+      cameraTarget: {
+        position: { ...state.camera.target },
+      },
+      [rocketId]: state.rocket,
+      [jetEngineId]: {
+        position: { ...state.jetEngine.position },
+        rotation: { ...state.jetEngine.rotation },
+        scale: { ...state.jetEngine.scale },
+        visible: state.jetEngine.visible,
+      },
+      [groundId]: state.ground,
+      [planetId]: state.planet,
+      [earthId]: state.earth,
+      [terrianId]: state.terrian,
+      [windowId]: state.window,
+      [backgroundId]: state.background,
+      [cloudId]: state.cloud,
+      [cloud2Id]: state.cloud2,
+      [cloud3Id]: state.cloud3,
+      [cloud4Id]: state.cloud4,
+      [cloud5Id]: state.cloud5,
+      [cloud6Id]: state.cloud6,
+      [sceneLightsId]: state.sceneLights,
+    } as unknown as SceneFromState;
+  }
+
+  apply(engine: Engine, state: MainTheatreState): void {
+    engine.setState(this.compose(state));
+    this._applyRocket(engine, state.rocket);
+    this._applyJetEngine(engine, state.jetEngine);
+    this._applyPostProcessing(engine, state.postProcessing);
+    this._applySceneLights(engine, state.sceneLights);
+    this._applySceneShake(engine, state.sceneShake);
+  }
+
+  read(engine: Engine): MainTheatreState {
+    const camera = engine.getCamera();
+    const target = engine.getCameraTarget();
+    const defaults = DEFAULT_MAIN_SCENE_STATE;
+    return {
+      camera: {
+        position: {
+          x: this._toFinite(camera.position.x, defaults.camera.position.x),
+          y: this._toFinite(camera.position.y, defaults.camera.position.y),
+          z: this._toFinite(camera.position.z, defaults.camera.position.z),
+        },
+        target: {
+          x: this._toFinite(target.position.x, defaults.camera.target.x),
+          y: this._toFinite(target.position.y, defaults.camera.target.y),
+          z: this._toFinite(target.position.z, defaults.camera.target.z),
+        },
+        fov: this._toFinite(camera.fov, defaults.camera.fov),
+      },
+      rocket: this._readRocket(engine),
+      jetEngine: this._readJetEngine(engine),
+      ground: this._readTransform(engine, groundId),
+      planet: this._readTransform(engine, planetId),
+      earth: this._readTransform(engine, earthId),
+      terrian: this._readTransform(engine, terrianId),
+      window: this._readTransform(engine, windowId),
+      background: this._readBackground(engine),
+      cloud: this._readCloud(engine),
+      cloud2: this._readCloudById(engine, cloud2Id, defaults.cloud2),
+      cloud3: this._readCloudById(engine, cloud3Id, defaults.cloud3),
+      cloud4: this._readCloudById(engine, cloud4Id, defaults.cloud4),
+      cloud5: this._readCloudById(engine, cloud5Id, defaults.cloud5),
+      cloud6: this._readCloudById(engine, cloud6Id, defaults.cloud6),
+      postProcessing: this._readPostProcessing(engine),
+      sceneLights: this._readSceneLights(engine),
+      sceneShake: this._readSceneShake(),
+    };
+  }
+
+  private _readTransform(engine: Engine, id: string): MainTransformState {
+    const object = engine.getObjectById(id) as THREE.Object3D | null;
+    const rotation = Helpers.readRotationDeg(object);
+    return {
+      position: {
+        x: this._toFinite(object?.position.x, 0),
+        y: this._toFinite(object?.position.y, 0),
+        z: this._toFinite(object?.position.z, 0),
+      },
+      rotation: {
+        x: this._toFinite(rotation.x, 0),
+        y: this._toFinite(rotation.y, 0),
+        z: this._toFinite(rotation.z, 0),
+      },
+      scale: {
+        x: this._toFinite(object?.scale.x, 1),
+        y: this._toFinite(object?.scale.y, 1),
+        z: this._toFinite(object?.scale.z, 1),
+      },
+      visible: object?.visible ?? true,
+    };
+  }
+
+  private _readRocket(engine: Engine): MainRocketState {
+    const transform = this._readTransform(engine, rocketId);
+    const defaults = DEFAULT_MAIN_SCENE_STATE.rocket;
+    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+    return {
+      ...transform,
+      flame: rocket?.getFlameState() ?? defaults.flame,
+    };
+  }
+
+  private _applyRocket(engine: Engine, state: MainRocketState): void {
+    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+    if (!rocket) return;
+    rocket.setFlameState(state.flame);
+  }
+
+  private _applyJetEngine(engine: Engine, state: MainJetEngineState): void {
+    const jet = engine.getSceneObjectById(jetEngineId) as SceneObject<
+      JetEngineTweenProps
+    > | null;
+    if (!jet || typeof jet.setTimelineVars !== "function") return;
+    const { position: _p, rotation: _r, scale: _s, ...rest } = state;
+    jet.setTimelineVars(rest, "to");
+  }
+
+  private _readJetEngine(engine: Engine): MainJetEngineState {
+    const transform = this._readTransform(engine, jetEngineId);
+    const defaults = DEFAULT_MAIN_SCENE_STATE.jetEngine;
+    const object = engine.getSceneObjectById(jetEngineId) as
+      | { getRuntimeOptions?: () => Record<string, unknown> }
+      | null;
+    const runtime = object?.getRuntimeOptions?.() ?? {};
+    return {
+      ...transform,
+      intensity: this._toFinite(runtime.intensity, defaults.intensity),
+      length: this._toFinite(runtime.length, defaults.length),
+      nozzleRadius: this._toFinite(runtime.nozzleRadius, defaults.nozzleRadius),
+      nozzleGap: this._toFinite(runtime.nozzleGap, defaults.nozzleGap),
+      noise: this._toFinite(runtime.noise, defaults.noise),
+      bloom: this._toFinite(runtime.bloom, defaults.bloom),
+    };
+  }
+
+  private _readBackground(engine: Engine): MainBackgroundState {
+    const transform = this._readTransform(engine, backgroundId);
+    const defaults = DEFAULT_MAIN_SCENE_STATE.background;
+    const object = engine.getSceneObjectById(backgroundId) as
+      | { getRuntimeOptions?: () => Record<string, unknown> }
+      | null;
+    const runtimeOptions = object?.getRuntimeOptions?.() ?? {};
+    const look = runtimeOptions.look as Record<string, unknown> | undefined;
+    return {
+      ...transform,
+      exposure: this._toFinite(runtimeOptions.exposure, defaults.exposure),
+      look: {
+        topColor: this._toFinite(look?.topColor, defaults.look.topColor),
+        bottomColor: this._toFinite(
+          look?.bottomColor,
+          defaults.look.bottomColor,
+        ),
+        accentColor: this._toFinite(
+          look?.accentColor,
+          defaults.look.accentColor,
+        ),
+        starIntensity: this._toFinite(
+          look?.starIntensity,
+          defaults.look.starIntensity,
+        ),
+        starDensity: this._toFinite(look?.starDensity, defaults.look.starDensity),
+        nebulaStrength: this._toFinite(
+          look?.nebulaStrength,
+          defaults.look.nebulaStrength,
+        ),
+        motionStrength: this._toFinite(
+          look?.motionStrength,
+          defaults.look.motionStrength,
+        ),
+        legacyMix: this._toFinite(look?.legacyMix, defaults.look.legacyMix),
+      },
+    };
+  }
+
+  private _readCloud(engine: Engine): MainCloudState {
+    return this._readCloudById(engine, cloudId, DEFAULT_MAIN_SCENE_STATE.cloud);
+  }
+
+  private _readCloudById(
+    engine: Engine,
+    id: string,
+    defaults: MainCloudState,
+  ): MainCloudState {
+    const transform = this._readTransform(engine, id);
+    const object = engine.getSceneObjectById(id) as
+      | { getRuntimeOptions?: () => Record<string, unknown> }
+      | null;
+    const runtimeOptions = object?.getRuntimeOptions?.() ?? {};
+    return {
+      ...transform,
+      chapter: this._toFinite(runtimeOptions.chapter, defaults.chapter),
+      transition: this._toFinite(
+        runtimeOptions.transition,
+        defaults.transition,
+      ),
+    };
+  }
+
+  private _readPostProcessing(engine: Engine): MainPostProcessingState {
+    const defaults = DEFAULT_MAIN_SCENE_STATE.postProcessing;
+    const postProcessor = engine.getPostProcessor();
+    const renderer = engine.getRenderer() as
+      | { toneMappingExposure?: number }
+      | null;
+    const bloom = postProcessor?.getBloomOptions();
+    const vignette = postProcessor?.getVignetteOptions();
+    return {
+      bloom: {
+        strength: this._toFinite(bloom?.strength, defaults.bloom.strength),
+        radius: this._toFinite(bloom?.radius, defaults.bloom.radius),
+        threshold: this._toFinite(bloom?.threshold, defaults.bloom.threshold),
+        compositeStrength: this._toFinite(
+          bloom?.compositeStrength,
+          defaults.bloom.compositeStrength,
+        ),
+      },
+      vignette: {
+        offset: this._toFinite(vignette?.offset, defaults.vignette.offset),
+        darkness: this._toFinite(
+          vignette?.darkness,
+          defaults.vignette.darkness,
+        ),
+      },
+      exposure: this._toFinite(
+        renderer?.toneMappingExposure,
+        defaults.exposure,
+      ),
+    };
+  }
+
+  private _readSceneLights(engine: Engine): MainSceneLightsState {
+    const sceneLights = engine.getSceneObjectById(
+      sceneLightsId,
+    ) as MainSceneLightsPort | null;
+    if (sceneLights) {
+      return sceneLights.getState();
+    }
+    const defaults = DEFAULT_MAIN_SCENE_STATE.sceneLights;
+    return {
+      visible: defaults.visible,
+      intensity: defaults.intensity,
+      flightProgress: defaults.flightProgress,
+      groundLight: defaults.groundLight,
+      rocketFillLight: defaults.rocketFillLight,
+      rocketRimLightLeft: defaults.rocketRimLightLeft,
+      rocketRimLightRight: defaults.rocketRimLightRight,
+      ground: this._readTransform(engine, groundId),
+    };
+  }
+
+  private _applySceneLights(engine: Engine, state: MainSceneLightsState): void {
+    const sceneLights = engine.getSceneObjectById(
+      sceneLightsId,
+    ) as MainSceneLightsPort | null;
+    if (!sceneLights) return;
+    sceneLights.setState(state);
+  }
+
+  private _applyPostProcessing(
+    engine: Engine,
+    state: MainPostProcessingState,
+  ): void {
+    const postProcessor = engine.getPostProcessor();
+    postProcessor?.setBloomOptions(state.bloom);
+    postProcessor?.setVignetteOptions(state.vignette);
+    const renderer = engine.getRenderer() as
+      | { toneMappingExposure?: number }
+      | null;
+    if (!renderer || typeof renderer.toneMappingExposure !== "number") return;
+    renderer.toneMappingExposure = this._toFinite(
+      state.exposure,
+      DEFAULT_MAIN_SCENE_STATE.postProcessing.exposure,
+    );
+  }
+
+  private _readSceneShake(): MainSceneShakeState {
+    return DEFAULT_MAIN_SCENE_STATE.sceneShake;
+  }
+
+  private _applySceneShake(
+    engine: Engine,
+    state: MainSceneShakeState,
+  ): void {
+    const gsap = this._getGsap();
+    if (!gsap) return;
+
+    const sceneShake = this._ensureSceneShake(engine, gsap);
+    if (!sceneShake) return;
+    sceneShake.setState(state);
+    sceneShake.runApply();
+  }
+
+  private _ensureSceneShake(
+    engine: Engine,
+    gsap: GsapGlobal,
+  ): SceneShake | null {
+    if (this._sceneShake && this._sceneShakeEngine === engine) {
+      return this._sceneShake;
+    }
+    this._sceneShake?.offShake();
+    this._sceneShake = new SceneShake(
+      engine.getCamera(),
+      engine.getCameraTarget(),
+      gsap,
+    );
+    this._sceneShakeEngine = engine;
+    return this._sceneShake;
+  }
+
+  private _getGsap(): GsapGlobal | null {
+    if (typeof window === "undefined") return null;
+    return ((window as WindowWithGsap).gsap ?? null) as GsapGlobal | null;
+  }
+
+  private _toFinite(value: unknown, fallback: number): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+    return value;
+  }
+}

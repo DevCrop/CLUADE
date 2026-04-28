@@ -1,0 +1,252 @@
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql:58:CREATE TABLE `nb_board` (
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-59-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-60-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-61-  `board_no` int NOT NULL COMMENT '게시판 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-62-  `user_no` int NOT NULL DEFAULT '0' COMMENT '회원 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-63-  `category_no` int NOT NULL DEFAULT '0' COMMENT '게시판 카테고리 번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-64-  `comment_cnt` int NOT NULL DEFAULT '0' COMMENT '등록된 댓글수',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-65-  `title` varchar(200) NOT NULL COMMENT '제목',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-66-  `contents` text NOT NULL COMMENT '내용',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-67-  `regdate` datetime DEFAULT NULL COMMENT '등록일',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-68-  `read_cnt` int NOT NULL DEFAULT '0' COMMENT '조회수',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-69-  `thumb_image` varchar(125) DEFAULT NULL COMMENT '썸네일 이미지(게시판에 따라 필요한 경우)',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-70-  `is_admin_writed` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '관리자작성 여부',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-71-  `is_notice` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '공지여부',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-72-  `is_secret` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '비밀글여부',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-73-  `secret_pwd` varchar(64) DEFAULT NULL COMMENT '비밀글 비밀번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-74-  `write_name` varchar(25) DEFAULT NULL COMMENT '작성자',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-75-  `isFile` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '첨부파일이 있는지 여부',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-76-  `file_attach_1` varchar(125) DEFAULT NULL COMMENT '파일첨부',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-77-  `file_attach_origin_1` varchar(125) DEFAULT NULL COMMENT '원래 파일명',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-78-  `file_attach_2` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-79-  `file_attach_origin_2` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-80-  `file_attach_3` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-81-  `file_attach_origin_3` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-82-  `file_attach_4` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-83-  `file_attach_origin_4` varchar(125) DEFAULT NULL,
+--
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql:134:CREATE TABLE `nb_board_category` (
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-135-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-136-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-137-  `board_no` int NOT NULL COMMENT '게시판 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-138-  `name` varchar(125) NOT NULL COMMENT '카테고리명',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-139-  `sort_no` int NOT NULL DEFAULT '0' COMMENT '정렬번호'
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-140-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3;
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-141-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-142--- --------------------------------------------------------
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-143-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-144---
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-145--- 테이블 구조 `nb_board_comment`
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-146---
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-147-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql:148:CREATE TABLE `nb_board_comment` (
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-149-  `no` int UNSIGNED NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-150-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-151-  `parent_no` int NOT NULL COMMENT '게시물 부모 번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-152-  `user_no` int NOT NULL DEFAULT '0' COMMENT '회원 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-153-  `write_name` varchar(25) DEFAULT NULL COMMENT '작성자',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-154-  `regdate` datetime NOT NULL COMMENT '등록일',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-155-  `contents` text NOT NULL COMMENT '내용',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-156-  `isAdmin` varchar(1) NOT NULL DEFAULT 'N',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-157-  `pwd` varchar(64) DEFAULT NULL
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-158-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3;
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-159-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-160--- --------------------------------------------------------
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-161-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-162---
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-163--- 테이블 구조 `nb_board_lev_manage`
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-164---
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-165-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql:166:CREATE TABLE `nb_board_lev_manage` (
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-167-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-168-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-169-  `board_no` int NOT NULL COMMENT '게시판 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-170-  `lev_no` int NOT NULL COMMENT '등급 번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-171-  `role_write` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '메뉴 쓰기 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-172-  `role_edit` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '메뉴 수정 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-173-  `role_view` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '메뉴 상세보기 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-174-  `role_list` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '메뉴 목록보기 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-175-  `role_delete` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '삭제 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-176-  `role_comment` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '댓글쓰기 권한'
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-177-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3;
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-178-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-179--- --------------------------------------------------------
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-180-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-181---
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-182--- 테이블 구조 `nb_board_manage`
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-183---
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-184-
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql:185:CREATE TABLE `nb_board_manage` (
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-186-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-187-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-188-  `title` varchar(50) NOT NULL COMMENT '게시판명',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-189-  `skin` varchar(3) NOT NULL COMMENT '게시판종류(bbs : 일반, img : 갤러리 , web : 웹진)',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-190-  `regdate` datetime NOT NULL COMMENT '등록일',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-191-  `top_banner_image` varchar(255) DEFAULT NULL COMMENT '상단배너 이미지',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-192-  `contents` text,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-193-  `view_yn` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '사용여부',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-194-  `secret_yn` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '비밀글기능 활성화',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-195-  `sort_no` int NOT NULL DEFAULT '0' COMMENT '정렬번호',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-196-  `list_size` int NOT NULL DEFAULT '20' COMMENT '목록출력수',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-197-  `block_size` int NOT NULL DEFAULT '0' COMMENT '페이지 카운',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-198-  `fileattach_yn` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '파일첨부 여부',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-199-  `fileattach_cnt` int NOT NULL DEFAULT '0' COMMENT '파일첨부 갯수',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-200-  `comment_yn` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '댓글기능 활성화',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-201-  `depth1` varchar(20) DEFAULT NULL COMMENT '1뎁스',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-202-  `depth2` varchar(20) DEFAULT NULL COMMENT '2뎁스',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-203-  `depth3` varchar(20) DEFAULT NULL COMMENT '3뎁스',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-204-  `lnb_path` varchar(50) DEFAULT NULL COMMENT '좌측 메뉴 경로',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-205-  `category_yn` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '카테고리 사용여부',
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-206-  `extra_match_field1` varchar(100) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-207-  `extra_match_field2` varchar(100) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-208-  `extra_match_field3` varchar(100) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-209-  `extra_match_field4` varchar(100) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260406_0102.sql-210-  `extra_match_field5` varchar(100) DEFAULT NULL,
+--
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql:94:CREATE TABLE `nb_board` (
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-95-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-96-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-97-  `board_no` int NOT NULL COMMENT '게시판 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-98-  `user_no` int NOT NULL DEFAULT '0' COMMENT '회원 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-99-  `category_no` int NOT NULL DEFAULT '0' COMMENT '게시판 카테고리 번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-100-  `comment_cnt` int NOT NULL DEFAULT '0' COMMENT '등록된 댓글수',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-101-  `title` varchar(200) NOT NULL COMMENT '제목',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-102-  `contents` text NOT NULL COMMENT '내용',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-103-  `regdate` datetime DEFAULT NULL COMMENT '등록일',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-104-  `read_cnt` int NOT NULL DEFAULT '0' COMMENT '조회수',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-105-  `thumb_image` varchar(125) DEFAULT NULL COMMENT '썸네일 이미지(게시판에 따라 필요한 경우)',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-106-  `is_admin_writed` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '관리자작성 여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-107-  `is_notice` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '공지여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-108-  `is_secret` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '비밀글여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-109-  `secret_pwd` varchar(64) DEFAULT NULL COMMENT '비밀글 비밀번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-110-  `write_name` varchar(25) DEFAULT NULL COMMENT '작성자',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-111-  `isFile` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '첨부파일이 있는지 여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-112-  `file_attach_1` varchar(125) DEFAULT NULL COMMENT '파일첨부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-113-  `file_attach_origin_1` varchar(125) DEFAULT NULL COMMENT '원래 파일명',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-114-  `file_attach_2` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-115-  `file_attach_origin_2` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-116-  `file_attach_3` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-117-  `file_attach_origin_3` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-118-  `file_attach_4` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-119-  `file_attach_origin_4` varchar(125) DEFAULT NULL,
+--
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql:163:CREATE TABLE `nb_board_category` (
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-164-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-165-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-166-  `board_no` int NOT NULL COMMENT '게시판 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-167-  `name` varchar(125) NOT NULL COMMENT '카테고리명',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-168-  `sort_no` int NOT NULL DEFAULT '0' COMMENT '정렬번호'
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-169-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3;
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-170-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-171--- --------------------------------------------------------
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-172-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-173---
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-174--- 테이블 구조 `nb_board_comment`
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-175---
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-176-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql:177:CREATE TABLE `nb_board_comment` (
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-178-  `no` int UNSIGNED NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-179-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-180-  `parent_no` int NOT NULL COMMENT '게시물 부모 번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-181-  `user_no` int NOT NULL DEFAULT '0' COMMENT '회원 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-182-  `write_name` varchar(25) DEFAULT NULL COMMENT '작성자',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-183-  `regdate` datetime NOT NULL COMMENT '등록일',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-184-  `contents` text NOT NULL COMMENT '내용',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-185-  `isAdmin` varchar(1) NOT NULL DEFAULT 'N',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-186-  `pwd` varchar(64) DEFAULT NULL
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-187-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3;
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-188-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-189--- --------------------------------------------------------
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-190-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-191---
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-192--- 테이블 구조 `nb_board_lev_manage`
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-193---
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-194-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql:195:CREATE TABLE `nb_board_lev_manage` (
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-196-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-197-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-198-  `board_no` int NOT NULL COMMENT '게시판 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-199-  `lev_no` int NOT NULL COMMENT '등급 번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-200-  `role_write` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '메뉴 쓰기 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-201-  `role_edit` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '메뉴 수정 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-202-  `role_view` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '메뉴 상세보기 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-203-  `role_list` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '메뉴 목록보기 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-204-  `role_delete` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '삭제 권한',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-205-  `role_comment` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '댓글쓰기 권한'
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-206-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3;
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-207-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-208--- --------------------------------------------------------
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-209-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-210---
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-211--- 테이블 구조 `nb_board_manage`
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-212---
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-213-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql:214:CREATE TABLE `nb_board_manage` (
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-215-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-216-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-217-  `title` varchar(50) NOT NULL COMMENT '게시판명',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-218-  `skin` varchar(3) NOT NULL COMMENT '게시판종류(bbs : 일반, img : 갤러리 , web : 웹진)',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-219-  `regdate` datetime NOT NULL COMMENT '등록일',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-220-  `top_banner_image` varchar(255) DEFAULT NULL COMMENT '상단배너 이미지',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-221-  `contents` text,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-222-  `view_yn` enum('N','Y') NOT NULL DEFAULT 'Y' COMMENT '사용여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-223-  `secret_yn` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '비밀글기능 활성화',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-224-  `sort_no` int NOT NULL DEFAULT '0' COMMENT '정렬번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-225-  `list_size` int NOT NULL DEFAULT '20' COMMENT '목록출력수',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-226-  `block_size` int NOT NULL DEFAULT '0' COMMENT '페이지 카운',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-227-  `fileattach_yn` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '파일첨부 여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-228-  `fileattach_cnt` int NOT NULL DEFAULT '0' COMMENT '파일첨부 갯수',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-229-  `comment_yn` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '댓글기능 활성화',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-230-  `depth1` varchar(20) DEFAULT NULL COMMENT '1뎁스',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-231-  `depth2` varchar(20) DEFAULT NULL COMMENT '2뎁스',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-232-  `depth3` varchar(20) DEFAULT NULL COMMENT '3뎁스',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-233-  `lnb_path` varchar(50) DEFAULT NULL COMMENT '좌측 메뉴 경로',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-234-  `category_yn` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '카테고리 사용여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-235-  `extra_match_field1` varchar(100) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-236-  `extra_match_field2` varchar(100) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-237-  `extra_match_field3` varchar(100) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-238-  `extra_match_field4` varchar(100) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1801.sql-239-  `extra_match_field5` varchar(100) DEFAULT NULL,
+--
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql:94:CREATE TABLE `nb_board` (
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-95-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-96-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-97-  `board_no` int NOT NULL COMMENT '게시판 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-98-  `user_no` int NOT NULL DEFAULT '0' COMMENT '회원 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-99-  `category_no` int NOT NULL DEFAULT '0' COMMENT '게시판 카테고리 번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-100-  `comment_cnt` int NOT NULL DEFAULT '0' COMMENT '등록된 댓글수',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-101-  `title` varchar(200) NOT NULL COMMENT '제목',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-102-  `contents` text NOT NULL COMMENT '내용',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-103-  `regdate` datetime DEFAULT NULL COMMENT '등록일',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-104-  `read_cnt` int NOT NULL DEFAULT '0' COMMENT '조회수',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-105-  `thumb_image` varchar(125) DEFAULT NULL COMMENT '썸네일 이미지(게시판에 따라 필요한 경우)',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-106-  `is_admin_writed` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '관리자작성 여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-107-  `is_notice` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '공지여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-108-  `is_secret` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '비밀글여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-109-  `secret_pwd` varchar(64) DEFAULT NULL COMMENT '비밀글 비밀번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-110-  `write_name` varchar(25) DEFAULT NULL COMMENT '작성자',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-111-  `isFile` enum('N','Y') NOT NULL DEFAULT 'N' COMMENT '첨부파일이 있는지 여부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-112-  `file_attach_1` varchar(125) DEFAULT NULL COMMENT '파일첨부',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-113-  `file_attach_origin_1` varchar(125) DEFAULT NULL COMMENT '원래 파일명',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-114-  `file_attach_2` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-115-  `file_attach_origin_2` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-116-  `file_attach_3` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-117-  `file_attach_origin_3` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-118-  `file_attach_4` varchar(125) DEFAULT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-119-  `file_attach_origin_4` varchar(125) DEFAULT NULL,
+--
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql:163:CREATE TABLE `nb_board_category` (
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-164-  `no` int NOT NULL,
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-165-  `sitekey` varchar(6) NOT NULL COMMENT '사이트 유니크 키',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-166-  `board_no` int NOT NULL COMMENT '게시판 고유번호',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-167-  `name` varchar(125) NOT NULL COMMENT '카테고리명',
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-168-  `sort_no` int NOT NULL DEFAULT '0' COMMENT '정렬번호'
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-169-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3;
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-170-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-171--- --------------------------------------------------------
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-172-
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-173---
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-174--- 테이블 구조 `nb_board_comment`
+c:\Users\edn_y\renew_nineonelabs\database\260405_1710.sql-175---
+
+[Showing results with pagination = limit: 250]

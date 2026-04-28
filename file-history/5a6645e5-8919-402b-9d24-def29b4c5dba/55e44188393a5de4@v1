@@ -1,0 +1,105 @@
+# Claude Code Best Practices Checklist
+
+Token efficiency and configuration health checklist for this project.
+
+---
+
+## 1. CLAUDE.md
+
+- [ ] Under 50 lines?
+- [ ] Does not contain anything Claude can infer from reading the code (file structure, naming conventions, etc.)?
+- [ ] File-type rules are separated into `.claude/rules/`?
+- [ ] Explicit "do not" prohibition patterns listed?
+- [ ] Verification commands included (tsc, lint, test, etc.)?
+
+## 2. Rules (`.claude/rules/`)
+
+- [ ] Split by file extension? (`php.md`, `frontend.md`, `scss.md`)
+- [ ] Each rules file has a `paths:` frontmatter header?
+- [ ] Rules contain only things that cannot be inferred from the code?
+
+## 3. Hooks (`.claude/settings.json`)
+
+- [ ] Auto-runs tsc after editing a `.ts` file?
+- [ ] Hook verified to actually fire by editing a `.ts` file?
+- [ ] Frequently used safe commands registered in `allowedTools`?
+
+## 4. Skills (`.claude/skills/`)
+
+- [ ] Repeatable workflows packaged as skills?
+- [ ] Project-specific workflows like `/migration`, `/new-route` defined?
+
+## 5. Subagents (`.claude/agents/`)
+
+- [ ] Exploration agents available for read-heavy tasks?
+- [ ] Three.js scene exploration delegated to `scene-explorer` agent?
+- [ ] PHP structure exploration delegated to `php-explorer` agent?
+
+## 6. Session habits
+
+- [ ] Using `/clear` between unrelated tasks?
+- [ ] After two failed corrections, starting fresh with `/clear` + better prompt?
+- [ ] Protecting main context by asking "use a subagent to investigate"?
+- [ ] Resuming long sessions with `--continue` / `--resume`?
+
+## 7. Token waste patterns (fix immediately if found)
+
+- [ ] No docs/ folder accumulating content Claude can infer from code?
+- [ ] CLAUDE.md not exceeding 50 lines?
+- [ ] Claude prefixing Bash tool calls with `chop`? (verify with `chop gain`)
+- [ ] `chop gain` count increasing? Zero means chop is not actually being used.
+
+---
+
+## Current project setup status
+
+| Item | Status |
+| --- | --- |
+| CLAUDE.md concise | ✅ |
+| CLAUDE.md skill invocation examples | ✅ |
+| Rules on-demand | ✅ php / frontend / scss |
+| Hooks (tsc) | ✅ Node.js stdin pattern |
+| Hook verified | ✅ Confirmed firing via Edit tool on .ts file |
+| allowedTools | ✅ chop / git / tsc / docker / npm test |
+| Skills | ✅ migration / new-route |
+| Subagents | ✅ scene-explorer / php-explorer |
+| docs/ removed + README cleaned | ✅ |
+| CHOP applied | ✅ |
+| MEMORY.md | ✅ architecture / workflow / chop / npm / permissions |
+| Test framework | ✅ vitest (19 tests) |
+| --dangerously-skip-permissions | ✅ VS Code setting (allowDangerouslySkipPermissions) |
+| npm build/watch/install forbidden | ✅ CLAUDE.md / AGENTS.md / frontend.md |
+| All AI-read files in English | ✅ |
+
+## Permission setup — `allowDangerouslySkipPermissions`
+
+To prevent Claude Code from asking for permission on every action, enable via VS Code:
+
+1. Open **File → Preferences → Settings** (or `Ctrl+,`)
+2. Search for `claudeCode.allowDangerouslySkipPermissions`
+3. Check the box — this adds "Bypass permissions" to the mode cycle
+
+> **Warning:** This flag auto-approves all tool use: file writes, Bash execution, etc.
+> Use only in trusted projects. Default permission mode is recommended for unfamiliar codebases.
+
+## Why npm build commands are forbidden
+
+`npm run build`, `npm run watch`, and `npm install` are **forbidden during normal development**.
+
+- **Reason:** Vite dev server at `http://localhost:8888` auto-rebuilds the bundle on every file save
+- Running these wastes context and time with no benefit
+- **Exception:** `npm install <package>` — only when explicitly adding a new dependency
+- This rule is enforced in three places: CLAUDE.md, AGENTS.md, and `.claude/rules/frontend.md`
+
+## How the tsc PostToolUse hook works
+
+When a `.ts` file is modified via the Edit or Write tool, the PostToolUse hook fires automatically:
+
+```bash
+# Command executed by the hook
+chop node_modules/.bin/tsc --noEmit
+```
+
+- Hook config: `.claude/settings.json` → `PostToolUse` → matcher: `Edit|Write`
+- If tsc errors are found, the hook returns `exit(1)`, immediately notifying Claude
+- **How to verify:** Edit any `.ts` file with the Edit tool → check hook output for tsc results

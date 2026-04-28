@@ -1,0 +1,106 @@
+import worksIntroState from "../../../../json/works.json";
+import { EnvSetup } from "../../../app/EnvSetup.js";
+import type {
+  WorksIntroTheatreConfig,
+  WorksTheatreSheetId,
+} from "../../../types/work.types.js";
+
+export const WORKS_THEATRE_PROJECT_ID = "works-orbit-recorder-config-v2";
+export const WORKS_THEATRE_OBJECT_ID = "orbitCamera";
+export const WORKS_THEATRE_QUERY_KEY = "theatre";
+export const WORKS_THEATRE_SHEET_IDS: readonly WorksTheatreSheetId[] = ["works"];
+export const WORKS_INTRO_DEFAULT_DURATION_MS = 3000;
+export const WORKS_INTRO_DEFAULT_EASE = "power3.inOut";
+export const WORKS_CAMERA_TRACK_DEBUG_NAMES = [
+  '["camera","position","x"]',
+  '["camera","position","y"]',
+  '["camera","position","z"]',
+  '["camera","target","x"]',
+  '["camera","target","y"]',
+  '["camera","target","z"]',
+  '["camera","fov"]',
+] as const;
+
+export const WORKS_INTRO_TRACK_DEBUG_NAMES = [
+  ...WORKS_CAMERA_TRACK_DEBUG_NAMES,
+  '["window","position","x"]',
+  '["window","position","y"]',
+  '["window","position","z"]',
+  '["window","rotation","x"]',
+  '["window","rotation","y"]',
+  '["window","rotation","z"]',
+  '["window","scale","x"]',
+  '["window","scale","y"]',
+  '["window","scale","z"]',
+  '["window","visible"]',
+  '["sceneLights","visible"]',
+  '["sceneLights","intensity"]',
+  '["sceneLights","flightProgress"]',
+  '["sceneLights","groundLight"]',
+  '["sceneLights","rocketFillLight"]',
+  '["sceneLights","rocketRimLightLeft"]',
+  '["sceneLights","rocketRimLightRight"]',
+  '["sceneLights","ground","position","x"]',
+  '["sceneLights","ground","position","y"]',
+  '["sceneLights","ground","position","z"]',
+  '["sceneLights","ground","rotation","x"]',
+  '["sceneLights","ground","rotation","y"]',
+  '["sceneLights","ground","rotation","z"]',
+  '["sceneLights","ground","scale","x"]',
+  '["sceneLights","ground","scale","y"]',
+  '["sceneLights","ground","scale","z"]',
+  '["sceneLights","ground","visible"]',
+  '["planet","position","x"]',
+  '["planet","position","y"]',
+  '["planet","position","z"]',
+  '["planet","rotation","x"]',
+  '["planet","rotation","y"]',
+  '["planet","rotation","z"]',
+  '["planet","scale","x"]',
+  '["planet","scale","y"]',
+  '["planet","scale","z"]',
+  '["planet","visible"]',
+] as const;
+
+export function resolveWorksAuthorMode(): boolean {
+  return EnvSetup.hasQueryFlag(WORKS_THEATRE_QUERY_KEY, "1");
+}
+
+function hasWorksTheatreSheetState(value: unknown): boolean {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const state = value as Record<string, unknown>;
+  const sheetsById = state.sheetsById;
+  if (sheetsById == null || typeof sheetsById !== "object" || Array.isArray(sheetsById)) {
+    return false;
+  }
+  return Object.prototype.hasOwnProperty.call(sheetsById, "works");
+}
+
+export function readWorksTheatreConfigSource(): WorksIntroTheatreConfig {
+  const configState = worksIntroState as unknown as WorksIntroTheatreConfig;
+  if (Array.isArray(configState.steps) && configState.steps.length > 0) {
+    return {
+      steps: configState.steps.map((step) => ({
+        sheetId: "works",
+        progressStart: step.progressStart,
+        progressEnd: step.progressEnd,
+        durationMs: Math.max(step.durationMs, WORKS_INTRO_DEFAULT_DURATION_MS),
+      })),
+    };
+  }
+  if (hasWorksTheatreSheetState(worksIntroState)) {
+    return {
+      steps: [
+        {
+          sheetId: "works",
+          progressStart: 0,
+          progressEnd: 1,
+          durationMs: WORKS_INTRO_DEFAULT_DURATION_MS,
+        },
+      ],
+    };
+  }
+  return { steps: [] };
+}

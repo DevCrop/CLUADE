@@ -1,0 +1,294 @@
+import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import type { SceneObjectContext } from "../../types/engine.types.js";
+import type { GravityBallsObjectOptions } from "../../types/object.types.js";
+
+interface SphereInfo {
+  ID: number;
+  color: string;
+  radiusStart: number;
+  startX: number;
+  startY: number;
+  startZ: number;
+  vx: number;
+  vxMult: number;
+  vy: number;
+  vyMult: number;
+  vz: number;
+  vzMult: number;
+  bounced: boolean;
+  gravity: number;
+  startGravity: number;
+  rotDir: number;
+  sphere: THREE.Sprite;
+  material: THREE.SpriteMaterial;
+}
+
+type ResolvedOpts = {
+  attachTo: string;
+  spawnOffset: { x?: number; y?: number; z?: number };
+  floorLevel: number;
+  floorDimensions: number;
+  radius: number;
+  colors: string[];
+  dotsPerInterval: number;
+  physicsScale: number;
+  textureUrl: string;
+};
+
+// Scale-decrement per tick: (1.0 - 0.1) / 150 ticks ≈ 2.25 s lifetime
+const SHRINK_RATE = -0.006;
+const FADE_START_SCALE = 0.5;
+const SMOKE_Z_DRIFT = 0.002;
+const SMOKE_SPREAD = 1.003;
+
+const DEFAULTS = {
+  attachTo: "rocket",
+  spawnOffset: { x: 0 as number, y: -0.34 as number, z: 0 as number },
+  floorLevel: -2.5,
+  floorDimensions: 25,
+  radius: 0.05,
+  colors: ["#F1EBDD"] as string[],
+  dotsPerInterval: 5,
+  physicsScale: 0.017,
+  textureUrl: "",
+};
+
+export class GravityBalls extends SceneObject<Record<string, never>> {
+  private readonly _balls = new Map<number, SphereInfo>();
+  private _idx = 0;
+  private _accumMs = 0;
+  private readonly _spawnPt = new THREE.Vector3();
+  private _opts: GravityBallsObjectOptions = {};
+  private _floorMesh: THREE.Mesh | null = null;
+  private _texture: THREE.Texture | null = null;
+  private _baseMat: THREE.SpriteMaterial | null = null;
+
+  setOptions(props: Partial<GravityBallsObjectOptions> | undefined): this {
+    if (props) this._opts = { ...this._opts, ...props };
+    return this;
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._opts as Record<string, unknown>;
+  }
+
+  override async runObject(): Promise<void> {
+    const ctx = this._context;
+    if (!ctx) return;
+
+    const o = this._resolve();
+
+    if (o.textureUrl && ctx.loadTexture) {
+      try {
+        this._texture = await ctx.loadTexture(this.resolveAssetPath(o.textureUrl));
+      } catch {
+        // fall back to flat color sprite
+      }
+    }
+
+    this._baseMat = new THREE.SpriteMaterial({
+      map: this._texture ?? null,
+      transparent: true,
+      depthWrite: false,
+      opacity: 0.8,
+    });
+
+    const floorGeo = new THREE.BoxGeometry(o.floorDimensions, 0.05, o.floorDimensions);
+    const floorMat = new THREE.MeshLambertMaterial({
+      color: "#000000",
+      depthWrite: false,
+      transparent: true,
+      opacity: 0.2,
+    });
+    this._floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    this._floorMesh.position.y = o.floorLevel - o.radius / 2;
+    ctx.scene.add(this._floorMesh);
+
+    this._applyOptionVisibility();
+  }
+
+  override runUpdate(delta: number): void {
+    const ctx = this._context;
+    if (!ctx || this._disposed) return;
+
+    this._accumMs += delta * 1000;
+    if (this._accumMs >= 15) {
+      this._accumMs -= 15;
+      this._tick(ctx);
+    }
+    // Sprite auto-billboards — no quaternion copy needed
+  }
+
+  private _tick(ctx: SceneObjectContext): void {
+    const o = this._resolve();
+
+    if (o.attachTo) {
+      const rkt = ctx.getObject(o.attachTo);
+      if (rkt instanceof THREE.Object3D) {
+        rkt.getWorldPosition(this._spawnPt);
+        this._spawnPt.x += o.spawnOffset.x ?? 0;
+        this._spawnPt.y += o.spawnOffset.y ?? 0;
+        this._spawnPt.z += o.spawnOffset.z ?? 0;
+      }
+    }
+
+    for (let i = 0; i < o.dotsPerInterval; i++) this._spawn(ctx, o);
+
+    const dead: number[] = [];
+    this._balls.forEach((b, id) => { if (this._step(b, o)) dead.push(id); });
+    for (const id of dead) this._balls.delete(id);
+  }
+
+  private _spawn(ctx: SceneObjectContext, o: ResolvedOpts): void {
+    const baseMat = this._baseMat;
+    if (!baseMat) return;
+
+    const s = o.physicsScale;
+    const mat = baseMat.clone();
+
+    const color = o.colors[this._rnd(0, o.colors.length)] ?? o.colors[0];
+    mat.color.set(color);
+    mat.rotation = Math.random() * Math.PI * 2;
+
+    const isXNeg = this._rnd(1, 2) === 1;
+    const isZNeg = this._rnd(1, 2) === 1;
+    let sy = this._spawnPt.y;
+    if (sy < o.floorLevel - o.radius / 2) sy = o.floorLevel - o.radius / 2;
+
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.setScalar(1);
+
+    const info: SphereInfo = {
+      ID: ++this._idx,
+      color,
+      radiusStart: o.radius,
+      startX: this._spawnPt.x,
+      startY: sy,
+      startZ: this._spawnPt.z,
+      vx: isXNeg ? this._rnd(0, 50) * -0.15 * s : this._rnd(0, 50) * 0.15 * s,
+      vxMult: this._rnd(10, 20) * 0.15,
+      vy: this._rnd(-10, 20) * s,
+      vyMult: this._rnd(4, 6) * -0.1,
+      vz: isZNeg ? this._rnd(-25, 25) * -0.4 * s : this._rnd(-25, 25) * 0.4 * s,
+      vzMult: this._rnd(10, 20) * 0.1,
+      bounced: false,
+      startGravity: 10 * s,
+      gravity: 10 * s,
+      rotDir: (Math.random() < 0.5 ? 1 : -1) * (0.003 + Math.random() * 0.006),
+      sphere: sprite,
+      material: mat,
+    };
+
+    ctx.scene.add(sprite);
+    this._balls.set(info.ID, info);
+  }
+
+  // Returns true when the ball should be removed
+  private _step(b: SphereInfo, o: ResolvedOpts): boolean {
+    const sp = b.sphere;
+
+    sp.scale.x += SHRINK_RATE;
+    sp.scale.y += SHRINK_RATE;
+
+    b.startX += b.vx * 0.6;
+    b.startY -= b.vy * 0.5;
+    b.startZ -= b.vz * 0.6;
+    sp.position.x = b.startX;
+    sp.position.y = b.startY;
+    sp.position.z = b.startZ;
+
+    if (sp.position.y < o.floorLevel - b.radiusStart / 2) {
+      if (!b.bounced) {
+        b.vx *= b.vxMult;
+        b.vz *= b.vzMult;
+      } else {
+        b.vx *= 0.95;
+        b.vz *= 0.95;
+      }
+
+      const h = o.floorDimensions / 2;
+      const outOfBounds =
+        sp.position.x > h || sp.position.x < -h ||
+        sp.position.z > h || sp.position.z < -h;
+
+      if (!outOfBounds) {
+        b.vy *= b.vyMult;
+        sp.position.y = o.floorLevel + b.radiusStart * sp.scale.x;
+        b.startY = sp.position.y;
+      } else {
+        b.gravity = b.startGravity / 4;
+        b.startY -= b.vy * 0.01;
+        sp.position.y = b.startY + (20 * o.physicsScale - b.radiusStart * sp.scale.x);
+      }
+      b.bounced = true;
+    }
+
+    b.vy += b.gravity;
+
+    // SpriteMaterial.rotation is billboard-safe (doesn't conflict with auto-facing)
+    b.material.rotation += b.rotDir;
+
+    if (sp.scale.y < FADE_START_SCALE) {
+      b.material.opacity = Math.max(0, (sp.scale.y - 0.1) / (FADE_START_SCALE - 0.1));
+      sp.position.z -= SMOKE_Z_DRIFT;
+      b.startX *= SMOKE_SPREAD;
+      b.startY *= SMOKE_SPREAD;
+    }
+
+    if (sp.scale.y <= 0.1) {
+      this._context?.scene.remove(sp);
+      b.material.dispose();
+      return true;
+    }
+    return false;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    if (this._floorMesh) this._floorMesh.visible = visible;
+    this._balls.forEach(b => { b.sphere.visible = visible; });
+  }
+
+  override dispose(): void {
+    if (this._disposed) return;
+    const scene = this._context?.scene;
+
+    if (this._floorMesh) {
+      scene?.remove(this._floorMesh);
+      this._floorMesh.geometry.dispose();
+      (this._floorMesh.material as THREE.Material).dispose();
+      this._floorMesh = null;
+    }
+
+    this._balls.forEach(b => {
+      scene?.remove(b.sphere);
+      b.material.dispose();
+    });
+    this._balls.clear();
+
+    this._baseMat?.dispose();
+    this._baseMat = null;
+    // Texture owned by engine cache — do not dispose
+
+    super.dispose();
+  }
+
+  private _resolve(): ResolvedOpts {
+    const o = this._opts;
+    return {
+      attachTo: o.attachTo ?? DEFAULTS.attachTo,
+      spawnOffset: o.spawnOffset ?? DEFAULTS.spawnOffset,
+      floorLevel: o.floorLevel ?? DEFAULTS.floorLevel,
+      floorDimensions: o.floorDimensions ?? DEFAULTS.floorDimensions,
+      radius: o.radius ?? DEFAULTS.radius,
+      colors: (o.colors && o.colors.length > 0) ? o.colors : DEFAULTS.colors,
+      dotsPerInterval: o.dotsPerInterval ?? DEFAULTS.dotsPerInterval,
+      physicsScale: o.physicsScale ?? DEFAULTS.physicsScale,
+      textureUrl: o.textureUrl ?? DEFAULTS.textureUrl,
+    };
+  }
+
+  private _rnd(min: number, max: number): number {
+    return Math.floor(Math.random() * max) + min;
+  }
+}

@@ -1,0 +1,172 @@
+<?php
+/** @var \Menu\Menu|null $menu */
+$menu = app()->get('menu');
+$siteinfo = app()->get('siteinfo') ?? [];
+$currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '/';
+if (!isset($worksCount)) {
+    $rootPath = defined('ROOT_PATH') && is_string(ROOT_PATH) ? ROOT_PATH : dirname(__DIR__, 2);
+    require_once rtrim($rootPath, '/') . '/api/works.php';
+    $worksCount = function_exists('get_works_public_count') ? get_works_public_count() : 0;
+}
+// siteinfo / .env 가 비었을 때 드로어 표시용 기본값 (필요 시 수정)
+$drawerDefaultAddressHq = '서울시 노원구 동일로191가길 48 2F';
+$drawerDefaultAddressLab = '서울특별시 동대문구 무학로 49길 85, 3F';
+$drawerDefaultEmail = 'cs@nineonelabs.co.kr';
+$drawerDefaultPhone = '070 8739 7046';
+
+$rawFooterAddress = trim((string) ($siteinfo['footer_address'] ?? ''));
+$addressLabFromSub = trim((string) ($siteinfo['footer_address_sub'] ?? $siteinfo['footer_address2'] ?? ''));
+
+if ($rawFooterAddress !== '' && $addressLabFromSub === '' && preg_match('/\R/u', $rawFooterAddress)) {
+    $parts = preg_split('/\R/u', $rawFooterAddress, 2);
+    $addressHq = trim((string) ($parts[0] ?? '')) ?: $drawerDefaultAddressHq;
+    $addressLab = trim((string) ($parts[1] ?? '')) ?: $drawerDefaultAddressLab;
+} elseif ($rawFooterAddress !== '') {
+    $addressHq = $rawFooterAddress;
+    $addressLab = $addressLabFromSub !== '' ? $addressLabFromSub : $drawerDefaultAddressLab;
+} else {
+    $addressHq = $drawerDefaultAddressHq;
+    $addressLab = $addressLabFromSub !== '' ? $addressLabFromSub : $drawerDefaultAddressLab;
+}
+
+$contactEmail = trim((string) ($siteinfo['footer_email'] ?? ''));
+if ($contactEmail === '' && defined('PROJECT_CONTACT_EMAIL')) {
+    $contactEmail = trim((string) PROJECT_CONTACT_EMAIL);
+}
+if ($contactEmail === '') {
+    $contactEmail = $drawerDefaultEmail;
+}
+
+$footerPhone = trim((string) ($siteinfo['footer_phone'] ?? $siteinfo['phone'] ?? ''));
+if ($footerPhone === '') {
+    $footerPhone = $drawerDefaultPhone;
+}
+$telHref = preg_replace('/[^0-9+]/', '', $footerPhone);
+if ($telHref === '') {
+    $telHref = '07087397046';
+}
+if (!function_exists('corner_bracket_html')) {
+    require __DIR__ . '/button/button-corner-markup.php';
+}
+?>
+<aside id="main-drawer" class="no-drawer" role="dialog" aria-modal="true" aria-label="전체 메뉴" aria-hidden="true">
+    <div class="no-drawer__inner no-scrollbar" data-lenis-prevent>
+        <div class="no-drawer__container no-container-2xl">
+            <div class="no-drawer__center">
+                <nav class="no-drawer__nav" aria-label="전체 메뉴 탐색">
+                    <?php if ($menu): ?>
+                    <ul class="no-drawer__gnb">
+                        <?php foreach ($menu->rootItems() as $root):
+                                if (!$root->isVisible()) continue;
+                                $href = $root->url();
+                                $label = $root->label();
+                                $target = $root->target();
+                                $isActive = $href === '/'
+                                    ? $currentPath === '/'
+                                    : ($href !== '' && strpos($currentPath, $href) === 0);
+                                $children = $root->children(true);
+                                $hasSub = !empty($children);
+                            ?>
+                        <li class="no-drawer__gnb-item<?= $hasSub ? ' no-drawer__gnb-item--has-sub' : '' ?>">
+                            <div class="no-drawer__reveal">
+                                <div class="no-drawer__reveal-inner">
+                            <?php if ($hasSub): ?>
+                            <div class="no-drawer__gnb-row">
+                                <a href="<?= e($href) ?>"
+                                    class="no-drawer__gnb-link wavy-link f-display-0<?= $isActive ? ' is-active' : '' ?>"
+                                    <?= !empty($target) ? ' target="' . e($target) . '"' : '' ?>>
+                                    <span class="no-drawer__gnb-label"><?= e($label) ?></span>
+                                </a>
+                                <ul class="no-drawer__gnb-sub" aria-label="<?= e($label) ?> 하위 메뉴">
+                                    <?php foreach ($children as $child):
+                                                    $chHref = $child->url();
+                                                    $chActive = $chHref !== '' && ($currentPath === $chHref || strpos($currentPath, rtrim($chHref, '/') . '/') === 0);
+                                                ?>
+                                    <li class="no-drawer__gnb-sub-item">
+                                        <a href="<?= e($chHref) ?>"
+                                            class="no-drawer__gnb-sub-link<?= $chActive ? ' is-active' : '' ?>"><span
+                                                class="no-drawer__gnb-sub-label"><?= e($child->label()) ?></span></a>
+                                    </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                            <?php else: ?>
+                            <a href="<?= e($href) ?>"
+                                class="no-drawer__gnb-link wavy-link f-display-0<?= $isActive ? ' is-active' : '' ?>"
+                                <?= !empty($target) ? ' target="' . e($target) . '"' : '' ?><?= ($target === '_blank') ? ' rel="noopener noreferrer"' : '' ?>>
+                                <span class="no-drawer__gnb-label"><?= e($label) ?></span>
+                            </a>
+                            <?php if ($root->slug() === 'works'): ?>
+                            <span class="no-drawer__badge" aria-label="작품 <?= (int) $worksCount ?>건">
+                                <?= corner_bracket_html('no-drawer__badge-corner no-corner-bracket--shine') ?>
+                                <span class="no-drawer__badge-inner">
+                                    <span class="no-loop-filter-rect no-drawer__badge-rect" aria-hidden="true">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </span>
+                                    <span class="no-drawer__badge-count f-display-2"><?= (int) $worksCount ?></span>
+                                </span>
+                            </span>
+                            <?php endif; ?>
+                            <?php endif; ?>
+                                </div>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
+                </nav>
+                <div class="no-drawer__address">
+                    <div class="no-drawer__address-block">
+                        <div class="no-drawer__reveal">
+                            <div class="no-drawer__reveal-inner">
+                        <strong class="no-drawer__address-title">System Integration</strong>
+                        <p class="no-drawer__address-list">
+                            <span class="no-drawer__address-item"><?= e($addressHq) ?></span>
+                        </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="no-drawer__address-block">
+                        <div class="no-drawer__reveal">
+                            <div class="no-drawer__reveal-inner">
+                        <strong class="no-drawer__address-title">Agency &amp; Lab</strong>
+                        <p class="no-drawer__address-list">
+                            <span class="no-drawer__address-item"><?= e($addressLab) ?></span>
+                        </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="no-drawer__address-block">
+                        <div class="no-drawer__reveal">
+                            <div class="no-drawer__reveal-inner">
+                        <strong class="no-drawer__address-title">Email</strong>
+                        <p class="no-drawer__address-list">
+                            <span class="no-drawer__address-item">
+                                <a href="mailto:<?= e($contactEmail) ?>"
+                                    class="no-drawer__address-link"><?= e($contactEmail) ?></a>
+                            </span>
+                        </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="no-drawer__address-block">
+                        <div class="no-drawer__reveal">
+                            <div class="no-drawer__reveal-inner">
+                        <strong class="no-drawer__address-title">Tel</strong>
+                        <p class="no-drawer__address-list">
+                            <span class="no-drawer__address-item">
+                                <a href="tel:<?= e($telHref) ?>"
+                                    class="no-drawer__address-link"><?= e($footerPhone) ?></a>
+                            </span>
+                        </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</aside>

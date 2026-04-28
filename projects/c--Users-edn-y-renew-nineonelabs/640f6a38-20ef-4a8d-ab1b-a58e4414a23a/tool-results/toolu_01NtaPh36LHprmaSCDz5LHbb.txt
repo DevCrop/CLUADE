@@ -1,0 +1,163 @@
+c:\Users\edn_y\renew_nineonelabs\BRAND.md:37:| Client-specific angle | `brand/client-archetypes.md`, `brand/positioning.md` |
+c:\Users\edn_y\renew_nineonelabs\CLAUDE.md:5:This file imports `AGENTS.md` (above) which contains all cross-AI repo rules. Add Claude-specific deltas only here. File-type rules in `.claude/rules/{frontend,php,scss}.md` auto-load via `paths:` frontmatter — no need to inline them.
+c:\Users\edn_y\renew_nineonelabs\CLAUDE.md:10:- `.claude/settings.json` runs `tsc --noEmit` after every `.ts`/`.tsx` edit — no need to manually re-run unless investigating a specific error.
+c:\Users\edn_y\renew_nineonelabs\CLAUDE.md:21:## Tests
+c:\Users\edn_y\renew_nineonelabs\CLAUDE.md:23:- `npm run test` — Vitest suite
+c:\Users\edn_y\renew_nineonelabs\.agents\skills\scene-explorer\SKILL.md:3:description: Inspect or audit Three.js scene structure, Theatre bindings, scene ownership, or runtime relationships inside `resource/ts/`. Use for read-heavy frontend architecture tracing and rule-violation checks.
+c:\Users\edn_y\renew_nineonelabs\.agents\skills\php-explorer\SKILL.md:3:description: Inspect or audit PHP routing, render chains, admin structure, or backend ownership in this custom MVC codebase. Use for read-heavy tracing of routes, views, namespace ownership, and rule checks.
+c:\Users\edn_y\renew_nineonelabs\brand\homepage-flow.md:95:- Requirement: show belief/value. Do not turn this section into `01 QUESTION / 02 TEST / 03 BUILD`; that is process, not story.
+c:\Users\edn_y\renew_nineonelabs\brand\copy-templates.md:166:Right: Journey language + specific digital word + active verb
+c:\Users\edn_y\renew_nineonelabs\brand\proof-system.md:85:- `Latest animation technology`
+c:\Users\edn_y\renew_nineonelabs\brand\process.md:59:- Tests motion, behavior, and usability.
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:12:5. Run usefulness test.
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:13:6. Run section-definition test.
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:14:7. Run service/client/proof/positioning fit tests when relevant.
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:15:8. Run context-naturalness test.
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:16:9. Run concept vocabulary and naming tests.
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:17:10. Run line-break test.
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:21:## Usefulness Test
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:37:## Section-Definition Test
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:54:## Fit Tests
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:64:If a claim fails the relevant fit test, rewrite or remove it.
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:66:## Context-Naturalness Test
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:80:## Scene Comment Alignment Test
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:92:## Adjacent-Shape Repetition Test
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:102:## Portfolio Proof-Grounding Test
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:112:## Concept Vocabulary And Naming Test
+c:\Users\edn_y\renew_nineonelabs\brand\review-algorithm.md:122:## Line-Break Test
+c:\Users\edn_y\renew_nineonelabs\brand\voice.md:40:- Vary openings with nouns, objects, outcomes, or fragments: `NEW WEBSITES`, `REAL WORK`, `FROM TEST TO LAUNCH`, `DESIGNED TO PROVE`, `BUILT THROUGH FRICTION`.
+c:\Users\edn_y\renew_nineonelabs\brand\voice.md:51:| Concrete (시원함) | `why`, `services`, `portfolio` | Brand tone only — lead with capability or deliverable | Specific tools, outputs, or proof required |
+c:\Users\edn_y\renew_nineonelabs\brand\services.md:36:- Brand-specific visual system
+c:\Users\edn_y\renew_nineonelabs\brand\services.md:79:- Prototype-tested interactions
+c:\Users\edn_y\renew_nineonelabs\brand\services.md:167:- Tested interaction flow
+c:\Users\edn_y\renew_nineonelabs\brand\vocabulary.md:18:## Concept Vocabulary Test
+c:\Users\edn_y\renew_nineonelabs\brand\vocabulary.md:49:| Proof | credibility | proof, tested, real, measured |
+c:\Users\edn_y\renew_nineonelabs\brand\vocabulary.md:57:| innovative | generic agency language | new, tested, built, proven |
+c:\Users\edn_y\renew_nineonelabs\.claude\SETUP_CHECKLIST.md:13:- [x] Verification commands included (tsc, lint, test, etc.)?
+c:\Users\edn_y\renew_nineonelabs\.claude\SETUP_CHECKLIST.md:30:- [x] Project-specific workflows like `/migration`, `/new-route` defined?
+c:\Users\edn_y\renew_nineonelabs\.claude\SETUP_CHECKLIST.md:63:| allowedTools | ✅ rtk / git / tsc / docker / npm test |
+c:\Users\edn_y\renew_nineonelabs\.claude\SETUP_CHECKLIST.md:70:| Test framework | ✅ vitest (19 tests) |
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\CHANGELOG.md:6:and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\CHANGELOG.md:106:- Prevent possible warnings on unset variables in `ServerRequest::normalizeNestedFileSpec`
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\CHANGELOG.md:280:- Tests don't pass with HHVM 4.0, so HHVM support got dropped. Other libraries like composer have done the same. (#262)
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\CHANGELOG.md:287:- Fixed encoding of special characters in the `userInfo` component of an URI (#253)
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\CHANGELOG.md:309:- A test for #129 behavior
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\CHANGELOG.md:324:- `InflateStream` preserves `isSeekable` attribute of the underlying stream
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:28:| 2.x     | Latest              | >=7.2.5,<8.6 |
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:122:Allows for easy testing and extension of a provided stream without needing
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:143:## InflateStream
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:145:`GuzzleHttp\Psr7\InflateStream`
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:183:$original = Psr7\Utils::streamFor(fopen('/tmp/test.txt', 'r+'));
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:248:For example, let's say we wanted to call a specific function each time the last
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:720:Creates a new URI with a specific query string value. Any existing query string values that exactly match the
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:735:Creates a new URI with a specific query string value removed. Any existing query string values that exactly match the
+c:\Users\edn_y\renew_nineonelabs\vendor\guzzlehttp\psr7\README.md:746:Determines if a modified URL should be considered cross-origin with respect to an original URL.
+c:\Users\edn_y\renew_nineonelabs\.claude\BEST_PRACTICES.md:89:| `core/` | Engine + scene + lifecycle primitives | `Engine`, `Scene`, `AnimationLoop`, `PostProcessor`, `ModelLoader`, `PageTheatreBinder`, `SceneObject` base | Page-specific logic |
+c:\Users\edn_y\renew_nineonelabs\.claude\BEST_PRACTICES.md:92:| `pages/<page>/runtime/` | Per-page lifecycle | Page-specific scroll, intro, interaction runtimes | Code shared across pages |
+c:\Users\edn_y\renew_nineonelabs\.claude\BEST_PRACTICES.md:93:| `pages/<page>/scene/` | Per-page THREE.js scene graph wiring | Object composition specific to the page | Generic scene objects |
+c:\Users\edn_y\renew_nineonelabs\.claude\BEST_PRACTICES.md:125:- Subclasses of `SceneObject` must respect the contract: `init` → `runObject` → `runUpdate` → `dispose`, no partial cycles.
+c:\Users\edn_y\renew_nineonelabs\.claude\BEST_PRACTICES.md:134:- `Engine` accepts `EngineDependencies` (`sceneFactory`, `modelLoaderFactory`). Use this for testing/swapping.
+c:\Users\edn_y\renew_nineonelabs\.claude\BEST_PRACTICES.md:205:- `chrome://tracing` / WebGL Inspector for draw-call counts.
+c:\Users\edn_y\renew_nineonelabs\.claude\BEST_PRACTICES.md:253:- Fighting against `prefers-reduced-motion` (autoplay, infinite animations). Respect it.
+c:\Users\edn_y\renew_nineonelabs\.claude\agents\scene-explorer.md:7:You are a Three.js architecture specialist for the NINEONELABS project.
+c:\Users\edn_y\renew_nineonelabs\.claude\agents\php-explorer.md:7:You are a PHP backend specialist for the NINEONELABS project.
+c:\Users\edn_y\renew_nineonelabs\vendor\symfony\process\CHANGELOG.md:7: * added `Process::setOptions()` to set `Process` specific options
+c:\Users\edn_y\renew_nineonelabs\vendor\symfony\process\CHANGELOG.md:37:   specific output, then continue the normal execution of your application
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\log\README.md:8:describes a logger. See the specification for more details.
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\log\README.md:57:[specification text](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-3-logger-interface.md)
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\temporary-directory\README.md:3:[![Latest Version on Packagist](https://img.shields.io/packagist/v/spatie/temporary-directory.svg?style=flat-square)](https://packagist.org/packages/spatie/temporary-directory)
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\temporary-directory\README.md:4:![Tests](https://github.com/spatie/temporary-directory/workflows/run-tests/badge.svg)
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\temporary-directory\README.md:115:## Testing
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\temporary-directory\README.md:118:composer test
+c:\Users\edn_y\renew_nineonelabs\resource\fonts\clash-display\README.md:21:You are now ready to use the following Rules in your CSS to specify each Font Style:
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\README.md:3:[![Latest Version](https://img.shields.io/github/release/thephpleague/glide.svg?style=flat-square)](https://github.com/thephpleague/glide/releases)
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\README.md:26:- Powered by the battle tested [Intervention Image](http://image.intervention.io/) image handling and manipulation library.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\README.md:42:## Testing
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\README.md:44:Glide has a [PHPUnit](https://phpunit.de/) test suite. To run the tests, run the following command from the project folder:
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\temporary-directory\.github\CONTRIBUTING.md:17:quality to benefit the project. Many developers have different skillsets, strengths, and weaknesses. Respect the maintainer's decision, and do not be upset or abusive if your submission is not used.
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\temporary-directory\.github\CONTRIBUTING.md:45:- **Add tests!** - Your patch won't be accepted if it doesn't have tests.
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\README.md:8:interface that describes a HTTP message. See the specification for more details.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\flysystem\CODE_OF_CONDUCT.md:18:* Being respectful of differing viewpoints and experiences
+c:\Users\edn_y\renew_nineonelabs\vendor\league\flysystem\CODE_OF_CONDUCT.md:62:Further details of specific enforcement policies may be posted separately.
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:41:| `withRequestTarget($requestTarget)` | Return a new message instance with the specific request-target |      |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:56:| `withCookieParams(array $cookies)` |  Returns a new request instance with the specified cookies      |   | 
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:57:| `withQueryParams(array $query)` | Returns a new request instance with the specified query string arguments  |  |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:59:| `withUploadedFiles(array $uploadedFiles)` | Returns a new request instance with the specified uploaded files  |  |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:61:| `withParsedBody($data)` | Returns a new request instance with the specified body parameters  |  |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:64:| `withAttribute($name, $value)` | Returns a new request instance with the specified derived request attribute  |  |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:65:| `withoutAttribute($name)` | Returns a new request instance that without the specified derived request attribute  |  |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:74:| `withStatus($code, $reasonPhrase = '')` | Returns a new response instance with the specified status code and, optionally, reason phrase. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:94:| `getMetadata($key = null)()` | Get stream metadata as an associative array or retrieve a specific key. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:108:| `withScheme($scheme)` | Return an instance with the specified scheme. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:109:| `withUserInfo($user, $password = null)` | Return an instance with the specified user information. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:110:| `withHost($host)` | Return an instance with the specified host. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:111:| `withPort($port)` | Return an instance with the specified port. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:112:| `withPath($path)` | Return an instance with the specified path. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:113:| `withQuery($query)` | Return an instance with the specified query string. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\docs\PSR7-Interfaces.md:114:| `withFragment($fragment)` | Return an instance with the specified URI fragment. | |
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\README.md:3:[![Latest Version on Packagist](https://img.shields.io/packagist/v/spatie/image-optimizer.svg?style=flat-square)](https://packagist.org/packages/spatie/image-optimizer)
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\README.md:4:![Tests](https://github.com/spatie/image-optimizer/workflows/Tests/badge.svg)
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\README.md:21:Loving Laravel? Then head over to [the Laravel specific integration](https://github.com/spatie/laravel-image-optimizer).
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\README.md:367:## Testing
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\README.md:370:composer test
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\CHANGELOG.md:23:  specification.
+c:\Users\edn_y\renew_nineonelabs\vendor\psr\http-message\CHANGELOG.md:36:Initial stable release; reflects accepted PSR-7 specification.
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\CHANGELOG.md:10:* PHP 8.4 tests by @erikn69 in https://github.com/spatie/image-optimizer/pull/224
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\CHANGELOG.md:46:- Add PHP 8.2 to the GitHub CI test matrix by @javiereguiluz in https://github.com/spatie/image-optimizer/pull/207
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\CHANGELOG.md:89:- Feature: Convert PHPUnit tests to Pest by @mansoorkhan96 in https://github.com/spatie/image-optimizer/pull/167
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\CHANGELOG.md:91:- Allow Pest Composer Plugin (fix failing tests) by @patinthehat in https://github.com/spatie/image-optimizer/pull/176
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image-optimizer\CHANGELOG.md:210:- make Google Pagespeed tests pass
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\installation.md:26:If you want a Framework specific version, the following adapters are available. Note, these adapters automatically include the base library (`league/glide`), so you don't need to require both.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\installation.md:36:<p class="message-notice">See <a href="/1.0/config/responses/">responses</a> for more information about integrating with a specific framework.</p>
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\index.md:11:[![Latest Version](https://img.shields.io/github/release/thephpleague/glide.svg?style=flat-square)](https://github.com/thephpleague/glide/releases)
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\index.md:34:- Powered by the battle tested [Intervention Image](http://image.intervention.io/) image handling and manipulation library.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\0.3\api\size.md:34:- `contain`: Default. Resizes the image to fit within the width and height boundaries without cropping, distorting or altering the aspect ratio.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\0.3\api\size.md:35:- `max`: Resizes the image to fit within the width and height boundaries without cropping, distorting or altering the aspect ratio, and will also not increase the size of the image if it is smaller than the output size. 
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\0.3\api\size.md:36:- `stretch`: Stretches the image to fit the constraining dimensions exactly. The resulting image will fill the dimensions, and will not maintain the aspect ratio of the input image.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\0.3\api\size.md:57:Crops the image to specific dimensions prior to any other resize operations. Required format: `width,height,x,y`.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\0.3\api\output.md:21:Encodes the image to a specific format. Accepts `jpg`, `png` or `gif`. Defaults to `jpg`.
+c:\Users\edn_y\renew_nineonelabs\vendor\ralouphie\getallheaders\README.md:8:[![Latest Stable Version](https://poser.pugx.org/ralouphie/getallheaders/v/stable.png)](https://packagist.org/packages/ralouphie/getallheaders)
+c:\Users\edn_y\renew_nineonelabs\vendor\ralouphie\getallheaders\README.md:9:[![Latest Unstable Version](https://poser.pugx.org/ralouphie/getallheaders/v/unstable.png)](https://packagist.org/packages/ralouphie/getallheaders)
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\0.3\index.md:10:[![Latest Version](https://img.shields.io/github/release/thephpleague/glide.svg?style=flat-square)](https://github.com/thephpleague/glide/releases)
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\0.3\index.md:34:- Powered by the battle tested [Intervention Image](http://image.intervention.io/) image handling and manipulation library
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image\.github\CONTRIBUTING.md:17:quality to benefit the project. Many developers have different skillsets, strengths, and weaknesses. Respect the maintainer's decision, and do not be upset or abusive if your submission is not used.
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image\.github\CONTRIBUTING.md:45:- **Add tests!** - Your patch won't be accepted if it doesn't have tests.
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image\README.md:3:[![Latest Version on Packagist](https://img.shields.io/packagist/v/spatie/image.svg?style=flat-square)](https://packagist.org/packages/spatie/image)
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image\README.md:5:![GitHub Workflow Status](https://img.shields.io/github/workflow/status/spatie/image/run-tests?label=tests)
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image\README.md:13:// modifying the image so it fits in a 100x100 rectangle without altering aspect ratio
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image\README.md:67:## Testing
+c:\Users\edn_y\renew_nineonelabs\vendor\spatie\image\README.md:70:composer test
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\watermarks.md:53:- `contain`: Default. Resizes the image to fit within the width and height boundaries without cropping, distorting or altering the aspect ratio.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\watermarks.md:54:- `max`: Resizes the image to fit within the width and height boundaries without cropping, distorting or altering the aspect ratio, and will also not increase the size of the image if it is smaller than the output size.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\watermarks.md:56:- `stretch`: Stretches the image to fit the constraining dimensions exactly. The resulting image will fill the dimensions, and will not maintain the aspect ratio of the input image.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\SMTPUTF8.md:5:For most of its existence, SMTP has been a 7-bit channel, only supporting US-ASCII characters. This has been a problem for many languages, especially those that use non-Latin scripts, and has led to the development of various workarounds.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\SMTPUTF8.md:34:[Omitted long matching line]
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\config\defaults-and-presets.md:8:In certain situations you may want to define default image manipulations. For example, maybe you want to specify that all images are outputted as JPEGs (`fm=jpg`). Or maybe you have a watermark that you want added to all images. Glide makes this possible using default manipulations.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\config\defaults-and-presets.md:92:You can override the default and preset manipulations for a specific request by passing a new parameter (e.x. `mark=different.png`), or even disable it entirely by setting it to blank (e.x. `mark=`).
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\size.md:34:- `contain`: Default. Resizes the image to fit within the width and height boundaries without cropping, distorting or altering the aspect ratio.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\size.md:35:- `max`: Resizes the image to fit within the width and height boundaries without cropping, distorting or altering the aspect ratio, and will also not increase the size of the image if it is smaller than the output size. 
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\size.md:37:- `stretch`: Stretches the image to fit the constraining dimensions exactly. The resulting image will fill the dimensions, and will not maintain the aspect ratio of the input image.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\SECURITY.md:12:[Omitted long matching line]
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\relative-dimensions.md:8:Relative dimensions allow you to specify a width or height value as a percentage of the main image. This is helpful for features like watermarks and borders.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:7:[![Test status](https://github.com/PHPMailer/PHPMailer/workflows/Tests/badge.svg)](https://github.com/PHPMailer/PHPMailer/actions)
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:9:[![Latest Stable Version](https://poser.pugx.org/phpmailer/phpmailer/v/stable.svg)](https://packagist.org/packages/phpmailer/phpmailer)
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:63:by @decomplexity's [SendOauth2 wrapper](https://github.com/decomplexity/SendOauth2), especially if you're using Microsoft services.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:66:can [download PHPMailer as a zip file](https://github.com/PHPMailer/PHPMailer/archive/master.zip), (note that docs and examples are not included in the zip file), then copy the contents of the PHPMailer folder into one of the `include_path` directories specified in your PHP configuration and load each class file manually:
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:81:PHPMailer 5.2 (which is compatible with PHP 5.0 — 7.0) is no longer supported, even for security updates. You will find the latest version of 5.2 in the [5.2-stable branch](https://github.com/PHPMailer/PHPMailer/tree/5.2-stable). If you're using PHP 5.5 or later (which you should be), switch to the 6.x releases.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:148:PHPMailer defaults to English, but in the [language](https://github.com/PHPMailer/PHPMailer/tree/master/language/) folder, you'll find many translations for PHPMailer error messages that you may encounter. Their filenames contain [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) language code for the translations, for example `fr` for French. To specify a language, you need to tell PHPMailer which one to use, like this:
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:155:We welcome corrections and new languages – if you're looking for corrections, run the [Language/TranslationCompletenessTest.php](https://github.com/PHPMailer/PHPMailer/blob/master/test/Language/TranslationCompletenessTest.php) script in the tests folder and it will show any missing translations.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:166:You can generate complete API-level documentation by running `phpdoc` in the top-level folder, and documentation will appear in the `docs` folder, though you'll need to have [PHPDocumentor](https://www.phpdoc.org) installed. You may find [the unit tests](https://github.com/PHPMailer/PHPMailer/blob/master/test/PHPMailer/PHPMailerTest.php) a good reference for how to do various operations such as encryption.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:170:## Tests
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:171:[PHPMailer tests](https://github.com/PHPMailer/PHPMailer/tree/master/test/) use PHPUnit 9, with [a polyfill](https://github.com/Yoast/PHPUnit-Polyfills) to let 9-style tests run on older PHPUnit and PHP versions.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:173:[![Test status](https://github.com/PHPMailer/PHPMailer/workflows/Tests/badge.svg)](https://github.com/PHPMailer/PHPMailer/actions)
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:185:We're particularly interested in fixing edge cases, expanding test coverage, and updating translations.
+c:\Users\edn_y\renew_nineonelabs\vendor\phpmailer\phpmailer\README.md:226:- Test suite.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\config\responses.md:17:| [CakePHP](/1.0/config/integrations/cakephp/) | *Vendor specific*   | league/glide-cake          |
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\quick-reference.md:12:Crop | `crop` | Crops the image to specific dimensions. | [info](api/crop/#crop-crop)
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\quick-reference.md:35:Format | `fm` | Encodes the image to a specific format. | [info](api/encode/#format-fm)
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\pixel-density.md:10:The device pixel ratio is used to easily convert between CSS pixels and device pixels. This makes it possible to display images at the correct pixel density on a variety of devices such as Apple devices with Retina Displays and Android devices. You must specify either a width, a height, or both for this parameter to work. The default is 1. The maximum value that can be set for dpr is 8.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\encode.md:21:Encodes the image to a specific format. Accepts `jpg`, `pjpg` (progressive jpeg), `png`, `gif` or `webp`. Defaults to `jpg`.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\crop.md:28:In addition to the crop position, you can be more specific about the exact crop position using a focal point. This is defined using two offset percentages: `crop-x%-y%`.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\api\crop.md:42:Crops the image to specific dimensions prior to any other resize operations. Required format: `width,height,x,y`.
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\config\integrations\psr-7.md:29:## Vendor specific adapters
+c:\Users\edn_y\renew_nineonelabs\vendor\league\glide\docs\1.0\config\integrations\psr-7.md:31:However, for simplicity, Glide provides a vendor specific PSR-7 adapters to make this easier:

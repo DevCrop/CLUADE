@@ -1,0 +1,74 @@
+# Works 필터 모달 헤더 고정 — 구조 최적화
+
+## Context
+
+works 페이지 모바일 필터 모달(`.no-grid-filter-modal`)에서 카테고리 리스트를 스크롤하면 상단 헤더(`Category` 라벨 + ✕ 닫기 버튼)가 같이 따라 올라가 버려, 길이가 긴 카테고리 목록을 확인하던 사용자가 모달을 닫을 수 없게 된다.
+
+원인은 단순하다. [resource/scss/pages/_sub.scss:1960-1978](resource/scss/pages/_sub.scss#L1960-L1978)의 `.no-grid-filter-modal__sheet`가 `max-height: 85vh` + `overflow-y: auto`로 **시트 전체를 하나의 스크롤 컨테이너**로 만들어버려, 그 안에 든 `__header`도 같이 스크롤된다. 헤더에는 `position: sticky`도, 별도 고정 처리도 없다.
+
+DOM은 이미 `__sheet > __header + __list` 형태(2-row 구조)이므로 ([WorksPageRuntime.ts:555-618](resource/ts/pages/works/runtime/WorksPageRuntime.ts#L555-L618)), TS/HTML은 손대지 않고 **SCSS만으로 시트를 flex column으로 재구성하고 스크롤 책임을 `__list`로 이양**하면 헤더는 자연스럽게 고정된다. `position: sticky` 트릭보다 의미적으로 더 명확하고, 백그라운드 페인팅 hack도 필요 없다.
+
+## 변경 파일
+
+- [resource/scss/pages/_sub.scss](resource/scss/pages/_sub.scss) — `.no-grid-filter-modal` 블록 (L1937–L2057)만 수정
+- TS, PHP 뷰, JS 핸들러 변경 없음
+
+## 변경 내용
+
+### 1. `__sheet` — 스크롤 컨테이너 해제, flex column 레이아웃
+
+[_sub.scss:1960-1978](resource/scss/pages/_sub.scss#L1960-L1978)
+
+- `overflow-y: auto` 제거 → 시트 자체는 더 이상 스크롤하지 않음
+- `padding` 제거 → 헤더/리스트가 각자 책임
+- `display: flex; flex-direction: column;` 추가
+- `max-height: 85vh`, `transform`, `transition`, `bottom: 0`, `background`, `border-radius`는 유지 (기존 시트 슬라이드업 애니메이션 보존)
+
+### 2. `__header` — 고정 영역 (flex shrink 0)
+
+[_sub.scss:1980-1996](resource/scss/pages/_sub.scss#L1980-L1996)
+
+- `flex: 0 0 auto` 추가 → 줄어들지 않음
+- `padding: var(--gutter-md) var(--gutter-md) var(--gutter-sm)` 추가 (기존 시트 padding + 헤더 하단 간격을 통합)
+- `margin-bottom`, 별도 `padding-bottom` 제거 (위에서 일원화)
+- 기존 border-bottom, flex 정렬, font-size 유지
+
+### 3. `__list` — 스크롤 영역
+
+[_sub.scss:2014-2018](resource/scss/pages/_sub.scss#L2014-L2018)
+
+- `flex: 1 1 auto`
+- `overflow-y: auto` (시트에서 이쪽으로 이동)
+- `padding: var(--gutter-sm) var(--gutter-md) calc(var(--gutter-md) + env(safe-area-inset-bottom))` (시트에서 이양)
+- `-webkit-overflow-scrolling: touch` + `overscroll-behavior: contain` 추가 — iOS 관성 스크롤 + 모달 스크롤이 페이지 스크롤로 새는 것 차단
+- 기존 `display: flex; flex-direction: column; gap: 2px` 유지
+
+### 4. `__close` — 정렬·터치 영역 미세 보정 (선택)
+
+[_sub.scss:1998-2012](resource/scss/pages/_sub.scss#L1998-L2012)
+
+- 모바일 터치 타겟이 작아 보이면 `min-width`/`min-height: 44px` 정도만 보강. 시각적 디자인은 그대로.
+- 헤더가 고정된 뒤 ✕ 버튼이 항상 우상단에 머무르므로 추가 위치 조정은 불필요.
+
+## 재사용·준수 사항
+
+- 기존 토큰 그대로 사용: `--gutter-md`, `--gutter-sm`, `--clr-bg-surface`, `--clr-border-default`, `--z-index-modal`, `env(safe-area-inset-bottom)`
+- BEM 유지, 신규 클래스/엘리먼트 도입 없음
+- `var(--token, fallback)` 금지 규칙([.claude/rules/scss.md](.claude/rules/scss.md)) 준수 — 기존 fallback이 남아있으면 이번 기회에 정리
+- `fluid()`/`mq()` 신규 호출 없음 (기존 토큰이 이미 fluid 기반)
+
+## 미세 결정 — 사용자 확인 후 진행 가능
+
+- 시트 슬라이드업 애니메이션은 그대로 둠 (현재 `transform: translateY(...)` + `is-open` 토글 기반). 변경 불필요.
+- 헤더에 backdrop-blur나 그림자를 추가할지는 디자인 선호의 문제 — 이번 변경 범위에서는 **추가하지 않음** (헤더가 이미 시트의 일부이므로 시각적 분리는 border-bottom으로 충분).
+
+## 검증
+
+1. 저장 → Vite HMR 자동 반영 (build/watch 명령 금지).
+2. `rtk tsc --noEmit` — TS 경계는 건드리지 않았으므로 영향 없어야 함.
+3. 브라우저 모바일 뷰포트(혹은 DevTools device toolbar)에서 works 페이지 → 카테고리 필터 버튼 탭 → 모달 열림 → 카테고리 리스트를 위/아래로 스크롤:
+   - 헤더(`Category` + ✕)가 항상 모달 상단에 고정되어 있어야 함
+   - ✕ 버튼이 어떤 스크롤 위치에서도 보이고 탭 가능해야 함
+   - iOS Safari에서 관성 스크롤이 모달 안에서만 작동, 페이지 본문이 같이 흔들리지 않아야 함 (overscroll-behavior 효과)
+4. 카테고리 선택 → 모달 닫힘 → 그리드 필터링 정상 동작 확인 (JS 핸들러 무변경).
+5. 데스크톱 뷰포트에서 모달이 노출되는 경로가 있다면 동일하게 확인 (현재 모바일 트리거 전용으로 보이나 회귀 체크).

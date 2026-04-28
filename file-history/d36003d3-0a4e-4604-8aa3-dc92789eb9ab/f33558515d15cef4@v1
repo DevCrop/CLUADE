@@ -1,0 +1,71 @@
+import { EnvSetup } from "../../../app/EnvSetup.js";
+import type {
+  AboutSceneSectionKey,
+  AboutTheatrePlaybackStep,
+  AboutTheatreSheetId,
+} from "../../../types/about.types.js";
+
+export const ABOUT_THEATRE_PROJECT_ID = "about-orbit-recorder-hero-config";
+export const ABOUT_THEATRE_OBJECT_ID = "orbitCamera";
+export const ABOUT_THEATRE_QUERY_KEY = "theatre";
+export const ABOUT_THEATRE_QUERY_ENABLED = "1";
+export const ABOUT_THEATRE_PREVIEW_QUERY_KEY = "theatrePreview";
+export const ABOUT_THEATRE_PREVIEW_QUERY_ENABLED = "1";
+export const ABOUT_THEATRE_SAVE_FILE_STORAGE_KEY =
+  "about-theatre-project-savefile-v2";
+export const ABOUT_THEATRE_FILE_SEED_STORAGE_KEY =
+  "about-theatre-project-savefile-v2.seeded-from-file";
+export const ABOUT_THEATRE_STUDIO_CLEAR_STORAGE_KEY =
+  "about-theatre-project-savefile-v2.cleared-studio-persistence";
+export const ABOUT_THEATRE_OBSOLETE_SAVE_FILE_STORAGE_KEYS = [
+  "about-theatre-project-savefile",
+] as const;
+export const ABOUT_THEATRE_STORAGE_OPTIONS = {
+  storageKey: ABOUT_THEATRE_SAVE_FILE_STORAGE_KEY,
+  obsoleteStorageKeys: ABOUT_THEATRE_OBSOLETE_SAVE_FILE_STORAGE_KEYS,
+  fileSeedStorageKey: ABOUT_THEATRE_FILE_SEED_STORAGE_KEY,
+  studioClearStorageKey: ABOUT_THEATRE_STUDIO_CLEAR_STORAGE_KEY,
+} as const;
+export const ABOUT_PREVIEW_RATE = 1;
+export const ABOUT_INTRO_AUTOPLAY_SHEET_ID = "heroIntro";
+export const ABOUT_INTRO_AUTOPLAY_RATE = 1.8;
+export const ABOUT_AFTER_INTRO_AUTOPLAY_ENABLED = false;
+export const ABOUT_AFTER_INTRO_AUTOPLAY_SHEET_ID = "heroSlogan";
+export const ABOUT_AFTER_INTRO_AUTOPLAY_RATE = 0.84;
+
+export const ABOUT_THEATRE_SHEET_IDS = [
+  "heroIntro",
+  "heroSlogan",
+  "missionVision",
+  "services",
+  "awards",
+  "client",
+  "contact",
+] as const satisfies readonly AboutTheatreSheetId[];
+
+export const ABOUT_SCENE_THEATRE_STEPS = {
+  heroIntro: [{ sheetId: "heroIntro", progressRange: { start: 0, end: 1 } }],
+  heroSlogan: [{ sheetId: "heroSlogan", progressRange: { start: 0, end: 1 } }],
+  missionVision: [{ sheetId: "missionVision", progressRange: { start: 0, end: 1 } }],
+  services: [{ sheetId: "services", progressRange: { start: 0, end: 1 } }],
+  awards: [{ sheetId: "awards", progressRange: { start: 0, end: 1 } }],
+  client: [{ sheetId: "client", progressRange: { start: 0, end: 1 } }],
+  contact: [{ sheetId: "contact", progressRange: { start: 0, end: 1 } }],
+} as const satisfies Record<
+  AboutSceneSectionKey,
+  readonly AboutTheatrePlaybackStep[]
+>;
+
+export function resolveAboutAuthorMode(): boolean {
+  return EnvSetup.hasQueryFlag(
+    ABOUT_THEATRE_QUERY_KEY,
+    ABOUT_THEATRE_QUERY_ENABLED,
+  );
+}
+
+export function resolveAboutPreviewMode(): boolean {
+  return EnvSetup.hasQueryFlag(
+    ABOUT_THEATRE_PREVIEW_QUERY_KEY,
+    ABOUT_THEATRE_PREVIEW_QUERY_ENABLED,
+  );
+}

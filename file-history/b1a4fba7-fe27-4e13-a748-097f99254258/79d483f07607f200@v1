@@ -1,0 +1,24 @@
+uniform float uTime; uniform float uFlameLen; uniform float uThrottle; uniform float uSeed;
+varying vec2 vUv; varying float vNDot;
+__NOISE_GLSL__
+void main(){
+  float t = vUv.y;
+  float ndot = clamp(abs(vNDot), 0., 1.);
+  float haze = exp(-ndot * ndot * 0.28);
+  float coreGlow = exp(-ndot * ndot * 3.5) * 0.35;
+  vec2 uv1 = vec2(vUv.x*3.2, vUv.y*7.0 - uTime*__INNER_FS1__ + uSeed);
+  vec2 uv2 = vec2(vUv.x*1.6, vUv.y*4.0 - uTime*__INNER_FS2__ + uSeed*1.4);
+  float turb = fbm(uv1,4)*0.5 + fbm(uv2,4)*0.5;
+  float turbBreak = turb * 2.2;
+  float lenFade = pow(smoothstep(1.0, 0.0, t), 0.45);
+  vec3 col = mix(__INNER_C_TOP__, __INNER_C_TIP__, pow(t, 0.7));
+  col += __INNER_FLASH__ * exp(-t * 12.0) * uThrottle * 0.5;
+  float intensity = (haze + coreGlow) * lenFade * turbBreak;
+  intensity *= 0.8 + uThrottle * 0.4;
+  intensity = clamp(intensity, 0., 1.1);
+  float alpha = haze * lenFade * turbBreak * 0.65;
+  alpha = clamp(alpha, 0., 0.75);
+  alpha *= smoothstep(1.0, 0.38, t);
+  alpha *= smoothstep(0.0, 0.09, t) * 0.15 + 0.85;
+  gl_FragColor = vec4(col * intensity, alpha);
+}

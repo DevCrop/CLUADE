@@ -1,0 +1,106 @@
+import type {
+  IntroCanvasColorStop,
+  IntroDistortionTransitionConfig,
+  IntroCanvasMotionConfig,
+  IntroCanvasRenderConfig,
+  IntroCanvasSelectorConfig,
+} from "../types/intro.types.js";
+
+export const INTRO_CANVAS_SELECTORS: IntroCanvasSelectorConfig = {
+  section: "#intro",
+  card: "#intro-card",
+  percent: "#pct-text",
+  canvas: "#c",
+};
+
+export const INTRO_CANVAS_COLORS: readonly IntroCanvasColorStop[] = [
+  { progress: 0, color: [0, 28, 74] },
+  { progress: 20, color: [0, 66, 145] },
+  { progress: 40, color: [0, 112, 220] },
+  { progress: 60, color: [36, 154, 255] },
+  { progress: 80, color: [104, 198, 255] },
+  { progress: 100, color: [190, 232, 255] },
+];
+
+export const INTRO_CANVAS_RENDER: IntroCanvasRenderConfig = {
+  minVisibleProgress: 0.1,
+  trailStartThreshold: 1,
+  tailStartThreshold: 4,
+  tailMaxWidthRatio: 0.38,
+  tailMaxLength: 240,
+  lineWidth: 1.5,
+  tailLineWidth: 3.5,
+  tailShadowBlur: 8,
+  headOuterRadius: 42,
+  headOuterPulseRadius: 5,
+  headMiddleRadius: 22,
+  headMiddlePulseRadius: 3,
+  headHorizontalFlareWidth: 112,
+  headHorizontalFlareHeight: 3,
+  headVerticalFlareWidth: 2,
+  headVerticalFlareHeight: 72,
+  headCoreRadius: 7,
+  headDotRadius: 2,
+};
+
+export const INTRO_CANVAS_MOTION: IntroCanvasMotionConfig = {
+  pulseTimeScale: 0.003,
+  pulseFrequency: 3,
+  particleSpawnBaseCount: 3,
+  particleSpawnScale: 7,
+  particleAngleSpread: 1.4,
+  particleDecayBase: 0.022,
+  particleDecayRandom: 0.04,
+  particleDecaySpeedFactor: 0.08,
+  particleVelocityDragX: 0.97,
+  particleVelocityDragY: 0.96,
+  particleSpeedMax: 4.5,
+  particleLargeSizeThreshold: 1.4,
+  particleLargeRadiusScale: 3,
+  particleLargeAlphaScale: 0.1,
+  particleAlphaScale: 0.9,
+  progressVelocityThreshold: 0.08,
+};
+
+export const INTRO_ACTION_STORY_SEQUENCE = {
+  startDelay: 0.58,
+  enterDuration: 0.96,
+  holdDuration: 1.52,
+  exitDuration: 0.92,
+  initialOffsetY: 72,
+  exitOffsetY: -56,
+  initialBlur: "blur(22px)",
+  exitBlur: "blur(18px)",
+  enterEase: "power3.out",
+  holdEase: "none",
+  exitEase: "power2.in",
+} as const;
+
+export const INTRO_ACTION_COUNTDOWN_SEQUENCE = {
+  values: ["5", "4", "3", "2", "1"] as const,
+  enterDuration: 0.34,
+  holdDuration: 0.62,
+  exitDuration: 0.28,
+  gapDuration: 0.14,
+  initialScale: 0.72,
+  exitScale: 1.18,
+  initialBlur: "blur(18px)",
+  exitBlur: "blur(14px)",
+  enterEase: "power3.out",
+  exitEase: "power2.in",
+} as const;
+
+export const INTRO_ACTION_COUNTDOWN_ORBIT = {
+  selector: ".no-main-intro-action__countdown-orbit",
+  markerCount: 100,
+  delayStep: 0.03,
+} as const;
+
+export const INTRO_DISTORTION_TRANSITION: IntroDistortionTransitionConfig = {
+  duration: 1.8,
+  amplitude: 0.045,
+  frequency: 5.4,
+  noiseScale: 3.2,
+  fadeStart: 0.42,
+  overlayFallbackZIndex: 9999,
+};

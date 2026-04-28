@@ -1,0 +1,515 @@
+﻿import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import { rocket } from "../../core/setup.js";
+import type {
+  CloudPlaneTweenProps,
+  SharedCloudTextureEntry,
+} from "../../types/object.types.js";
+import type { CloudPlaneObjectOptions } from "../../types/object-visual.types.js";
+import type { ShaderUniformRecord } from "../../types/object-runtime.types.js";
+import cloudPlaneFragmentShader from "../../../shaders/cloud-plane/cloud-plane.fragment.glsl?raw";
+import cloudPlaneVertexShader from "../../../shaders/cloud-plane/cloud-plane.vertex.glsl?raw";
+
+const CLOUD_PLANE_RENDER_ORDER = -1190;
+const CLOUD_PLANE_WIDTH = 100;
+const CLOUD_PLANE_HEIGHT = 100;
+const CLOUD_PLANE_SEGMENTS = 1;
+const CLOUD_PLANE_CURVE_DEPTH = 0;
+const CLOUD_PLANE_CURVE_POWER = 1;
+const DEFAULT_CLOUD_DARK_COLOR = 0xa7b9cf;
+const DEFAULT_CLOUD_LIGHT_COLOR = 0xf3f8ff;
+const CLOUD_MOUSE_TEXTURE_SIZE = 256;
+const CLOUD_MOUSE_TEXTURE_CHANNELS = 4;
+const CLOUD_MOUSE_TEXTURE_FADE = 0.9;
+const CLOUD_ROCKET_EFFECT_DEPTH = 12;
+const CLOUD_ROCKET_EFFECT_RADIUS = 0.2;
+
+export class CloudPlane extends SceneObject<CloudPlaneTweenProps> {
+  private static readonly _sharedTextures = new Map<
+    string,
+    SharedCloudTextureEntry
+  >();
+  private _options: Partial<CloudPlaneObjectOptions> = {};
+  private _mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> | null =
+    null;
+  private _material: THREE.ShaderMaterial | null = null;
+  private _perlinTexture: THREE.Texture | null = null;
+  private _noiseTexture: THREE.Texture | null = null;
+  private _mouseTexture: THREE.Texture | null = null;
+  private readonly _sharedTextureKeys = new Set<string>();
+  private _mouseTextureData: Float32Array | null = null;
+  private _elapsedTime = 0;
+  private readonly _rocketWorldPosition = new THREE.Vector3();
+  private readonly _rocketLocalPosition = new THREE.Vector3();
+
+  setOptions(props: Partial<CloudPlaneObjectOptions> | undefined): this {
+    if (props) this._options = { ...this._options, ...props };
+    return this;
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options;
+  }
+
+  protected override mergeOptionsFromTimeline(
+    vars: Partial<CloudPlaneTweenProps>,
+  ): void {
+    const next = this._options;
+    if (vars.position) next.position = { ...next.position, ...vars.position };
+    if (vars.rotation) next.rotation = { ...next.rotation, ...vars.rotation };
+    if (vars.scale) next.scale = { ...next.scale, ...vars.scale };
+    const visible = vars.visible;
+    const chapter = vars.chapter;
+    const transition = vars.transition;
+    if (typeof visible === "boolean") next.visible = visible;
+    if (typeof chapter === "number") next.chapter = chapter;
+    if (typeof transition === "number") next.transition = transition;
+  }
+
+  override getBloomEnabled(): boolean {
+    return false;
+  }
+
+  override getAnimationTarget(): THREE.Object3D | null {
+    return this.getTimelineRoot();
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (root) root.visible = visible;
+  }
+
+  protected override syncFromOptions(): void {
+    this._applyBaseTransform();
+    this._applyStaticUniforms();
+  }
+
+  override async runObject(): Promise<void> {
+    const scene = this._context?.scene;
+    if (!scene) return;
+
+    const root = this.ensureTimelineRoot(this._getLayerLabel());
+    if (!root) return;
+    root.name = this._getLayerLabel();
+
+    this._clearRuntime();
+    await this._prepareShaderTextures();
+
+    this._material = this._createMaterial();
+    this._mesh = new THREE.Mesh(
+      this._createCurvedPlaneGeometry(),
+      this._material,
+    );
+    this._mesh.name = `${this._getLayerLabel()}.mesh`;
+    this._mesh.frustumCulled = false;
+    this._mesh.renderOrder = CLOUD_PLANE_RENDER_ORDER;
+    root.add(this._mesh);
+
+    this._applyBaseTransform();
+    this._applyStaticUniforms();
+    this._applyDynamicUniforms();
+  }
+
+  override runUpdate(deltaTime: number): void {
+    this._elapsedTime += Number.isFinite(deltaTime)
+      ? Math.max(0, deltaTime)
+      : 0;
+    this._updateMouseTexture();
+    this._applyDynamicUniforms();
+  }
+
+  override dispose(): void {
+    this._clearRuntime();
+    super.dispose();
+  }
+
+  private async _prepareShaderTextures(): Promise<void> {
+    this._disposeTextures();
+    const ctx = this._context;
+    const textures = this._options.shader?.textures;
+    if (!ctx?.loadTexture || !textures) return;
+    const perlinTextureUrl = textures.perlinTextureUrl?.trim();
+    const noiseTextureUrl = textures.noiseTextureUrl?.trim();
+    if (!perlinTextureUrl || !noiseTextureUrl) return;
+    const [perlinTexture, noiseTexture] = await Promise.all([
+      this._loadSharedTexture(
+        this.resolveAssetPath(perlinTextureUrl),
+        this._prepareRepeatTexture,
+      ),
+      this._loadSharedTexture(
+        this.resolveAssetPath(noiseTextureUrl),
+        this._prepareRepeatTexture,
+      ),
+    ]);
+    this._perlinTexture = perlinTexture;
+    this._noiseTexture = noiseTexture;
+    this._createMouseTexture();
+    const perlinTextureRef = this._perlinTexture;
+    const noiseTextureRef = this._noiseTexture;
+    const mouseTextureRef = this._mouseTexture;
+    if (perlinTextureRef) ctx.prepareTexture?.(perlinTextureRef);
+    if (noiseTextureRef) ctx.prepareTexture?.(noiseTextureRef);
+    if (mouseTextureRef) ctx.prepareTexture?.(mouseTextureRef);
+  }
+
+  private _prepareRepeatTexture(texture: THREE.Texture): THREE.Texture {
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  private _createMaterial(): THREE.ShaderMaterial {
+    const shader = this._options.shader;
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uRatio: { value: this._finiteOr(shader?.ratio, 2) },
+        uChapter: {
+          value: this._finiteOr(
+            shader?.chapter,
+            this._finiteOr(this._options.chapter, 0),
+          ),
+        },
+        uTransition: {
+          value: this._finiteOr(
+            shader?.transition,
+            this._finiteOr(this._options.transition, 0),
+          ),
+        },
+        uOpacity: { value: this._finiteOr(shader?.opacity, 0.16) },
+        uRocketInfluence: { value: 0 },
+        uRocketRadius: { value: CLOUD_ROCKET_EFFECT_RADIUS },
+        uRocketUv: { value: new THREE.Vector2(0.5, 0.5) },
+        uDarkColor: { value: new THREE.Color(DEFAULT_CLOUD_DARK_COLOR) },
+        uLightColor: { value: new THREE.Color(DEFAULT_CLOUD_LIGHT_COLOR) },
+        uSize: {
+          value: new THREE.Vector2(
+            this._finiteOr(shader?.size?.x, 1),
+            this._finiteOr(shader?.size?.y, 1),
+          ),
+        },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        tPerlin: { value: this._perlinTexture },
+        tNoise: { value: this._noiseTexture },
+        tMouse: { value: this._mouseTexture },
+      },
+      vertexShader: cloudPlaneVertexShader,
+      fragmentShader: cloudPlaneFragmentShader,
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      fog: false,
+    });
+  }
+
+  private _applyBaseTransform(): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    root.name = this._getLayerLabel();
+    root.position.set(
+      this._options.position?.x ?? 0,
+      this._options.position?.y ?? 0,
+      this._options.position?.z ?? 0,
+    );
+    root.rotation.set(
+      THREE.MathUtils.degToRad(this._options.rotation?.x ?? 0),
+      THREE.MathUtils.degToRad(this._options.rotation?.y ?? 0),
+      THREE.MathUtils.degToRad(this._options.rotation?.z ?? 0),
+    );
+    root.scale.set(
+      this._options.scale?.x ?? 1,
+      this._options.scale?.y ?? 1,
+      this._options.scale?.z ?? 1,
+    );
+  }
+
+  private _applyStaticUniforms(): void {
+    const uniforms = this._material?.uniforms as
+      | ShaderUniformRecord
+      | undefined;
+    if (!uniforms) return;
+    this._setUniformNumber(
+      uniforms,
+      "uChapter",
+      this._finiteOr(
+        this._options.chapter,
+        this._finiteOr(this._options.shader?.chapter, 0),
+      ),
+    );
+    this._setUniformNumber(
+      uniforms,
+      "uTransition",
+      this._finiteOr(
+        this._options.transition,
+        this._finiteOr(this._options.shader?.transition, 0),
+      ),
+    );
+  }
+
+  private _applyDynamicUniforms(): void {
+    const uniforms = this._material?.uniforms as
+      | ShaderUniformRecord
+      | undefined;
+    if (!uniforms) return;
+    this._setUniformNumber(uniforms, "uTime", this._elapsedTime);
+    this._applyResolutionUniform(uniforms);
+    this._applyRocketUniforms(uniforms);
+  }
+
+  private _applyResolutionUniform(uniforms: ShaderUniformRecord): void {
+    const target = uniforms.uResolution;
+    if (!target) return;
+    const renderer = this._context?.renderer;
+    const width = renderer?.domElement?.width;
+    const height = renderer?.domElement?.height;
+    if (
+      !(target.value instanceof THREE.Vector2) ||
+      !Number.isFinite(width) ||
+      !Number.isFinite(height)
+    ) {
+      return;
+    }
+    target.value.set(width as number, height as number);
+  }
+
+  private _applyRocketUniforms(uniforms: ShaderUniformRecord): void {
+    const root = this.getTimelineRoot();
+    const rocketObject = this._context?.getObject(rocket) as
+      | THREE.Object3D
+      | null;
+    const rocketInfluence = uniforms.uRocketInfluence;
+    const rocketUv = uniforms.uRocketUv;
+    if (!root || !rocketObject || !rocketInfluence || !rocketUv) {
+      if (rocketInfluence) rocketInfluence.value = 0;
+      return;
+    }
+
+    rocketObject.getWorldPosition(this._rocketWorldPosition);
+    this._rocketLocalPosition.copy(this._rocketWorldPosition);
+    root.worldToLocal(this._rocketLocalPosition);
+
+    const plane = this._resolvePlaneOptions();
+    const halfWidth = plane.width * 0.5;
+    const halfHeight = plane.height * 0.5;
+    const normalizedX = this._rocketLocalPosition.x / Math.max(halfWidth, 0.0001);
+    const normalizedY = this._rocketLocalPosition.y / Math.max(halfHeight, 0.0001);
+    const lateralDistance = Math.max(Math.abs(normalizedX), Math.abs(normalizedY));
+    const depthDistance = Math.abs(this._rocketLocalPosition.z);
+    const lateralInfluence = 1 - this._smoothstep(0.35, 1.2, lateralDistance);
+    const depthInfluence =
+      1 -
+      this._smoothstep(
+        CLOUD_ROCKET_EFFECT_DEPTH * 0.2,
+        CLOUD_ROCKET_EFFECT_DEPTH,
+        depthDistance,
+      );
+    rocketInfluence.value = lateralInfluence * depthInfluence;
+    const rocketUvValue =
+      rocketUv.value instanceof THREE.Vector2
+        ? rocketUv.value
+        : new THREE.Vector2();
+    rocketUvValue.set(normalizedX * 0.5 + 0.5, normalizedY * 0.5 + 0.5);
+    rocketUv.value = rocketUvValue;
+  }
+
+  private _createCurvedPlaneGeometry(): THREE.PlaneGeometry {
+    const plane = this._resolvePlaneOptions();
+    const geometry = new THREE.PlaneGeometry(
+      plane.width,
+      plane.height,
+      plane.segments,
+      plane.segments,
+    );
+    if (plane.curveDepth <= 0 || plane.segments <= 1) {
+      geometry.computeVertexNormals();
+      geometry.computeBoundingSphere();
+      return geometry;
+    }
+    const position = geometry.getAttribute("position");
+    for (let index = 0; index < position.count; index += 1) {
+      const x = position.getX(index);
+      const y = position.getY(index);
+      const normalizedX = Math.abs(x / (plane.width * 0.5));
+      const normalizedY = Math.abs(y / (plane.height * 0.5));
+      const clampedX = THREE.MathUtils.clamp(normalizedX, 0, 1);
+      const clampedY = THREE.MathUtils.clamp(normalizedY, 0, 1);
+      const edgeCurve = this._smoothstep(
+        0.72,
+        1,
+        Math.pow(clampedX, plane.curvePower),
+      );
+      const horizontalCurve =
+        (1 - Math.cos(edgeCurve * Math.PI * 0.5)) * edgeCurve;
+      const verticalCurve = 1 - Math.pow(clampedY, 1.5) * 0.03;
+      position.setZ(
+        index,
+        plane.curveDepth *
+          horizontalCurve *
+          THREE.MathUtils.clamp(verticalCurve, 0.96, 1),
+      );
+    }
+    position.needsUpdate = true;
+    geometry.computeVertexNormals();
+    geometry.computeBoundingSphere();
+    return geometry;
+  }
+
+  private _resolvePlaneOptions(): Required<
+    NonNullable<CloudPlaneObjectOptions["plane"]>
+  > {
+    const plane = this._options.plane;
+    const fallbackSize = this._resolvePositiveNumber(
+      plane?.size,
+      CLOUD_PLANE_WIDTH,
+    );
+    return {
+      size: fallbackSize,
+      width: this._resolvePositiveNumber(plane?.width, fallbackSize),
+      height: this._resolvePositiveNumber(plane?.height, CLOUD_PLANE_HEIGHT),
+      segments: Math.max(
+        1,
+        Math.round(
+          this._resolvePositiveNumber(plane?.segments, CLOUD_PLANE_SEGMENTS),
+        ),
+      ),
+      curveDepth: this._resolvePositiveNumber(
+        plane?.curveDepth,
+        CLOUD_PLANE_CURVE_DEPTH,
+      ),
+      curvePower: this._resolvePositiveNumber(
+        plane?.curvePower,
+        CLOUD_PLANE_CURVE_POWER,
+      ),
+    };
+  }
+
+  private _smoothstep(edge0: number, edge1: number, value: number): number {
+    const normalized = THREE.MathUtils.clamp(
+      (value - edge0) / Math.max(edge1 - edge0, Number.EPSILON),
+      0,
+      1,
+    );
+    return normalized * normalized * (3 - 2 * normalized);
+  }
+
+  private _clearRuntime(): void {
+    if (this._mesh) {
+      this._mesh.geometry.dispose();
+      this._mesh.material.dispose();
+      this._mesh.parent?.remove(this._mesh);
+    }
+    this._mesh = null;
+    this._material = null;
+    this._disposeTextures();
+    this._elapsedTime = 0;
+  }
+
+  private _disposeTextures(): void {
+    for (const key of this._sharedTextureKeys) {
+      const cached = CloudPlane._sharedTextures.get(key);
+      if (!cached) continue;
+      cached.refs -= 1;
+      if (cached.refs <= 0) {
+        cached.texture.dispose();
+        CloudPlane._sharedTextures.delete(key);
+      }
+    }
+    this._sharedTextureKeys.clear();
+    this._mouseTexture?.dispose();
+    this._perlinTexture = null;
+    this._noiseTexture = null;
+    this._mouseTexture = null;
+    this._mouseTextureData = null;
+  }
+
+  private async _loadSharedTexture(
+    url: string,
+    prepare: (texture: THREE.Texture) => THREE.Texture,
+  ): Promise<THREE.Texture> {
+    const cached = CloudPlane._sharedTextures.get(url);
+    if (cached) {
+      cached.refs += 1;
+      this._sharedTextureKeys.add(url);
+      return cached.texture;
+    }
+    const loader = this._context?.loadTexture;
+    if (!loader) {
+      throw new Error(`Cloud texture loader is unavailable for ${url}`);
+    }
+    const texture = prepare.call(this, await loader(url));
+    CloudPlane._sharedTextures.set(url, {
+      texture,
+      refs: 1,
+    });
+    this._sharedTextureKeys.add(url);
+    return texture;
+  }
+
+  private _getLayerLabel(): string {
+    const label = this._options.label?.trim();
+    return label && label.length > 0 ? label : "cloudPlaneRoot";
+  }
+
+  private _createMouseTexture(): void {
+    this._mouseTextureData = new Float32Array(
+      CLOUD_MOUSE_TEXTURE_SIZE *
+        CLOUD_MOUSE_TEXTURE_SIZE *
+        CLOUD_MOUSE_TEXTURE_CHANNELS,
+    );
+    this._mouseTexture = new THREE.DataTexture(
+      this._mouseTextureData,
+      CLOUD_MOUSE_TEXTURE_SIZE,
+      CLOUD_MOUSE_TEXTURE_SIZE,
+      THREE.RGBAFormat,
+      THREE.FloatType,
+    );
+    this._mouseTexture.wrapS = THREE.ClampToEdgeWrapping;
+    this._mouseTexture.wrapT = THREE.ClampToEdgeWrapping;
+    this._mouseTexture.magFilter = THREE.LinearFilter;
+    this._mouseTexture.minFilter = THREE.LinearFilter;
+    this._mouseTexture.generateMipmaps = false;
+    this._mouseTexture.needsUpdate = true;
+  }
+
+  private _updateMouseTexture(): void {
+    const mouseTexture = this._mouseTexture;
+    const mouseTextureData = this._mouseTextureData;
+    if (!mouseTexture || !mouseTextureData) return;
+    for (
+      let index = 0;
+      index < mouseTextureData.length;
+      index += CLOUD_MOUSE_TEXTURE_CHANNELS
+    ) {
+      mouseTextureData[index] *= CLOUD_MOUSE_TEXTURE_FADE;
+      mouseTextureData[index + 1] *= CLOUD_MOUSE_TEXTURE_FADE;
+      mouseTextureData[index + 2] *= CLOUD_MOUSE_TEXTURE_FADE;
+      mouseTextureData[index + 3] = 1;
+    }
+    mouseTexture.needsUpdate = true;
+  }
+
+  private _setUniformNumber(
+    uniforms: ShaderUniformRecord,
+    key: string,
+    value: number,
+  ): void {
+    const target = uniforms[key];
+    if (!target) return;
+    target.value = value;
+  }
+
+  private _finiteOr(value: unknown, fallback: number): number {
+    return Number.isFinite(value as number) ? (value as number) : fallback;
+  }
+
+  private _resolvePositiveNumber(value: unknown, fallback: number): number {
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+      return fallback;
+    }
+    return value;
+  }
+}

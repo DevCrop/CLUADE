@@ -1,0 +1,32 @@
+# NINEONELABS Renewal Project
+
+<!-- File-type specific rules are in .claude/rules/ and load on demand -->
+
+## Stack
+
+- **Backend**: PHP 7.4, Custom MVC, MySQL 8.0, Apache (Docker)
+- **Frontend**: TypeScript, SCSS, Three.js, Vite, Swiper
+
+## Build & Dev Commands
+
+See @package.json for available npm scripts.
+
+```bash
+make up              # Start Docker containers
+make down            # Remove containers
+make bash            # Access web container
+make migrate         # Run DB migrations
+make migrate-status  # Check migration status
+make install         # Install npm + composer packages
+```
+
+## Workflow Rules
+
+- Do NOT run `npm run build` or `npm run watch` — dev server reflects changes on save automatically
+- `vendor/` must be included in deployment; exclude `node_modules/`
+
+## Local Access
+
+- Website: [http://localhost:8080](http://localhost:8080)
+- phpMyAdmin: [http://localhost:8081](http://localhost:8081)
+- DB: localhost:3306 / nineonelabs / user / password

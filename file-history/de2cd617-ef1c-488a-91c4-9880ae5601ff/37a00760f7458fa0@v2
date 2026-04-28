@@ -1,0 +1,43 @@
+﻿import { AppManager } from "./manager/AppManager.js";
+import { FrameScheduler } from "./utils/FrameScheduler.js";
+
+async function start(): Promise<void> {
+  await AppManager.init();
+}
+
+function deferStart(): void {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => deferStart(), {
+      once: true,
+    });
+    return;
+  }
+  if (typeof requestIdleCallback !== "undefined") {
+    requestIdleCallback(
+      () => {
+        FrameScheduler.request(() => void start());
+      },
+      { timeout: 2000 },
+    );
+  } else {
+    FrameScheduler.request(() => void start());
+  }
+}
+
+function registerLifecycle(): void {
+  // beforeunload는 bfcache 진입을 차단한다. pagehide + persisted 체크로 대체.
+  window.addEventListener("pagehide", (e) => {
+    if (!e.persisted) {
+      AppManager.disposeBootstrap();
+    }
+  });
+  // bfcache에서 복원될 때 전체 앱 재초기화
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) {
+      void AppManager.init();
+    }
+  });
+}
+
+registerLifecycle();
+deferStart();

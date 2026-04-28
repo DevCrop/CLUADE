@@ -1,0 +1,108 @@
+# Plan: Fix Selective Bloom Triangular Artifact — Depth-Matched Dark Material
+
+## Context
+
+`main → hero` veil 트렌지션 중 삼각형 아티팩트가 발생한다.
+
+**근본 원인**: Selective bloom pass에서 non-bloom 메쉬를 `_darkMaterial`(`MeshBasicMaterial({ color: 0x000000 })`)로 교체할 때, 대상 메쉬의 원본 depth state를 무시하고 동일한 material 하나를 모든 메쉬에 적용한다.
+
+`TransitionVeil`은 설계상 `depthTest: false` / `depthWrite: false` (화면 최상단 오버레이)이지만, `_darkMaterial`의 `depthTest: true`로 교체되면서 카메라 앞 16 units 위치의 veil 평면이 더 가까운 씬 오브젝트(rocket, jetEngine 등)의 depth buffer에 클리핑된다. 이 triangular 클리핑 패턴이 bloom 텍스처에 구멍으로 남고, final composer의 additive blend에서 bloom이 veil 위로 bleeding된다.
+
+**단순 제외(필터링)가 아닌 depth-matched 교체가 근본 해법인 이유**:
+- 메쉬를 완전히 제외하면 veil 뒤의 bloom이 bloom 텍스처에 그대로 남아 반대 방향의 bleeding 발생
+- veil은 bloom pass에서도 "검정 오버레이"로서 bloom을 올바르게 억제해야 함
+- depth state만 맞추면 원래 의도(오버레이 + bloom 억제)가 동시에 보존됨
+
+**동일 조건 오브젝트**: `CloudPlane`(renderOrder -1190), `AboutLights` 이미터도 `depthTest: false` — 동일 픽스 적용됨.
+
+---
+
+## Approach
+
+`_darkenNonBloom`이 메쉬별로 원본 material의 depth state를 확인하고, 매칭되는 dark material variant를 선택한다.
+
+- `depthTest: true` 메쉬 → 기존 `_darkMaterial` (변경 없음)
+- `depthTest: false` 메쉬 → 새 `_darkMaterialDepthOff` (`depthTest: false`, `depthWrite: false`)
+
+두 material 모두 `color: 0x000000`으로 bloom 텍스처에서 해당 영역을 완전히 억제. depth state만 원본에 맞춤.
+
+---
+
+## Files to Modify
+
+- **`resource/ts/core/PostProcessor.ts`** — 유일한 수정 대상
+
+---
+
+## Implementation (3단계, 단일 파일)
+
+### 1. `_darkMaterialDepthOff` 필드 추가
+
+```ts
+// 기존 (line 46)
+private _darkMaterial: THREE.MeshBasicMaterial | null = null;
+
+// 추가
+private _darkMaterialDepthOff: THREE.MeshBasicMaterial | null = null;
+```
+
+### 2. `_setupSelectiveBloom`에서 두 번째 material 초기화 (line 106 근처)
+
+```ts
+// 기존
+this._darkMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+// 추가
+this._darkMaterialDepthOff = new THREE.MeshBasicMaterial({
+  color: 0x000000,
+  depthTest: false,
+  depthWrite: false,
+});
+```
+
+### 3. `_darkenNonBloom`에서 메쉬별 depth-matched material 선택
+
+기존 (line 252–255):
+```ts
+for (const mesh of this._cachedNonBloomMeshes) {
+  this._materialCache.set(mesh, mesh.material);
+  mesh.material = dark;
+}
+```
+
+변경:
+```ts
+for (const mesh of this._cachedNonBloomMeshes) {
+  this._materialCache.set(mesh, mesh.material);
+  mesh.material = this._resolveDarkMaterial(mesh);
+}
+```
+
+추가 private 메서드:
+```ts
+private _resolveDarkMaterial(mesh: THREE.Mesh): THREE.MeshBasicMaterial {
+  const mat = mesh.material;
+  const isDepthOff = Array.isArray(mat)
+    ? mat.every((m) => m.depthTest === false)
+    : (mat as THREE.Material).depthTest === false;
+  return (isDepthOff ? this._darkMaterialDepthOff : this._darkMaterial)!;
+}
+```
+
+### 4. `dispose()`에 새 material 해제 추가 (line 471 근처)
+
+```ts
+this._darkMaterialDepthOff?.dispose();
+this._darkMaterialDepthOff = null;
+```
+
+---
+
+## Verification
+
+1. `http://localhost:8888` 메인 페이지 로드
+2. 인트로 카운트다운 완료 → veil 전환 (cover 1.26s / hold 0.88s / reveal 1.92s)
+3. **커버 단계**: 구름이 화면을 덮는 동안 삼각형 아티팩트 없음
+4. **홀드 단계**: 완전히 덮인 veil이 순수 흰 구름으로만 표시 (bloom bleeding 없음)
+5. **리빌 단계**: 중앙 원형 dissolve에서 triangular 경계 없음
+6. `rtk tsc --noEmit` 통과 (타입 변경 없음)

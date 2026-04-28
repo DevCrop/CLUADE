@@ -1,0 +1,212 @@
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\SceneObject.ts:60:    return this._effects.bloom?.enabled ?? false;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\Scene.ts:81:  private _bloomRootsCache = new Set<THREE.Object3D>();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\Scene.ts:84:    const roots = this._bloomRootsCache;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:434:    bloom: 1,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:38:  private _bloomComposer: EffectComposer | null = null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:40:  private _bloomPass: UnrealBloomPass | null = null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:42:  private _vignettePass: ShaderPass | null = null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:51:  private _bloomDescendants = new Set<THREE.Object3D>();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:76:    const bloomOpt = this._opts.bloom;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:77:    const vignetteOpt = this._opts.vignette;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:78:    const hasBloom = bloomOpt !== false;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:79:    const hasVignette = vignetteOpt !== false && vignetteOpt != null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:83:    const vignetteCfg = this._normalizeVignetteOptions(vignetteOpt);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:85:      this._setupCustomPassPipeline(vignetteCfg);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:88:    const bloomCfg = this._normalizeBloomOptions(bloomOpt);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:90:    this._selective = bloomCfg.selective ?? true;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:97:      this._setupSelectiveBloom(bloomCfg, resolution, vignetteCfg);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:100:    this._setupGlobalBloom(bloomCfg, resolution, vignetteCfg);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:106:    vignetteCfg: Required<VignetteOptions> | null,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:115:    this._bloomComposer = new EffectComposer(this._renderer);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:116:    this._bloomComposer.renderToScreen = false;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:117:    this._bloomComposer.addPass(new RenderPass(this._scene, this._camera));
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:118:    this._bloomPass = new UnrealBloomPass(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:124:    this._bloomComposer.addPass(this._bloomPass);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:133:          bloomTexture: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:134:            value: this._bloomComposer.renderTarget2.texture,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:136:          bloomMix: { value: cfg.compositeStrength },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:147:    if (vignetteCfg) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:148:      this._vignettePass = this._createVignettePass(vignetteCfg);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:149:      this._finalComposer.addPass(this._vignettePass);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:154:    bloomCfg: Required<Omit<BloomOptions, "selective">> & {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:158:    vignetteCfg: Required<VignetteOptions> | null,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:162:    this._bloomPass = new UnrealBloomPass(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:164:      bloomCfg.strength,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:165:      bloomCfg.radius,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:166:      bloomCfg.threshold,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:168:    this._composer.addPass(this._bloomPass);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:169:    if (vignetteCfg) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:170:      this._vignettePass = this._createVignettePass(vignetteCfg);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:171:      this._composer.addPass(this._vignettePass);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:176:    vignetteCfg: Required<VignetteOptions> | null,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:180:    if (vignetteCfg) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:181:      this._vignettePass = this._createVignettePass(vignetteCfg);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:182:      this._composer.addPass(this._vignettePass);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:186:  render(bloomRoots: Set<THREE.Object3D>, deltaTime?: number): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:187:    if (!this._bloomPass) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:197:      const hasRoots = this._hasRenderableBloomRoots(bloomRoots);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:198:      this._renderSelective(bloomRoots, hasRoots, deltaTime);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:205:    bloomRoots: Set<THREE.Object3D>,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:211:      !this._bloomComposer ||
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:220:      console.log(`[BLOOM:render] hasRoots changed → ${String(hasRoots)}  bloomRoots.size=${bloomRoots.size}`);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:229:        this._prepareBloomScene(hasRoots, bloomRoots);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:230:        this._bloomComposer.render(deltaTime);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:245:    bloomRoots: Set<THREE.Object3D>,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:248:      this._darkenNonBloom(bloomRoots);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:254:  private _darkenNonBloom(bloomRoots: Set<THREE.Object3D>): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:256:    const signature = this._createBloomSignature(bloomRoots);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:259:      this._rebuildNonBloomMeshCache(bloomRoots);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:296:  private _hasRenderableBloomRoots(bloomRoots: Set<THREE.Object3D>): boolean {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:297:    if (bloomRoots.size === 0) return false;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:298:    for (const root of bloomRoots) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:305:    bloomOpt: PostProcessorOptions["bloom"],
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:307:    if (typeof bloomOpt !== "object" || bloomOpt == null) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:311:      bloomOpt.strength,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:317:      bloomOpt.radius,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:323:      bloomOpt.threshold,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:329:      bloomOpt.compositeStrength,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:335:      typeof bloomOpt.selective === "boolean"
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:336:        ? bloomOpt.selective
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:342:    vignetteOpt: PostProcessorOptions["vignette"],
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:344:    if (vignetteOpt === false || vignetteOpt == null) return null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:345:    if (vignetteOpt === true) return { ...DEFAULT_VIGNETTE };
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:348:        vignetteOpt.offset,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:354:        vignetteOpt.darkness,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:363:    vignetteCfg: Required<VignetteOptions>,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:366:    pass.uniforms.offset.value = vignetteCfg.offset;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:367:    pass.uniforms.darkness.value = vignetteCfg.darkness;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:388:  private _createBloomSignature(bloomRoots: Set<THREE.Object3D>): string {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:389:    return Array.from(bloomRoots)
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:396:  private _rebuildNonBloomMeshCache(bloomRoots: Set<THREE.Object3D>): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:397:    this._bloomDescendants.clear();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:398:    for (const root of bloomRoots) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:399:      root.traverse((child) => this._bloomDescendants.add(child));
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:403:      (mesh) => !this._bloomDescendants.has(mesh),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:442:      this._bloomComposer?.setSize(width, height);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:443:      this._bloomComposer?.setPixelRatio(dpr);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:451:    if (this._bloomPass) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:452:      this._bloomPass.resolution.set(width, height);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:461:    return this._bloomPass;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:465:    if (!this._bloomPass) return null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:467:      strength: this._bloomPass.strength,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:468:      radius: this._bloomPass.radius,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:469:      threshold: this._bloomPass.threshold,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:475:    if (!this._bloomPass) return;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:477:    this._bloomPass.strength = normalized.strength;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:478:    this._bloomPass.radius = normalized.radius;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:479:    this._bloomPass.threshold = normalized.threshold;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:480:    const blendUniform = this._blendPass?.uniforms?.bloomMix;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:487:    const uniforms = this._vignettePass?.uniforms;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:496:    const uniforms = this._vignettePass?.uniforms;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:507:    this._bloomComposer?.dispose();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:508:    this._bloomComposer = null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:511:    this._bloomPass?.dispose();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:512:    this._bloomPass = null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:514:    this._vignettePass = null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:520:    this._bloomDescendants.clear();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\PostProcessor.ts:528:    const uniform = this._blendPass?.uniforms?.bloomMix;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\Engine.ts:638:  private _resolvePostProcessorOptions(): EngineOptions["postProcessing"] | null {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\Engine.ts:639:    const options = this._opts.postProcessing;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\Engine.ts:641:    const hasBloom = options.bloom !== false && options.bloom != null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\Engine.ts:642:    const hasVignette = options.vignette !== false && options.vignette != null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\base.config.ts:45:    postProcessing: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\base.config.ts:46:      bloom: false,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\base.config.ts:47:      vignette: false,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:17:import bloomVertRaw from "../../../shaders/jet-engine/bloom.vertex.glsl?raw";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:18:import bloomFragRaw from "../../../shaders/jet-engine/bloom.fragment.glsl?raw";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:187:    const bloom =
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:188:      typeof o.bloom === "number" && Number.isFinite(o.bloom)
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:189:        ? Math.max(0, o.bloom)
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:221:      innerBloom: bloom,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:222:      parentBloom: bloom * 0.92,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:376:      for (const b of eng.blooms) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:391:    for (const b of parent.blooms) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:480:      const blooms = this._buildBlooms(group, [
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:497:        blooms.push(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:509:      this._inner.push({ group, mat, blooms });
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:557:    this._parent = { group: pGroup, mat: pMat, blooms: pBlooms };
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:569:      for (const b of eng.blooms) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:582:      for (const b of this._parent.blooms) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:609:        vertexShader: bloomVertRaw as string,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:610:        fragmentShader: bloomFragRaw as string,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:617:        key: this.createShaderKey(`bloom.${parent.uuid}.${index}`),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:107:      postProcessing: this._resolvePostProcessing(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:108:        three.postProcessing,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:179:    postProcessing: PostProcessorOptions | undefined,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:182:    if (!postProcessing) return undefined;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:183:    if (postProcessing.bloom === false) return postProcessing;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:185:    const bloom =
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:186:      typeof postProcessing.bloom === "object" && postProcessing.bloom != null
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:187:        ? { ...performance.bloom, ...postProcessing.bloom }
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:188:        : { ...performance.bloom };
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:191:      ...postProcessing,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\runtime\AppEngineRuntime.ts:192:      bloom,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreBridge.ts:72:    postProcessing: three.postProcessing,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\utils\PerformanceProfile.ts:23:  bloom: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\utils\PerformanceProfile.ts:48:  bloom: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\utils\PerformanceProfile.ts:73:  bloom: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\utils\PerformanceProfile.ts:190:      bloom: { ...profile.bloom },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts:125:    bloom: unknown;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-runtime.types.ts:252:  blooms: JetEngineBloomLayer[];
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:456:  bloom: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\engine.types.ts:263:  bloom?: boolean | BloomOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\engine.types.ts:264:  vignette?: boolean | VignetteOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\engine.types.ts:294:  postProcessing?: PostProcessorOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts:72:  postProcessing: PostProcessorOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts:162:  postProcessing?: { bloom?: { enabled: boolean } };
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:231:    bloom: unknown;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object-common.types.ts:34:  bloom?: ObjectBloomEffect;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:45:  bloom: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:67:  bloom: MainBloomState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:68:  vignette: MainVignetteState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:105:  postProcessing: MainPostProcessingState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:271:    "bloom",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:452:  bloom?: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:463:    | "bloom"
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\scene\works.scene.ts:187:      postProcessing: defaultThree.postProcessing,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\runtime\WorksIntroRuntime.ts:47:    postProcessing: three.postProcessing,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\scene\main.scene.ts:108:  mainInitialSceneState.postProcessing,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\scene\main.scene.ts:553:  postProcessing: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\scene\main.scene.ts:554:    bloom: { ...initialPostProcessing.bloom, selective: true },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\scene\main.scene.ts:555:    vignette: { ...initialPostProcessing.vignette },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:81:    this._applyPostProcessing(engine, state.postProcessing);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:118:      postProcessing: this._readPostProcessing(engine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:186:      bloom: this._toFinite(runtime.bloom, defaults.bloom),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:254:    const defaults = DEFAULT_MAIN_SCENE_STATE.postProcessing;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:259:    const bloom = postProcessor?.getBloomOptions();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:260:    const vignette = postProcessor?.getVignetteOptions();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:262:      bloom: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:263:        strength: this._toFinite(bloom?.strength, defaults.bloom.strength),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:264:        radius: this._toFinite(bloom?.radius, defaults.bloom.radius),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:265:        threshold: this._toFinite(bloom?.threshold, defaults.bloom.threshold),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:267:          bloom?.compositeStrength,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:268:          defaults.bloom.compositeStrength,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:271:      vignette: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:272:        offset: this._toFinite(vignette?.offset, defaults.vignette.offset),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:274:          vignette?.darkness,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:275:          defaults.vignette.darkness,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:318:    postProcessor?.setBloomOptions(state.bloom);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:319:    postProcessor?.setVignetteOptions(state.vignette);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:326:      DEFAULT_MAIN_SCENE_STATE.postProcessing.exposure,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:35:  bloom: { ...DEFAULT_MAIN_BLOOM_STATE },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:36:  vignette: { ...DEFAULT_MAIN_VIGNETTE_STATE },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:135:    bloom: cloneBloomState(state.bloom),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:136:    vignette: cloneVignetteState(state.vignette),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:216:    bloom: num(jc?.bloom, 1),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:233:    bloom: state.bloom,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:264:    bloom: num(source.bloom, target.bloom),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:409:  postProcessing: clonePostProcessingState(DEFAULT_MAIN_POST_PROCESSING_STATE),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:423:  bloom: MainBloomState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:424:  vignette: MainVignetteState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:427:    bloom: cloneBloomState(state.bloom),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:428:    vignette: cloneVignetteState(state.vignette),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:455:    postProcessing: clonePostProcessingState(state.postProcessing),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:630:    bloom: mergeBloomState(target.bloom, source.bloom),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:631:    vignette: mergeVignetteState(target.vignette, source.vignette),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:732:    postProcessing: mergePostProcessingState(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:733:      target.postProcessing,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:734:      source.postProcessing,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\contact\scene\contact.scene.ts:62:    bloom: 1,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:269:    bloom: blendAboutNumber(from.bloom, to.bloom, mix),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:130:      bloom: this._toFinite(runtime.bloom, defaults.bloom),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\scene\about.scene.ts:346:  postProcessing: { ...defaultThree.postProcessing },

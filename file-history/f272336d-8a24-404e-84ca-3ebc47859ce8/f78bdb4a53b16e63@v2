@@ -1,0 +1,302 @@
+<div class="no-legal-doc">
+
+    <p class="no-legal-doc__effective">Current · Effective April 1, 2026</p>
+
+    <p class="no-legal-doc__intro">
+        EverCura Co., Ltd. (hereinafter "the Company") complies with the personal information protection regulations applicable to information and communications service providers, including the Personal Information Protection Act. The Company establishes and maintains a privacy policy in accordance with relevant laws to protect the rights and interests of users. This Privacy Policy applies to the website services provided by the Company and contains the following information.
+    </p>
+
+    <!-- ■ 1 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Personal Information Collected and Collection Methods
+        </h3>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. Items of Personal Information Collected</p>
+            <p class="no-legal-doc__body">The Company collects the minimum personal information necessary to handle service inquiries and fulfill contracts, without a separate membership registration process.</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>Upon service inquiry: name, company name, contact number (mobile), email address, inquiry details</li>
+                <li>Upon service contract and payment: address (place of business), representative name, information for tax invoice issuance (email, etc.), payment records</li>
+                <li>During service use: service usage logs, access logs, cookies, and access IP addresses may be automatically generated and collected.</li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. Collection Methods</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>Website (inquiry form), written forms, email, phone, fax, and automatic collection via data collection tools</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ■ 2 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Purpose of Collecting and Using Personal Information
+        </h3>
+        <p class="no-legal-doc__body">The Company uses the collected personal information for the following purposes.</p>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. Fulfillment of Service Agreements and Billing</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>Providing EverCura services, processing purchases and payments, sending contracts and invoices, and verifying identity for financial transactions</li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. Customer Management and Inquiry Handling</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>Identity verification for inquiries, contact and notification for fact investigation, complaint handling and notification of processing results</li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">3. Marketing and Advertising (With Consent)</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>Delivering promotional information related to EverCura services and events, analyzing access frequency, and gathering statistics on customer service usage</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ■ 3 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Retention and Use Period of Personal Information
+        </h3>
+        <p class="no-legal-doc__body">In principle, the Company destroys personal information without delay once the purpose of collection and use has been achieved. However, the following information is retained for the period specified below for the stated reasons.</p>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. Retention Based on Internal Policy</p>
+            <ul class="no-legal-doc__circle-list">
+                <li>
+                    <span>Inquiry and consultation service usage records</span>
+                    <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--square">
+                        <li><span class="sub-label">Items retained:</span>&nbsp;Name, company name, contact number, email address, inquiry details</li>
+                        <li><span class="sub-label">Reason for retention:</span>&nbsp;Verification of inquiry history and provision of seamless service upon follow-up</li>
+                        <li><span class="sub-label">Retention period:</span>&nbsp;3 years after inquiry is resolved (or until the purpose is achieved)</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. Retention Required by Applicable Law</p>
+            <p class="no-legal-doc__body">Where retention is required under applicable laws such as the Commercial Act and the Act on Consumer Protection in Electronic Commerce, the Company retains customer information for the periods specified by those laws.</p>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">a. Records on contracts and withdrawal of subscription</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">Items retained:</span>&nbsp;Service contracts (including consent forms), records of contract performance</li>
+                    <li><span class="sub-label">Legal basis:</span>&nbsp;Act on Consumer Protection in Electronic Commerce</li>
+                    <li><span class="sub-label">Retention period:</span>&nbsp;5 years</li>
+                </ul>
+            </div>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">b. Records on consumer complaints and dispute resolution</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">Items retained:</span>&nbsp;Electronic documents related to customer complaints and disputes</li>
+                    <li><span class="sub-label">Legal basis:</span>&nbsp;Act on Consumer Protection in Electronic Commerce</li>
+                    <li><span class="sub-label">Retention period:</span>&nbsp;5 years</li>
+                </ul>
+            </div>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">c. Records on payment and supply of goods/services</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">Items retained:</span>&nbsp;Payment records, tax invoice issuance records</li>
+                    <li><span class="sub-label">Legal basis:</span>&nbsp;Act on Consumer Protection in Electronic Commerce, Framework Act on National Taxes</li>
+                    <li><span class="sub-label">Retention period:</span>&nbsp;5 years</li>
+                </ul>
+            </div>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">d. Survey and statistical data</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">Items retained:</span>&nbsp;Data containing personal information collected after survey compilation</li>
+                    <li><span class="sub-label">Legal basis:</span>&nbsp;Data collection for customer satisfaction activities and system improvement</li>
+                    <li><span class="sub-label">Retention period:</span>&nbsp;5 years</li>
+                </ul>
+            </div>
+
+            <div class="no-legal-doc__law-item">
+                <p class="no-legal-doc__law-item-title">e. Website visit records</p>
+                <ul class="no-legal-doc__sub-list no-legal-doc__sub-list--dash">
+                    <li><span class="sub-label">Items retained:</span>&nbsp;Website visit logs</li>
+                    <li><span class="sub-label">Legal basis:</span>&nbsp;Protection of Communications Secrets Act</li>
+                    <li><span class="sub-label">Retention period:</span>&nbsp;3 months</li>
+                </ul>
+            </div>
+
+            <p class="no-legal-doc__note">
+                However, for customers with an active service contract, information necessary for the provision of that service and fulfillment of the contract may be retained until the contract ends. Where retention is required by applicable law, such information is stored separately for the period prescribed by that law.
+            </p>
+        </div>
+    </div>
+
+    <!-- ■ 4 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Destruction of Personal Information
+        </h3>
+        <p class="no-legal-doc__body">In principle, the Company destroys personal information without delay once the purpose of processing has been achieved. The procedures, deadlines, and methods of destruction are as follows.</p>
+
+        <ul class="no-legal-doc__bullet-list">
+            <li>
+                Destruction procedure: Information entered by users for inquiries or service contracts is transferred to a separate database once the purpose has been achieved and is stored for a designated period in accordance with internal policy and applicable laws before being destroyed. Such personal information is not used for any purpose other than retention unless required by law.
+            </li>
+            <li>
+                Destruction deadline and method: Personal information is destroyed without delay when the retention period has expired, the purpose of processing has been achieved, or the relevant business has been discontinued, rendering the information unnecessary. Electronic files are destroyed using technical methods that prevent recovery. Personal information printed on paper is destroyed by shredding or incineration.
+            </li>
+        </ul>
+    </div>
+
+    <!-- ■ 5 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Disclosure of Personal Information to Third Parties
+        </h3>
+        <p class="no-legal-doc__body">In principle, the Company processes personal information only within the scope specified for the purpose of collection and use. Except in the cases listed below, the Company does not process personal information beyond its original purpose or provide it to third parties without the prior consent of the data subject.</p>
+
+        <ol class="no-legal-doc__numbered-list">
+            <li>Where prior consent has been given, or where separate consent is obtained from the data subject</li>
+            <li>Where there is a special provision in law, or where a request is made by an investigative authority in accordance with the procedures and methods prescribed by law</li>
+            <li>Where it is clearly necessary for the urgent protection of the life, body, or property of the data subject or a third party, and prior consent cannot be obtained due to the data subject's incapacity or unknown address</li>
+            <li>Where personal information is provided in a form that does not allow identification of a specific individual for purposes such as statistical compilation or academic research</li>
+        </ol>
+    </div>
+
+    <!-- ■ 6 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Entrustment of Personal Information Processing
+        </h3>
+        <p class="no-legal-doc__body">To provide smooth services, the Company entrusts personal information processing to external specialists as set out below, and stipulates the necessary provisions in entrustment agreements to ensure that personal information is managed securely.</p>
+
+        <div class="no-legal-doc__table-wrap">
+            <table class="no-legal-doc__table">
+                <thead>
+                    <tr>
+                        <th>Entrusted Company</th>
+                        <th>Entrusted Tasks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Salesforce.com, Inc.</td>
+                        <td>Operation of Customer Relationship Management (CRM) system and data storage (including overseas storage through global cloud infrastructure)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ■ 7 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            User Rights and How to Exercise Them
+        </h3>
+
+        <ol class="no-legal-doc__numbered-list">
+            <li>Users may at any time exercise their rights against the Company, including the right to access, correct, delete, or request suspension of processing of their personal information.</li>
+            <li>Rights may be exercised in writing, by email, or by mobile message to the Company, and the Company will respond without delay.</li>
+            <li>If a user requests correction or deletion of personal information due to errors, the Company will not use or provide that information until the correction or deletion is completed.</li>
+            <li>Rights may be exercised through a legal representative or an authorized agent of the user. In such cases, a power of attorney in accordance with Annex 11 of the Enforcement Rules of the Personal Information Protection Act must be submitted.</li>
+            <li>Personal information terminated or deleted at the user's request is handled in accordance with the retention periods stated in "Retention and Use Period of Personal Information" and is rendered inaccessible or unusable for any other purpose.</li>
+        </ol>
+    </div>
+
+    <!-- ■ 8 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Security Measures for Personal Information
+        </h3>
+        <p class="no-legal-doc__body">The Company takes the following measures to ensure the security of personal information.</p>
+
+        <ol class="no-legal-doc__numbered-list">
+            <li>Administrative measures: Establishment and implementation of internal management plans, minimization of personnel handling personal information, and regular training</li>
+            <li>Technical measures: Access control for personal information processing systems (including Salesforce), maintenance and tamper-prevention of access logs, encrypted transmission of personal information, installation and updating of security programs</li>
+            <li>Physical measures: Access control for external visitors and locking mechanisms for data storage areas</li>
+        </ol>
+    </div>
+
+    <!-- ■ 9 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Installation, Operation, and Refusal of Automatic Data Collection Devices
+        </h3>
+        <p class="no-legal-doc__body">The Company operates "cookies" and similar tools that frequently store and retrieve your information. Cookies are small text files sent by the server operating the website to your browser and stored on your computer's hard disk.</p>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. Purpose of Cookies</p>
+            <p class="no-legal-doc__body">Analysis of access frequency and visit times, identification and tracking of user preferences and interests, measurement of participation in events and number of visits, and provision of targeted marketing and personalized services</p>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. Installation, Operation, and Refusal of Cookies</p>
+            <p class="no-legal-doc__body">You have the right to choose whether to accept cookies. You can configure your web browser settings to allow all cookies, confirm each time a cookie is saved, or refuse all cookies.</p>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">3. How to Refuse Cookie Installation</p>
+            <ul class="no-legal-doc__browser-list">
+                <li><strong>Chrome:</strong>&nbsp;Settings &gt; Privacy and security &gt; Clear browsing data</li>
+                <li><strong>Edge:</strong>&nbsp;Settings &gt; Cookies and site permissions &gt; Manage and delete cookies and site data</li>
+                <li><strong>Safari:</strong>&nbsp;Preferences &gt; Privacy &gt; Manage Website Data</li>
+            </ul>
+            <p class="no-legal-doc__note">
+                Please note that refusing to save cookies may cause difficulties in using personalized services.
+            </p>
+        </div>
+    </div>
+
+    <!-- ■ 10 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Personal Information Complaint Service
+        </h3>
+        <p class="no-legal-doc__body">To protect customers' personal information and handle complaints related to personal information, the Company has designated the following department and Privacy Officer.</p>
+
+        <dl class="no-legal-doc__contact-card">
+            <dt>Privacy Officer</dt><dd>&nbsp;</dd>
+            <dt>Name</dt><dd>Cha Seulyena</dd>
+            <dt>Department</dt><dd>Distribution Business Division</dd>
+            <dt>Phone</dt><dd>010-2762-4324</dd>
+            <dt>Email</dt><dd><a href="mailto:lina@ever-cura.com">lina@ever-cura.com</a></dd>
+        </dl>
+
+        <p class="no-legal-doc__body" style="margin-top:16px;">You may report any personal information protection complaints arising from the use of the Company's services to the Privacy Officer or the relevant department. The Company will provide prompt and sufficient responses to user reports.</p>
+        <p class="no-legal-doc__body">For additional reports or consultations regarding personal information infringement, please contact the following organizations.</p>
+
+        <ul class="no-legal-doc__agency-list">
+            <li>Personal Information Infringement Report Center (<a href="https://privacy.kisa.or.kr" target="_blank" rel="noopener">privacy.kisa.or.kr</a> / 118 without area code)</li>
+            <li>Personal Information Dispute Mediation Committee (<a href="https://www.kopico.go.kr" target="_blank" rel="noopener">kopico.go.kr</a> / 1833-6972)</li>
+            <li>Supreme Prosecutors' Office Cyber Investigation Department (<a href="https://www.spo.go.kr" target="_blank" rel="noopener">spo.go.kr</a> / area code + 1301)</li>
+            <li>National Police Agency Cyber Safety Bureau (<a href="https://cyberbureau.police.go.kr" target="_blank" rel="noopener">cyberbureau.police.go.kr</a> / 182 without area code)</li>
+        </ul>
+    </div>
+
+    <!-- ■ 11 -->
+    <div class="no-legal-doc__section">
+        <h3 class="no-legal-doc__section-title">
+            <span class="icon-square" aria-hidden="true">■</span>
+            Changes to the Privacy Policy
+        </h3>
+        <p class="no-legal-doc__body">This Privacy Policy may be amended with additions, deletions, or modifications in response to changes in government policy or security technology, and in such cases the Company will notify users through the official website without delay.</p>
+        <ul class="no-legal-doc__bullet-list">
+            <li>This Privacy Policy is effective as of April 1, 2026.</li>
+        </ul>
+    </div>
+
+</div>

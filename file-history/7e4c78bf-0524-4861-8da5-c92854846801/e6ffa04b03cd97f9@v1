@@ -1,0 +1,208 @@
+﻿import { UI } from "../ui/UI.js";
+import { Aria } from "../utils/Aria.js";
+import { dispatchInputChange } from "../utils/domUtil.js";
+import type { ComponentConfig } from "../types/dom.types.js";
+
+export class Dropdown extends UI {
+  private _openClass = "is-open";
+  private _trigger: HTMLButtonElement | null = null;
+  private _panel: HTMLElement | null = null;
+  private _label: HTMLElement | null = null;
+  private _input: HTMLInputElement | null = null;
+  private _options: HTMLElement[] = [];
+  private _selectedIndex = 0;
+  private _bindings: Array<{
+    option: HTMLElement;
+    onClick: () => void;
+    onKeydown: (event: KeyboardEvent) => void;
+  }> = [];
+
+  private readonly _onTriggerClick = (): void => {
+    console.log("[Dropdown] trigger click", this.getElement()?.id ?? "unknown");
+    this._flip();
+  };
+  private readonly _onTriggerKeydown = (event: KeyboardEvent): void =>
+    this._onTriggerKey(event);
+  private readonly _onDocumentClick = (event: MouseEvent): void =>
+    this._onOutside(event);
+
+  constructor(
+    root: HTMLElement,
+    options: { openClass?: string } = {},
+  ) {
+    super({ selector: "#dropdown-item" } as ComponentConfig);
+    this.setElement(root);
+    if (options.openClass) this._openClass = options.openClass;
+  }
+
+  protected override mount(): void {
+    const root = this.getElement();
+    if (!root) return;
+    this._trigger = root.querySelector<HTMLButtonElement>(".no-dropdown__trigger");
+    this._panel = root.querySelector<HTMLElement>(".no-dropdown__panel");
+    this._label = root.querySelector<HTMLElement>(".no-dropdown__trigger-label");
+    this._input = root.querySelector<HTMLInputElement>("[data-dropdown-input]");
+    this._options = Array.from(root.querySelectorAll<HTMLElement>(".no-dropdown__item"));
+    if (!this._trigger || !this._panel || !this._label || this._options.length === 0) {
+      return;
+    }
+    this._selectedIndex = this._resolveSelectedIndex();
+    this._select(this._selectedIndex);
+    this.setVisibleOff();
+
+    this._trigger.addEventListener("click", this._onTriggerClick);
+    this._trigger.addEventListener("keydown", this._onTriggerKeydown);
+    this._options.forEach((option, index) => {
+      const onClick = (): void => this._onOptionClick(index);
+      const onKeydown = (event: KeyboardEvent): void =>
+        this._onOptionKey(event, index);
+      option.addEventListener("click", onClick);
+      option.addEventListener("keydown", onKeydown);
+      this._bindings.push({ option, onClick, onKeydown });
+    });
+    document.addEventListener("click", this._onDocumentClick);
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    const root = this.getElement();
+    if (!root || !this._trigger || !this._panel) return;
+    root.classList.toggle(this._openClass, visible);
+    this._syncAria(visible);
+  }
+
+  isDetached(): boolean {
+    return !this.getElement()?.isConnected;
+  }
+
+  private _flip(): void {
+    this._setVisibility(!this.getVisibleState());
+  }
+
+  private _syncAria(isVisible: boolean): void {
+    Aria.setExpanded(this._trigger, isVisible);
+    Aria.setControls(this._trigger, this._panel?.id ?? "dropdown-panel");
+    Aria.setHidden(this._panel, !isVisible);
+  }
+
+  private _select(index: number): void {
+    if (index < 0 || index >= this._options.length || !this._label) return;
+    this._selectedIndex = index;
+    this._options.forEach((option, optionIndex) => {
+      const selected = optionIndex === index;
+      option.classList.toggle("is-selected", selected);
+      Aria.setSelected(option, selected);
+      option.tabIndex = selected ? 0 : -1;
+    });
+    const selected = this._options[index];
+    if (!selected) return;
+    this._label.textContent = selected.textContent ?? "";
+    if (!this._input) return;
+    const value = selected.dataset.value ?? "";
+    if (this._input.value === value) return;
+    this._input.value = value;
+    dispatchInputChange(this._input);
+  }
+
+  private _onTriggerKey(event: KeyboardEvent): void {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Escape") {
+      return;
+    }
+    if (event.key === "Escape") {
+      this.setVisibleOff();
+      return;
+    }
+    event.preventDefault();
+    this.setVisibleOn();
+    this._selectedIndex = this._moveIndex(
+      this._selectedIndex,
+      event.key === "ArrowDown" ? 1 : -1,
+    );
+    this._select(this._selectedIndex);
+    this._options[this._selectedIndex]?.focus();
+  }
+
+  private _onOptionClick(index: number): void {
+    console.log("[Dropdown] option click", {
+      rootId: this.getElement()?.id ?? "unknown",
+      index,
+      value: this._options[index]?.dataset.value ?? "",
+    });
+    this._select(index);
+    this.setVisibleOff();
+    this._trigger?.focus();
+  }
+
+  private _onOptionKey(event: KeyboardEvent, index: number): void {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      this._selectedIndex = this._moveIndex(
+        this._selectedIndex,
+        event.key === "ArrowDown" ? 1 : -1,
+      );
+      this._select(this._selectedIndex);
+      this._options[this._selectedIndex]?.focus();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      this._onOptionClick(index);
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.setVisibleOff();
+      this._trigger?.focus();
+    }
+  }
+
+  private _onOutside(event: MouseEvent): void {
+    if (!this.getVisibleState()) return;
+    const target = event.target;
+    const root = this.getElement();
+    if (!(target instanceof Node) || !root) return;
+    if (root.contains(target)) return;
+    this.setVisibleOff();
+  }
+
+  private _resolveSelectedIndex(): number {
+    const ariaIndex = this._options.findIndex(
+      (option) => Aria.isSelected(option),
+    );
+    if (ariaIndex >= 0) return ariaIndex;
+    const classIndex = this._options.findIndex((option) =>
+      option.classList.contains("is-selected"),
+    );
+    if (classIndex >= 0) return classIndex;
+    return 0;
+  }
+
+  private _moveIndex(current: number, delta: number): number {
+    const size = this._options.length;
+    if (size <= 0) return 0;
+    const next = current + delta;
+    if (next < 0) return size - 1;
+    if (next >= size) return 0;
+    return next;
+  }
+
+  override dispose(): void {
+    this._trigger?.removeEventListener("click", this._onTriggerClick);
+    this._trigger?.removeEventListener("keydown", this._onTriggerKeydown);
+    document.removeEventListener("click", this._onDocumentClick);
+    this._bindings.forEach(({ option, onClick, onKeydown }) => {
+      option.removeEventListener("click", onClick);
+      option.removeEventListener("keydown", onKeydown);
+    });
+    this._bindings = [];
+    this._options = [];
+    this._trigger = null;
+    this._panel = null;
+    this._label = null;
+    this._input = null;
+    super.dispose();
+  }
+}
+
+
+
+

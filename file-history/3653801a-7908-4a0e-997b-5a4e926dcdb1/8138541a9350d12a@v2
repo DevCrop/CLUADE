@@ -1,0 +1,16 @@
+$base = "C:\Users\edn_y\.claude"
+
+# plans/: 2일 이상 된 파일 삭제
+Get-ChildItem "$base\plans" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-2) } |
+    Remove-Item -Force
+
+# shell-snapshots/: 7일 이상 된 파일 삭제
+Get-ChildItem "$base\shell-snapshots" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-7) } |
+    Remove-Item -Force
+
+# session-env/: 빈 서브디렉토리 제거
+Get-ChildItem "$base\session-env" -Directory -ErrorAction SilentlyContinue |
+    Where-Object { (Get-ChildItem $_.FullName -Force).Count -eq 0 } |
+    Remove-Item -Force

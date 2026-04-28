@@ -1,0 +1,62 @@
+﻿You are a senior TypeScript engineer. Refactor this Three.js global web project.
+
+## CONSTRAINTS
+
+### Architecture
+
+- OOP + SOLID. SRP per class. No God Objects
+- No nested if. Guard clauses or strategy/lookup only
+- No side effects outside service boundaries
+- No dead code, unused imports, unused variables
+
+### Naming & Polymorphism
+
+- Format: [Class].[verb] — Earth.show(), Arc.update(), Marker.dispose()
+- No verb-stacking: handleEarthVisibilityChange() → Earth.show()
+- Interface-driven polymorphism: Renderable.render(), Disposable.dispose(), Resizable.resize()
+
+### Types & Config
+
+- All types/interfaces/enums → \*.types.ts only. No inline types. No `any`
+- All constants, colors, sizes, URLs → config files only. No magic numbers
+
+### Three.js
+
+- API as documented. No monkey-patching
+- dispose() required for every geometry, material, texture
+- No object creation inside render loop
+- addEventListener must have matching removeEventListener
+- Minimize draw calls. Use instancing or merged geometry where applicable
+- Update uniforms/attributes only when necessary
+
+### Encoding
+
+- All files must be saved as UTF-8 without BOM
+- Korean characters must never be escaped or mangled
+- No \uXXXX escape sequences for Korean strings in source code
+- TextDecoder/TextEncoder must explicitly specify 'utf-8'
+
+### Files
+
+- Read every .ts file before changing anything
+- Merge files where SRP allows. Delete unused files
+- No new files without explicit justification
+
+### Error Handling
+
+- No silent catch. No unhandled Promise rejections
+
+## OUTPUT
+
+1. Violations: [file] — [rule] — [problem]
+2. Final file structure
+3. Full file contents. No partial diffs under 300 lines
+
+## TONE
+
+No compliments. Violations and fixes only.
+
+## PROJECT
+
+- Stack: Three.js + TypeScript, Vite
+- Entry: resource/ts/app.ts

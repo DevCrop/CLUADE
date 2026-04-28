@@ -1,0 +1,580 @@
+<?php section('content'); ?>
+<?php
+$mainWhyCards = [
+    '/resource/images/main/main_why_img_1.jpg',
+    '/resource/images/main/main_why_img_2.jpg',
+    '/resource/images/main/main_why_img_3.jpg',
+    '/resource/images/main/main_why_img_4.jpg',
+    '/resource/images/main/main_why_img_5.jpg',
+    '/resource/images/main/main_why_img_6.jpg',
+];
+$homeWorks = is_array($homeWorks ?? null) ? $homeWorks : [];
+?>
+<div class="scroll-container">
+    <!-- 캔버스 전용 고정 레이어 (화면 따라감, z 낮음) -->
+    <div class="canvas-container" aria-hidden="true">
+        <canvas id="canvas"></canvas>
+        <div class="no-overlay" aria-hidden="true"></div>
+    </div>
+
+    <!-- 스크롤되는 콘텐츠 (캔버스 위를 덮고 스크롤, z 높음) -->
+    <div class="main-content">
+        <div id="main">
+            <!--
+            SCENE: intro
+            ARC: 기
+            PREVIOUS BEAT: 첫 화면에서 브랜드와 처음 마주하는 순간이다.
+            CURRENT JOB: 브랜드의 첫 화면은 딱 한 번뿐이라는 긴장감을 전달하고, 사용자가 계속 스크롤하도록 초대한다.
+            VISUAL CONTEXT: 캔버스가 비치고 있으며 아직 본격적인 움직임은 시작되지 않았다.
+            COPY RULE: 에이전시 자기 소개가 아닌, 방문자의 상황을 먼저 제시한다. 철학, 기술, 서비스 설명으로 넘어가지 않는다.
+            NEXT BEAT: introAction에서 클라이언트와 같은 방향을 맞추며 출발을 점화한다.
+            -->
+            <section class="no-main-intro" data-scene="intro" aria-hidden="false">
+                <div class="no-container">
+                    <div class="no-main-intro__inner">
+                        <div class="no-main-intro__body">
+                            <div class="no-main-intro__txt">
+                                <div class="no-main-intro__txt--top">
+                                    <div class="no-main-intro-1 no-main-intro__title">
+                                        <h2 class="f-display-x --semibold --fm-en-title mask-target">
+                                            WE MAKE YOUR JOURNEY
+                                        </h2>
+                                    </div>
+                                </div>
+                                <div class="no-main-intro__txt--bottom">
+                                    <div class="no-main-intro__txt--hook">
+                                        <h3 class="f-heading-4 --regular --fm-ui">
+                                            READY FOR LAUNCH.
+                                        </h3>
+                                        <p class="f-body-1 --regular  mask-target">
+                                            브랜드가 처음 세상과 만나는 순간,<br>
+                                            웹은 가장 선명한 출발점이 됩니다.
+                                        </p>
+                                    </div>
+                                    <?= include_view('components.button', [
+                                      'variant' => 'corner',
+                                      'tag' => 'button',
+                                      'type' => 'button',
+                                      'text' => 'START',
+                                      'iconName' => 'arrow-down',
+                                      'iconPosition' => 'after',
+                                      'class' => 'no-main-intro__cta no-corner-btn--highlight',
+                                      'withWrapper' => false,
+                                      'beforeTextHtml' => '<span class="no-loop-filter-rect" aria-hidden="true"><span></span><span></span><span></span><span></span></span>',
+                                      'extraAttrs' => [
+                                        'data-intro-action' => 'after-intro',
+                                      ],
+                                  ]) ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!--
+            SCENE: introAction
+            ARC: 기 -> 승
+            PREVIOUS BEAT: 사용자는 이미 출발점과 첫 인상을 받아들였다.
+            CURRENT JOB: 브랜드와 같은 자리에서 방향을 맞추고, 그 방향을 실제 구조로 전환하는 출발 동작을 보여준다.
+            VISUAL CONTEXT: 정적인 시작에서 움직임이 생기며 런치 시퀀스가 시작된다.
+            COPY RULE: 함께 시작한다는 감각과 구조화의 역할을 보여준다. 과한 미션 서사나 추상적 각오는 피한다.
+            NEXT BEAT: hero에서 모두가 기억할 중심 문장으로 여정을 공식화한다.
+            -->
+            <section class="no-main-intro-action" data-scene="introAction" aria-hidden="true">
+                <div class="no-container">
+                    <div class="no-main-intro-action__inner">
+                        <div class="no-main-intro-action__countdown" aria-hidden="true">
+                            <div class="no-main-intro-action__countdown-shell">
+                                <span class="no-main-intro-action__countdown-orbit" aria-hidden="true"></span>
+                                <span class="no-main-intro-action__countdown-value">5</span>
+                            </div>
+                        </div>
+                        <div class="no-main-intro-action__skip-wrap">
+                            <?= include_view('components.button', [
+                              'variant' => 'corner',
+                              'tag' => 'button',
+                              'type' => 'button',
+                              'text' => 'SKIP',
+                              'class' => 'no-main-intro-action__skip',
+                              'withWrapper' => false,
+                              'beforeTextHtml' => '<span class="no-loop-filter-rect" aria-hidden="true"><span></span><span></span><span></span><span></span></span>',
+                              'extraAttrs' => [
+                                'tabindex' => '-1',
+                                'inert' => '',
+                              ],
+                          ]) ?>
+                        </div>
+                        <!-- 점화 — Mission Control -->
+                        <div class="no-main-intro-action__content content-1">
+                            <h2 class="f-display-2 --bold mask-target">
+                                세상에 없던 <br>
+                                단 하나의 웹을 만들기 위해
+                            </h2>
+                        </div>
+                        <!-- 이륙 — Your Brand. Built To Launch. -->
+                        <div class="no-main-intro-action__content content-2">
+                            <h2 class="f-display-2 --bold mask-target">
+                                우리의 여정은 <br>
+                                이미 시작되었습니다.
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!--
+            SCENE: hero
+            ARC: 승
+            PREVIOUS BEAT: 방향이 구조로 바뀌며 실제 움직임이 시작됐다.
+            CURRENT JOB: JOIN THE JOURNEY를 착지시키고, 이 여정이 결국 웹 경험 위에서 시작된다는 점을 분명히 한다.
+            VISUAL CONTEXT: 장면의 중심 문장이 전면에 놓이며 여정의 언어가 브랜드의 약속이 된다.
+            COPY RULE: 슬로건은 그대로 유지하고, 짧은 한국어 문장으로 실제 의미를 보강한다.
+            NEXT BEAT: story에서 왜 이런 방식으로 만드는지에 대한 믿음과 관점을 설명한다.
+            -->
+            <section class="no-main-hero" data-scene="hero" data-handoff-visible="false" aria-hidden="false">
+                <div class="no-container">
+                    <div class="no-main-hero__inner">
+                        <div class="no-main-hero__body">
+                            <div class="no-main-hero__content slogan">
+                                <div class="no-main-hero__title">
+                                    <h2 class="f-display-1  --fm-en-title no-main-hero__reveal mask-target">
+                                        JOIN THE JOURNEY
+                                    </h2>
+                                    <div class="no-main-hero__desc">
+                                        <p class="no-main-hero__reveal mask-target">
+                                            브랜드의 여정은 웹에서 시작됩니다.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="no-main-hero__contents">
+                                    <p class="mask-target ">
+                                        당신의 브랜드가 처음 세상과 만나는 그 화면,<br>
+                                        우리가 함께 설계합니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        </section>
+        <!--
+            SCENE: story
+            ARC: 승 -> 전
+            PREVIOUS BEAT: hero에서 여정의 언어와 출발 이유가 선언됐다.
+            CURRENT JOB: 익숙한 정답 대신 새로운 브랜드에는 새로운 구조가 필요하다는 믿음과 문제의식을 제시한다.
+            VISUAL CONTEXT: 출발 이후의 시야가 넓어지며, 왜 이 길을 택하는지가 문장으로 정리된다.
+            COPY RULE: 회사의 관점과 믿음을 말한다. 프로세스 설명, 기술 나열, 서비스 소개로 흐르지 않는다.
+            NEXT BEAT: who에서 브랜드와 에이전시의 역할을 분리해서 설명한다.
+            -->
+        <section class="no-main-story" data-scene="story" aria-hidden="false">
+            <div class="no-container">
+                <div class="no-main-story__inner">
+                    <div class="no-main-story__body">
+                        <div class="no-main-story__content">
+                            <div class="block left">
+                                <div class="title">
+                                    <h2 class="f-display-2  --fm-en-title mask-target">
+                                        우리는 남들과 다르게
+                                        브랜드를 만들고 증명합니다.
+                                    </h2>
+                                </div>
+                                <div class="body">
+                                    <p class="f-heading-4 --regular mask-target">
+                                        우리는 브랜드가 세상에
+                                        처음 증명되는 그 장면을,<br>
+                                        매번 새로 설계합니다.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="etc ">
+                                <p class="f-body-1 --regular">
+                                    <span class="--divider-row --divider"></span>
+                                    <span>
+                                        브랜드가 선택받을 이유,<br>
+                                        우리가 함께 만들어갑니다.
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!--
+            SCENE: who
+            ARC: 승 -> 전
+            PREVIOUS BEAT: story에서 기본 공식 대신 새로운 방향이 필요하다는 믿음을 제시했다.
+            CURRENT JOB: 브랜드가 방향을 정하고, 우리는 그 방향을 실제 웹 구조와 화면으로 구현하는 파트너라는 점을 설명한다.
+            VISUAL CONTEXT: 출발 지점은 뒤에 남아 있고, 이제는 함께 다음 구간을 돌파하는 단계다.
+            COPY RULE: 장면을 우주 서사로 설명하지 말고, 전진·동행·구조·구현의 언어로 착지한다.
+            NEXT BEAT: why에서 이를 뒷받침하는 기술, 시스템, 실행 역량을 증명한다.
+            -->
+        <section class="no-main-who" data-scene="who" aria-hidden="false">
+            <div class="no-container">
+                <div class="no-main-who__inner">
+                    <div class="no-main-who__body">
+                        <div class="no-main-who__content">
+                            <div class="no-main-who__title">
+                                <h2 class="f-display-1 --fm-en-title  mask-target">
+                                    YOUR BRAND LEADS.<br>
+                                    WE BUILD THE ROUTE.
+                                </h2>
+                            </div>
+                            <div class="no-main-who__desc">
+                                <p class="f-heading-5 --regular mask-target">
+                                    브랜드의 방향은 클라이언트가 정합니다.<br>
+                                    우리는 그 방향을 실제 웹 구조와 화면으로 구현합니다.<br>
+                                    같은 여정 안에서, 함께 움직입니다.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!--
+            SCENE: whyus
+            ARC: 전
+            PREVIOUS BEAT: who에서 우리의 역할과 파트너십의 방식이 분명해졌다.
+            CURRENT JOB: 그 역할을 실제로 수행할 수 있는 기술, 시스템, 역량을 증명한다.
+            VISUAL CONTEXT: 구조와 방향의 언어가 이제 도구와 실행력의 언어로 변환된다.
+            COPY RULE: 역량과 proof signal에 집중한다. 서비스 설명이나 브랜드 철학 반복으로 흐르지 않는다.
+            NEXT BEAT: services에서 실제로 무엇을 만들어내는지 구체적인 제공 항목을 보여준다.
+            -->
+        <section class="no-main-why" data-scene="whyus" aria-hidden="false">
+            <div class="no-main-why__wrap">
+                <div class="no-container">
+                    <div class="no-main-why__inner">
+                        <?php
+                            $whySkills = [
+                                ['label' => 'THREE.JS',        'desc' => 'INTERACTIVE WEB'],
+                                ['label' => 'GSAP',            'desc' => 'MOTION & ANIMATION'],
+                                // ['label' => 'WEBFLOW',         'desc' => 'NO-CODE BUILD'],
+                                ['label' => 'UI / UX DESIGN',  'desc' => 'USER EXPERIENCE'],
+                                ['label' => 'BRANDING SYSTEM', 'desc' => 'BRAND IDENTITY'],
+                                ['label' => '3D MODELING',     'desc' => 'SPATIAL DESIGN'],
+                                ['label' => 'SEO STRATEGY',    'desc' => 'SEARCH GROWTH'],
+                                ['label' => 'CMS SYSTEM',      'desc' => 'CONTENT CONTROL'],
+                            ];
+                            $whyVideos = [
+                                '/resource/video/why_video_1.mp4',
+                                '/resource/video/why_video_2.mp4',
+                                '/resource/video/why_video_3.mp4',
+                                '/resource/video/why_video_4.mp4',
+                            ];
+                            ?>
+                        <ul class="no-main-why__skill-list" data-why-skill-list>
+                            <?php foreach ($whySkills as $skill): ?>
+                            <li class="no-main-why__skill-item" data-why-skill-item
+                                data-skill-video="<?= $whyVideos[array_rand($whyVideos)] ?>">
+                                <span
+                                    class="no-main-why__skill-label f-display-0 --semibold --fm-en-title"><?= $skill['label'] ?></span>
+                                <p class="no-main-why__skill-desc f-body-1 --regular" aria-hidden="true">
+                                    <?= $skill['desc'] ?></p>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <div class="no-main-why__preview" data-why-skill-preview aria-hidden="true">
+                            <video class="no-main-why__preview-video" muted playsinline loop
+                                data-why-skill-video></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!--
+            SCENE: services
+            ARC: 전 -> 결
+            PREVIOUS BEAT: why에서 역량과 증명이 확보됐다.
+            CURRENT JOB: 우리가 실제로 어떤 결과물을 만드는지 구체적인 서비스와 산출물로 명확히 보여준다.
+            VISUAL CONTEXT: 추상적인 신뢰가 실체 있는 제공 범위와 작업 항목으로 바뀐다.
+            COPY RULE: 서비스 카테고리와 짧은 결과 중심 설명을 유지한다. 기술 스택 나열이나 철학 문장으로 되돌아가지 않는다.
+            NEXT BEAT: portfolio에서 이 서비스들이 실제 작업으로 어떻게 구현됐는지 증거를 보여준다.
+            -->
+        <section class="no-main-services" data-scene="services" aria-hidden="false">
+            <div class="no-main-services__body  no-section-lg">
+                <div class="no-container">
+                    <div class="no-main-services__txt">
+                        <div class="no-main-services__title">
+                            <h2 class="--fm-en-title f-display-0  mask-target">SERVICES</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="no-container">
+                    <div class="--cnt">
+                        <?php
+                          $services = [
+                              [
+                                  'num' => '01',
+                                  'title' => 'Web Build',
+                                  'desc' => '브랜드의 첫 화면부터 흐름까지 설계합니다. <br> 구조, 인터랙션, 구현이 하나의 웹 경험으로 이어집니다.'
+                              ],
+                              [
+                                  'num' => '02',
+                                  'title' => 'App Build',
+                                  'desc' => '반복해서 쓰이는 화면의 흐름을 만듭니다. <br> 사용자가 다시 돌아올 수 있는 앱 구조를 설계합니다.'
+                              ],
+                              [
+                                  'num' => '03',
+                                  'title' => 'Branding',
+                                  'desc' => '브랜드를 한 문장으로 설명할 수 있게 만듭니다. <br> 이름, 톤, 시각 기준이 웹 위에서도 흔들리지 않게 정리합니다.'
+                              ],
+                              [
+                                  'num' => '04',
+                                  'title' => 'UI · UX',
+                                  'desc' => '사용자가 무엇을 해야 할지 보이게 만듭니다. <br> 화면 구조와 동선을 다음 행동으로 이어지게 설계합니다.'
+                              ],
+                              [
+                                  'num' => '05',
+                                  'title' => 'Maintenance',
+                                  'desc' => '런칭 이후에도 시스템은 계속 움직여야 합니다. <br> 성능, 콘텐츠, 오류, 개선 흐름을 함께 관리합니다.'
+                              ],
+                          ];
+                          ?>
+                        <ul class="no-main-services__list">
+                            <?php foreach ($services as $index => $service): ?>
+                            <li class="no-main-services__item">
+                                <div class="no-services__num" aria-hidden="true">
+                                    <span class="no-loop-filter-rect"
+                                        style="--loop-filter-delay-base: <?= number_format($index * 0.14, 2, '.', '') ?>s;">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </span>
+                                </div>
+                                <h3
+                                    class="no-main-services__item-title f-display-1 --fm-en-title --regular mask-target">
+                                    <?= $service['title'] ?>
+                                </h3>
+                                <p class="f-body-2 --regular mask-target">
+                                    <?= $service['desc'] ?>
+                                </p>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!--
+            SCENE: works
+            ARC: 결
+            PREVIOUS BEAT: services에서 우리가 만드는 일이 구체화됐다.
+            CURRENT JOB: 포트폴리오 증거가 시작되기 전, 시선을 다시 정리하고 실작업으로 넘어갈 준비를 만든다.
+            VISUAL CONTEXT: 캔버스가 다시 열리며 계획이 실제 결과로 전환되는 구간의 문턱이 된다.
+            COPY RULE: 직접적인 카피는 비워둘 수 있지만, 섹션의 역할은 '증거의 입구'로 유지한다.
+            NEXT BEAT: worksDetail에서 계획이 실제 화면이 된 결과를 명시적으로 보여준다.
+            -->
+        <section class="no-main-portfolio-intro scene-shell" data-scene="works" aria-hidden="true">
+        </section>
+        <!--
+            SCENE: worksDetail
+            ARC: 결
+            PREVIOUS BEAT: 포트폴리오 진입을 위한 시각적 전환이 끝났다.
+            CURRENT JOB: 설계와 구조가 실제 화면과 사용 흐름으로 구현되었다는 사실을 헤드 카피로 선언한다.
+            VISUAL CONTEXT: 이제 결과물은 계획 안이 아니라 눈앞의 장면으로 보인다.
+            COPY RULE: 분위기보다 proof framing을 우선한다. 실제 화면, 구조, 사용 흐름 같은 단어로 착지한다.
+            NEXT BEAT: worksFinal에서 개별 작업들이 반복 가능한 수준의 증거로 쌓인다.
+            -->
+        <section class="no-main-portfolio scene-shell" data-scene="worksDetail" aria-hidden="false">
+            <div class="no-container">
+                <div class="no-main-portfolio__head" data-active="false">
+                    <div class="first-title">
+                        <h2 class="f-display-1_5 --fm-en-title mask-target">
+                            FROM PLAN <br>
+                            TO SCREEN
+                        </h2>
+                    </div>
+                    <div class="title-bottom">
+                        <div class="second-title">
+                            <h2 class="f-display-1_5  --fm-en-title mask-target">
+                                WORK <br>
+                                BECOMES REAL
+                            </h2>
+                        </div>
+                        <div class="desc">
+                            <p class="f-heading-4 mask-target">
+                                설계하던 구조와 경험이<br>
+                                이제 실제 화면과 사용 흐름으로 공개됩니다.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!--
+            SCENE: worksFinal
+            ARC: 결
+            PREVIOUS BEAT: 포트폴리오 헤드에서 결과물이 실제라는 점을 선언했다.
+            CURRENT JOB: 개별 작업 사례를 누적시켜 우리의 기준이 일회성이 아니라 반복 가능한 실력임을 보여준다.
+            VISUAL CONTEXT: 여러 작업이 한 장면 안에 쌓이며 증거의 밀도가 높아진다.
+            COPY RULE: 설명은 최소화하고 시각적 evidence가 중심이 되게 한다. 장황한 해설은 피한다.
+            NEXT BEAT: clients에서 이 결과를 실제로 선택한 브랜드들의 신뢰 신호로 넘어간다.
+            -->
+        <section class="no-main-portfolio-gallery no-section-lg" data-scene="worksFinal" aria-hidden="false">
+            <div class="no-container">
+                <div id="main-portfolio-hook" class="no-main-portfolio__gallery">
+                    <ul class="no-main-portfolio__list">
+                        <?php foreach ($homeWorks as $work): ?>
+                        <?php
+                            $workTitle = trim((string) ($work['title'] ?? ''));
+                            $workClient = trim((string) ($work['client'] ?? ''));
+                            $workLabel = $workTitle !== '' ? $workTitle : $workClient;
+                            if ($workLabel === '') {
+                                $workLabel = 'WORK';
+                            }
+
+                            $workTags = is_array($work['tagLabels'] ?? null) ? $work['tagLabels'] : [];
+                            if ($workTags === []) {
+                                $fallbackCategory = trim((string) ($work['categoryLabel'] ?? ''));
+                                if ($fallbackCategory !== '') {
+                                    $workTags[] = $fallbackCategory;
+                                }
+                            }
+                            ?>
+                        <li class="no-main-portfolio__item"
+                            data-video="<?= e((string) ($work['thumbnailVideo'] ?? '')) ?>">
+                            <a href="<?= e((string) ($work['detailPath'] ?? '/works')) ?>">
+                                <div class="no-sub-gallery-item__img-wrap">
+                                    <?= include_view('components.button.corner-markup', ['class' => 'no-sub-gallery__corner']) ?>
+                                    <div class="no-sub-gallery-item__img-inner">
+                                        <figure class="no-sub-gallery-item__img">
+                                            <?= render_uploaded_image(
+                                                    (string) ($work['thumbnailImage'] ?? ''),
+                                                    (string) ($workLabel ?? ''),
+                                                    '',
+                                                    'lazy'
+                                                ) ?>
+                                            <video muted loop playsinline preload="none"></video>
+                                        </figure>
+                                    </div>
+                                </div>
+                                <div class="no-main-portfolio__item__content">
+                                    <h3 class="f-heading-4 --bold "><?= e($workLabel) ?></h3>
+                                    <div class="no-main-portfolio__item-category">
+                                        <ul class="no-main-portfolio__item-category-list">
+                                            <?php foreach ($workTags as $tagLabel): ?>
+                                            <li class="no-main-portfolio__item-category-chip">
+                                                <?= e((string) $tagLabel) ?>
+                                            </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <div class="no-view-more">
+                        <?= include_view('components.button', [
+                              'variant' => 'corner',
+                              'tag' => 'a',
+                              'href' => '/works',
+                              'text' => 'View More',
+                              'iconName' => 'arrow-right',
+                              'class' => 'no-main-portfolio__view-more no-corner-btn--highlight',
+                              'withWrapper' => false,
+                          ]) ?>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!--
+            SCENE: client
+            ARC: 결
+            PREVIOUS BEAT: 실제 작업 사례를 통해 결과가 충분히 증명됐다.
+            CURRENT JOB: 우리와 함께한 파트너를 보여주며 신뢰를 사회적 증거로 확장한다.
+            VISUAL CONTEXT: 개별 프로젝트의 증거가 브랜드 집합의 신뢰로 전환된다.
+            COPY RULE: 제목과 짧은 신뢰 문장으로 충분하다. 과장된 파트너십 서사나 장식적 비유는 피한다.
+            NEXT BEAT: contact에서 사용자가 자신의 여정을 시작하도록 행동을 연다.
+            -->
+        <section class="no-main-clients no-section-lg" data-scene="client" aria-hidden="false">
+            <div class="no-container">
+                <div class="no-main-clients__head-wrap">
+                    <div class="no-main-clients__head">
+                        <h2 class="f-display-1 --fm-en-title  mask-target">
+                            PARTNERS
+                        </h2>
+                        <p class="f-body-1 mask-target">
+                            같은 여정을 함께한 파트너들입니다.<br>
+                            각 브랜드는 더 선명한 구조와 경험으로 다음 단계에 도달했습니다.
+                        </p>
+                    </div>
+                </div>
+                <div class="no-main-clients__list">
+                    <ul class="no-main-clients__items">
+                        <?php for($i = 1; $i < 23; $i++): ?>
+                        <li class="no-main-clients__item is-block-reveal">
+                            <img src="<?= base_path('/resource/images/logo/client_logo_'.$i.'.svg') ?>" alt="">
+                        </li>
+                        <?php endfor; ?>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        <!--
+            SCENE: contact
+            ARC: 결 -> new 기
+            PREVIOUS BEAT: 신뢰와 결과가 충분히 쌓여 이제 행동으로 전환할 수 있다.
+            CURRENT JOB: 사용자가 문의나 작업 탐색으로 바로 이어질 수 있도록 다음 행동을 열어준다.
+            VISUAL CONTEXT: 하나의 여정이 닫히는 동시에 다음 여정의 입구가 다시 열린다.
+            COPY RULE: 직접적이고 실행 가능한 CTA를 유지한다. 감상적인 마무리만 남기지 않는다.
+            NEXT BEAT: 새로운 브랜드 여정의 시작으로 다시 intro의 역할과 연결된다.
+            -->
+        <section class="no-main-contact scene-shell" data-scene="contact" aria-hidden="false">
+            <div class="no-main-contact__stage">
+                <div class="no-container">
+                    <div class="no-main-contact__panel">
+                        <div class="no-main-contact__head" data-active="false">
+                            <h2 class="f-display-0 --fm-en-title mask-target">
+                                YOUR JOURNEY<br>
+                                STARTS HERE.
+                            </h2>
+                            <p class="f-body-1 mask-target">
+                                브랜드의 다음 여정이 시작될 때,<br>
+                                우리는 그 첫 번째 화면을 함께 설계합니다.
+                            </p>
+                        </div>
+                        <div class="no-main-contact__actions">
+                            <?= include_view('components.button', [
+                            'variant' => 'corner',
+                            'tag' => 'a',
+                            'href' => '/contact',
+                            'text' => 'Contact',
+                            'iconSvg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M571.3 331.3C577.5 325.1 577.5 314.9 571.3 308.7L395.3 132.7C389.1 126.5 378.9 126.5 372.7 132.7C366.5 138.9 366.5 149.1 372.7 155.3L521.4 304L80 304C71.2 304 64 311.2 64 320C64 328.8 71.2 336 80 336L521.4 336L372.7 484.7C366.5 490.9 366.5 501.1 372.7 507.3C378.9 513.5 389.1 513.5 395.3 507.3L571.3 331.3z" fill="currentColor"/></svg>',
+                            'iconPosition' => 'after',
+                            'class' => 'no-main-contact__action no-corner-btn--highlight',
+                        ]) ?>
+                            <?= include_view('components.button', [
+                            'variant' => 'corner',
+                            'tag' => 'a',
+                            'href' => '/works',
+                            'text' => 'Works',
+                            'iconSvg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M571.3 331.3C577.5 325.1 577.5 314.9 571.3 308.7L395.3 132.7C389.1 126.5 378.9 126.5 372.7 132.7C366.5 138.9 366.5 149.1 372.7 155.3L521.4 304L80 304C71.2 304 64 311.2 64 320C64 328.8 71.2 336 80 336L521.4 336L372.7 484.7C366.5 490.9 366.5 501.1 372.7 507.3C378.9 513.5 389.1 513.5 395.3 507.3L571.3 331.3z" fill="currentColor"/></svg>',
+                            'iconPosition' => 'after',
+                            'class' => 'no-main-contact__action',
+                        ]) ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <?= include_view('components.footer', [
+                'class' => 'no-footer no-main-contact__footer',
+                'dataScene' => 'footer',
+                'ariaHidden' => 'false',
+            ]) ?>
+    </div>
+</div>
+</div>
+
+<?= include_view('components.hud-panel') ?>
+
+<?php end_section(); ?>
+
+<?php section('portal'); ?>
+<?php end_section(); ?>

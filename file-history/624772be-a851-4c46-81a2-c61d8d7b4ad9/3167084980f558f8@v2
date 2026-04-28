@@ -1,0 +1,11 @@
+---
+name: CHOP 토큰 최적화 도구 필수 사용
+description: 모든 Bash 커맨드에 chop prefix를 붙여야 함 — 글로벌 훅이 자동 적용하지만 직접 실행 시에도 필수
+type: feedback
+originSessionId: 624772be-a851-4c46-81a2-c61d8d7b4ad9
+---
+모든 Bash 커맨드는 `chop` prefix로 실행할 것.
+
+**Why:** 노이즈 많은 출력(git, tsc, docker, npm)이 컨텍스트 창을 낭비함. CHOP가 토큰을 압축해서 효율을 높임.
+
+**How to apply:** `chop git status`, `chop git log`, `chop node_modules/.bin/tsc --noEmit` 등. 출력이 몇 줄뿐인 커맨드는 생략 가능.

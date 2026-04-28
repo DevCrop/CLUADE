@@ -1,0 +1,236 @@
+import * as THREE from "three";
+import { EnvSetup } from "../app/EnvSetup.js";
+import type { Engine } from "../core/Engine.js";
+import type { DebugHelperHandle, DebugHelperState } from "../types/runtime.types.js";
+import { Aria } from "./Aria.js";
+import { FrameScheduler } from "./FrameScheduler.js";
+
+const ROOT_ID = "debug-helper-root";
+const HELPERS_BUTTON_CLASS = "hp-toggle";
+const STYLES = `
+  #${ROOT_ID} * { box-sizing: border-box; }
+  #${ROOT_ID} .${HELPERS_BUTTON_CLASS} {
+    position: fixed;
+    bottom: 70px;
+    right: 16px;
+    z-index: 99998;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid rgba(110, 209, 255, 0.45);
+    background: rgba(16, 24, 44, 0.95);
+    color: #d8f4ff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  }
+  #${ROOT_ID} .${HELPERS_BUTTON_CLASS}:hover {
+    background: rgba(30, 45, 74, 0.98);
+    color: #fff;
+  }
+`;
+
+const DIRECTIONAL_LIGHT_HELPER_SIZE = 120;
+const POINT_LIGHT_HELPER_SIZE = 18;
+const DEBUG_QUERY_KEY = "debug";
+const THEATRE_QUERY_KEY = "theatre";
+const QUERY_ENABLED = "1";
+
+function canShowHelperToggle(): boolean {
+  return (
+    EnvSetup.hasQueryFlag(DEBUG_QUERY_KEY, QUERY_ENABLED) ||
+    EnvSetup.hasQueryFlag(THEATRE_QUERY_KEY, QUERY_ENABLED)
+  );
+}
+
+function disposeObject3D(object3D: THREE.Object3D): void {
+  object3D.traverse((child) => {
+    const node = child as THREE.Object3D & {
+      geometry?: { dispose?: () => void };
+      material?: THREE.Material | THREE.Material[];
+    };
+    node.geometry?.dispose?.();
+    const material = node.material;
+    if (Array.isArray(material)) {
+      material.forEach((entry) => entry.dispose());
+      return;
+    }
+    material?.dispose?.();
+  });
+}
+
+function hasHelpers(state: DebugHelperState): boolean {
+  return (
+    state.axisHelper != null ||
+    state.gridHelper != null ||
+    state.cameraHelper != null ||
+    state.lightHelpers.length > 0
+  );
+}
+
+function updateHelpersButtonLabel(button: HTMLButtonElement, active: boolean): void {
+  button.textContent = active ? "HP ON" : "HP";
+}
+
+function removeObjectHelper(
+  scene: THREE.Scene,
+  helper: THREE.Object3D | null,
+): null {
+  if (!helper) return null;
+  scene.remove(helper);
+  disposeObject3D(helper);
+  return null;
+}
+
+function removeLightHelpers(scene: THREE.Scene, helpers: THREE.Object3D[]): THREE.Object3D[] {
+  helpers.forEach((helper) => {
+    scene.remove(helper);
+    disposeObject3D(helper);
+  });
+  return [];
+}
+
+function buildLightHelpers(scene: THREE.Scene): THREE.Object3D[] {
+  const helpers: THREE.Object3D[] = [];
+  scene.traverse((node) => {
+    if (node instanceof THREE.DirectionalLight) {
+      helpers.push(
+        new THREE.DirectionalLightHelper(node, DIRECTIONAL_LIGHT_HELPER_SIZE),
+      );
+      return;
+    }
+    if (node instanceof THREE.PointLight) {
+      helpers.push(new THREE.PointLightHelper(node, POINT_LIGHT_HELPER_SIZE));
+      return;
+    }
+    if (node instanceof THREE.SpotLight) {
+      helpers.push(new THREE.SpotLightHelper(node));
+    }
+  });
+  helpers.forEach((helper) => scene.add(helper));
+  return helpers;
+}
+
+function stopSyncLoop(state: DebugHelperState): void {
+  if (state.syncLoopId == null) return;
+  FrameScheduler.cancel(state.syncLoopId);
+  state.syncLoopId = null;
+}
+
+function scheduleSyncLoop(
+  state: DebugHelperState,
+  sync: () => void,
+): void {
+  if (state.syncLoopId != null) return;
+  state.syncLoopId = FrameScheduler.request(sync);
+}
+
+function clearHelpers(scene: THREE.Scene, state: DebugHelperState): void {
+  state.axisHelper = removeObjectHelper(scene, state.axisHelper) as THREE.AxesHelper | null;
+  state.gridHelper = removeObjectHelper(scene, state.gridHelper) as THREE.GridHelper | null;
+  state.cameraHelper = removeObjectHelper(scene, state.cameraHelper) as THREE.CameraHelper | null;
+  state.lightHelpers = removeLightHelpers(scene, state.lightHelpers);
+}
+
+function enableHelpers(engine: Engine, state: DebugHelperState): void {
+  const scene = engine.getScene().three;
+  if (!state.axisHelper) {
+    state.axisHelper = new THREE.AxesHelper(5);
+    scene.add(state.axisHelper);
+  }
+  if (!state.gridHelper) {
+    state.gridHelper = new THREE.GridHelper(200, 40, 0x77c2ff, 0x2f5a85);
+    scene.add(state.gridHelper);
+  }
+  if (!state.cameraHelper) {
+    const camera = engine.getObjectById("camera");
+    if (camera instanceof THREE.Camera) {
+      state.cameraHelper = new THREE.CameraHelper(camera);
+      scene.add(state.cameraHelper);
+    }
+  }
+  if (state.lightHelpers.length === 0) {
+    state.lightHelpers = buildLightHelpers(scene);
+  }
+}
+
+function syncLiveHelpers(state: DebugHelperState): void {
+  state.syncLoopId = null;
+  state.cameraHelper?.update();
+  state.lightHelpers.forEach((helper) => {
+    const candidate = helper as THREE.Object3D & { update?: () => void };
+    candidate.update?.();
+  });
+  if (!hasHelpers(state)) return;
+  scheduleSyncLoop(state, () => syncLiveHelpers(state));
+}
+
+function buildHelperHandle(engine: Engine): DebugHelperHandle {
+  const root = document.createElement("div");
+  root.id = ROOT_ID;
+
+  const style = document.createElement("style");
+  style.textContent = STYLES;
+  root.appendChild(style);
+
+  const helpersButton = document.createElement("button");
+  helpersButton.type = "button";
+  helpersButton.className = HELPERS_BUTTON_CLASS;
+  Aria.setLabel(helpersButton, "Helper toggle");
+  updateHelpersButtonLabel(helpersButton, false);
+  root.appendChild(helpersButton);
+
+  const state: DebugHelperState = {
+    axisHelper: null,
+    gridHelper: null,
+    cameraHelper: null,
+    lightHelpers: [],
+    syncLoopId: null,
+  };
+
+  const toggleHelpers = (): void => {
+    const scene = engine.getScene().three;
+    if (hasHelpers(state)) {
+      clearHelpers(scene, state);
+      stopSyncLoop(state);
+      updateHelpersButtonLabel(helpersButton, false);
+      return;
+    }
+    enableHelpers(engine, state);
+    scheduleSyncLoop(state, () => syncLiveHelpers(state));
+    updateHelpersButtonLabel(helpersButton, true);
+  };
+
+  helpersButton.addEventListener("click", toggleHelpers);
+
+  return {
+    root,
+    dispose: () => {
+      helpersButton.removeEventListener("click", toggleHelpers);
+      stopSyncLoop(state);
+      clearHelpers(engine.getScene().three, state);
+    },
+  };
+}
+
+function initHelpers(engine: Engine): () => void {
+  if (typeof document === "undefined") return () => {};
+  if (!canShowHelperToggle()) return () => {};
+  document.getElementById(ROOT_ID)?.remove();
+  const handle = buildHelperHandle(engine);
+  document.body.appendChild(handle.root);
+  return () => {
+    handle.dispose();
+    handle.root.remove();
+  };
+}
+
+export function attachDebug(engine: Engine): (() => void) | null {
+  return initHelpers(engine);
+}

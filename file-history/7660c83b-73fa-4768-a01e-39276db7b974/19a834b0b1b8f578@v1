@@ -1,0 +1,194 @@
+precision highp float;
+
+uniform float uTime;
+uniform float uProgress;
+uniform float uOpacity;
+uniform float uNoiseStrength;
+uniform float uRevealSoftness;
+uniform vec2 uResolution;
+uniform vec2 uSize;
+uniform vec3 uDarkColor;
+uniform vec3 uLightColor;
+uniform sampler2D tPerlin;
+uniform sampler2D tNoise;
+
+varying vec2 vUv;
+
+float saturateFloat(float value) {
+  return clamp(value, 0.0, 1.0);
+}
+
+float veilFbm(sampler2D textureSampler, vec2 uv) {
+  float amplitude = 0.5;
+  float value = 0.0;
+  vec2 currentUv = uv;
+  for (int index = 0; index < 4; index += 1) {
+    value += texture2D(textureSampler, currentUv).r * amplitude;
+    currentUv *= 2.03;
+    amplitude *= 0.5;
+  }
+  return value;
+}
+
+float veilRidgedNoise(sampler2D textureSampler, vec2 uv) {
+  float baseValue = veilFbm(textureSampler, uv);
+  return 1.0 - abs(baseValue * 2.0 - 1.0);
+}
+
+void main() {
+  vec2 safeResolution = max(uResolution, vec2(1.0));
+  vec2 screenUv = gl_FragCoord.xy / safeResolution;
+  float time = uTime * 0.18;
+  vec2 flowUv = vUv * uSize;
+  vec2 driftUv = flowUv;
+  driftUv.x += sin(time * 0.42 + vUv.y * 4.8) * 0.035;
+  driftUv.y += cos(time * 0.34 + vUv.x * 5.4) * 0.022;
+  flowUv = mix(flowUv, driftUv, 0.72);
+  vec2 largeCloudUv = flowUv * 0.05 + vec2(0.004 * time, -0.01 * time);
+  vec2 midCloudUv = flowUv * 0.14 + vec2(-0.009 * time, 0.016 * time);
+  vec2 fineCloudUv = flowUv * 0.33 + vec2(0.018 * time, -0.014 * time);
+  float largeCloudNoise = veilFbm(tNoise, largeCloudUv);
+  float largeCloudDetail = veilFbm(tPerlin, largeCloudUv * 1.6);
+  float layeredCloudBase = smoothstep(
+    0.42,
+    0.88,
+    largeCloudNoise * 0.62 + largeCloudDetail * 0.38
+  );
+  float layeredCloudRidge = veilRidgedNoise(tPerlin, midCloudUv * 0.82);
+  float layeredCloudShadow = veilRidgedNoise(tNoise, fineCloudUv * 0.74);
+  float cloudGapMask = 1.0 - smoothstep(0.36, 0.74, largeCloudNoise);
+  float cloudBodyMask = smoothstep(0.48, 0.86, largeCloudNoise + layeredCloudRidge * 0.32);
+  float cloudShadowMask = smoothstep(0.54, 0.92, layeredCloudShadow * largeCloudDetail);
+  float baseNoise = texture2D(
+    tNoise,
+    flowUv * 0.18 + vec2(0.01 * time, -0.028 * time)
+  ).r;
+  float detailNoise = texture2D(
+    tPerlin,
+    flowUv * 0.42 + vec2(-0.012 * time, 0.02 * time)
+  ).r;
+  float bodyNoise = texture2D(
+    tNoise,
+    flowUv * 0.08 + vec2(0.006 * time, -0.018 * time)
+  ).g;
+  float curlNoise = texture2D(
+    tPerlin,
+    flowUv * 1.38 + vec2(-0.026 * time, 0.018 * time)
+  ).g;
+  float grainNoise = texture2D(
+    tNoise,
+    flowUv * 2.1 + vec2(0.034 * time, -0.022 * time)
+  ).b;
+  float microNoise = texture2D(
+    tPerlin,
+    flowUv * 3.4 + vec2(-0.04 * time, 0.028 * time)
+  ).r;
+  float plumeNoise = texture2D(
+    tNoise,
+    flowUv * 0.62 + vec2(0.014 * time, -0.01 * time)
+  ).b;
+  float erosionNoise = texture2D(
+    tPerlin,
+    flowUv * 4.6 + vec2(0.052 * time, -0.034 * time)
+  ).g;
+
+  vec2 distortedUv = vUv;
+  distortedUv.x += (detailNoise - 0.5) * 0.11 * uNoiseStrength;
+  distortedUv.y += (bodyNoise - 0.5) * 0.24 * uNoiseStrength;
+  distortedUv.x += (curlNoise - 0.5) * 0.072 * uNoiseStrength;
+  distortedUv.y += (plumeNoise - 0.5) * 0.06 * uNoiseStrength;
+
+  float blanket = smoothstep(
+    0.22,
+    0.88,
+    1.0 - distortedUv.y + 0.1 * (baseNoise - 0.5) + 0.08 * (plumeNoise - 0.5)
+  );
+  float cloudMass = smoothstep(
+    0.24,
+    0.88,
+    baseNoise * 0.24 +
+      plumeNoise * 0.28 +
+      detailNoise * 0.16 +
+      bodyNoise * 0.14 +
+      curlNoise * 0.08 +
+      (1.0 - distortedUv.y) * 0.4
+  );
+  float cloudBody = smoothstep(
+    0.18,
+    0.82,
+    baseNoise * 0.22 +
+      plumeNoise * 0.14 +
+      detailNoise * 0.16 +
+      bodyNoise * 0.14 +
+      curlNoise * 0.14 +
+      grainNoise * 0.08 +
+      microNoise * 0.12 +
+      erosionNoise * 0.14 +
+      (1.0 - distortedUv.y) * 0.24
+  );
+  float wispNoise = texture2D(
+    tPerlin,
+    flowUv * 0.86 + vec2(0.018 * time, -0.01 * time)
+  ).r;
+  float textureLayer = smoothstep(
+    0.24,
+    0.78,
+    detailNoise * 0.28 +
+      bodyNoise * 0.14 +
+      wispNoise * 0.16 +
+      curlNoise * 0.18 +
+      grainNoise * 0.1 +
+      microNoise * 0.14
+  );
+  float erosion = smoothstep(0.22, 0.82, erosionNoise);
+  float density = max(blanket * 0.42, cloudMass * 0.82);
+  density = max(density, cloudBody);
+  density = max(
+    density,
+    layeredCloudBase * (0.42 + layeredCloudRidge * 0.26)
+  );
+  density *= mix(0.72, 1.24, textureLayer);
+  density *= mix(1.08, 0.72, erosion * (1.0 - textureLayer * 0.48));
+  density *= mix(0.88, 1.08, layeredCloudShadow);
+  density *= mix(1.0, 0.52, cloudGapMask);
+  density += smoothstep(0.6, 0.9, curlNoise) * 0.08;
+  density += smoothstep(0.68, 0.94, microNoise) * 0.05;
+  density += smoothstep(0.58, 0.86, plumeNoise) * 0.08;
+  density += smoothstep(0.56, 0.84, erosionNoise) * 0.06;
+  density += smoothstep(0.54, 0.9, layeredCloudRidge) * 0.12;
+  density += cloudBodyMask * 0.18;
+  density = smoothstep(0.18, 0.88, density);
+  density = saturateFloat(density);
+
+  vec2 centeredUv = screenUv - 0.5;
+  centeredUv.x *= safeResolution.x / safeResolution.y;
+  float centerDistance = length(centeredUv);
+  float revealNoise = texture2D(
+    tNoise,
+    screenUv * vec2(0.62, 0.44) + vec2(0.0, -0.014 * time)
+  ).r - 0.5;
+  float revealRadius = mix(-0.18, 1.78, saturateFloat(uProgress));
+  float revealEdge = centerDistance - revealRadius - 0.06 * revealNoise;
+  float reveal = 1.0 - smoothstep(
+    -max(uRevealSoftness, 0.0001),
+    max(uRevealSoftness, 0.0001),
+    revealEdge
+  );
+
+  float coverage = smoothstep(0.12, 0.62, density);
+  float alpha = mix(0.94, 1.0, coverage) * (1.0 - reveal) * uOpacity;
+  vec3 color = mix(uDarkColor, uLightColor, smoothstep(0.25, 1.0, density));
+  color = mix(vec3(0.94, 0.945, 0.952), vec3(1.0), smoothstep(0.18, 0.9, density));
+  color *= mix(vec3(0.985, 0.988, 0.992), vec3(1.02, 1.018, 1.012), textureLayer * 0.48);
+  color *= mix(vec3(0.99, 0.992, 0.996), vec3(1.018, 1.014, 1.008), plumeNoise * 0.42);
+  color *= mix(vec3(0.992, 0.994, 0.997), vec3(1.016), curlNoise * 0.24);
+  color *= mix(vec3(0.994, 0.995, 0.998), vec3(1.01), microNoise * 0.16);
+  color *= mix(vec3(0.988, 0.989, 0.992), vec3(0.972, 0.974, 0.978), erosion * 0.18);
+  color *= mix(vec3(0.992, 0.993, 0.996), vec3(1.0), detailNoise * 0.22);
+  color *= mix(vec3(0.992, 0.994, 0.997), vec3(1.024, 1.02, 1.014), layeredCloudBase * 0.54);
+  color *= mix(vec3(1.0), vec3(0.982, 0.984, 0.988), layeredCloudShadow * 0.18);
+  color *= mix(vec3(1.0), vec3(1.035, 1.028, 1.018), cloudBodyMask * 0.52);
+  color *= mix(vec3(1.0), vec3(0.88, 0.89, 0.91), cloudShadowMask * 0.34);
+
+  gl_FragColor = vec4(color, saturateFloat(alpha));
+}

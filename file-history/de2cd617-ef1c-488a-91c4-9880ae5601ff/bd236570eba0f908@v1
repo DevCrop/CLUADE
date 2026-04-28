@@ -1,0 +1,164 @@
+﻿import { FrameScheduler } from "../../utils/FrameScheduler.js";
+import type { LenisInstance, WindowWithLenis } from "../../types/app.types.js";
+import {
+  LENIS_SCROLL_CONFIG,
+  LENIS_SCROLL_TRIGGER_SYNC_CONFIG,
+} from "../../config/timeline.config.js";
+
+const LENIS_PREVENT_SELECTORS = [
+  "[data-lenis-prevent]",
+  "[data-lenis-prevent-wheel]",
+  "[data-lenis-prevent-touch]",
+].join(", ");
+
+export class LenisRuntime {
+  private instance: LenisInstance | null = null;
+  private rafId: number | null = null;
+  private nativeScrollRafId: number | null = null;
+  private lastScrollY = 0;
+  private settleFramesLeft = 0;
+  private isScrollbarDragSyncEnabled = false;
+  private _initialized = false;
+  private _disposed = false;
+  private readonly _onPointerDown = (event: PointerEvent): void => {
+    this.isScrollbarDragSyncEnabled = this.isScrollbarPointerDown(event);
+  };
+  private readonly _onPointerUp = (): void => {
+    this.isScrollbarDragSyncEnabled = false;
+  };
+  private readonly _onNativeScroll = (): void => {
+    if (!this.instance) return;
+    if (!this.isScrollbarDragSyncEnabled) return;
+    if (this.nativeScrollRafId != null) return;
+    this.nativeScrollRafId = window.requestAnimationFrame(() => {
+      this.nativeScrollRafId = null;
+      const currentScrollY = window.scrollY ?? window.pageYOffset ?? 0;
+      const lenisScroll =
+        this.instance?.actualScroll ??
+        this.instance?.animatedScroll ??
+        currentScrollY;
+      if (
+        Math.abs(currentScrollY - lenisScroll) <
+        LENIS_SCROLL_TRIGGER_SYNC_CONFIG.minDeltaPx
+      ) {
+        return;
+      }
+      this.instance?.scrollTo?.(currentScrollY, { immediate: true });
+      this.lastScrollY = currentScrollY;
+      this.settleFramesLeft = LENIS_SCROLL_TRIGGER_SYNC_CONFIG.settleFrames;
+      window.ScrollTrigger?.update?.();
+    });
+  };
+
+  async init(): Promise<void> {
+    if (this._initialized || this._disposed) return;
+    this.onInit();
+    this._initialized = true;
+  }
+
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._initialized = false;
+    this.onDispose();
+  }
+
+  private onInit(): void {
+    if (this.instance) return;
+
+    const LenisCtor = this.resolveLenisCtor();
+    if (!LenisCtor) return;
+
+    this.instance = new LenisCtor({
+      autoRaf: false,
+      smoothWheel: true,
+      lerp: LENIS_SCROLL_CONFIG.lerp,
+      wheelMultiplier: LENIS_SCROLL_CONFIG.wheelMultiplier,
+      touchMultiplier: LENIS_SCROLL_CONFIG.touchMultiplier,
+      prevent: (node: Element) => this.shouldPreventLenis(node),
+    });
+    (window as WindowWithLenis).__appLenis = this.instance;
+    this.lastScrollY = window.scrollY ?? window.pageYOffset ?? 0;
+    this.settleFramesLeft = LENIS_SCROLL_TRIGGER_SYNC_CONFIG.settleFrames;
+
+    const onRaf = (time: number): void => {
+      this.instance?.raf(time);
+      this._syncScrollTrigger();
+      this.rafId = FrameScheduler.request(onRaf);
+    };
+    this.rafId = FrameScheduler.request(onRaf);
+    window.addEventListener("scroll", this._onNativeScroll, { passive: true });
+    window.addEventListener("pointerdown", this._onPointerDown, {
+      passive: true,
+    });
+    window.addEventListener("pointerup", this._onPointerUp, {
+      passive: true,
+    });
+    window.addEventListener("pointercancel", this._onPointerUp, {
+      passive: true,
+    });
+  }
+
+  private onDispose(): void {
+    if (this.rafId !== null) {
+      FrameScheduler.cancel(this.rafId);
+      this.rafId = null;
+    }
+    if (this.nativeScrollRafId !== null) {
+      window.cancelAnimationFrame(this.nativeScrollRafId);
+      this.nativeScrollRafId = null;
+    }
+    window.removeEventListener("scroll", this._onNativeScroll);
+    window.removeEventListener("pointerdown", this._onPointerDown);
+    window.removeEventListener("pointerup", this._onPointerUp);
+    window.removeEventListener("pointercancel", this._onPointerUp);
+    this.instance?.destroy?.();
+    this.instance = null;
+    this.settleFramesLeft = 0;
+    this.isScrollbarDragSyncEnabled = false;
+    delete (window as WindowWithLenis).__appLenis;
+  }
+
+  private _syncScrollTrigger(): void {
+    const currentScrollY = window.scrollY ?? window.pageYOffset ?? 0;
+    const moved =
+      Math.abs(currentScrollY - this.lastScrollY) >=
+      LENIS_SCROLL_TRIGGER_SYNC_CONFIG.minDeltaPx;
+    if (moved) {
+      this.lastScrollY = currentScrollY;
+      this.settleFramesLeft = LENIS_SCROLL_TRIGGER_SYNC_CONFIG.settleFrames;
+      window.ScrollTrigger?.update?.();
+      return;
+    }
+    if (this.settleFramesLeft <= 0) return;
+    this.settleFramesLeft -= 1;
+    window.ScrollTrigger?.update?.();
+  }
+
+  private resolveLenisCtor(): WindowWithLenis["Lenis"] {
+    return (window as WindowWithLenis).Lenis;
+  }
+
+  private shouldPreventLenis(node: Element): boolean {
+    if (!(node instanceof Element)) return false;
+    if (node.closest(LENIS_PREVENT_SELECTORS) != null) return true;
+    const rootNode = node.getRootNode();
+    if (!(rootNode instanceof ShadowRoot)) return false;
+    const host = rootNode.host;
+    if (!(host instanceof Element)) return false;
+    return host.matches(LENIS_PREVENT_SELECTORS) || host.closest(LENIS_PREVENT_SELECTORS) != null;
+  }
+
+  private isScrollbarPointerDown(event: PointerEvent): boolean {
+    const root = document.documentElement;
+    const hasVerticalScrollbar = root.scrollHeight > root.clientHeight;
+    if (hasVerticalScrollbar && event.clientX >= root.clientWidth) {
+      return true;
+    }
+    const hasHorizontalScrollbar = root.scrollWidth > root.clientWidth;
+    if (hasHorizontalScrollbar && event.clientY >= root.clientHeight) {
+      return true;
+    }
+    return false;
+  }
+}

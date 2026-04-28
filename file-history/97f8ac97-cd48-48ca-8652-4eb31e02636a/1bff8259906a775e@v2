@@ -1,0 +1,172 @@
+﻿
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
+import type {
+  LoadGLTFOptions,
+  LoadGLTFResult,
+  GLTFLoaderPluginRegister,
+} from "../types/runtime.types.js";
+import { disposeObject3D } from "../utils/disposeObject3D.js";
+export { type LoadGLTFOptions, type LoadGLTFResult } from "../types/runtime.types.js";
+
+function registerPBRSpecularGlossinessPlugin(loader: GLTFLoader): void {
+  const registrableLoader = loader as GLTFLoader & GLTFLoaderPluginRegister;
+  if (typeof registrableLoader.register !== "function") return;
+  registrableLoader.register(() => ({
+    name: "KHR_materials_pbrSpecularGlossiness",
+  }));
+}
+
+export class ModelLoader {
+  private _gltf: GLTFLoader;
+  private _draco: DRACOLoader | null = null;
+  private _texture: THREE.TextureLoader;
+  private _hdr: InstanceType<typeof HDRLoader>;
+  private _modelMap = new Map<string, THREE.Group>();
+  private _clipMap = new Map<string, THREE.AnimationClip[]>();
+
+  constructor() {
+    this._gltf = new GLTFLoader();
+    registerPBRSpecularGlossinessPlugin(this._gltf);
+    this._setupDRACO();
+    this._texture = new THREE.TextureLoader();
+    this._hdr = new HDRLoader();
+  }
+
+  private _setupDRACO(): void {
+    try {
+      this._draco = new DRACOLoader();
+      
+      this._draco.setDecoderPath(
+        "https://www.gstatic.com/draco/versioned/decoders/1.5.7/",
+      );
+      this._gltf.setDRACOLoader(this._draco);
+    } catch (error) {
+      this._draco = null;
+    }
+  }
+
+  clearModelCache(): void {
+    this._disposeCachedModels();
+    this._modelMap.clear();
+    this._clipMap.clear();
+  }
+
+  dispose(): void {
+    this._disposeCachedModels();
+    this._modelMap.clear();
+    this._clipMap.clear();
+    this._draco?.dispose();
+    this._draco = null;
+  }
+
+  private _disposeCachedModels(): void {
+    this._modelMap.forEach((group) => disposeObject3D(group));
+  }
+
+  loadGLTF(
+    scene: THREE.Scene | null,
+    url: string,
+    options: LoadGLTFOptions = {},
+  ): Promise<LoadGLTFResult> {
+    const cached = this._modelMap.get(url);
+    if (cached) {
+      const clone = cached.clone(true) as THREE.Group;
+      this._cloneMaterialsInPlace(clone);
+      this._applyTransform(clone, options);
+      const clips = this._clipMap.get(url) ?? [];
+      const mixers =
+        clips.length > 0 ? this._createMixersFromClips(clips, clone) : [];
+      return Promise.resolve({ model: clone, mixers });
+    }
+
+    if (!scene) return Promise.resolve({ model: null, mixers: [] });
+    return new Promise<LoadGLTFResult>((resolve, reject) => {
+      this._gltf.load(
+        url,
+        (gltf) => {
+          const model = gltf.scene;
+          this._applyTransform(model, options);
+          this._setupModelUserData(model);
+          this._setupMeshes(model);
+          this._modelMap.set(url, model);
+          this._clipMap.set(url, gltf.animations ?? []);
+          if (options.addToScene !== false) scene.add(model);
+          const mixers = this._createMixers(gltf, model);
+          resolve({ model, mixers });
+        },
+        undefined,
+        reject,
+      );
+    });
+  }
+
+  async loadTexture(url: string): Promise<THREE.Texture> {
+    return new Promise<THREE.Texture>((resolve, reject) => {
+      this._texture.load(url, resolve, undefined, reject);
+    });
+  }
+
+  async loadHdrTexture(url: string): Promise<THREE.Texture> {
+    return this._hdr.loadAsync(url);
+  }
+
+  private _applyTransform(model: THREE.Group, options: LoadGLTFOptions): void {
+    if (options.position) model.position.set(...options.position);
+    if (options.scale) model.scale.set(...options.scale);
+    if (options.rotation) model.rotation.set(...options.rotation);
+  }
+
+  private _setupModelUserData(model: THREE.Object3D): void {
+    model.userData.selectable = true;
+    model.userData.isModel = true;
+  }
+
+  private _setupMeshes(model: THREE.Object3D): void {
+    model.traverse((child) => {
+      if (!(child as THREE.Mesh).isMesh) return;
+      const mesh = child as THREE.Mesh;
+      mesh.userData.selectable = true;
+      mesh.userData.isModel = true;
+    });
+  }
+
+  private _cloneMaterialsInPlace(root: THREE.Object3D): void {
+    root.traverse((child) => {
+      const mesh = child as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const material = mesh.material;
+      if (Array.isArray(material)) {
+        mesh.material = material.map((entry) => entry.clone());
+        return;
+      }
+      if (material) {
+        mesh.material = material.clone();
+      }
+    });
+  }
+
+  private _createMixers(
+    gltf: { animations?: THREE.AnimationClip[] },
+    model: THREE.Object3D,
+  ): THREE.AnimationMixer[] {
+    const mixers: THREE.AnimationMixer[] = [];
+    if (!gltf.animations?.length) return mixers;
+    const mixer = new THREE.AnimationMixer(model);
+    gltf.animations.forEach((anim) => mixer.clipAction(anim).play());
+    mixers.push(mixer);
+    return mixers;
+  }
+
+  private _createMixersFromClips(
+    clips: THREE.AnimationClip[],
+    model: THREE.Object3D,
+  ): THREE.AnimationMixer[] {
+    if (clips.length === 0) return [];
+    const mixer = new THREE.AnimationMixer(model);
+    clips.forEach((clip) => mixer.clipAction(clip).play());
+    return [mixer];
+  }
+}

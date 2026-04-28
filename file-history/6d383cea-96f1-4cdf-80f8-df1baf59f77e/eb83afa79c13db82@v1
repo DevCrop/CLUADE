@@ -1,0 +1,215 @@
+# NINEONELABS — Brand Identity
+
+> **For AI agents:** Always read this file before writing copy, naming sections, proposing storytelling directions, or suggesting UI text for this project. This is the single source of truth for brand identity.
+
+---
+
+## Company
+
+| | |
+|---|---|
+| **Name (EN)** | NineOneLabs |
+| **Name (KR)** | 나인원랩스 |
+| **Type** | Digital Web Agency |
+| **Location** | Korea |
+| **Founded** | — |
+
+NineOneLabs is a digital web agency that designs immersive brand experiences. We build websites, apps, and brand identities — not as a deliverable, but as the beginning of a journey clients take with us.
+
+---
+
+## Core Values
+
+| Value | Korean | Meaning |
+|---|---|---|
+| **Experiment** | 실험 | We test unconventional ideas. Tried-and-safe is not our mode. |
+| **Challenge** | 도전 | We take on briefs others won't. Difficulty is a reason to proceed. |
+| **Proof** | 증명 | Results matter. Every claim we make, we demonstrate. |
+
+These three values — **실험 · 도전 · 증명** — are the foundation for all brand decisions, copy framing, and storytelling. When proposing headlines or messaging, anchor them to at least one of these values.
+
+---
+
+## Brand Concept & Narrative
+
+### The Journey Metaphor
+
+The central metaphor is **a voyage from Earth to Planet NX-2** — an unknown destination that represents the brand's potential, not yet discovered.
+
+- **Earth** = where the client starts (existing brand, current state)
+- **NX-2** = the destination (realized potential, transformed brand, new audience)
+- **NineOneLabs** = the crew, the Mission Control, the companion — not the captain. The client leads their story; we engineer the vessel.
+
+### The Role of NineOneLabs
+
+We are the **조력자 (facilitator/companion)** — not a vendor, not a service provider. We join the client's journey and share ownership of the outcome.
+
+This means:
+- Copy should frame us alongside the client, not above or below
+- Use "we" and "together" language, not "we will do X for you"
+- The journey belongs to the client; we make it possible
+
+### Planet NX-2
+
+NX-2 is a coined name — it is intentionally mysterious, uncharted. It does not refer to a real place. It signals that where we're going together has never been mapped before.
+
+---
+
+## Slogan
+
+```
+JOIN THE JOURNEY
+```
+
+- Always uppercase in display contexts
+- Can be adapted as "Join The Journey" in title-case body copy
+- Avoid abbreviating or paraphrasing — use as-is for CTAs and section anchors
+- Variant in Korean: `함께 여정을 시작하세요` / `같은 여정을 함께 씁니다`
+
+---
+
+## Services
+
+| # | Name | Korean Description |
+|---|---|---|
+| 01 | **Web Build** | 사람들이 느끼고 오래 기억하는 웹. 브랜드만의 독창적인 인터랙션으로 특별한 경험을 설계합니다. |
+| 02 | **App Build** | 브랜드는 화면 밖에서도 계속됩니다. 사용자가 편하게 쓰는 흐름을 중심으로, 손 안에서 완성되는 앱을 만듭니다. |
+| 03 | **Branding** | 브랜드를 한 문장으로 설명할 수 있어야 합니다. 핵심을 명확히 정리하고, 어디서나 같은 인상이 남는 정체성을 만듭니다. |
+| 04 | **UI · UX** | 목적에 맞는 구조와 동선으로, 사용자가 편하고 자연스럽게 다음 행동으로 이어지게 설계합니다. |
+| 05 | **Maintenance** | 서비스는 안정적으로 운영될 때 빛납니다. 구조를 정리하고, 문제가 생기기 전에 먼저 대응합니다. |
+
+**Short label set (for UI chips, tags, and skill lists):**
+`APP` · `WEB` · `BRANDING` · `UI/UX` · `MAINTENANCE`
+
+---
+
+## Technology Strengths
+
+These are the capabilities we lead with. When explaining "why choose us," these are the proof points.
+
+| Technology | Category |
+|---|---|
+| **Three.js** | Interactive / Immersive Web |
+| **GSAP** | Motion & Animation |
+| **Webflow** | No-code CMS Build |
+| **UI / UX Design** | User Experience |
+| **Branding System** | Brand Identity |
+| **3D Modeling** | Spatial Design |
+| **SEO Strategy** | Search Growth |
+| **CMS System** | Content Control |
+| **TypeScript** | Engineering Quality |
+| **PHP (Custom MVC)** | Backend Architecture |
+
+**Key differentiator:** We don't just use these tools — we apply them inside a unified, immersive experience. Our Three.js + GSAP stack is embedded in the actual site the client sees, not a demo.
+
+---
+
+## Visual Identity
+
+### Aesthetic Direction
+
+- **Dark, spatial, atmospheric** — the canvas is space; content floats in it
+- **High contrast** — white type on deep backgrounds
+- **Precision engineering** — sharp corners, controlled motion, no decorative noise
+- **Immersive scroll** — the Three.js scene reacts to the user; nothing is static
+
+### Recurring Visual Elements
+
+| Element | Role |
+|---|---|
+| **Rocket** | Forward motion, launch, ambition — used for CTAs and transitions |
+| **Planets / NX-2** | Destination, mystery, scale — used for hero and interstitial moments |
+| **Astronaut** | The client/user in the journey — human scale against the cosmos |
+| **Countdown / Mission Control UI** | The launch sequence metaphor — used in the `introAction` section |
+| **Orbit rings** | Transition and motion markers |
+
+### Typography Style
+
+- EN display: uppercase, wide tracking, bold or regular weight
+- KR body: medium/regular, sentence case
+- Mixing EN headers with KR body is intentional — it's part of the brand voice
+
+---
+
+## Tone of Voice
+
+### Principles
+
+| Tone | Description |
+|---|---|
+| **Bold** | We don't hedge. "We design" not "we try to design." |
+| **Experimental** | Willing to try sentence structures, punctuation, or framing that surprises. |
+| **Precise** | Every word earns its place. No filler copy. |
+| **Warm at scale** | We are a small team that handles big brands — intimate in conversation, confident in scope. |
+| **Mission-language** | Borrow from aerospace: launch, orbit, mission, trajectory, control, signal. But use sparingly — never more than the content warrants. |
+
+### English Copy Style
+
+- Display headlines: title-case or ALL CAPS, 3–7 words preferred
+- Subheadlines: sentence case, conversational
+- Body: short paragraphs (2–3 lines), no complex clauses
+- CTAs: verb-first, journey-anchored — "Start Your Journey", "Join The Mission", "Let's Launch"
+
+### Korean Copy Style
+
+- 존댓말(formal polite) for all public-facing copy
+- Avoid corporate stiffness — write as a creative partner, not a firm
+- Short sentences. Line breaks are intentional pacing, not overflow.
+- Key phrases to use: `함께`, `여정`, `브랜드`, `설계`, `경험`, `나인원랩스`
+- Key phrases to avoid: `솔루션`, `최고의`, `최적의`, `고객님` (too transactional)
+
+---
+
+## Content Guidelines
+
+### Section Narrative Arc (Homepage)
+
+The homepage tells a story in sequence — content should reinforce this arc:
+
+1. **Intro** — The invitation. "Your journey starts now." First contact with the brand.
+2. **introAction** — The launch sequence. "Mission Control is live." The transition metaphor (Earth lift-off).
+3. **Hero** — "Join The Journey." The slogan lands. We're in space now.
+4. **Story** — Define the philosophy. Why we exist, what makes us different.
+5. **Who** — Our role in your journey. We are the architects, not the pilots.
+6. **Why (Skills)** — The proof. This is what we're capable of. Tech stack as credibility.
+7. **Services** — What we build for you. Concrete, not abstract.
+8. **Portfolio** — Evidence. Work that became real.
+9. **Clients (Partners)** — Who has already trusted the journey.
+10. **Contact** — "Your Journey Starts Here." The door is open.
+
+### Copy Rules
+
+- **Lead with the journey metaphor**, but always land on the concrete service or outcome
+- **Never let the space concept obscure the agency offer** — every section must make it clear we build digital products
+- **Avoid generic agency speak**: "passionate team", "cutting-edge solutions", "innovative approach"
+- **Use the NX-2 narrative sparingly** — it's the frame, not every sentence
+- Section titles should be able to stand alone as brand statements
+
+---
+
+## What We Are NOT
+
+These are active guardrails. If a content direction drifts toward any of these, correct course.
+
+| ❌ Avoid | ✅ Instead |
+|---|---|
+| Aerospace / aviation company | Web agency with a space-as-metaphor brand |
+| Abstract art studio with no service clarity | Immersive web studio with defined deliverables |
+| Generic "we're passionate creatives" agency | Results-driven team with Experiment · Challenge · Proof values |
+| Overly poetic copy with no conversion intent | Bold copy that inspires AND directs to action |
+| Trend-follower ("we use the latest AI tools!") | Craft-first ("we build what serves the brand") |
+| "We do everything for you" positioning | "We journey together" partnership positioning |
+
+---
+
+## Glossary
+
+| Term | Usage |
+|---|---|
+| **NX-2** | The destination planet — a metaphor for the client's unrealized potential. Not a product name. |
+| **Mission Control** | NineOneLabs in action — coordinating, engineering, keeping the mission on track. |
+| **Launch** | Beginning of a project or brand reveal. |
+| **Orbit** | The ongoing relationship after launch — maintenance, iteration, growth. |
+| **Crew** | The NineOneLabs team. |
+| **The Journey** | The full arc from brand conception through launch and beyond. |
+| **Coordinates** | Contact information / project brief. |

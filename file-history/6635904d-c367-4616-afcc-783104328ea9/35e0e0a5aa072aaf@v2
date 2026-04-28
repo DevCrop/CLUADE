@@ -1,0 +1,149 @@
+<?php
+
+/**
+ * works 마이그레이션 1차 통과에서 16MP 초과로 skip 된 잔여 jpg/png 를
+ * webp 한계(16383px) 를 넘지 않도록 폭·높이 동시 고려 리사이즈하여 변환한다.
+ *
+ * 사용법:
+ *   php scripts/convert-large-works-jpg.php --dry-run
+ *   php scripts/convert-large-works-jpg.php
+ *
+ * 안전 장치:
+ *   - DB UPDATE 가 성공한 뒤에만 원본 unlink
+ *   - 변환 실패 시 원본·DB 모두 그대로 유지
+ *   - per-cell 처리 — 일부 실패가 다른 항목에 전파되지 않음
+ */
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('CLI only.' . PHP_EOL);
+}
+
+ini_set('memory_limit', '2048M');
+
+$args = $argv ?? [];
+$isDryRun = in_array('--dry-run', $args, true);
+
+$projectRoot = null;
+$dir = __DIR__;
+while ($dir !== dirname($dir)) {
+    if (is_file($dir . '/vendor/autoload.php')) {
+        $projectRoot = $dir;
+        break;
+    }
+    $dir = dirname($dir);
+}
+if ($projectRoot === null) {
+    fwrite(STDERR, 'ERROR: project root not found' . PHP_EOL);
+    exit(1);
+}
+
+require_once $projectRoot . '/vendor/autoload.php';
+require_once $projectRoot . '/config/setup.php';
+
+use Database\DB;
+use Spatie\Image\Image;
+
+$worksDir = $projectRoot . '/uploads/works';
+$imageColumns = ['thumb_image', 'file_attach1', 'file_attach2', 'file_attach3', 'file_attach4', 'file_attach5'];
+$convertible = ['jpg', 'jpeg', 'png', 'gif'];
+
+const WEBP_DIM_LIMIT = 16000;
+const MAX_WIDTH = 2560;
+const QUALITY = 82;
+
+$pdo = DB::getInstance();
+$rows = $pdo->query('SELECT `id`, `' . implode('`, `', $imageColumns) . '` FROM `nb_works` ORDER BY `id`')
+    ->fetchAll(\PDO::FETCH_ASSOC);
+
+$counts = ['converted' => 0, 'skipped' => 0, 'failed_convert' => 0, 'failed_db' => 0, 'bytes_saved' => 0];
+
+foreach ($rows as $row) {
+    $workId = (int) $row['id'];
+    foreach ($imageColumns as $col) {
+        $value = trim((string) ($row[$col] ?? ''));
+        if ($value === '') continue;
+
+        $ext = strtolower(pathinfo($value, PATHINFO_EXTENSION));
+        if (!in_array($ext, $convertible, true)) continue;
+
+        $absOriginal = $worksDir . '/' . $value;
+        if (!is_file($absOriginal)) continue;
+
+        $imgSize = @getimagesize($absOriginal);
+        if (!is_array($imgSize) || empty($imgSize[0]) || empty($imgSize[1])) {
+            fwrite(STDERR, sprintf("[bad-image] id=%d %s='%s'\n", $workId, $col, $value));
+            $counts['failed_convert']++;
+            continue;
+        }
+        [$w, $h] = $imgSize;
+
+        // 폭은 MAX_WIDTH, 높이는 WEBP_DIM_LIMIT 를 동시에 만족하는 최대 폭 산출.
+        $widthByHeight = (int) floor($w * WEBP_DIM_LIMIT / $h);
+        $targetW = max(100, min(MAX_WIDTH, $widthByHeight));
+
+        $webpName = preg_replace('/\.[^.]+$/', '.webp', $value);
+        $absWebp = $worksDir . '/' . $webpName;
+        $originalSize = (int) @filesize($absOriginal);
+
+        if ($isDryRun) {
+            echo sprintf("[dry-run] id=%d %s '%s' (%dx%d) -> '%s' targetW=%d\n",
+                $workId, $col, $value, $w, $h, $webpName, $targetW);
+            $counts['converted']++;
+            continue;
+        }
+
+        $existedBefore = is_file($absWebp);
+        echo sprintf("[try] id=%d %s '%s' (%dx%d) -> targetW=%d\n", $workId, $col, $value, $w, $h, $targetW);
+        @flush();
+
+        try {
+            Image::load($absOriginal)
+                ->width($targetW)
+                ->format('webp')
+                ->quality(QUALITY)
+                ->save($absWebp);
+        } catch (\Throwable $e) {
+            fwrite(STDERR, sprintf("[CONVERT-FAIL] id=%d %s='%s': %s\n", $workId, $col, $value, $e->getMessage()));
+            $counts['failed_convert']++;
+            if (!$existedBefore && is_file($absWebp) && filesize($absWebp) === 0) {
+                @unlink($absWebp);
+            }
+            continue;
+        }
+
+        if (!is_file($absWebp) || filesize($absWebp) === 0) {
+            fwrite(STDERR, sprintf("[CONVERT-FAIL] id=%d %s='%s' (no output)\n", $workId, $col, $value));
+            $counts['failed_convert']++;
+            continue;
+        }
+
+        try {
+            $update = $pdo->prepare('UPDATE `nb_works` SET `' . $col . '` = :val WHERE `id` = :id');
+            $update->execute([':val' => $webpName, ':id' => $workId]);
+        } catch (\Throwable $e) {
+            fwrite(STDERR, sprintf("[DB-FAIL] id=%d %s='%s': %s\n", $workId, $col, $value, $e->getMessage()));
+            $counts['failed_db']++;
+            if (!$existedBefore && is_file($absWebp)) {
+                @unlink($absWebp);
+            }
+            continue;
+        }
+
+        @unlink($absOriginal);
+        $counts['converted']++;
+        $counts['bytes_saved'] += max(0, $originalSize - (int) @filesize($absWebp));
+        echo sprintf("[ok] id=%d %s '%s' -> '%s' (%dKB->%dKB)\n",
+            $workId, $col, $value, $webpName,
+            (int) round($originalSize / 1024), (int) round(@filesize($absWebp) / 1024));
+    }
+}
+
+echo PHP_EOL;
+echo "--- Summary " . ($isDryRun ? '(DRY-RUN) ' : '') . "---" . PHP_EOL;
+echo "Converted       : {$counts['converted']}" . PHP_EOL;
+echo "Convert failed  : {$counts['failed_convert']}" . PHP_EOL;
+echo "DB failed       : {$counts['failed_db']}" . PHP_EOL;
+echo "Bytes saved     : " . number_format($counts['bytes_saved']) . " (" . round($counts['bytes_saved'] / 1024 / 1024, 2) . " MB)" . PHP_EOL;
+
+exit(($counts['failed_convert'] + $counts['failed_db']) > 0 ? 1 : 0);

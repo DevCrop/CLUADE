@@ -1,0 +1,113 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "deny": [
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(rm -rf D:\\.claude:*)",
+      "Bash(rm -rf D:/.claude:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Read(.credentials*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"D:/.claude/hooks/session-start.ps1\"",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"D:/.claude/cleanup.ps1\"",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"D:/.claude/hooks/drift-detect-worker.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"D:/.claude/hooks/drift-enqueue.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"D:/.claude/hooks/inject-runtime-ctx.ps1\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"D:/.claude/hooks/precompact-snapshot.ps1\"",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"D:/.claude/hooks/postcompact-verify.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"D:/.claude/hooks/token-report.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "ENABLE_PROMPT_CACHING_1H": "1"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "powershell.exe -NonInteractive -File \"D:/.claude/statusline.ps1\""
+  },
+  "effortLevel": "high",
+  "autoUpdatesChannel": "latest",
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": false,
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": [],
+  "disabledMcpjsonServers": []
+}

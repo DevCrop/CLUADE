@@ -1,0 +1,367 @@
+# Claude Code Best Practices
+
+Part A covers **TypeScript architecture** (how Claude should write and extend code).
+Part B covers **Claude Code harness** (token efficiency, hooks, settings).
+
+---
+
+# Part A — TypeScript Architecture Guidelines
+
+Source of truth for code additions/refactors in `resource/ts/`. Read this before writing new code.
+
+## A1. God objects — current state
+
+A god object = single class mixing 3+ reasons to change or > ~600 lines of heterogeneous logic.
+
+**Known remaining god objects (planned for separate branch decomposition):**
+
+| File | Lines | Reason to split | Status |
+|---|---|---|---|
+| `manager/AppManager.ts` | 1950 | Intro + showcase + UI lifecycle + contact flow + debug | Pending (plan: `lovely-humming-spindle.md` Phase 3-1) |
+| `ui/ContactWizard.ts` | 1445 | Step nav + chip anim + form sync + submission | Dispose leak fixed; split pending (Phase 3-2 partial) |
+| `pages/works/runtime/WorksPageRuntime.ts` | 1254 | Route lifecycle + scroll + intro + camera + wheel hints | Pending review |
+| `builder/TimelineBuilder.ts` | 1007 | Declarative GSAP timeline DSL | Size justified (DSL engine) — keep |
+| `pages/main/theatre/MainTheatreRuntime.ts` | 919 | Theatre sequences + sheet effects + autoplay | Phase 3-4 |
+| `pages/works/render/WorksSceneManager.ts` | 825 | Layout + render + pointer + view mode | Phase 3-3 |
+| `pages/about/theatre/AboutTheatreBridge.ts` | 818 | Theatre ↔ scene bindings | Review if splittable by sequence |
+| `manager/BackgroundManager.ts` | 730 | Env + uniforms + transitions | Acceptable (single rendering concern) |
+
+**Healthy coordinators (do not touch):**
+- `core/Scene.ts`, `core/PageTheatreBinder.ts`, `runtime/PageRuntime.ts` — clean single-purpose orchestrators.
+- All `types/*.types.ts` — 19 files organized by domain.
+- All `config/*.config.ts` — constants only, no logic.
+
+**Claude rule:** Do not grow the god objects above. New features belong in new runtime/coordinator classes next to them.
+
+## A2. How to extend — adding a new feature
+
+### Decision tree
+
+```
+New feature needed
+│
+├─ Is it a visible 3D object?           → resource/ts/objects/<env|sub|main|rocket|shared>/
+│                                         Extends SceneObject<TweenProps>
+│
+├─ Is it DOM UI (header, modal, form)?  → resource/ts/ui/ or resource/ts/components/
+│                                         Must implement init() + dispose()
+│
+├─ Is it page-scoped runtime state?     → resource/ts/pages/<page>/runtime/
+│
+├─ Is it Theatre.js binding for a page? → resource/ts/pages/<page>/theatre/
+│                                         Register in PageTheatreBinder factory map
+│
+├─ Is it a cross-page orchestrator?     → resource/ts/runtime/ or resource/ts/manager/
+│                                         Needs strong justification
+│
+├─ Is it a shader / material?           → resource/shaders/ + referenced from objects/
+│
+└─ Is it a constant / color / URL?      → resource/ts/config/<domain>.config.ts
+                                          NOT inline
+```
+
+### New scene object checklist
+
+1. File: `objects/<group>/YourObject.ts` extending `SceneObject<YourTweenProps>`.
+2. Implement `runObject()`, `runUpdate(dt)`, `dispose()`, `applyVisibility()`.
+3. Type: `YourObjectOptions` + `YourTweenProps` in `types/object.types.ts` (not inline).
+4. Config: constants in `config/<group>.config.ts`.
+5. Dispose: every allocated geometry/material/texture goes through `utils/disposeObject3D.ts` or `SceneObject._ownedTextures`.
+6. Registration: `ObjectSetup.ts` for instance + optional `registerObject(id, ...)` for cross-object lookup.
+
+### New DOM component checklist
+
+1. File: `ui/YourComponent.ts` (singletons) or `components/YourComponent.ts` (reusable widgets).
+2. Static `init({ root })` + static `dispose()` pair. If multiple instances, keep a `Set<Instance>` and iterate in `dispose()`.
+3. All event listeners: store bound handlers as fields, remove the same references in `dispose()`.
+4. Timers: track via `Set<number>` + helper `_trackedTimeout`. Clear all in `dispose()`.
+5. Web Animations API: track via `Set<Animation>` + helper `_trackAnimation`. Cancel all in `dispose()`.
+6. Hook into `PageRuntime.dispose()` so page navigation tears down cleanly.
+7. Options/data types → `types/component.types.ts`.
+8. CSS class names / selectors → `config/component.config.ts` or `config/dom.config.ts`.
+
+### New page route checklist
+
+Use `/new-route` skill. Adds:
+- `routes/web.php` closure route
+- `views/pages/<page>.php` view
+- Optional `resource/ts/pages/<page>/` entry
+
+## A3. Roles
+
+| Folder | Role | What lives here | What does NOT |
+|---|---|---|---|
+| `core/` | Engine + scene + lifecycle primitives | `Engine`, `Scene`, `AnimationLoop`, `PostProcessor`, `ModelLoader`, `PageTheatreBinder`, `SceneObject` base | Page-specific logic |
+| `runtime/` | Cross-cutting app-level state machines | `PageRuntime`, `ResponsiveRuntime`, `IntroFlowRuntime`, `ScrollSceneRuntime`, `TimelineRuntime` | Per-page scenes |
+| `manager/` | Heavyweight orchestrators | `AppManager` (to be split), `BackgroundManager`, `QaManager`, `IntroManager`, `ShaderManager` | New single-responsibility code (prefer `runtime/` or `core/`) |
+| `pages/<page>/runtime/` | Per-page lifecycle | Page-specific scroll, intro, interaction runtimes | Code shared across pages |
+| `pages/<page>/scene/` | Per-page THREE.js scene graph wiring | Object composition specific to the page | Generic scene objects |
+| `pages/<page>/theatre/` | Per-page Theatre.js bindings | `*TheatreBridge`, `*TheatreRuntime`, `*SceneState` | DOM-only logic |
+| `pages/<page>/render/` | Per-page standalone renderers (rare) | `WorksSceneManager` style secondary renderers | Main engine scenes |
+| `objects/` | THREE.js scene objects | Classes extending `SceneObject` | DOM elements |
+| `ui/` | DOM singletons | `Header`, `Drawer`, `ContactWizard`, `WorkModal`, `IntroCanvas` | Reusable widgets (go to `components/`) |
+| `components/` | Reusable DOM widgets | `Button`, `Marquee`, `CustomCursor`, `TextReveal`, `WhySkillPreview` | Scene objects |
+| `animation/` | Non-GSAP DOM animation primitives | `TextReveal`, `BlockReveal` base | 3D tweens |
+| `builder/` | Declarative composition engines | `TimelineBuilder` | Runtime state |
+| `validation/` | Form/input validation | `ContactFormValidation` | Business logic |
+| `utils/` | Pure leaf helpers | `disposeObject3D`, `Debounce`, `FrameScheduler`, `Aria`, `Helpers` | Stateful managers |
+| `config/` | Constants only | colors, selectors, durations, URLs | Any logic |
+| `types/` | Type definitions only | `*.types.ts` per domain | Runtime code |
+| `app/` | Bootstrap entry | `AppBootstrap`, `ObjectSetup`, `EnvSetup` | Feature code |
+| `lib/` | Third-party wrappers | Theatre.js, Lenis wrappers | Domain code |
+
+Every file must fit one row. If it fits none, stop and reconsider the design.
+
+## A4. OOP / SOLID checklist for new code
+
+Run through this list mentally before writing the class.
+
+### SRP — Single Responsibility
+- One "reason to change" per class. If you need "and" to describe it, split.
+- If > 400 lines, ask whether 2+ smaller classes fit better.
+- **New code must not be added to `AppManager` or `ContactWizard`.** Extend in a sibling class.
+
+### OCP — Open/Closed
+- New page variants → add to factory map (`PageTheatreBinder.PAGE_THEATRE_ADAPTER_FACTORIES`), never a new `if (pageId === ...)` branch.
+- New light/object types → register in a creator map (`SceneLights._creators` pattern), never a switch.
+- Use the `ObjectFactoryRegistry` for new scene-object kinds.
+
+### LSP — Liskov Substitution
+- Subclasses of `SceneObject` must respect the contract: `init` → `runObject` → `runUpdate` → `dispose`, no partial cycles.
+- `override` keyword is mandatory on overridden methods.
+
+### ISP — Interface Segregation
+- Adapter interfaces are split by capability (`PageTheatreBootAdapter`, `PageTheatrePreviewAdapter`, `PageTheatreIntroAdapter`, `PageTheatreIntroActionAdapter`, `PageTheatreSceneSyncAdapter`).
+- Implement only the capabilities you need; the composite `PageTheatreAdapter` is optional-by-field.
+- Do not add fields to existing interfaces just to avoid a type check — add a narrower interface.
+
+### DIP — Dependency Inversion
+- `Engine` accepts `EngineDependencies` (`sceneFactory`, `modelLoaderFactory`). Use this for testing/swapping.
+- High-level modules must not `new ConcreteClass()` mid-constructor when a factory slot exists.
+- Cross-class lookup goes through `context.getObject(id)` (O(1)), never `scene.getObjectByName(...)` (O(n)).
+
+### Disposal symmetry
+Every class that allocates is responsible for releasing:
+
+| Creates | Must release in `dispose()` |
+|---|---|
+| `addEventListener` | `removeEventListener` with same reference + options |
+| `setTimeout` / `setInterval` | `clearTimeout` / `clearInterval` |
+| `requestAnimationFrame` | `cancelAnimationFrame` |
+| `new MutationObserver` / Intersection / Resize | `.disconnect()` |
+| `THREE.BufferGeometry` | `.dispose()` |
+| `THREE.Material` | `.dispose()` + all texture slots |
+| `THREE.Texture` | `.dispose()` — or register via `SceneObject._ownedTextures` |
+| `THREE.Light` | `.parent?.remove(light)` + `light.dispose?.()` + target removal |
+| `Element.animate()` | `.cancel()` |
+| Debounce / scheduler | `.offCancel()` |
+| Theatre subscription | Call returned unsubscribe |
+| Scene pub/sub subscription | Call returned unsubscribe |
+
+Use the helpers:
+- `utils/disposeObject3D.ts` — traverses an Object3D, disposes geometries + materials (with all 21 texture slots + shader uniform textures).
+- `utils/disposeObject3D.ts#removeAndDispose(node)` — detach from parent and dispose.
+
+### Side effects
+- Constructors: wiring only. No DOM queries, no RAF, no fetches, no listener registration. Do it in `init()`/`mount()`.
+- Module top-level: no side effects. No `window.addEventListener` at import time. No singletons created at import time.
+- Static fields: no mutable state. If you need tracking (e.g., `ContactWizard._instances`), it must be reset by a static `dispose()`.
+
+## A5. THREE.js GPU/CPU optimization playbook
+
+### Render-loop hot path rules (hard bans)
+
+1. **No `new Vector2/Vector3/Matrix4/Quaternion/Euler` inside `runUpdate`, `render`, or any per-frame callback.**
+   - Use module-scope or instance `_scratch` fields. Mutate with `.copy()`, `.set()`, `.applyMatrix4()`.
+2. **No object literals inside per-frame paths.**
+   - Cache resolved options in an instance scratch object. Recompute only when inputs change (in `setOptions`, not in `runUpdate`).
+3. **No `scene.getObjectByName()` per frame.** Use `context.getObject(id)` (O(1) Map lookup) or subscribe via `Scene.onObjectRegistered`.
+4. **No `new Set()` / `Object.keys()` / `Array.from()` inside hot path.** Pre-compute key arrays when source changes.
+5. **No `.getSnapshot()` called more than once per frame.** Cache locally in the function.
+6. **No `uniform.tX.value = texture` per frame.** Textures set once at material creation; only scalars/vectors update per frame.
+
+### World matrix freshness
+
+- Before reading `object.matrixWorld` or `object.getWorldPosition()`, call `object.updateWorldMatrix(true, false)` if the render hasn't run yet this frame.
+- Known call sites that already do this: `Engine._resolveFollowAnchor`, `CameraTargetRuntime.resolveFollowAnchor`, `CloudPlane._applyRocketUniforms`.
+
+### GPU memory
+
+- Every cached model must be cloned with independent materials. `ModelLoader.loadGLTF` handles this via `_cloneMaterialsInPlace` — don't bypass.
+- Shader swaps on cached meshes must guard against re-application. Use `userData.__<name>Applied` tag (see `Ground._applyGroundShader`).
+- On page teardown: `Engine.dispose()` → `Scene.dispose()` → every `SceneObject.dispose()` → `disposeObject3D(timelineRoot)`.
+- Secondary renderers (like `WorksSceneManager`): must call `renderer.dispose()` AND `renderer.forceContextLoss()`.
+
+### Materials / shaders
+
+- Clone materials before mutation to avoid cache pollution: `material.clone()`.
+- `onBeforeCompile` closures must not retain frame-local state. Store uniform refs in `userData.shader` for later mutation.
+- `needsUpdate = true` is set exactly once (after `onBeforeCompile` assignment). Never in the render loop.
+
+### Post-processing
+
+- `EffectComposer.setSize(w, h)` receives CSS pixels (composer applies pixel ratio internally).
+- `UnrealBloomPass.resolution.set(w, h)` receives CSS pixels (matches composer).
+- Do not call `renderer.setSize()` inside the render loop. Use a resize listener → `ResponsiveRuntime` dispatch.
+
+### Profiling
+
+- Chrome DevTools Performance → look for frames > 16.67ms and GC sawteeth.
+- `chrome://tracing` / WebGL Inspector for draw-call counts.
+- Self-check: 60fps with GC events < 2/sec. Allocation profiler should show ~0 new Vector2/Vector3/Object per frame.
+
+## A6. Responsive architecture
+
+The project centralizes all responsive state through `ResponsiveRuntime` (pub/sub). Build new responsive features on top of it; do not add ad-hoc `window.matchMedia` listeners.
+
+### Contract
+
+```ts
+const runtime = ResponsiveRuntime.getDefault();
+const snapshot = runtime.getSnapshot();
+// snapshot.breakpoint: "sm" | "md" | "lg" | "xl"
+// snapshot.viewportWidth / viewportHeight
+// snapshot.render.clampedPixelRatio
+// snapshot.device.isMobile
+// snapshot.reducedMotion
+// snapshot.performance tier
+
+const unsubscribe = runtime.subscribe((next) => {
+  // react to breakpoint / viewport / reduced motion changes
+});
+// In dispose(): unsubscribe();
+```
+
+### Extension rules
+
+- **New responsive value:** derive from `snapshot` inside the consumer. Don't add fields to `ResponsiveSnapshot` unless multiple consumers need it.
+- **Config with breakpoint variance:** use `utils/ResponsiveValue.ts` (`{ sm, md, lg, xl, default }`) — declare in `config/`, resolve at call site.
+- **Reduced motion:** check `snapshot.reducedMotion` and provide a degraded path (no infinite loops, no parallax). Required for accessibility.
+- **Pixel ratio / performance tier:** read `snapshot.render.clampedPixelRatio` and `snapshot.performance` — used by `Engine` and `PostProcessor` automatically. Pass the snapshot through, don't re-derive.
+- **Orientation / mobile only:** prefer `snapshot.device.isMobile` over UA sniffing.
+- **Three.js resizing:** single path. Resize listener → `ResponsiveRuntime.updateFromWindow()` → subscribers (`Engine.applyResponsiveSnapshot`, `PostProcessor.resize`, `WorksSceneManager`). Do not bind `window.resize` in new code.
+
+### CSS integration
+
+- `ResponsiveRuntime._applyCssVariables(snapshot)` publishes CSS custom properties. Read them in SCSS via `var(--vw, 1vw)` etc., not through JS-computed inline styles.
+
+### Touch vs hover
+
+- Hover UX (`mouseenter` / `mouseleave`) stays on `MouseEvent` semantics — it's desktop-only by design.
+- Drag / press / click target → `PointerEvent` (`pointerdown` / `pointerup` / `pointermove`) with `pointerId` tracking. See `CustomCursor` and `WorksPageRuntime` patterns.
+
+### Anti-patterns (do not ship)
+
+- Inline `@media` in TypeScript conditions (`if (window.innerWidth < 768)`). Use the snapshot.
+- `matchMedia` listener per component. Use `ResponsiveRuntime.subscribe`.
+- Hardcoded breakpoint numbers in TS. Source them from `config/` or from `snapshot.breakpoint`.
+- Fighting against `prefers-reduced-motion` (autoplay, infinite animations). Respect it.
+
+---
+
+# Part B — Claude Code Harness Checklist
+
+Token efficiency and configuration health checklist for this project.
+
+---
+
+## 1. CLAUDE.md
+
+- [ ] Under 50 lines?
+- [ ] Does not contain anything Claude can infer from reading the code (file structure, naming conventions, etc.)?
+- [ ] File-type rules are separated into `.claude/rules/`?
+- [ ] Explicit "do not" prohibition patterns listed?
+- [ ] Verification commands included (tsc, lint, test, etc.)?
+
+## 2. Rules (`.claude/rules/`)
+
+- [ ] Split by file extension? (`php.md`, `frontend.md`, `scss.md`)
+- [ ] Each rules file has a `paths:` frontmatter header?
+- [ ] Rules contain only things that cannot be inferred from the code?
+
+## 3. Hooks (`.claude/settings.json`)
+
+- [ ] Auto-runs tsc after editing a `.ts` file?
+- [ ] Hook verified to actually fire by editing a `.ts` file?
+- [ ] Frequently used safe commands registered in `allowedTools`?
+
+## 4. Skills (`.claude/skills/`)
+
+- [ ] Repeatable workflows packaged as skills?
+- [ ] Project-specific workflows like `/migration`, `/new-route` defined?
+
+## 5. Subagents (`.claude/agents/`)
+
+- [ ] Exploration agents available for read-heavy tasks?
+- [ ] Three.js scene exploration delegated to `scene-explorer` agent?
+- [ ] PHP structure exploration delegated to `php-explorer` agent?
+
+## 6. Session habits
+
+- [ ] Using `/clear` between unrelated tasks?
+- [ ] After two failed corrections, starting fresh with `/clear` + better prompt?
+- [ ] Protecting main context by asking "use a subagent to investigate"?
+- [ ] Resuming long sessions with `--continue` / `--resume`?
+
+## 7. Token waste patterns (fix immediately if found)
+
+- [ ] No docs/ folder accumulating content Claude can infer from code?
+- [ ] CLAUDE.md not exceeding 50 lines?
+- [ ] Claude prefixing Bash tool calls with `chop`? (verify with `chop gain`)
+- [ ] `chop gain` count increasing? Zero means chop is not actually being used.
+
+---
+
+## Current project setup status
+
+| Item | Status |
+| --- | --- |
+| CLAUDE.md concise | ✅ |
+| CLAUDE.md skill invocation examples | ✅ |
+| Rules on-demand | ✅ php / frontend / scss |
+| Hooks (tsc) | ✅ Node.js stdin pattern |
+| Hook verified | ✅ Confirmed firing via Edit tool on .ts file |
+| allowedTools | ✅ chop / git / tsc / docker / npm test |
+| Skills | ✅ migration / new-route |
+| Subagents | ✅ scene-explorer / php-explorer |
+| docs/ removed + README cleaned | ✅ |
+| spatie/image WEBP optimization | ✅ 1.10.6 (PHP 7.4 compat), ImageProcessor, dockerfile libwebp-dev |
+| CHOP applied | ✅ |
+| MEMORY.md | ✅ architecture / workflow / chop / npm / permissions |
+| Test framework | ✅ vitest (19 tests) |
+| --dangerously-skip-permissions | ✅ VS Code setting (allowDangerouslySkipPermissions) |
+| npm build/watch/install forbidden | ✅ CLAUDE.md / AGENTS.md / frontend.md |
+| All AI-read files in English | ✅ |
+
+## Permission setup — `allowDangerouslySkipPermissions`
+
+To prevent Claude Code from asking for permission on every action, enable via VS Code:
+
+1. Open **File → Preferences → Settings** (or `Ctrl+,`)
+2. Search for `claudeCode.allowDangerouslySkipPermissions`
+3. Check the box — this adds "Bypass permissions" to the mode cycle
+
+> **Warning:** This flag auto-approves all tool use: file writes, Bash execution, etc.
+> Use only in trusted projects. Default permission mode is recommended for unfamiliar codebases.
+
+## Why npm build commands are forbidden
+
+`npm run build`, `npm run watch`, and `npm install` are **forbidden during normal development**.
+
+- **Reason:** Vite dev server at `http://localhost:8888` auto-rebuilds the bundle on every file save
+- Running these wastes context and time with no benefit
+- **Exception:** `npm install <package>` — only when explicitly adding a new dependency
+- This rule is enforced in three places: CLAUDE.md, AGENTS.md, and `.claude/rules/frontend.md`
+
+## How the tsc PostToolUse hook works
+
+When a `.ts` file is modified via the Edit or Write tool, the PostToolUse hook fires automatically:
+
+```bash
+# Command executed by the hook
+chop node_modules/.bin/tsc --noEmit
+```
+
+- Hook config: `.claude/settings.json` → `PostToolUse` → matcher: `Edit|Write`
+- If tsc errors are found, the hook returns `exit(1)`, immediately notifying Claude
+- **How to verify:** Edit any `.ts` file with the Edit tool → check hook output for tsc results

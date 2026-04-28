@@ -1,0 +1,32 @@
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+---
+
+# Frontend Rules
+
+- Bundler: Vite / Language: TypeScript (ES6+)
+- 3D: Three.js. Main scenes use `core/Engine.ts`; works scatter is the standalone secondary renderer in `pages/works/render/WorksSceneManager.ts`.
+- **Do NOT run `npm run build`, `npm run watch`, or `npm install`**
+  - Reason: Vite dev server at `http://localhost:8888` auto-bundles on every file save
+  - Only `npm install <package>` is allowed when adding a new dependency
+  - Do not include these commands in verification steps, PR notes, or agent plans
+
+## TypeScript
+
+- All shared types/interfaces/enums live in `resource/ts/types/*.types.ts`; avoid inline exported types and `any`.
+- Shared constants, colors, sizes, URLs, selectors, and timings live in `resource/ts/config/*.config.ts` or page scene config files.
+- Page theatre: `resource/ts/pages/<page>/theatre/`
+- Page scene/config composition: `resource/ts/pages/<page>/scene/`
+- Page-only lifecycle/runtime: `resource/ts/pages/<page>/runtime/`
+- Standalone page renderer exception: `resource/ts/pages/<page>/render/` (currently works scatter)
+- Shared engine/runtime code stays out of page folders.
+
+## Three.js
+
+- `dispose()` required for every geometry, material, texture, render target, and standalone renderer.
+- Main WebGL renderer ownership belongs to `Engine`; standalone secondary renderers must call `renderer.dispose()` and `renderer.forceContextLoss()`.
+- No object creation inside render loops or RAF hot paths.
+- `addEventListener` must have matching `removeEventListener`.
+- No monkey-patching Three.js API.

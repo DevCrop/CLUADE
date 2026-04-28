@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "noEmit": true,
+    "outDir": "./dist",
+    "rootDir": "./resource/ts",
+    "baseUrl": ".",
+    "typeRoots": ["./resource/ts/types", "./node_modules/@types"],
+    "types": ["node"],
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": ["resource/ts/*"]
+    }
+  },
+  "include": ["resource/ts/**/*.ts", "resource/ts/types/**/*.d.ts"],
+  "exclude": ["node_modules", "assets"]
+}

@@ -1,0 +1,511 @@
+import type {
+  AboutSceneState,
+  AboutTheatreValue,
+} from "../../../types/about.types.js";
+import type {
+  MainGravityBallsState,
+  MainJetEngineState,
+  MainRocketFlameState,
+  MainRocketState,
+} from "../../../types/main.types.js";
+import {
+  earth,
+  astronaut,
+  terrian,
+  rocket,
+} from "../../../core/setup.js";
+import {
+  resolveAboutObjectTransformDefaults,
+} from "../../../config/object.config.js";
+import { ABOUT_BACKGROUND_STATE_DEFAULTS } from "../../../config/background.config.js";
+import { ABOUT_LIGHT_STATE_DEFAULTS } from "../../../config/scene-light.config.js";
+import {
+  cloneGravityBallsState,
+  cloneJetEngineState,
+  cloneRocketFlameState,
+  cloneRocketState,
+  DEFAULT_MAIN_SCENE_STATE,
+  mergeGravityBallsState,
+  mergeJetEngineState,
+  mergeRocketFlameState,
+  mergeRocketState,
+} from "../../main/theatre/MainSceneState.js";
+
+export type { AboutSceneState } from "../../../types/about.types.js";
+
+export const ABOUT_DEFAULT_SCENE_STATE: AboutSceneState = {
+  camera: {
+    position: { x: 0, y: 0, z: 18 },
+    target: { x: 0, y: 0, z: 0 },
+    fov: 64,
+  },
+  light: { ...ABOUT_LIGHT_STATE_DEFAULTS },
+  background: {
+    position: { ...ABOUT_BACKGROUND_STATE_DEFAULTS.position },
+    rotation: { ...ABOUT_BACKGROUND_STATE_DEFAULTS.rotation },
+    scale: { ...ABOUT_BACKGROUND_STATE_DEFAULTS.scale },
+    visible: ABOUT_BACKGROUND_STATE_DEFAULTS.visible,
+    exposure: ABOUT_BACKGROUND_STATE_DEFAULTS.exposure,
+    look: { ...ABOUT_BACKGROUND_STATE_DEFAULTS.look },
+  },
+  earth: resolveAboutObjectTransformDefaults(earth, {
+    position: { x: 0, y: 32, z: 388 },
+  }),
+  rocket: {
+    ...resolveAboutObjectTransformDefaults(rocket, {
+      position: { x: 0, y: 36, z: 737 },
+      rotation: { x: 12, y: 0, z: 1.6 },
+    }),
+    flame: mergeRocketFlameState(
+      cloneRocketFlameState(DEFAULT_MAIN_SCENE_STATE.rocket.flame),
+      { visible: true },
+    ),
+  },
+  jetEngine: cloneJetEngineState(DEFAULT_MAIN_SCENE_STATE.jetEngine),
+  gravityBalls: cloneGravityBallsState(DEFAULT_MAIN_SCENE_STATE.gravityBalls),
+  astronaut: resolveAboutObjectTransformDefaults(astronaut),
+  terrian: resolveAboutObjectTransformDefaults(terrian, {
+    position: { x: 0, y: -42, z: -120 },
+  }),
+};
+
+export function cloneAboutSceneState(state: AboutSceneState): AboutSceneState {
+  return {
+    camera: {
+      position: { ...state.camera.position },
+      target: { ...state.camera.target },
+      fov: state.camera.fov,
+    },
+    light: {
+      visible: state.light.visible,
+      rig: {
+        position: { ...state.light.rig.position },
+        rotation: { ...state.light.rig.rotation },
+        scale: { ...state.light.rig.scale },
+        visible: state.light.rig.visible,
+      },
+      travelProgress: state.light.travelProgress,
+      intensity: state.light.intensity,
+      ambientLight: state.light.ambientLight,
+      keyLight: state.light.keyLight,
+      fillLight: state.light.fillLight,
+      rimLight: state.light.rimLight,
+    },
+    background: {
+      position: { ...state.background.position },
+      rotation: { ...state.background.rotation },
+      scale: { ...state.background.scale },
+      visible: state.background.visible,
+      exposure: state.background.exposure,
+      look: { ...state.background.look },
+    },
+    earth: {
+      position: { ...state.earth.position },
+      rotation: { ...state.earth.rotation },
+      scale: { ...state.earth.scale },
+      visible: state.earth.visible,
+    },
+    rocket: cloneRocketState(state.rocket),
+    jetEngine: cloneJetEngineState(state.jetEngine),
+    gravityBalls: cloneGravityBallsState(state.gravityBalls),
+    astronaut: {
+      position: { ...state.astronaut.position },
+      rotation: { ...state.astronaut.rotation },
+      scale: { ...state.astronaut.scale },
+      visible: state.astronaut.visible,
+    },
+    terrian: {
+      position: { ...state.terrian.position },
+      rotation: { ...state.terrian.rotation },
+      scale: { ...state.terrian.scale },
+      visible: state.terrian.visible,
+    },
+  };
+}
+
+export function mergeAboutSceneState(
+  state?: Partial<AboutSceneState> | null,
+): AboutSceneState {
+  const defaults = ABOUT_DEFAULT_SCENE_STATE;
+  return {
+    camera: {
+      position: {
+        x: state?.camera?.position?.x ?? defaults.camera.position.x,
+        y: state?.camera?.position?.y ?? defaults.camera.position.y,
+        z: state?.camera?.position?.z ?? defaults.camera.position.z,
+      },
+      target: {
+        x: state?.camera?.target?.x ?? defaults.camera.target.x,
+        y: state?.camera?.target?.y ?? defaults.camera.target.y,
+        z: state?.camera?.target?.z ?? defaults.camera.target.z,
+      },
+      fov: state?.camera?.fov ?? defaults.camera.fov,
+    },
+    light: {
+      visible: state?.light?.visible ?? defaults.light.visible,
+      rig: {
+        position: {
+          x: state?.light?.rig?.position?.x ?? defaults.light.rig.position.x,
+          y: state?.light?.rig?.position?.y ?? defaults.light.rig.position.y,
+          z: state?.light?.rig?.position?.z ?? defaults.light.rig.position.z,
+        },
+        rotation: {
+          x: state?.light?.rig?.rotation?.x ?? defaults.light.rig.rotation.x,
+          y: state?.light?.rig?.rotation?.y ?? defaults.light.rig.rotation.y,
+          z: state?.light?.rig?.rotation?.z ?? defaults.light.rig.rotation.z,
+        },
+        scale: {
+          x: state?.light?.rig?.scale?.x ?? defaults.light.rig.scale.x,
+          y: state?.light?.rig?.scale?.y ?? defaults.light.rig.scale.y,
+          z: state?.light?.rig?.scale?.z ?? defaults.light.rig.scale.z,
+        },
+        visible: state?.light?.rig?.visible ?? defaults.light.rig.visible,
+      },
+      travelProgress:
+        state?.light?.travelProgress ?? defaults.light.travelProgress,
+      intensity: state?.light?.intensity ?? defaults.light.intensity,
+      ambientLight: state?.light?.ambientLight ?? defaults.light.ambientLight,
+      keyLight: state?.light?.keyLight ?? defaults.light.keyLight,
+      fillLight: state?.light?.fillLight ?? defaults.light.fillLight,
+      rimLight: state?.light?.rimLight ?? defaults.light.rimLight,
+    },
+    background: {
+      position: {
+        x: state?.background?.position?.x ?? defaults.background.position.x,
+        y: state?.background?.position?.y ?? defaults.background.position.y,
+        z: state?.background?.position?.z ?? defaults.background.position.z,
+      },
+      rotation: {
+        x: state?.background?.rotation?.x ?? defaults.background.rotation.x,
+        y: state?.background?.rotation?.y ?? defaults.background.rotation.y,
+        z: state?.background?.rotation?.z ?? defaults.background.rotation.z,
+      },
+      scale: {
+        x: state?.background?.scale?.x ?? defaults.background.scale.x,
+        y: state?.background?.scale?.y ?? defaults.background.scale.y,
+        z: state?.background?.scale?.z ?? defaults.background.scale.z,
+      },
+      visible: state?.background?.visible ?? defaults.background.visible,
+      exposure:
+        state?.background?.exposure ?? defaults.background.exposure,
+      look: {
+        topColor:
+          state?.background?.look?.topColor ?? defaults.background.look.topColor,
+        bottomColor:
+          state?.background?.look?.bottomColor ??
+          defaults.background.look.bottomColor,
+        accentColor:
+          state?.background?.look?.accentColor ??
+          defaults.background.look.accentColor,
+        starIntensity:
+          state?.background?.look?.starIntensity ??
+          defaults.background.look.starIntensity,
+        starDensity:
+          state?.background?.look?.starDensity ??
+          defaults.background.look.starDensity,
+        nebulaStrength:
+          state?.background?.look?.nebulaStrength ??
+          defaults.background.look.nebulaStrength,
+        motionStrength:
+          state?.background?.look?.motionStrength ??
+          defaults.background.look.motionStrength,
+        legacyMix:
+          state?.background?.look?.legacyMix ??
+          defaults.background.look.legacyMix,
+      },
+    },
+    earth: mergeAboutTransformState(state?.earth, defaults.earth),
+    rocket: mergeRocketState(defaults.rocket, state?.rocket),
+    jetEngine: mergeJetEngineState(defaults.jetEngine, state?.jetEngine),
+    gravityBalls: mergeGravityBallsState(defaults.gravityBalls, state?.gravityBalls),
+    astronaut: mergeAboutTransformState(state?.astronaut, defaults.astronaut),
+    terrian: mergeAboutTransformState(state?.terrian, defaults.terrian),
+  };
+}
+
+function blendAboutRocketFlameState(
+  from: MainRocketFlameState,
+  to: MainRocketFlameState,
+  alpha: number,
+): MainRocketFlameState {
+  const mix = clampBlendAlpha(alpha);
+  return {
+    visible: mix < 0.5 ? from.visible : to.visible,
+    offset: blendAboutVec3State(from.offset, to.offset, mix),
+    rotation: blendAboutVec3State(from.rotation, to.rotation, mix),
+    scale: blendAboutVec3State(from.scale, to.scale, mix),
+    opacity: blendAboutNumber(from.opacity, to.opacity, mix),
+    renderOrder: mix < 0.5 ? from.renderOrder : to.renderOrder,
+    speed: blendAboutNumber(from.speed, to.speed, mix),
+    wave: blendAboutNumber(from.wave, to.wave, mix),
+  };
+}
+
+function blendAboutRocketState(
+  from: MainRocketState,
+  to: MainRocketState,
+  alpha: number,
+): MainRocketState {
+  const mix = clampBlendAlpha(alpha);
+  return {
+    position: blendAboutVec3State(from.position, to.position, mix),
+    rotation: blendAboutVec3State(from.rotation, to.rotation, mix),
+    scale: blendAboutVec3State(from.scale, to.scale, mix),
+    visible: mix < 0.5 ? from.visible : to.visible,
+    flame: blendAboutRocketFlameState(from.flame, to.flame, mix),
+  };
+}
+
+function blendAboutGravityBallsState(
+  from: MainGravityBallsState,
+  to: MainGravityBallsState,
+  alpha: number,
+): MainGravityBallsState {
+  const mix = clampBlendAlpha(alpha);
+  return {
+    visible: mix < 0.5 ? from.visible : to.visible,
+    dotsPerInterval: blendAboutNumber(from.dotsPerInterval, to.dotsPerInterval, mix),
+    physicsScale: blendAboutNumber(from.physicsScale, to.physicsScale, mix),
+    maxGravityBoost: blendAboutNumber(from.maxGravityBoost, to.maxGravityBoost, mix),
+    particleScaleMin: blendAboutNumber(from.particleScaleMin, to.particleScaleMin, mix),
+    particleScaleMax: blendAboutNumber(from.particleScaleMax, to.particleScaleMax, mix),
+  };
+}
+
+function blendAboutJetEngineState(
+  from: MainJetEngineState,
+  to: MainJetEngineState,
+  alpha: number,
+): MainJetEngineState {
+  const mix = clampBlendAlpha(alpha);
+  return {
+    position: blendAboutVec3State(from.position, to.position, mix),
+    rotation: blendAboutVec3State(from.rotation, to.rotation, mix),
+    scale: blendAboutVec3State(from.scale, to.scale, mix),
+    visible: mix < 0.5 ? from.visible : to.visible,
+    intensity: blendAboutNumber(from.intensity, to.intensity, mix),
+    length: blendAboutNumber(from.length, to.length, mix),
+    nozzleRadius: blendAboutNumber(from.nozzleRadius, to.nozzleRadius, mix),
+    nozzleGap: blendAboutNumber(from.nozzleGap, to.nozzleGap, mix),
+    noise: blendAboutNumber(from.noise, to.noise, mix),
+    bloom: blendAboutNumber(from.bloom, to.bloom, mix),
+  };
+}
+
+export function blendAboutSceneState(
+  from: AboutSceneState,
+  to: AboutSceneState,
+  alpha: number,
+): AboutSceneState {
+  const mix = clampBlendAlpha(alpha);
+  return {
+    camera: {
+      position: blendAboutVec3State(from.camera.position, to.camera.position, mix),
+      target: blendAboutVec3State(from.camera.target, to.camera.target, mix),
+      fov: blendAboutNumber(from.camera.fov, to.camera.fov, mix),
+    },
+    light: {
+      visible: mix < 0.5 ? from.light.visible : to.light.visible,
+      rig: blendAboutTransformState(from.light.rig, to.light.rig, mix),
+      travelProgress: blendAboutNumber(
+        from.light.travelProgress,
+        to.light.travelProgress,
+        mix,
+      ),
+      intensity: blendAboutNumber(from.light.intensity, to.light.intensity, mix),
+      ambientLight: blendAboutNumber(
+        from.light.ambientLight,
+        to.light.ambientLight,
+        mix,
+      ),
+      keyLight: blendAboutNumber(from.light.keyLight, to.light.keyLight, mix),
+      fillLight: blendAboutNumber(from.light.fillLight, to.light.fillLight, mix),
+      rimLight: blendAboutNumber(from.light.rimLight, to.light.rimLight, mix),
+    },
+    background: {
+      position: blendAboutVec3State(
+        from.background.position,
+        to.background.position,
+        mix,
+      ),
+      rotation: blendAboutVec3State(
+        from.background.rotation,
+        to.background.rotation,
+        mix,
+      ),
+      scale: blendAboutVec3State(from.background.scale, to.background.scale, mix),
+      visible: mix < 0.5 ? from.background.visible : to.background.visible,
+      exposure: blendAboutNumber(
+        from.background.exposure,
+        to.background.exposure,
+        mix,
+      ),
+      look: {
+        topColor: blendAboutNumber(
+          from.background.look.topColor,
+          to.background.look.topColor,
+          mix,
+        ),
+        bottomColor: blendAboutNumber(
+          from.background.look.bottomColor,
+          to.background.look.bottomColor,
+          mix,
+        ),
+        accentColor: blendAboutNumber(
+          from.background.look.accentColor,
+          to.background.look.accentColor,
+          mix,
+        ),
+        starIntensity: blendAboutNumber(
+          from.background.look.starIntensity,
+          to.background.look.starIntensity,
+          mix,
+        ),
+        starDensity: blendAboutNumber(
+          from.background.look.starDensity,
+          to.background.look.starDensity,
+          mix,
+        ),
+        nebulaStrength: blendAboutNumber(
+          from.background.look.nebulaStrength,
+          to.background.look.nebulaStrength,
+          mix,
+        ),
+        motionStrength: blendAboutNumber(
+          from.background.look.motionStrength,
+          to.background.look.motionStrength,
+          mix,
+        ),
+        legacyMix: blendAboutNumber(
+          from.background.look.legacyMix,
+          to.background.look.legacyMix,
+          mix,
+        ),
+      },
+    },
+    earth: blendAboutTransformState(from.earth, to.earth, mix),
+    rocket: blendAboutRocketState(from.rocket, to.rocket, mix),
+    jetEngine: blendAboutJetEngineState(from.jetEngine, to.jetEngine, mix),
+    gravityBalls: blendAboutGravityBallsState(from.gravityBalls, to.gravityBalls, mix),
+    astronaut: blendAboutTransformState(from.astronaut, to.astronaut, mix),
+    terrian: blendAboutTransformState(from.terrian, to.terrian, mix),
+  };
+}
+
+export function pickAboutTheatreValue(
+  state: AboutSceneState,
+): AboutTheatreValue {
+  return {
+    camera: {
+      position: { ...state.camera.position },
+      target: { ...state.camera.target },
+      fov: state.camera.fov,
+    },
+    light: {
+      visible: state.light.visible,
+      rig: {
+        position: { ...state.light.rig.position },
+        rotation: { ...state.light.rig.rotation },
+        scale: { ...state.light.rig.scale },
+        visible: state.light.rig.visible,
+      },
+      travelProgress: state.light.travelProgress,
+      intensity: state.light.intensity,
+      ambientLight: state.light.ambientLight,
+      keyLight: state.light.keyLight,
+      fillLight: state.light.fillLight,
+      rimLight: state.light.rimLight,
+    },
+    earth: mergeAboutTransformState(state.earth, state.earth),
+    rocket: cloneRocketState(state.rocket),
+    jetEngine: cloneJetEngineState(state.jetEngine),
+    gravityBalls: cloneGravityBallsState(state.gravityBalls),
+    astronaut: mergeAboutTransformState(state.astronaut, state.astronaut),
+    terrian: mergeAboutTransformState(state.terrian, state.terrian),
+  };
+}
+
+export function mergeAboutTheatreValue(
+  value?: Partial<AboutTheatreValue> | null,
+): AboutSceneState {
+  const defaults = ABOUT_DEFAULT_SCENE_STATE;
+  return mergeAboutSceneState({
+    camera: value?.camera,
+    light: value?.light
+      ? {
+          ...defaults.light,
+          ...value.light,
+          rig: value.light.rig
+            ? mergeAboutTransformState(value.light.rig, defaults.light.rig)
+            : defaults.light.rig,
+        }
+      : undefined,
+    earth: value?.earth,
+    rocket: value?.rocket,
+    jetEngine: value?.jetEngine,
+    gravityBalls: value?.gravityBalls,
+    astronaut: value?.astronaut,
+    terrian: value?.terrian,
+  });
+}
+
+function mergeAboutTransformState(
+  state: Partial<AboutSceneState["earth"]> | null | undefined,
+  defaults: AboutSceneState["earth"],
+): AboutSceneState["earth"] {
+  return {
+    position: {
+      x: state?.position?.x ?? defaults.position.x,
+      y: state?.position?.y ?? defaults.position.y,
+      z: state?.position?.z ?? defaults.position.z,
+    },
+    rotation: {
+      x: state?.rotation?.x ?? defaults.rotation.x,
+      y: state?.rotation?.y ?? defaults.rotation.y,
+      z: state?.rotation?.z ?? defaults.rotation.z,
+    },
+    scale: {
+      x: state?.scale?.x ?? defaults.scale.x,
+      y: state?.scale?.y ?? defaults.scale.y,
+      z: state?.scale?.z ?? defaults.scale.z,
+    },
+    visible: state?.visible ?? defaults.visible,
+  };
+}
+
+function blendAboutTransformState(
+  from: AboutSceneState["earth"],
+  to: AboutSceneState["earth"],
+  alpha: number,
+): AboutSceneState["earth"] {
+  return {
+    position: blendAboutVec3State(from.position, to.position, alpha),
+    rotation: blendAboutVec3State(from.rotation, to.rotation, alpha),
+    scale: blendAboutVec3State(from.scale, to.scale, alpha),
+    visible: alpha < 0.5 ? from.visible : to.visible,
+  };
+}
+
+function blendAboutVec3State(
+  from: AboutSceneState["camera"]["position"],
+  to: AboutSceneState["camera"]["position"],
+  alpha: number,
+): AboutSceneState["camera"]["position"] {
+  return {
+    x: blendAboutNumber(from.x, to.x, alpha),
+    y: blendAboutNumber(from.y, to.y, alpha),
+    z: blendAboutNumber(from.z, to.z, alpha),
+  };
+}
+
+function blendAboutNumber(from: number, to: number, alpha: number): number {
+  const mix = clampBlendAlpha(alpha);
+  return from + (to - from) * mix;
+}
+
+function clampBlendAlpha(alpha: number): number {
+  if (!Number.isFinite(alpha)) return 0;
+  if (alpha <= 0) return 0;
+  if (alpha >= 1) return 1;
+  return alpha;
+}

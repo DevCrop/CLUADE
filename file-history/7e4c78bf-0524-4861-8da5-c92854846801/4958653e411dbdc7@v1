@@ -1,0 +1,113 @@
+import type { GsapGlobal } from "../types/gsap.types.js";
+import { Helpers } from "../utils/Helpers.js";
+import type {
+  SceneTransitionPlayOptions,
+  SceneTransitionStep,
+} from "../types/runtime.types.js";
+import type {
+  TransitionEaseKey,
+  TransitionVeilRuntimePort,
+} from "../types/object-runtime.types.js";
+
+const DEFAULT_INACTIVE_PROGRESS = 1;
+
+export class SceneTransitionRuntime {
+  syncVeil(veil: TransitionVeilRuntimePort | null, progress: number): void {
+    if (!veil) return;
+    veil.setRuntimeState({
+      active: true,
+      progress: Helpers.clamp01(progress),
+    });
+  }
+
+  resetVeil(
+    veil: TransitionVeilRuntimePort | null,
+    inactiveProgress = DEFAULT_INACTIVE_PROGRESS,
+  ): void {
+    if (!veil) return;
+    veil.setRuntimeState({
+      active: false,
+      progress: Helpers.clamp01(inactiveProgress),
+    });
+  }
+
+  async play(
+    options: SceneTransitionPlayOptions,
+    gsap: GsapGlobal | null,
+  ): Promise<void> {
+    const { veil, steps, onStepComplete, initialState, finalState } = options;
+    if (!veil || steps.length === 0) {
+      if (onStepComplete) await onStepComplete(0);
+      return;
+    }
+
+    veil.setRuntimeState({
+      active: true,
+      progress: Helpers.clamp01(initialState?.progress ?? steps[0]?.from ?? 0),
+      ...initialState,
+    });
+
+    if (!gsap) {
+      for (let index = 0; index < steps.length; index += 1) {
+        veil.setRuntimeState({
+          active: true,
+          progress: Helpers.clamp01(steps[index].to),
+        });
+        if (onStepComplete) await onStepComplete(index);
+      }
+      veil.setRuntimeState({
+        active: false,
+        progress: Helpers.clamp01(
+          finalState?.progress ?? steps[steps.length - 1]?.to ?? 1,
+        ),
+        ...finalState,
+      });
+      return;
+    }
+
+    for (let index = 0; index < steps.length; index += 1) {
+      await this._playStep(gsap, veil, steps[index]);
+      if (onStepComplete) await onStepComplete(index);
+    }
+
+    veil.setRuntimeState({
+      active: false,
+      progress: Helpers.clamp01(
+        finalState?.progress ?? steps[steps.length - 1]?.to ?? 1,
+      ),
+      ...finalState,
+    });
+  }
+
+  private async _playStep(
+    gsap: GsapGlobal,
+    veil: TransitionVeilRuntimePort,
+    step: SceneTransitionStep,
+  ): Promise<void> {
+    const state = { progress: Helpers.clamp01(step.from) };
+    veil.setRuntimeState({
+      active: true,
+      progress: state.progress,
+    });
+
+    await new Promise<void>((resolve) => {
+      gsap.to(state, {
+        progress: Helpers.clamp01(step.to),
+        duration: Math.max(0, step.duration),
+        ease: this._resolveEase(step.ease),
+        onUpdate: () => {
+          veil.setRuntimeState({
+            active: true,
+            progress: state.progress,
+          });
+        },
+        onComplete: () => resolve(),
+      });
+    });
+  }
+
+  private _resolveEase(ease: TransitionEaseKey | undefined): string {
+    if (ease === "easeInOutCubic") return "power2.inOut";
+    return "none";
+  }
+}

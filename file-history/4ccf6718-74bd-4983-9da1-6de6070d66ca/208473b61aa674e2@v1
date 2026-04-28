@@ -1,0 +1,818 @@
+import aboutState from "../../../../json/about.json";
+import type { Engine } from "../../../core/Engine.js";
+import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import type {
+  TheatreSelectionItemPort,
+  TheatreSequencePort,
+  TheatreSheetPort,
+} from "../../../types/theatre.types.js";
+import { pageAbout } from "../../../core/setup.js";
+import { Logger } from "../../../utils/Logger.js";
+import { TheatrePlaybackService } from "../../../lib/theatre/TheatrePlaybackService.js";
+import { TheatreProjectSession } from "../../../lib/theatre/TheatreProjectSession.js";
+import { TheatreSequenceSession } from "../../../lib/theatre/TheatreSequenceSession.js";
+import { TheatreSheetSession } from "../../../lib/theatre/TheatreSheetSession.js";
+import { TheatreStateStorageService } from "../../../lib/theatre/TheatreStateStorageService.js";
+import { TheatreStudioService } from "../../../lib/theatre/TheatreStudioService.js";
+import { AboutSceneRig } from "./AboutSceneRig.js";
+import {
+  ABOUT_DEFAULT_SCENE_STATE,
+  mergeAboutSceneState,
+  mergeAboutTheatreValue,
+  pickAboutTheatreValue,
+} from "./AboutSceneState.js";
+import type {
+  AboutTheatreScrubCameraPort,
+  AboutCameraTheatreValue,
+  AboutTheatreBridgeHooks,
+  AboutTheatreObject,
+  AboutTheatreProps,
+  AboutTheatreSheetId,
+  AboutTheatreScrub,
+  AboutTheatreValue,
+} from "../../../types/about.types.js";
+import {
+  ABOUT_THEATRE_OBJECT_ID,
+  ABOUT_THEATRE_PROJECT_ID,
+  ABOUT_THEATRE_SHEET_IDS,
+  ABOUT_THEATRE_STORAGE_OPTIONS,
+  resolveAboutAuthorMode,
+} from "./AboutTheatreConfig.js";
+
+const CLASS = "AboutTheatreBridge";
+const ABOUT_PAGE_TYPE = pageAbout;
+const PRIMARY_SHEET_ID: AboutTheatreSheetId = "heroIntro";
+const FRAME_MS = 1000 / 30;
+const STORAGE_PERSIST_DELAY_MS = 120;
+const STATUS_ID = "about-theatre-status";
+const EXPORT_BUTTON_ID = "about-theatre-export";
+const SHEET_SELECT_ID = "about-theatre-sheet-select";
+const MATCH_PREV_BUTTON_ID = "about-theatre-match-prev";
+const LEGACY_ABOUT_SHEET_ID_MAP = {
+  whoIntro: "who",
+  servicesIntro: "missionVision",
+  servicesDesc: "services",
+  clientIntro: "client",
+  clientEnd: "contact",
+} as const satisfies Readonly<Record<string, AboutTheatreSheetId>>;
+type LegacyAboutSheetId = keyof typeof LEGACY_ABOUT_SHEET_ID_MAP;
+
+function readAboutTheatreFileState(): Record<string, unknown> | null {
+  const rawState = aboutState as Record<string, unknown>;
+  if (
+    rawState == null ||
+    typeof rawState !== "object" ||
+    Array.isArray(rawState)
+  ) {
+    return null;
+  }
+  return rawState;
+}
+
+function seedSavedAboutStateFromFileState(
+  fileState: Record<string, unknown> | null,
+): void {
+  TheatreStateStorageService.seedFromFileState(
+    fileState,
+    ABOUT_THEATRE_STORAGE_OPTIONS,
+  );
+}
+
+function clearAboutStudioPersistenceOnce(
+  fileState: Record<string, unknown> | null,
+): void {
+  TheatreStateStorageService.clearStudioPersistenceOnce(fileState, {
+    ...ABOUT_THEATRE_STORAGE_OPTIONS,
+    pageType: ABOUT_PAGE_TYPE,
+  });
+}
+
+function readAboutRecord(value: unknown): Record<string, unknown> | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function mergeAboutTheatreStateSources(
+  fileState: Record<string, unknown> | null,
+  savedState: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (!fileState) return savedState;
+  if (!savedState) return fileState;
+  const fileSheetsById = readAboutRecord(fileState.sheetsById) ?? {};
+  const savedSheetsById = readAboutRecord(savedState.sheetsById) ?? {};
+  return {
+    ...fileState,
+    ...savedState,
+    sheetsById: {
+      ...fileSheetsById,
+      ...savedSheetsById,
+    },
+  };
+}
+
+export class AboutTheatreBridge {
+  private _authorSheetId: AboutTheatreSheetId = PRIMARY_SHEET_ID;
+  private _playing = false;
+  private _sampling = false;
+  private _disposed = false;
+  private _lastSampleAt = 0;
+  private _recordScrub: AboutTheatreScrub | null = null;
+  private _persistTimerId: number | null = null;
+  private _unsubscribeValues: (() => void) | null = null;
+  private _unsubscribePlaying: (() => void) | null = null;
+  private _unsubscribeSelection: (() => void) | null = null;
+  private _syncingStudioSelection = false;
+  private readonly _sheetById = new Map<
+    AboutTheatreSheetId,
+    TheatreSheetPort<AboutTheatreValue, AboutTheatreProps>
+  >();
+  private readonly _objectBySheetId = new Map<
+    AboutTheatreSheetId,
+    AboutTheatreObject
+  >();
+  private readonly _sequenceBySheetId = new Map<
+    AboutTheatreSheetId,
+    TheatreSequencePort
+  >();
+  private readonly _rig = new AboutSceneRig();
+  private readonly _hooks: AboutTheatreBridgeHooks;
+  private readonly _engine: Engine;
+  private readonly _controls: OrbitControls;
+  private readonly _onControlsStart: () => void;
+  private readonly _onControlsEnd: () => void;
+  private readonly _onControlsChange: () => void;
+  private readonly _onExportClick: () => void;
+  private readonly _onSheetChange: (event: Event) => void;
+  private readonly _onMatchPrevClick: () => void;
+
+  constructor(
+    engine: Engine,
+    controls: OrbitControls,
+    hooks: AboutTheatreBridgeHooks,
+  ) {
+    this._engine = engine;
+    this._controls = controls;
+    this._hooks = hooks;
+    this._onControlsStart = () => this._recordStart();
+    this._onControlsEnd = () => this._recordEnd();
+    this._onControlsChange = () => this._recordFrame();
+    this._onExportClick = () => {
+      void this._exportSaveFile();
+    };
+    this._onSheetChange = (event) => {
+      const select = event.currentTarget;
+      if (!(select instanceof HTMLSelectElement)) return;
+      this._setAuthorSheetId(select.value);
+    };
+    this._onMatchPrevClick = () => this._matchFromPrevious();
+  }
+
+  static async create(
+    engine: Engine,
+    controls: OrbitControls,
+    hooks: AboutTheatreBridgeHooks,
+  ): Promise<AboutTheatreBridge | null> {
+    const isAboutPage = window.location.pathname.includes(ABOUT_PAGE_TYPE);
+    if (!isAboutPage) return null;
+    if (!resolveAboutAuthorMode()) {
+      return null;
+    }
+    try {
+      const bridge = new AboutTheatreBridge(engine, controls, hooks);
+      await bridge._init();
+      return bridge;
+    } catch (error) {
+      Logger.warn(
+        CLASS,
+        "create",
+        "Failed to initialize about theatre bridge.",
+        error,
+      );
+      return null;
+    }
+  }
+
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._controls.removeEventListener("start", this._onControlsStart);
+    this._controls.removeEventListener("end", this._onControlsEnd);
+    this._controls.removeEventListener("change", this._onControlsChange);
+    this._unsubscribeValues?.();
+    this._unsubscribeValues = null;
+    this._unsubscribePlaying?.();
+    this._unsubscribePlaying = null;
+    this._unsubscribeSelection?.();
+    this._unsubscribeSelection = null;
+    if (this._persistTimerId !== null) {
+      window.clearTimeout(this._persistTimerId);
+      this._persistTimerId = null;
+    }
+    this._recordScrub?.discard();
+    this._recordScrub = null;
+    this._sheetById.clear();
+    this._objectBySheetId.clear();
+    this._sequenceBySheetId.clear();
+    TheatreStudioService.removeAuthorControl(STATUS_ID, "status");
+    TheatreStudioService.removeAuthorControl(
+      EXPORT_BUTTON_ID,
+      "button",
+      this._onExportClick as EventListener,
+    );
+    TheatreStudioService.removeAuthorControl(
+      SHEET_SELECT_ID,
+      "select",
+      this._onSheetChange as EventListener,
+    );
+    TheatreStudioService.removeAuthorControl(
+      MATCH_PREV_BUTTON_ID,
+      "button",
+      this._onMatchPrevClick as EventListener,
+    );
+  }
+
+  private async _init(): Promise<void> {
+    await TheatreStudioService.ensureReady(ABOUT_PAGE_TYPE);
+    const fileStateSource = readAboutTheatreFileState();
+    const fileState = fileStateSource
+      ? this._normalizeSavedState(fileStateSource)
+      : null;
+    clearAboutStudioPersistenceOnce(fileState);
+    TheatreStudioService.restoreUi();
+    seedSavedAboutStateFromFileState(fileState);
+    const savedState = this._readSavedState();
+    const initialState = mergeAboutTheatreStateSources(fileState, savedState);
+    const project = TheatreProjectSession.open<
+      AboutTheatreValue,
+      AboutTheatreProps
+    >(
+      ABOUT_THEATRE_PROJECT_ID,
+      initialState ? { state: initialState } : undefined,
+    );
+    await project.ready;
+    ABOUT_THEATRE_SHEET_IDS.forEach((sheetId) => {
+      const sheet = TheatreSheetSession.open(project, sheetId);
+      const object = sheet.object(
+        ABOUT_THEATRE_OBJECT_ID,
+        this._readSceneValues(),
+        {
+          reconfigure: true,
+        },
+      );
+      const sequence = TheatreSequenceSession.get(sheet);
+      this._sheetById.set(sheetId, sheet);
+      this._objectBySheetId.set(sheetId, object);
+      this._sequenceBySheetId.set(sheetId, sequence);
+    });
+    if (!this._sheetById.has(PRIMARY_SHEET_ID)) {
+      throw new Error("Primary about theatre sheet was not created.");
+    }
+    this._attachSheet(PRIMARY_SHEET_ID);
+    this._unsubscribeSelection = TheatreStudioService.bindSelectionChange(
+      (selection) => {
+        this._syncAuthorSheetFromStudioSelection(selection);
+      },
+    );
+
+    this._bindControls();
+    this._renderSheetSelector();
+    this._renderMatchPrevButton();
+    if (this._currentObject) {
+      this._applyState(this._currentObject.value);
+    }
+    this._hooks.onModeChange("author");
+    this._hooks.onPlaybackChange(this._playing);
+    this._renderExportButton();
+    this._renderStatus(
+      savedState
+        ? `SAVEFILE MERGED (${ABOUT_THEATRE_SHEET_IDS.length} SHEETS)`
+        : fileState
+        ? `FILE SAVEFILE LOADED (${ABOUT_THEATRE_SHEET_IDS.length} SHEETS)`
+        : `THEATRE READY (${ABOUT_THEATRE_SHEET_IDS.length} SHEETS)`,
+    );
+  }
+
+  private _attachSheet(sheetId: AboutTheatreSheetId): void {
+    const sheet = this._sheetById.get(sheetId);
+    const object = this._objectBySheetId.get(sheetId);
+    const sequence = this._sequenceBySheetId.get(sheetId);
+    if (!sheet || !object || !sequence) return;
+    this._unsubscribeValues?.();
+    this._unsubscribeValues = null;
+    this._unsubscribePlaying?.();
+    this._unsubscribePlaying = null;
+    this._authorSheetId = sheetId;
+    this._unsubscribeValues = TheatrePlaybackService.bindValues(
+      object,
+      (values) => {
+        if (this._disposed) return;
+        if (sheetId !== this._authorSheetId) return;
+        this._applyState(values);
+        this._schedulePersistSaveFileSnapshot("AUTOSAVE FAILED");
+      },
+    );
+    this._unsubscribePlaying = TheatrePlaybackService.bindPlaying(
+      sequence,
+      (playing) => {
+        if (sheetId !== this._authorSheetId) return;
+        this._playing = playing;
+        this._hooks.onPlaybackChange(playing);
+      },
+    );
+    this._syncStudioSelection(sheet, object);
+    this._applyState(object.value);
+  }
+
+  private get _currentObject(): AboutTheatreObject | null {
+    return this._objectBySheetId.get(this._authorSheetId) ?? null;
+  }
+
+  private _syncStudioSelection(
+    sheet: TheatreSheetPort<AboutTheatreValue, AboutTheatreProps>,
+    object: AboutTheatreObject,
+  ): void {
+    this._syncingStudioSelection = true;
+    try {
+      TheatreStudioService.setSelection([sheet, object]);
+    } finally {
+      this._syncingStudioSelection = false;
+    }
+  }
+
+  private _syncAuthorSheetFromStudioSelection(
+    selection: TheatreSelectionItemPort[],
+  ): void {
+    if (this._syncingStudioSelection) return;
+    const nextSheetId = this._findSelectedSheetId(selection);
+    if (!nextSheetId) return;
+    if (nextSheetId === this._authorSheetId) return;
+    this._attachSheet(nextSheetId);
+    this._syncSheetSelector();
+    this._renderStatus(`ACTIVE SHEET ${nextSheetId.toUpperCase()}`);
+  }
+
+  private _findSelectedSheetId(
+    selection: TheatreSelectionItemPort[],
+  ): AboutTheatreSheetId | null {
+    for (const [sheetId, sheet] of this._sheetById.entries()) {
+      if (selection.includes(sheet)) return sheetId;
+    }
+    for (const [sheetId, object] of this._objectBySheetId.entries()) {
+      if (selection.includes(object)) return sheetId;
+    }
+    return null;
+  }
+
+  private _bindControls(): void {
+    this._controls.addEventListener("start", this._onControlsStart);
+    this._controls.addEventListener("end", this._onControlsEnd);
+    this._controls.addEventListener("change", this._onControlsChange);
+  }
+
+  private _recordStart(): void {
+    if (this._playing) return;
+    this._sampling = true;
+    this._recordScrub = TheatreStudioService.createScrub<
+      AboutTheatreValue,
+      AboutTheatreProps
+    >();
+    this._recordFrame(true);
+  }
+
+  private _recordEnd(): void {
+    if (this._playing) return;
+    this._recordFrame(true);
+    this._sampling = false;
+    this._recordScrub?.commit();
+    this._recordScrub = null;
+    this._schedulePersistSaveFileSnapshot("AUTOSAVE FAILED");
+  }
+
+  private _recordFrame(force = false): void {
+    if (this._playing) return;
+    if (!force && !this._sampling) return;
+    const object = this._currentObject;
+    const scrub = this._recordScrub;
+    if (!object || !scrub) return;
+
+    const now = performance.now();
+    if (!force && now - this._lastSampleAt < FRAME_MS) return;
+    this._lastSampleAt = now;
+
+    const values = this._readCameraValues();
+    const cameraProps = object.props.camera;
+    const cameraScrub = scrub as unknown as AboutTheatreScrubCameraPort;
+    cameraScrub.capture(({ set }) => {
+      set(cameraProps, values.camera);
+    });
+  }
+
+  private _readSceneValues(): AboutTheatreValue {
+    const state = this._rig.read(this._engine);
+    return pickAboutTheatreValue(state);
+  }
+
+  private _readCameraValues(): AboutCameraTheatreValue {
+    const state = this._rig.read(this._engine);
+    return {
+      camera: state.camera,
+    };
+  }
+
+  private _setAuthorSheetId(sheetId: string): void {
+    if (!this._isTheatreSheetId(sheetId)) return;
+    if (this._authorSheetId === sheetId) return;
+    this._attachSheet(sheetId);
+    this._syncSheetSelector();
+    this._renderStatus(`ACTIVE SHEET ${sheetId.toUpperCase()}`);
+  }
+
+  private _matchFromPrevious(): void {
+    const currentIndex = ABOUT_THEATRE_SHEET_IDS.indexOf(this._authorSheetId);
+    if (currentIndex <= 0) {
+      this._renderStatus("NO PREVIOUS SHEET");
+      return;
+    }
+    const previousSheetId = ABOUT_THEATRE_SHEET_IDS[currentIndex - 1];
+    const previousObject = this._objectBySheetId.get(previousSheetId) ?? null;
+    const previousSequence = this._sequenceBySheetId.get(previousSheetId) ?? null;
+    const currentObject = this._currentObject;
+    const currentSequence = this._sequenceBySheetId.get(this._authorSheetId) ?? null;
+    if (!previousObject || !previousSequence || !currentObject || !currentSequence) {
+      this._renderStatus("MATCH FAILED");
+      return;
+    }
+
+    const previousEndValues = this._readSheetEndValues(
+      previousSheetId,
+      previousObject,
+      previousSequence,
+    );
+    if (!previousEndValues) {
+      this._renderStatus("MATCH FAILED");
+      return;
+    }
+
+    this._writeMatchStartKeyframe(
+      currentObject,
+      currentSequence,
+      previousEndValues,
+    );
+    this._applyState(previousEndValues);
+    this._schedulePersistSaveFileSnapshot("MATCH SAVE FAILED");
+    this._renderStatus(`MATCHED ${previousSheetId.toUpperCase()}`);
+  }
+
+  private _applyState(values: AboutTheatreValue): void {
+    const state = mergeAboutTheatreValue(values);
+    this._rig.apply(this._engine, state);
+    this._syncControlsToCameraState();
+  }
+
+  private _readSheetEndValues(
+    sheetId: AboutTheatreSheetId,
+    object: AboutTheatreObject,
+    sequence: TheatreSequencePort,
+  ): AboutTheatreValue | null {
+    const previousPosition = sequence.position;
+    try {
+      sequence.pause();
+      sequence.position = this._resolveSheetEndPosition(sheetId, sequence);
+      return pickAboutTheatreValue(mergeAboutTheatreValue(object.value));
+    } catch (error) {
+      Logger.warn(CLASS, "_readSheetEndValues", "Failed to read previous sheet end state.", error);
+      return null;
+    } finally {
+      sequence.position = previousPosition;
+    }
+  }
+
+  private _writeMatchStartKeyframe(
+    currentObject: AboutTheatreObject,
+    currentSequence: TheatreSequencePort,
+    previousValues: AboutTheatreValue,
+  ): void {
+    const previousPosition = currentSequence.position;
+    const scrub = TheatreStudioService.createScrub<
+      AboutTheatreValue,
+      AboutTheatreProps
+    >();
+    currentSequence.pause();
+    currentSequence.position = 0;
+    scrub.capture(({ set }) => {
+      set(currentObject.props, previousValues);
+    });
+    scrub.commit();
+    currentSequence.position = previousPosition;
+  }
+
+  private _resolveSheetEndPosition(
+    sheetId: AboutTheatreSheetId,
+    sequence: TheatreSequencePort,
+  ): number {
+    const saveFile = TheatreStudioService.createContentOfSaveFile(
+      ABOUT_THEATRE_PROJECT_ID,
+    );
+    const sheetsById = this._readRecord(saveFile?.sheetsById);
+    const sheetState = this._readRecord(sheetsById?.[sheetId]);
+    const sequenceState = this._readRecord(sheetState?.sequence);
+    const tracksByObject = this._readRecord(sequenceState?.tracksByObject);
+    const objectTracks = this._readRecord(tracksByObject?.[ABOUT_THEATRE_OBJECT_ID]);
+    const trackData = this._readRecord(objectTracks?.trackData);
+    if (!trackData) {
+      return sequence.length > 0 ? sequence.length : 0;
+    }
+
+    let maxPosition = Number.NEGATIVE_INFINITY;
+    Object.values(trackData).forEach((trackState) => {
+      const trackRecord = this._readRecord(trackState);
+      const keyframes = trackRecord?.keyframes;
+      if (!Array.isArray(keyframes)) return;
+      keyframes.forEach((keyframe) => {
+        const keyframeRecord = this._readRecord(keyframe);
+        const position = keyframeRecord?.position;
+        if (typeof position !== "number" || !Number.isFinite(position)) return;
+        maxPosition = Math.max(maxPosition, position);
+      });
+    });
+
+    if (!Number.isFinite(maxPosition)) {
+      return sequence.length > 0 ? sequence.length : 0;
+    }
+    return maxPosition;
+  }
+
+  private _syncControlsToCameraState(): void {
+    const target = this._engine.getCameraTarget().position;
+    this._controls.target.copy(target);
+    this._controls.update();
+  }
+
+  private _readSavedState(): Record<string, unknown> | null {
+    return TheatreStateStorageService.read({
+      ...ABOUT_THEATRE_STORAGE_OPTIONS,
+      normalize: (state) => this._normalizeSavedState(state),
+      validate: (state) => this._isReadableTheatreState(state),
+    });
+  }
+
+  private async _exportSaveFile(): Promise<void> {
+    const raw = this._createSaveFileJson();
+    if (raw == null) return;
+    const persistedRaw =
+      TheatreStateStorageService.readRaw(ABOUT_THEATRE_STORAGE_OPTIONS) ?? raw;
+    if (!this._downloadSaveFile(persistedRaw, "about.json")) {
+      this._renderStatus("EXPORT BLOCKED");
+      return;
+    }
+    this._renderStatus("ABOUT.JSON DOWNLOADED");
+  }
+
+  private _createSaveFileJson(failureStatus = "EXPORT FAILED"): string | null {
+    const saveFile = TheatreStudioService.createContentOfSaveFile(
+      ABOUT_THEATRE_PROJECT_ID,
+    );
+    if (!saveFile) {
+      this._renderStatus(failureStatus);
+      return null;
+    }
+    const minimizedSaveFile = this._minimizeSaveFile(saveFile);
+    const raw = JSON.stringify(minimizedSaveFile, null, 2);
+    TheatreStateStorageService.writeRaw(raw, ABOUT_THEATRE_STORAGE_OPTIONS);
+    return raw;
+  }
+
+  private _persistSaveFileSnapshot(failureStatus: string): void {
+    this._createSaveFileJson(failureStatus);
+  }
+
+  private _schedulePersistSaveFileSnapshot(failureStatus: string): void {
+    if (typeof window === "undefined") {
+      this._persistSaveFileSnapshot(failureStatus);
+      return;
+    }
+    if (this._persistTimerId !== null) {
+      window.clearTimeout(this._persistTimerId);
+    }
+    this._persistTimerId = window.setTimeout(() => {
+      this._persistTimerId = null;
+      this._persistSaveFileSnapshot(failureStatus);
+    }, STORAGE_PERSIST_DELAY_MS);
+  }
+
+  private _renderExportButton(): void {
+    TheatreStudioService.renderAuthorButton(
+      {
+        id: EXPORT_BUTTON_ID,
+        text: "EXPORT STATE JSON",
+        bottom: "16px",
+      },
+      this._onExportClick,
+    );
+  }
+
+  private _renderSheetSelector(): void {
+    TheatreStudioService.renderAuthorSelect(
+      {
+        id: SHEET_SELECT_ID,
+        bottom: "92px",
+        value: this._authorSheetId,
+        options: ABOUT_THEATRE_SHEET_IDS.map((sheetId) => ({
+          value: sheetId,
+          text: sheetId,
+        })),
+      },
+      this._onSheetChange,
+    );
+  }
+
+  private _renderMatchPrevButton(): void {
+    TheatreStudioService.renderAuthorButton(
+      {
+        id: MATCH_PREV_BUTTON_ID,
+        text: "MATCH FROM PREV",
+        bottom: "130px",
+      },
+      this._onMatchPrevClick,
+    );
+  }
+
+  private _syncSheetSelector(): void {
+    if (typeof document === "undefined") return;
+    const select = document.getElementById(
+      SHEET_SELECT_ID,
+    ) as HTMLSelectElement | null;
+    if (!select) return;
+    select.value = this._authorSheetId;
+  }
+
+  private _isTheatreSheetId(value: string): value is AboutTheatreSheetId {
+    return (ABOUT_THEATRE_SHEET_IDS as readonly string[]).includes(value);
+  }
+
+  private _renderStatus(text: string): void {
+    TheatreStudioService.renderAuthorStatus(STATUS_ID, text);
+  }
+
+  private _normalizeSavedState(
+    savedState: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const migratedState = this._migrateLegacySheetState(savedState);
+    const sheetsById = this._readRecord(migratedState.sheetsById);
+    const cameraSheet = this._readRecord(sheetsById?.[PRIMARY_SHEET_ID]);
+    const sequence = this._readRecord(cameraSheet?.sequence);
+    const staticOverrides = this._readRecord(sequence?.staticOverrides);
+    const objectsByKey = this._readRecord(staticOverrides?.byObject);
+    const cameraObject = this._readRecord(
+      objectsByKey?.[ABOUT_THEATRE_OBJECT_ID],
+    );
+
+    if (cameraObject) {
+      const mergedValues = mergeAboutSceneState(
+        cameraObject as Partial<typeof ABOUT_DEFAULT_SCENE_STATE>,
+      );
+      Object.assign(cameraObject, pickAboutTheatreValue(mergedValues));
+    }
+
+    const projectDefinition = this._readRecord(
+      savedState.definitionVersion != null ? savedState : null,
+    );
+    if (projectDefinition && projectDefinition.addressesBySheetId) {
+      return { ...migratedState, projectId: ABOUT_THEATRE_PROJECT_ID };
+    }
+
+    return migratedState;
+  }
+
+  private _migrateLegacySheetState(
+    savedState: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const sheetsById = this._readRecord(savedState.sheetsById);
+    if (!sheetsById) return savedState;
+
+    const nextSheetsById: Record<string, unknown> = {};
+    let didChange = false;
+
+    Object.entries(sheetsById).forEach(([sheetId, sheetState]) => {
+      const mappedSheetId =
+        LEGACY_ABOUT_SHEET_ID_MAP[sheetId as LegacyAboutSheetId] ?? sheetId;
+      if (mappedSheetId !== sheetId) {
+        didChange = true;
+      }
+      if ((ABOUT_THEATRE_SHEET_IDS as readonly string[]).includes(mappedSheetId)) {
+        nextSheetsById[mappedSheetId] = sheetState;
+        return;
+      }
+      didChange = true;
+    });
+
+    if (!didChange) return savedState;
+
+    return {
+      ...savedState,
+      sheetsById: nextSheetsById,
+    };
+  }
+
+  private _readRecord(value: unknown): Record<string, unknown> | null {
+    if (value == null || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+    return value as Record<string, unknown>;
+  }
+
+  private _minimizeSaveFile(
+    saveFile: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const sheetsById = this._readRecord(saveFile.sheetsById);
+    if (!sheetsById) return saveFile;
+    const nextSheetsById: Record<string, unknown> = {};
+    Object.entries(sheetsById).forEach(([sheetId, sheetState]) => {
+      if (!this._isTheatreSheetId(sheetId)) return;
+      const normalizedSheetState = this._normalizeSheetState(
+        sheetState,
+        sheetId,
+      );
+      if (!normalizedSheetState) return;
+      nextSheetsById[sheetId] = normalizedSheetState;
+    });
+    return {
+      ...saveFile,
+      sheetsById: nextSheetsById,
+    };
+  }
+
+  private _normalizeSheetState(
+    sheetState: unknown,
+    sheetId: AboutTheatreSheetId,
+  ): Record<string, unknown> | null {
+    const sheetRecord = this._readRecord(sheetState);
+    if (!sheetRecord) return null;
+    if (this._sheetHasMeaningfulKeyframes(sheetRecord, sheetId)) {
+      return sheetRecord;
+    }
+    return null;
+  }
+
+  private _sheetHasMeaningfulKeyframes(
+    sheetState: Record<string, unknown>,
+    sheetId: AboutTheatreSheetId,
+  ): boolean {
+    const sequenceState = this._readRecord(sheetState.sequence);
+    if (!sequenceState) return false;
+    const tracksByObject = this._readRecord(sequenceState.tracksByObject);
+    if (!tracksByObject) return false;
+    const objectTracks = this._readRecord(tracksByObject[ABOUT_THEATRE_OBJECT_ID]);
+    if (!objectTracks) return false;
+    const trackData = this._readRecord(objectTracks.trackData);
+    if (!trackData) return false;
+    const sequence = this._sequenceBySheetId.get(sheetId);
+    if (!sequence) return false;
+    return Object.values(trackData).some((trackState) =>
+      this._trackHasMeaningfulKeyframes(trackState, sequence),
+    );
+  }
+
+  private _trackHasMeaningfulKeyframes(
+    trackState: unknown,
+    sequence: TheatreSequencePort,
+  ): boolean {
+    const trackRecord = this._readRecord(trackState);
+    if (!trackRecord) return false;
+    const keyframes = trackRecord.keyframes;
+    if (!Array.isArray(keyframes) || keyframes.length === 0) {
+      return false;
+    }
+    const positions = keyframes
+      .map((keyframe) => {
+        const keyframeRecord = this._readRecord(keyframe);
+        const position = keyframeRecord?.position;
+        return typeof position === "number" && Number.isFinite(position)
+          ? position
+          : null;
+      })
+      .filter((position): position is number => position != null);
+    return positions.length > 0;
+  }
+
+  private _downloadSaveFile(raw: string, fileName: string): boolean {
+    return TheatreStudioService.downloadFile(raw, { fileName });
+  }
+
+  private _isReadableTheatreState(
+    value: Record<string, unknown> | null,
+  ): value is Record<string, unknown> {
+    if (!value) return false;
+    const sheetsById = value.sheetsById;
+    if (
+      sheetsById == null ||
+      typeof sheetsById !== "object" ||
+      Array.isArray(sheetsById)
+    ) {
+      return false;
+    }
+    return true;
+  }
+}

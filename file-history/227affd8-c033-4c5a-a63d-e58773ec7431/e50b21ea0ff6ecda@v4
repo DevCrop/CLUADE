@@ -1,0 +1,65 @@
+# NINEONELABS Renewal Project
+
+## Build Commands
+
+```bash
+npm run build        # Production build (JS + CSS)
+npm run watch        # Dev mode (auto rebuild)
+npm run build:css    # Compile SCSS only
+make up              # Start Docker containers
+make down            # Remove containers
+make bash            # Access web container
+make migrate         # Run DB migrations
+make migrate-status  # Check migration status
+make install         # Install npm + composer packages
+```
+
+## Stack
+
+- **Backend**: PHP 7.4, Custom MVC framework, MySQL 8.0, Apache (Docker)
+- **Frontend**: TypeScript, SCSS, Three.js, Vite, Swiper
+- **Packages**: Composer (PHP), npm (Node.js, runs locally)
+
+## Naming Conventions
+
+- **Classes**: PascalCase (e.g. `Application`, `Router`)
+- **Methods/Variables**: camelCase (e.g. `handleRequest()`, `$request`)
+- **Constants**: UPPER_SNAKE_CASE (e.g. `ROOT_PATH`, `DEFAULT_LOCALE`)
+- **DB Tables**: `nb_` prefix (e.g. `nb_siteinfo`, `nb_admin`)
+- **SCSS**: BEM pattern
+
+## Architecture Patterns
+
+```php
+// Routing
+$router->get('/', function () {
+    return render('pages.index');
+})->name('home');
+
+// View rendering
+render('pages.index');                          // views/pages/index.php
+render('pages.works.view', ['no' => $no]);      // views/pages/works/view.php
+```
+
+## Namespaces
+
+- `Core\` — Application core
+- `Database\` — Database layer
+- `Http\` — Request/Response
+- `Routing\` — Router
+- `View\` — View engine
+- `Menu\` — Menu system
+
+## Workflow Rules
+
+- Do NOT run `npm run build` or `npm run watch` — the dev server is always running and reflects changes on save automatically
+- Do NOT suggest starting the dev server; assume it is already running
+- DB schema changes must go through migration files (`make m`)
+- `vendor/` must be included in deployment; exclude `node_modules/`
+- SCSS source: `resource/scss/` → compiled output: `resource/dist/`
+
+## Local Access
+
+- Website: [http://localhost:8080](http://localhost:8080)
+- phpMyAdmin: [http://localhost:8081](http://localhost:8081)
+- DB: localhost:3306 / nineonelabs / user / password

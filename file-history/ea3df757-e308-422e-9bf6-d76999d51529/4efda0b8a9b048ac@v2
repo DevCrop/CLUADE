@@ -1,0 +1,75 @@
+import { TextReveal } from "../animation/TextReveal.js";
+import {
+  LEGACY_RISE_STATE_FLAGS,
+  RISE_STATES,
+} from "../config/timeline.config.js";
+import type { ITimelineActionTarget } from "../types/engine.types.js";
+import type { RiseState } from "../types/gsap.types.js";
+import type { ITimelineTargetResolver } from "../types/runtime.types.js";
+
+function isRiseState(value: unknown): value is RiseState {
+  return (
+    typeof value === "string" &&
+    (RISE_STATES as readonly string[]).includes(value)
+  );
+}
+
+export function resolveRiseUpFromVars(
+  vars: Record<string, unknown>,
+): RiseState | null {
+  if (isRiseState(vars.riseState)) return vars.riseState;
+  for (const item of LEGACY_RISE_STATE_FLAGS) {
+    if (vars[item.key] === true) return item.state;
+  }
+  return null;
+}
+
+export class TimelineRuntime implements ITimelineTargetResolver {
+  private static _instance: ITimelineTargetResolver | null = null;
+  private readonly _targets = new Map<string, ITimelineActionTarget>();
+
+  static getInstance(): ITimelineTargetResolver {
+    return (this._instance ??= new TimelineRuntime());
+  }
+
+  static setInstance(instance: ITimelineTargetResolver | null): void {
+    this._instance = instance;
+  }
+
+  static clear(): void {
+    this._instance = null;
+  }
+
+  registerTarget(target: ITimelineActionTarget): void {
+    this._targets.set(target.timelineKey, target);
+  }
+
+  unregisterTarget(key: string): void {
+    this._targets.delete(key);
+  }
+
+  resolve(
+    key: string,
+    vars: Record<string, unknown>,
+  ): (() => void) | null {
+    const riseState = resolveRiseUpFromVars(vars);
+    if (riseState) return this._resolveRiseUpHandler(key, vars);
+    return this._resolveRegisteredTarget(key, vars);
+  }
+
+  private _resolveRiseUpHandler(
+    key: string,
+    _vars: Record<string, unknown>,
+  ): () => void {
+    return () => TextReveal.riseUp(key);
+  }
+
+  private _resolveRegisteredTarget(
+    key: string,
+    vars: Record<string, unknown>,
+  ): (() => void) | null {
+    const target = this._targets.get(key);
+    if (!target) return null;
+    return target.getTimelineCallback(vars);
+  }
+}

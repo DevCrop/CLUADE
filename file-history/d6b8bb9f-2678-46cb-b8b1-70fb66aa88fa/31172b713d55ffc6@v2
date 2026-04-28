@@ -1,0 +1,119 @@
+<?php
+
+namespace Core;
+
+use Spatie\Image\Image;
+use Throwable;
+
+class ImageProcessor
+{
+    public const MAX_WIDTH = 2560;
+    public const WEBP_QUALITY = 82;
+    public const CONVERTIBLE = ['jpg', 'jpeg', 'png', 'gif'];
+    /** GD 가 안전하게 다룰 수 있는 픽셀 수 한계 — 초과 시 변환 자체를 skip 해야 OOM/세그폴트 회피. */
+    public const MAX_CONVERTIBLE_PIXELS = 16_000_000;
+    private const MEMORY_LIMIT = '1024M';
+
+    /**
+     * **Low-level primitive.** 원본 경로 옆에 .webp 파일을 생성한다. 원본은 건드리지 않는다.
+     * 신규 업로드 경로는 `convertToWebp()` 를 사용할 것 — 변환·검증·원본 unlink 가 한 번에 처리됨.
+     * 본 메서드는 마이그레이션 스크립트의 2-phase 패턴 (변환 → DB UPDATE → 원본 unlink) 처럼
+     * 원본 삭제 시점을 직접 제어해야 할 때만 호출.
+     * 실패해도 예외를 삼켜서 업로드 플로우를 깨뜨리지 않는다.
+     */
+    public static function makeWebpSibling(string $absolutePath): bool
+    {
+        if (!is_file($absolutePath)) {
+            return false;
+        }
+
+        $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::CONVERTIBLE, true)) {
+            return false;
+        }
+
+        $webpPath = self::getWebpPath($absolutePath);
+
+        // GD 의 비트맵 디코딩은 압축된 jpg 크기보다 훨씬 더 큰 메모리를 소모한다.
+        // 기본 128M 으로는 큰 이미지에서 OOM 으로 silent fail 하므로 일시 상향.
+        $previousLimit = ini_get('memory_limit');
+        @ini_set('memory_limit', self::MEMORY_LIMIT);
+
+        try {
+            $image = Image::load($absolutePath);
+
+            $size = @getimagesize($absolutePath);
+            if (is_array($size) && isset($size[0]) && $size[0] > self::MAX_WIDTH) {
+                $image->width(self::MAX_WIDTH);
+            }
+
+            $image->format('webp')
+                ->quality(self::WEBP_QUALITY)
+                ->save($webpPath);
+
+            return is_file($webpPath);
+        } catch (Throwable $e) {
+            error_log('[ImageProcessor] webp sibling failed for ' . $absolutePath . ': ' . $e->getMessage());
+            return false;
+        } finally {
+            if ($previousLimit !== false) {
+                @ini_set('memory_limit', $previousLimit);
+            }
+        }
+    }
+
+    /**
+     * 주어진 이미지 경로 옆의 .webp 파일을 삭제한다. 원본은 건드리지 않는다.
+     * 신 전략에서는 DB 가 .webp 를 직접 가리키므로 호출이 거의 발생하지 않으나,
+     * legacy 행(.png/.jpg + 동반 .webp)을 삭제·덮어쓸 때 청소를 담당한다.
+     */
+    public static function deleteWebpSibling(string $absolutePath): bool
+    {
+        $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::CONVERTIBLE, true)) {
+            return false;
+        }
+
+        $webpPath = self::getWebpPath($absolutePath);
+        if (is_file($webpPath)) {
+            return @unlink($webpPath);
+        }
+
+        return false;
+    }
+
+    /**
+     * **High-level upload API.** 원본을 webp 로 변환하고, 성공 시 원본을 unlink 한다.
+     * 신규 업로드 경로(`imageUpload()` 또는 그 외 `move_uploaded_file()` 직접 호출 코드)는
+     * 본 메서드 한 번 호출로 신 전략(원본 대체)을 안전하게 구현할 수 있다.
+     *
+     * @return string|null  성공 시 새 basename (예: `"6830abc.webp"`). 변환 불가 확장자/검증 실패/변환 실패 시 `null`.
+     *                      호출자는 `?? $original` 로 fall-through 시켜 안전하게 원본 파일명을 유지할 수 있다.
+     *
+     * 마이그레이션 스크립트처럼 DB UPDATE 성공 후 원본 unlink 가 필요한 경우는 `makeWebpSibling()` 사용.
+     */
+    public static function convertToWebp(string $absolutePath): ?string
+    {
+        $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::CONVERTIBLE, true)) {
+            return null;
+        }
+
+        if (!self::makeWebpSibling($absolutePath)) {
+            return null;
+        }
+
+        $webpPath = self::getWebpPath($absolutePath);
+        if (!is_file($webpPath) || filesize($webpPath) <= 0) {
+            return null;
+        }
+
+        @unlink($absolutePath);
+        return basename($webpPath);
+    }
+
+    private static function getWebpPath(string $absolutePath): string
+    {
+        return (string) preg_replace('/\.[^.]+$/', '.webp', $absolutePath);
+    }
+}

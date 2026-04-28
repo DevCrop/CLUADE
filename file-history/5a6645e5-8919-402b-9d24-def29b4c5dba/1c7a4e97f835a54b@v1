@@ -1,0 +1,86 @@
+# NINEONELABS Codex Guide
+
+Use this file for Codex-specific repo instructions. Keep Claude-specific behavior in `CLAUDE.md`.
+
+## Brand Identity
+
+See `/BRAND.md` first for the brand, copy, design language, homepage flow, and review algorithm index. Do not load the full brand system by default; read only the relevant `brand/*.md` files for the task.
+
+Key rules:
+
+- Company: **NINEONELABS (나인원랩스)** — digital web agency
+- Core values: **Experiment · Challenge · Proof** (실험 · 도전 · 증명)
+- Concept: Earth → Planet NX-2 voyage. NINEONELABS is the companion (조력자), not the captain.
+- Slogan: **JOIN THE JOURNEY** — use as-is for display contexts
+- Services: APP · WEB · BRANDING · UI/UX · MAINTENANCE
+- Space metaphor is the frame, not the message — always land on the concrete agency offer
+- Never use mixed camel case brand naming; use `NINEONELABS` for display and `nineonelabs` only for technical context
+- Never position NINEONELABS as an aerospace/aviation entity
+
+## Project Defaults
+
+- Stack: TypeScript, SCSS, Three.js, Vite, PHP 7.4 custom MVC, MySQL, Apache via Docker
+- Dev server: `http://localhost:8888`
+- Default task framing: state the goal, relevant context, constraints, and done condition.
+- For complex or ambiguous work, plan first before editing code.
+- Prefer `chop` for long git, typecheck, and Docker inspection output when available.
+- For read-only `git` inspection commands that may produce non-trivial output, prefer `chop` by default.
+- Typical examples: `chop git status`, `chop git diff`, `chop git log --oneline -20`.
+- Prefer `chop rg ...` for repository searches when the result may be longer than a few lines.
+- For PowerShell builtins or pipeline-based inspection commands, wrap the whole script with `chop powershell -Command "..."`.
+- Typical examples: `chop powershell -Command "Get-Content ... | Select-Object -Skip 720 -First 90"` and `chop powershell -Command "Get-Content ... | Select-String ..."`.
+- Very short one-line commands may skip `chop`, but when in doubt prefer `chop`.
+- **Do not run `npm run build`, `npm run watch`, or `npm install`** — Vite dev server auto-rebuilds the bundle on every file save; there is no reason to run these. Only `npm install <package>` is allowed when explicitly adding a new dependency.
+- Do not add any of these commands to agent roles, task plans, verification steps, or PR notes unless the user explicitly asks for it.
+- On Windows PowerShell, use explicit UTF-8 for Korean text reads and writes.
+
+## Architecture
+
+- Public routes stay closure-based in `routes/web.php` and render via `render()`.
+- Do not reintroduce Barba.js or SPA navigation contracts.
+- Do not duplicate ownership already handled by `AppManager`, `PageRuntime`, or `PageTheatreBinder`.
+- Keep shared engine or runtime code out of page folders.
+- Put page scene code in `resource/ts/pages/<page>/scene/`.
+- Put Theatre bindings in `resource/ts/pages/<page>/theatre/`.
+- Keep shared types in `resource/ts/types/*.types.ts`.
+
+## Editing Rules
+
+- Follow existing custom MVC patterns; do not introduce Laravel or Symfony conventions.
+- Use BEM-style naming in SCSS.
+- Keep admin CSS and JS separate from the public SCSS pipeline.
+- For SCSS responsive sizing, prefer shared abstract helpers such as `fluid(...)` instead of ad-hoc raw values when the project already uses that pattern.
+- Use `#{fluid(...)}` only inside shared `abstract` or `base` files when emitting CSS custom properties or shared tokens.
+- In component, layout, and page SCSS files, use `fluid(min, max)` directly instead of `#{fluid(...)}`.
+- In SCSS files outside `resource/scss/abstract/` and `resource/scss/base/`, add `@use "../abstract" as *;` at the top before using shared helpers like `fluid(...)`.
+- Do not use CSS variable fallbacks like `var(--token, fallback)` in SCSS. Use either `var(--token)` or `fluid(...)` directly.
+- Do not introduce base/root tokens unless the value is genuinely shared across multiple features. Avoid token waste for one-off component values.
+- For reusable SCSS values, define the source of truth in the shared `abstract` or `base` layer first, then reference it from component or page partials.
+- Prefer semantic tokens over raw hex values when an upstream token exists.
+- Dispose Three.js geometries, materials, and textures.
+- Avoid object creation inside render loops.
+- Match event listener registration with cleanup.
+- Never hardcode credentials or secrets.
+
+## Verification
+
+- TypeScript: `chop node_modules/.bin/tsc --noEmit`
+- PHP lint: `docker compose exec web php -l <file>`
+- Diff inspection: `chop git diff`
+- Do not use `npm run build`, `npm run watch`, or `npm install` for verification; saved files are already handled by the automatic build flow.
+- After changes, run the smallest relevant verification and report any checks not run.
+- Review the final diff for regressions, risky patterns, and missing tests before handing off.
+
+## Repo Skills
+
+- `$scene-explorer`: inspect Three.js scene structure, Theatre bindings, and runtime ownership
+- `$php-explorer`: inspect routes, render chains, admin structure, and backend ownership
+
+## Codex Notes
+
+- Repo-specific config lives in `.codex/config.toml`.
+- Repo-specific execution policy lives in `.codex/rules/default.rules`.
+- Repo hooks are intentionally omitted here because Codex hooks are currently disabled on Windows.
+- Direct terminal commands are not auto-wrapped; use `chop <command>` explicitly when you want compressed output.
+- Keep this file concise and durable. Add new rules only after repeated friction or repeated mistakes.
+- Put stable repo rules here; use skills for repeatable workflows and MCP only when external, fast-changing context is required.

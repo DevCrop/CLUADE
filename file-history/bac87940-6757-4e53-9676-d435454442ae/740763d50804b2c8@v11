@@ -1,0 +1,553 @@
+<?php
+$awardRows = isset($awardRows) && is_array($awardRows) ? $awardRows : [];
+
+if (count($awardRows) === 0) {
+    $awardRows = [
+        ['year' => '2025', 'title' => 'Project Alpha', 'awardLabel' => 'Awwwards', 'prize' => 'Site of the Day', 'detailPath' => '/works', 'previewImage' => '', 'awardIcon' => ''],
+        ['year' => '2024', 'title' => 'Project Beta',  'awardLabel' => 'CSS Design Awards', 'prize' => 'Best UI', 'detailPath' => '/works', 'previewImage' => '', 'awardIcon' => ''],
+        ['year' => '2024', 'title' => 'Project Gamma', 'awardLabel' => 'FWA',  'prize' => 'FWA of the Month', 'detailPath' => '/works', 'previewImage' => '', 'awardIcon' => ''],
+    ];
+}
+?>
+<?php section('content'); ?>
+<div class="scroll-container">
+    <div class="canvas-container" aria-hidden="true">
+        <canvas id="canvas"></canvas>
+        <div class="no-overlay" aria-hidden="true"></div>
+    </div>
+
+    <div class="main-content">
+        <div id="main" class="no-sub-about">
+            <div class="no-sub-about-contents">
+                <section class="no-sub-about-section no-sub-about-hero-intro" data-scene="heroIntro"
+                    aria-hidden="false">
+                    <div class="no-container">
+                        <div class="no-sub-about-section__inner no-sub-about-hero-intro__inner">
+                            <div class="no-sub-about-section__txt no-sub-about-hero-intro__txt">
+                                <div class="no-sub-about-hero-intro__top is-block-reveal">
+                                    <div class="no-sub-about-hero-intro__title">
+                                        <p class="f-display-x --fm-en mask-target">
+                                            WE ARE
+                                        </p>
+                                        <h2 class="f-display-x --fm-en  mask-target">EXPLORERS</h2>
+                                    </div>
+                                </div>
+                                <div class="no-sub-about-hero-intro__bottom">
+                                    <div class="no-sub-about-hero-intro__desc is-block-reveal">
+                                        <h3 class="f-heading-2 --fm-ui mask-target">DIGITAL WEB AGENCY</h3>
+                                        <div>
+                                            <p class="f-heading-5 --bold mask-target">
+                                                우리는 브랜드가 나아갈 좌표를 정의하고 탐험합니다.
+                                            </p>
+                                            <p class="f-body-2 --regular mask-target">
+                                                탐험은 혼자 하는 것이 아닙니다.
+                                                가본 적 없는 좌표를 향해 <br>
+                                                — 나인원랩스가 크루가 함께합니다.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="no-sub-about-hero-intro__info is-block-reveal">
+                                        <?= include_view('components.button', [
+                                            'variant' => 'corner',
+                                            'tag' => 'div',
+                                            'text' => 'Start Here',
+                                            'iconName' => 'arrow-down',
+                                            'class' => 'no-sub-about-hero-intro__scroll',
+                                            'withWrapper' => false,
+                                        ]) ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="no-sub-about-section no-sub-about-hero-slogan" data-scene="heroSlogan"
+                    aria-hidden="true">
+                    <div class="no-container">
+                        <div class="no-sub-about-section__inner no-sub-about-hero-slogan__inner">
+                            <div class="no-sub-about-section__txt no-sub-about-hero-slogan__txt">
+                                <div class="no-sub-about-hero-slogan__top ">
+                                    <div class="no-sub-about-hero-slogan__title">
+                                        <h2 class="f-display-x --fm-en"
+                                            aria-label="We lead your design, development, branding, and UI/UX journey.">
+                                            <div class="no-sub-about-hero-slogan__line ">
+                                                <div>
+                                                    <span class="weak">
+                                                        WE
+                                                    </span>
+                                                    <span class="weak">
+                                                        LEAD
+                                                    </span>
+                                                    <span class="weak">
+                                                        YOUR
+                                                    </span>
+                                                </div>
+                                                <div class="no-sub-about-hero-slogan__keyword-shell" aria-hidden="true">
+                                                    <span class="no-sub-about-hero-slogan__bracket">(</span>
+                                                    <span class="no-sub-about-hero-slogan__keyword-viewport">
+                                                        <span class="no-sub-about-hero-slogan__keyword-track">
+                                                            <span
+                                                                class="no-sub-about-hero-slogan__keyword">DESIGN</span>
+                                                            <span
+                                                                class="no-sub-about-hero-slogan__keyword">DEVELOPMENT</span>
+                                                            <span
+                                                                class="no-sub-about-hero-slogan__keyword">BRANDING</span>
+                                                            <span class="no-sub-about-hero-slogan__keyword">UI/UX</span>
+                                                        </span>
+                                                    </span>
+                                                    <span class="no-sub-about-hero-slogan__bracket">)</span>
+                                                </div>
+                                            </div>
+                                            <span class="no-sub-about-hero-slogan__line ">
+                                                JOURNEY
+                                            </span>
+                                        </h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="no-sub-about-section no-sub-about-gallery" data-scene="gallery" aria-hidden="true">
+                    <div class="no-sub-about-gallery__sticky">
+                        <div class="no-sub-about-gallery__content">
+                            <h2 class="no-sub-about-gallery__headline f-display-1 --bold is-block-reveal">
+                                <span class="mask-target">
+                                    지금까지 지나쳐온
+                                    <br> 디지털 여정이 증명합니다.
+                                </span>
+                            </h2>
+
+                        </div>
+                        <div class="no-sub-about-gallery__canvas-wrap">
+                            <canvas id="about-gallery-canvas" aria-hidden="true"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="no-sub-about-journey-surface">
+                    <section class="no-sub-about-section no-sub-about-proof" data-scene="proof" aria-hidden="true">
+                        <div class="no-sub-about-proof__canvas-wrap">
+                            <canvas id="about-proof-canvas"></canvas>
+                        </div>
+                        <div class="no-sub-about-proof__scenes">
+                            <div class="no-sub-about-proof__scene">
+                                <div class="no-sub-about-proof__pin">
+                                    <h2 class="no-sub-about-proof__headline f-display-1 --bold is-block-reveal">
+                                        <span class="mask-target">
+                                            브랜드를 궤도에 올리는 것,
+                                        </span>
+                                    </h2>
+                                </div>
+                            </div>
+                            <div class="no-sub-about-proof__scene">
+                                <div class="no-sub-about-proof__pin">
+                                    <h2 class="no-sub-about-proof__headline f-display-1 --bold is-block-reveal">
+                                        <span class="mask-target">
+                                            그 여정을 함께하는 것이<br>
+                                            나인원랩스의 일입니다.
+                                        </span>
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="no-sub-about-section no-sub-about-mission-vision" data-scene="missionVision"
+                        aria-hidden="true">
+                        <div class="no-container">
+                            <div class="no-sub-about-section__inner no-sub-about-mission-vision__inner">
+                                <div class="no-sub-about-vision">
+                                    <div class="no-sub-about-section__txt no-sub-about-vision__txt">
+                                        <div class="no-sub-about-vision__title is-block-reveal-up">
+                                            <h2 class="f-display-1 --fm-en mask-target">
+                                                VISION
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <div class="no-sub-about-vision__contents">
+                                        <ul class="no-sub-about-vision__wrap">
+                                            <li
+                                                class="no-sub-about-mission__card no-corner-btn no-corner-btn--panel is-block-reveal-up">
+                                                <?= include_view('components.button.corner-markup', [
+                                                    'class' => 'no-corner-btn__corner no-corner-bracket--shine',
+                                                ]) ?>
+                                                <div class="no-sub-about-mission__card--wrap">
+                                                    <span
+                                                        class="no-sub-about-mission__index f-heading-4 --fm-ui mask-target">01</span>
+                                                    <h3 class="f-heading-1 mask-target">PIONEER</h3>
+                                                    <p class="f-body-1 --regular mask-target">
+                                                        누구도 만들지 않은 것을 만듭니다. <br>
+                                                        레퍼런스
+                                                        없이 시작하고, 결과물이 레퍼런스가 됩니다.</p>
+                                                </div>
+                                            </li>
+                                            <li
+                                                class="no-sub-about-mission__card no-corner-btn no-corner-btn--panel is-block-reveal-up">
+                                                <?= include_view('components.button.corner-markup', [
+                                                    'class' => 'no-corner-btn__corner no-corner-bracket--shine',
+                                                ]) ?>
+                                                <div class="no-sub-about-mission__card--wrap">
+                                                    <span
+                                                        class="no-sub-about-mission__index f-heading-4 --fm-ui mask-target">02</span>
+                                                    <h3 class="f-heading-1 mask-target">CHALLENGE</h3>
+                                                    <p class="f-body-1 --regular mask-target">
+                                                        해본 적 없는 것에 도전하지 않으면, <br>
+                                                        새로운
+                                                        것은 나오지 않습니다. 우리는 그 도전을 멈추지 않습니다.</p>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="no-sub-about-mission">
+                                    <div class="no-sub-about-section__txt no-sub-about-mission__txt">
+                                        <div class="no-sub-about-mission__title is-block-reveal-up">
+                                            <h2 class="f-display-1 --fm-en mask-target">
+                                                MISSION
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <div class="no-sub-about-mission__contents">
+                                        <ul class="no-sub-about-mission__wrap">
+                                            <li
+                                                class="no-sub-about-mission__card no-corner-btn no-corner-btn--panel is-block-reveal-up">
+                                                <?= include_view('components.button.corner-markup', [
+                                                    'class' => 'no-corner-btn__corner no-corner-bracket--shine',
+                                                ]) ?>
+                                                <div class="no-sub-about-mission__card--wrap">
+                                                    <span
+                                                        class="no-sub-about-mission__index f-heading-4 --fm-ui mask-target">01</span>
+                                                    <h3 class="f-heading-1 mask-target">LEAD</h3>
+                                                    <p class="f-body-1 --regular mask-target">방향이 흐릿할 때, 우리가 먼저 경로를
+                                                        잡습니다. <br>
+                                                        브랜드가 가야 할 길을 함께 설계합니다.</p>
+                                                </div>
+                                            </li>
+                                            <li
+                                                class="no-sub-about-mission__card no-corner-btn no-corner-btn--panel is-block-reveal-up">
+                                                <?= include_view('components.button.corner-markup', [
+                                                    'class' => 'no-corner-btn__corner no-corner-bracket--shine',
+                                                ]) ?>
+                                                <div class="no-sub-about-mission__card--wrap">
+                                                    <span
+                                                        class="no-sub-about-mission__index f-heading-4 --fm-ui mask-target">02</span>
+                                                    <h3 class="f-heading-1 mask-target">DELIVER</h3>
+                                                    <p class="f-body-1 --regular mask-target">
+                                                        완성된 URL 하나가 수백 장의 기획서보다
+                                                        강합니다. <br>
+                                                        우리는 결과로만 말합니다.</p>
+                                                </div>
+                                            </li>
+                                            <li
+                                                class="no-sub-about-mission__card no-corner-btn no-corner-btn--panel is-block-reveal-up">
+                                                <?= include_view('components.button.corner-markup', [
+                                                    'class' => 'no-corner-btn__corner no-corner-bracket--shine',
+                                                ]) ?>
+                                                <div class="no-sub-about-mission__card--wrap">
+                                                    <span
+                                                        class="no-sub-about-mission__index f-heading-4 --fm-ui mask-target">03</span>
+                                                    <h3 class="f-heading-1 mask-target">TOGETHER</h3>
+                                                    <p class="f-body-1 --regular mask-target">
+                                                        브랜드의 탐험에는 크루가 필요합니다. <br>
+                                                        기획부터
+                                                        운영까지, 우리가 그 자리에 있습니다.</p>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="no-sub-about-section no-sub-about-services" data-scene="services"
+                        aria-hidden="true">
+                        <div class="no-sub-about-services__body no-section-lg">
+                            <div class="no-container">
+                                <div class="no-sub-about-services__txt">
+                                    <div class="no-sub-about-services__title is-block-reveal-up">
+                                        <h2 class="--fm-en-title f-display-0 mask-target">SERVICES</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="no-container">
+                                <div class="--cnt">
+                                    <ul class="no-main-services__list">
+                                        <li class="no-main-services__item">
+                                            <div class="no-services__num" aria-hidden="true">
+                                                <span class="no-loop-filter-rect"
+                                                    style="--loop-filter-delay-base: 0.00s;">
+                                                    <span></span><span></span><span></span><span></span>
+                                                </span>
+                                            </div>
+                                            <h3
+                                                class="no-main-services__item-title f-display-1 --fm-en-title --regular mask-target">
+                                                Web Build</h3>
+                                            <div class="no-main-services__item-meta">
+                                                <p class="f-body-2 --regular mask-target">반응형 구조, 인터랙션, 퍼포먼스까지 — <br>
+                                                    브랜드 정체성을 담은 웹사이트를 처음부터 끝까지 완성합니다.</p>
+                                                <ul class="no-main-services__item-tools">
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Three.js',   'icon' => 'threedotjs']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'GSAP',       'icon' => 'greensock']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'TypeScript', 'icon' => 'typescript']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'React',      'icon' => 'react']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'PHP',        'icon' => 'php']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'MySQL',      'icon' => 'mysql']) ?>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                        <li class="no-main-services__item">
+                                            <div class="no-services__num" aria-hidden="true">
+                                                <span class="no-loop-filter-rect"
+                                                    style="--loop-filter-delay-base: 0.14s;">
+                                                    <span></span><span></span><span></span><span></span>
+                                                </span>
+                                            </div>
+                                            <h3
+                                                class="no-main-services__item-title f-display-1 --fm-en-title --regular mask-target">
+                                                App Build</h3>
+                                            <div class="no-main-services__item-meta">
+                                                <p class="f-body-2 --regular mask-target">iOS, Android, 하이브리드 — 플랫폼에 맞는
+                                                    앱을 설계하고 개발합니다. <br> 매일 쓰고 싶어지는 앱을 만듭니다.</p>
+                                                <ul class="no-main-services__item-tools">
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'React Native', 'icon' => 'react']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Flutter',      'icon' => 'flutter']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Swift',        'icon' => 'swift']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Kotlin',       'icon' => 'kotlin']) ?>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                        <li class="no-main-services__item">
+                                            <div class="no-services__num" aria-hidden="true">
+                                                <span class="no-loop-filter-rect"
+                                                    style="--loop-filter-delay-base: 0.28s;">
+                                                    <span></span><span></span><span></span><span></span>
+                                                </span>
+                                            </div>
+                                            <h3
+                                                class="no-main-services__item-title f-display-1 --fm-en-title --regular mask-target">
+                                                Branding</h3>
+                                            <div class="no-main-services__item-meta">
+                                                <p class="f-body-2 --regular mask-target">로고, 컬러, 타이포그래피 — 브랜드의 시각 언어를
+                                                    정리합니다. <br> 어떤 화면에서도 흔들리지 않는 아이덴티티를 만듭니다.</p>
+                                                <ul class="no-main-services__item-tools">
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Figma',         'icon' => 'figma']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Illustrator',   'icon' => 'adobeillustrator']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Photoshop',     'icon' => 'adobephotoshop']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'After Effects', 'icon' => 'adobeaftereffects']) ?>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                        <li class="no-main-services__item">
+                                            <div class="no-services__num" aria-hidden="true">
+                                                <span class="no-loop-filter-rect"
+                                                    style="--loop-filter-delay-base: 0.42s;">
+                                                    <span></span><span></span><span></span><span></span>
+                                                </span>
+                                            </div>
+                                            <h3
+                                                class="no-main-services__item-title f-display-1 --fm-en-title --regular mask-target">
+                                                UI · UX</h3>
+                                            <div class="no-main-services__item-meta">
+                                                <p class="f-body-2 --regular mask-target">사용자의 시선이 자연스럽게 이어지도록 화면을
+                                                    설계합니다. <br> 클릭 한 번이 다음 행동으로 연결되는 경험을 만듭니다.</p>
+                                                <ul class="no-main-services__item-tools">
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Figma',   'icon' => 'figma']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Framer',  'icon' => 'framer']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Webflow', 'icon' => 'webflow']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Zeplin',  'icon' => 'zeplin']) ?>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                        <li class="no-main-services__item">
+                                            <div class="no-services__num" aria-hidden="true">
+                                                <span class="no-loop-filter-rect"
+                                                    style="--loop-filter-delay-base: 0.56s;">
+                                                    <span></span><span></span><span></span><span></span>
+                                                </span>
+                                            </div>
+                                            <h3
+                                                class="no-main-services__item-title f-display-1 --fm-en-title --regular mask-target">
+                                                Maintenance</h3>
+                                            <div class="no-main-services__item-meta">
+                                                <p class="f-body-2 --regular mask-target">사이트가 느려지거나 오류가 생기기 전에 먼저
+                                                    관리합니다. <br> 런칭 이후에도 시스템이 멈추지 않도록 함께합니다.</p>
+                                                <ul class="no-main-services__item-tools">
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Docker',         'icon' => 'docker']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Apache',         'icon' => 'apache']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'MySQL',          'icon' => 'mysql']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'Git',            'icon' => 'git']) ?>
+                                                    <?= include_view('components.chip', ['variant' => 'tool', 'tag' => 'li', 'label' => 'GitHub Actions', 'icon' => 'githubactions']) ?>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="no-sub-about-section no-sub-about-awards no-sub-award" data-scene="awards"
+                        aria-hidden="true">
+                        <div class="no-container">
+                            <div class="no-sub-about-section__inner no-sub-about-awards__inner">
+                                <div class="no-sub-about-section__txt no-sub-about-awards__txt">
+                                    <div class="no-sub-about-awards__title is-block-reveal-up">
+                                        <h2 class="f-display-1 --fm-en mask-target">AWARDS</h2>
+                                    </div>
+                                </div>
+                                <div class="no-sub-about-awards__contents">
+                                    <ul class="no-sub-award-list" data-award-preview-list>
+                                        <?php if (count($awardRows) > 0) : ?>
+                                        <?php
+                                            $awardIconFallbacks = [
+                                                base_path('/resource/images/logo/GDWEB.png'),
+                                                base_path('/resource/images/logo/WEBAWARD.png'),
+                                            ];
+                                            $awardVideoFallbacks = [
+                                                '/resource/video/why_video_1.mp4',
+                                                '/resource/video/why_video_2.mp4',
+                                                '/resource/video/why_video_3.mp4',
+                                                '/resource/video/why_video_4.mp4',
+                                            ];
+                                            $awardVideoIndex = 0;
+                                        ?>
+                                        <?php foreach ($awardRows as $row) : ?>
+                                        <?php
+                                            $href = base_path($row['detailPath'] ?? '/works');
+                                            $previewSrc = $row['previewImage'] ?? '';
+                                            $iconPath = $row['awardIcon'] ?? null;
+                                            $iconSrc = is_string($iconPath) && $iconPath !== ''
+                                                ? base_path($iconPath)
+                                                : $awardIconFallbacks[array_rand($awardIconFallbacks)];
+                                            $videoSrc = $row['previewVideo'] ?? $awardVideoFallbacks[$awardVideoIndex % count($awardVideoFallbacks)];
+                                            $awardVideoIndex++;
+                                        ?>
+                                        <li class="no-sub-award-item">
+                                            <a href="<?= e($href) ?>" class="no-sub-award-item__link"
+                                                data-award-preview-item data-preview-image="<?= e($previewSrc) ?>"
+                                                data-skill-video="<?= e($videoSrc) ?>">
+                                                <div class="no-sub-award-item__year">
+                                                    <?= e((string) ($row['year'] ?? '')) ?></div>
+                                                <div class="no-sub-award-item__project">
+                                                    <?= e((string) ($row['title'] ?? '')) ?></div>
+                                                <div class="no-sub-award-item__award">
+                                                    <img src="<?= e($iconSrc) ?>"
+                                                        alt="<?= e((string) ($row['awardLabel'] ?? '')) ?>"
+                                                        loading="lazy">
+                                                </div>
+                                                <div class="no-sub-award-item__prize">
+                                                    <?= e((string) ($row['prize'] ?? '') !== '' ? (string) $row['prize'] : '—') ?>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <?php endforeach; ?>
+                                        <?php else : ?>
+                                        <li class="no-sub-award-item no-sub-award-item--empty" aria-hidden="true">
+                                            <div class="no-sub-award-item__empty">등록된 수상 작업이 없습니다.</div>
+                                        </li>
+                                        <?php endif; ?>
+                                    </ul>
+                                    <div class="no-view-more no-sub-about-awards__more">
+                                        <?= include_view('components.button', [
+                                            'variant' => 'corner',
+                                            'tag' => 'a',
+                                            'text' => 'View More',
+                                            'href' => base_path('/works?view=grid'),
+                                            'class' => 'no-view-more__btn',
+                                            'iconName' => 'plus',
+                                            'iconPosition' => 'before',
+                                            'icon_action' => 'rotate',
+                                        ]) ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="no-sub-about-section no-sub-about-client" data-scene="client" aria-hidden="true">
+                    <div class="no-container">
+                        <div class="no-sub-about-section__inner no-sub-about-client__inner">
+                            <div class="no-sub-about-client__contents">
+                                <div class="no-sub-about-client__head-wrap">
+                                    <div class="no-sub-about-client__head is-block-reveal-up">
+                                        <h2 class="f-display-1 --fm-en mask-target">
+                                            PARTNERS
+                                        </h2>
+                                    </div>
+                                </div>
+                                <div class="no-sub-about-client__list">
+                                    <ul class="no-sub-about-client__items">
+                                        <?php for ($i = 1; $i < 23; $i++): ?>
+                                        <li class="no-sub-about-client__item">
+                                            <img src="<?= base_path('/resource/images/logo/client_logo_'.$i.'.svg') ?>"
+                                                alt="">
+                                        </li>
+                                        <?php endfor; ?>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="no-main-contact scene-shell" data-scene="contact" aria-hidden="true">
+                    <div class="no-main-contact__stage">
+                        <div class="no-container">
+                            <div class="no-main-contact__panel">
+                                <div class="no-main-contact__head" data-active="false">
+                                    <h2 class="f-display-0 --fm-en-title mask-target">
+                                        YOUR JOURNEY <br> STARTS HERE.
+                                    </h2>
+                                    <p class="f-body-1 mask-target">
+                                        브랜드의 첫 발사를 함께할 준비가 됐습니다.<br>
+                                        지금, 나인원랩스와 궤도를 그립니다.
+                                    </p>
+                                </div>
+                                <div class="no-main-contact__actions">
+                                    <?= include_view('components.button', [
+                                        'variant' => 'corner',
+                                        'tag' => 'a',
+                                        'href' => '/contact',
+                                        'text' => 'Contact',
+                                        'iconSvg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M571.3 331.3C577.5 325.1 577.5 314.9 571.3 308.7L395.3 132.7C389.1 126.5 378.9 126.5 372.7 132.7C366.5 138.9 366.5 149.1 372.7 155.3L521.4 304L80 304C71.2 304 64 311.2 64 320C64 328.8 71.2 336 80 336L521.4 336L372.7 484.7C366.5 490.9 366.5 501.1 372.7 507.3C378.9 513.5 389.1 513.5 395.3 507.3L571.3 331.3z" fill="currentColor"/></svg>',
+                                        'iconPosition' => 'after',
+                                        'class' => 'no-main-contact__action no-corner-btn--highlight',
+                                    ]) ?>
+                                    <?= include_view('components.button', [
+                                        'variant' => 'corner',
+                                        'tag' => 'a',
+                                        'href' => '/works',
+                                        'text' => 'Works',
+                                        'iconSvg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M571.3 331.3C577.5 325.1 577.5 314.9 571.3 308.7L395.3 132.7C389.1 126.5 378.9 126.5 372.7 132.7C366.5 138.9 366.5 149.1 372.7 155.3L521.4 304L80 304C71.2 304 64 311.2 64 320C64 328.8 71.2 336 80 336L521.4 336L372.7 484.7C366.5 490.9 366.5 501.1 372.7 507.3C378.9 513.5 389.1 513.5 395.3 507.3L571.3 331.3z" fill="currentColor"/></svg>',
+                                        'iconPosition' => 'after',
+                                        'class' => 'no-main-contact__action',
+                                    ]) ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <?= include_view('components.footer', [
+                    'class' => 'no-footer no-main-contact__footer',
+                    'dataScene' => 'footer',
+                    'ariaHidden' => 'true',
+                ]) ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?= include_view('components.hud-panel') ?>
+
+<?php end_section(); ?>
+
+<?php section('portal') ?>
+<div class="no-sub-award-video-preview" data-award-video-preview aria-hidden="true">
+    <video data-why-skill-video muted playsinline loop preload="none"></video>
+    <img data-why-skill-img src="" alt="" style="display:none">
+</div>
+<?php end_section() ?>

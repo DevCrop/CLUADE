@@ -1,0 +1,207 @@
+# Plan: About 페이지 기술력 증명 섹션 추가
+
+## Context
+
+`who` 섹션("WE BUILD THE ROUTE")이 NINEONELABS의 역할을 선언한다면, 그 직후에 "실제로 무엇으로 만드는가"를 보여주는 섹션이 없다. 잠재 클라이언트가 About 페이지에서 기술력을 확인하고 신뢰를 형성하는 구조가 빠져 있음. 메인 페이지의 `whyus` 섹션은 빠른 스캔용이고, About 페이지에는 각 기술이 "왜 중요한가"를 보여주는 심층 버전이 필요하다.
+
+---
+
+## 브랜드 문서 검토 결과
+
+**변경 불필요. 기존 문서가 이 섹션을 완전히 커버한다.**
+
+| 문서 | 관련 내용 | 상태 |
+|---|---|---|
+| `brand/proof-system.md` | Proof Formula: Claim → Evidence → Result, Skill Label Rules | ✅ 적용 가능 |
+| `brand/voice.md` | Concrete 온도 섹션 규칙, WE 반복 금지, 섹션 제목 변형 지침 | ✅ 적용 완료 |
+| `brand/vocabulary.md` | PROOF 핵심 가치어 | ✅ 적용 완료 |
+
+---
+
+## 기술 분석 결과
+
+### 인터랙션: WhySkillPreview (재사용, TS 변경 없음)
+
+- `PageRuntime.ts:96-101` — `[data-why-skill-list]`가 DOM에 있으면 **자동 초기화**
+- About 페이지에 `data-why-skill-list` + `data-why-skill-item` + `data-why-skill-preview` 추가만 하면 동작
+- 메인과 동일: 호버 시 우측 카테고리 레이블 reveal + 좌측 비디오 clip-path 전환
+- About 전용 추가: 호버 시 카테고리 레이블과 함께 **한국어 증명 문장** reveal (아래쪽)
+
+### 기존 코드 재사용
+
+| 재사용 대상 | 위치 | 방식 |
+|---|---|---|
+| `WhySkillPreview` 컴포넌트 | `resource/ts/components/WhySkillPreview.ts` | data 속성으로 자동 초기화 |
+| `no-main-why__skill-list/item/label` SCSS | `resource/scss/pages/_main.scss:667-790` | 동일 클래스 직접 사용 |
+| why_video_1~4.mp4 | `/resource/video/` | 동일 비디오 풀 재사용 |
+| `is-block-reveal-up` 애니메이션 | `BlockReveal` 컴포넌트 | 섹션 헤더에 적용 |
+
+---
+
+## 섹션 설계
+
+### 위치: `no-sub-about-journey-surface` 안, `missionVision` 앞
+
+```
+<section who>             ← Balanced 온도 (frosted glass 밖)
+<div journey-surface>     ← frosted glass 시작
+  <section [NEW proof]>   ← Concrete 온도 (첫 진입부)
+  <section missionVision> ← Balanced 온도
+  <section services>      ← Concrete 온도
+  <section awards>        ← Concrete 온도
+</div>
+```
+
+**이유**: 브랜드 내러티브 아크 — 역할 선언(who) → 기술 증명(proof) → 철학(missionVision) → 결과물(services/awards)
+
+### 헤드라인: `BUILT TO PROVE`
+
+- WE 반복 패턴 회피 (voice.md 규칙)
+- PROOF 핵심 가치어 직접 사용 (vocabulary.md)
+- `voice.md` 변형 예시(`DESIGNED TO PROVE`, `BUILT THROUGH FRICTION`) 패턴과 일치
+- 한국어 서브: `브랜드가 선택받는 이유를 화면에서 증명합니다.` (proof-system.md 한국어 방향)
+
+### 스킬 데이터 (8개)
+
+```php
+$aboutProofSkills = [
+    ['label' => 'THREE.JS',        'desc' => 'INTERACTIVE WEB',     'proof' => '3D 씬이 실제 운영 사이트 안에서 작동합니다. 애니메이션이 아닌 인터랙션입니다.',              'video' => '/resource/video/why_video_1.mp4'],
+    ['label' => 'GSAP',            'desc' => 'MOTION & ANIMATION',  'proof' => '움직임은 이야기를 돕기 위해 설계합니다. 타이밍, 리듬, 시선 흐름 모두 의도된 구조입니다.',    'video' => '/resource/video/why_video_2.mp4'],
+    ['label' => 'WEBFLOW',         'desc' => 'NO-CODE BUILD',       'proof' => '브랜드에 맞는 도구를 선택합니다. 플랫폼이 브랜드를 따릅니다.',                              'video' => '/resource/video/why_video_3.mp4'],
+    ['label' => 'UI / UX DESIGN',  'desc' => 'USER EXPERIENCE',     'proof' => '화면마다 해야 할 일이 있습니다. 다음 행동으로 이어지는 동선을 설계합니다.',                 'video' => '/resource/video/why_video_4.mp4'],
+    ['label' => 'BRANDING SYSTEM', 'desc' => 'BRAND IDENTITY',      'proof' => '웹, 앱, 인쇄, 모션 어디서도 같은 인상이 남는 정체성을 만듭니다.',                           'video' => '/resource/video/why_video_1.mp4'],
+    ['label' => '3D MODELING',     'desc' => 'SPATIAL DESIGN',      'proof' => '공간감 있는 브랜드 언어를 화면 위에서 구현합니다.',                                          'video' => '/resource/video/why_video_2.mp4'],
+    ['label' => 'SEO STRATEGY',    'desc' => 'SEARCH GROWTH',       'proof' => '구조, 성능, 콘텐츠 흐름 모두 검색 가시성을 높이는 방향으로 설계합니다.',                     'video' => '/resource/video/why_video_3.mp4'],
+    ['label' => 'CMS SYSTEM',      'desc' => 'CONTENT CONTROL',     'proof' => '출시 이후에도 클라이언트가 직접 콘텐츠를 관리할 수 있습니다.',                               'video' => '/resource/video/why_video_4.mp4'],
+];
+```
+
+---
+
+## 구현 단계
+
+### Step 1 — `views/pages/about/index.php`
+
+1. **`$aboutProofSkills` 배열 추가** — PHP 파일 상단 데이터 정의부에 삽입
+2. **새 섹션 HTML 추가** — `no-sub-about-journey-surface` div 안, `missionVision` 섹션 바로 앞에 삽입
+
+```html
+<section class="no-sub-about-section no-sub-about-proof" data-scene="proof" aria-hidden="true">
+    <div class="no-sub-about-proof__body no-section-lg">
+        <div class="no-container">
+            <div class="no-sub-about-proof__txt is-block-reveal-up">
+                <h2 class="--fm-en-title f-display-0 mask-target">BUILT TO PROVE</h2>
+                <p class="f-body-2 --regular mask-target">브랜드가 선택받는 이유를 화면에서 증명합니다.</p>
+            </div>
+        </div>
+        <div class="no-container">
+            <div class="--cnt">
+                <ul class="no-main-why__skill-list no-sub-about-proof__skill-list" data-why-skill-list>
+                    <?php foreach ($aboutProofSkills as $skill): ?>
+                    <li class="no-main-why__skill-item no-sub-about-proof__skill-item"
+                        data-why-skill-item
+                        data-skill-video="<?= e($skill['video']) ?>">
+                        <span class="no-main-why__skill-label f-display-0 --semibold --fm-en-title">
+                            <?= e($skill['label']) ?>
+                        </span>
+                        <p class="no-main-why__skill-desc f-body-1 --regular" aria-hidden="true">
+                            <?= e($skill['desc']) ?>
+                        </p>
+                        <p class="no-sub-about-proof__proof-text f-body-2 --regular" aria-hidden="true">
+                            <?= e($skill['proof']) ?>
+                        </p>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <div class="no-main-why__preview no-sub-about-proof__preview"
+                    data-why-skill-preview aria-hidden="true">
+                    <video class="no-main-why__preview-video" muted playsinline loop
+                        data-why-skill-video></video>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+```
+
+3. **백틱 버그 수정** — line 417의 `` ` `` 제거
+
+### Step 2 — `resource/scss/pages/_sub.scss`
+
+`.no-sub-about` 블록 안에 `&-proof` 섹션 추가:
+
+```scss
+&-proof {
+  width: 100%;
+
+  &__body {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  &__txt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gutter-md);
+    margin-bottom: var(--gutter-2xl);
+
+    p {
+      max-width: fluid(480, 640);
+      color: var(--clr-text-body);
+    }
+  }
+
+  // 메인 no-main-why__skill-item 기본 스타일에 proof-text 공간 확보
+  &__skill-item {
+    position: relative;
+    padding-bottom: fluid(10, 24); // proof text 공간 확보 (기본 padding-top은 상속)
+  }
+
+  &__proof-text {
+    position: absolute;
+    bottom: fluid(10, 24);
+    left: 0;
+    opacity: 0;
+    transition: opacity 0.24s ease;
+    max-width: fluid(280, 480);
+    color: var(--clr-text-body);
+    white-space: normal;
+    pointer-events: none;
+  }
+
+  // 호버 시 카테고리 desc + proof text 동시 reveal
+  &__skill-list:has(&__skill-item:hover) &__skill-item:hover &__proof-text {
+    opacity: 0.64;
+  }
+
+  // 비디오 프리뷰 위치 — 메인은 left, about은 right (awards 섹션과 동일)
+  &__preview {
+    right: fluid(24, 56);
+    left: auto;
+  }
+}
+```
+
+---
+
+## 수정 파일 목록
+
+| 파일 | 변경 내용 |
+|---|---|
+| `views/pages/about/index.php` | `$aboutProofSkills` 배열 추가, 새 섹션 HTML 삽입, 백틱 버그 수정 |
+| `resource/scss/pages/_sub.scss` | `.no-sub-about-proof` 스타일 추가 |
+
+**변경하지 않는 파일**: `PageRuntime.ts`, `WhySkillPreview.ts`, `_main.scss`, 모든 `brand/*.md`
+
+---
+
+## 검증
+
+1. `http://localhost:8888/about` 접속
+2. `who` 섹션 아래 `BUILT TO PROVE` 섹션 노출 확인
+3. 각 스킬 아이템 호버 → 비디오 clip-path reveal + 카테고리 레이블 + 한국어 증명 문장 동시 노출
+4. 모바일(md 이하) → 비디오 프리뷰 숨김, 텍스트만 표시
+5. `frosted glass` 배경이 missionVision과 동일하게 적용되는지 확인
+6. PHP lint: `docker compose exec web php -l views/pages/about/index.php`

@@ -1,0 +1,30 @@
+---
+name: new-route
+description: Add a new public page route, view, and optional TypeScript entry
+disable-model-invocation: false
+---
+
+Add a new public page for: $ARGUMENTS
+
+1. Register route in `routes/web.php`:
+
+```php
+$router->get('/path', function () {
+    return render('pages.section.index', $data);
+})->name('name');
+```
+
+2. Create view at `views/pages/<section>/index.php`
+   - Do NOT include layout chrome — that comes from `views/layouts/main.php`
+   - Set `data-page` attribute if the page needs a TypeScript strategy
+
+3. If Three.js / managed page needed:
+   - Add scene config: `resource/ts/pages/<page>/scene/<page>.scene.ts`
+   - Register strategy in `resource/ts/controller/PageController.ts`
+   - Add theatre folder: `resource/ts/pages/<page>/theatre/`
+
+4. Run type check after any `.ts` changes:
+
+```bash
+chop node_modules/.bin/tsc --noEmit   # errors only
+```

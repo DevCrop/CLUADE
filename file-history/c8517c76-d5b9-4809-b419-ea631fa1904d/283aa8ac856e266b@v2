@@ -1,0 +1,40 @@
+# Regenerate AUTO-marked sections in D:\.claude\AUTOMATION.md on every session start.
+
+$ErrorActionPreference = 'SilentlyContinue'
+$hooksDir  = 'D:\.claude\hooks'
+$docFile   = 'D:\.claude\AUTOMATION.md'
+$timestamp = Get-Date -Format 'yyyy-MM-ddTHH:mm:sszzz'
+
+if (-not (Test-Path $docFile)) { exit 0 }
+
+$content = Get-Content $docFile -Raw -Encoding UTF8
+if (-not $content) { exit 0 }
+
+# Build scripts table from first-line comments in each *.ps1
+$rows = @('| Script | Description | Modified |', '|---|---|---|')
+Get-ChildItem -Path $hooksDir -Filter '*.ps1' -File |
+    Sort-Object Name |
+    ForEach-Object {
+        $desc = (Get-Content $_.FullName -TotalCount 1 -Encoding UTF8) -replace '^#\s*', '' -replace '\s+$', ''
+        $modified = $_.LastWriteTime.ToString('yyyy-MM-dd')
+        $rows += "| ``$($_.Name)`` | $desc | $modified |"
+    }
+$table = $rows -join "`n"
+
+# Replace AUTO:SCRIPTS-START ... AUTO:SCRIPTS-END (DOTALL)
+$content = [regex]::Replace(
+    $content,
+    '(?s)<!-- AUTO:SCRIPTS-START -->.*?<!-- AUTO:SCRIPTS-END -->',
+    "<!-- AUTO:SCRIPTS-START -->`n$table`n<!-- AUTO:SCRIPTS-END -->"
+)
+
+# Replace entire "Last verified" line, keeping the AUTO:TIMESTAMP marker intact
+$content = [regex]::Replace(
+    $content,
+    '\*\*Last verified\*\*: .*',
+    "**Last verified**: $timestamp <!-- AUTO:TIMESTAMP -->"
+)
+
+Set-Content -Path $docFile -Value $content -Encoding UTF8 -NoNewline
+
+exit 0

@@ -1,0 +1,243 @@
+<?php section('content') ?>
+
+<div class="no-sub-price">
+    <?php
+    $pricingData = __('pages.pricing');
+    $pricingData = is_array($pricingData) ? $pricingData : [];
+    $pricingCards = is_array($pricingData['cards'] ?? null) ? $pricingData['cards'] : [];
+    $brandCards = is_array($pricingCards['brand'] ?? null) ? $pricingCards['brand'] : [];
+    $retailerCards = is_array($pricingCards['retailer'] ?? null) ? $pricingCards['retailer'] : [];
+    ?>
+    <section class="no-sub-pricing  no-section-md" data-pricing-audience
+        aria-label="<?= e(__('pages.pricing.section_aria')) ?>">
+        <div class="no-container-xl">
+            <div class="no-sub-pricing__inner">
+                <div class="no-sub-pricing__txt" <?= AOS_TITLE ?>>
+                    <?php
+                    $__pk = __('pages.pricing.hero.kicker');
+                    $__pk = is_string($__pk) ? trim($__pk) : '';
+                    if ($__pk !== ''):
+                    ?>
+                    <span><?= e($__pk) ?></span>
+                    <?php endif; ?>
+                    <h2 class="f-heading-1 --fm-en">
+                        <?= __('pages.pricing.hero.heading_html') ?>
+                    </h2>
+                    <?php
+                    $__pintro = __('pages.pricing.hero.intro');
+                    $__pintro = is_string($__pintro) ? trim($__pintro) : '';
+                    if ($__pintro !== ''):
+                    ?>
+                    <p class="f-body-1 --regular"><?= e_nl2br($__pintro) ?></p>
+                    <?php endif; ?>
+                </div>
+
+                <div class="no-sub-pricing__toggle" role="presentation" <?= AOS_CONTENTS ?>>
+                    <div class="no-sub-pricing__toggle-track" data-audience="brand" role="tablist"
+                        aria-label="<?= e(__('pages.pricing.toggle.aria')) ?>">
+                        <span class="no-sub-pricing__toggle-thumb" aria-hidden="true"></span>
+                        <button type="button" class="no-sub-pricing__toggle-btn f-body-1 --semibold is-active"
+                            role="tab" data-audience="brand" id="pricing-tab-brand" aria-controls="pricing-panel-brand"
+                            aria-selected="true" tabindex="0">
+                            <?= e(__('pages.pricing.toggle.brand')) ?>
+                        </button>
+                        <button type="button" class="no-sub-pricing__toggle-btn f-body-1 --semibold" role="tab"
+                            data-audience="retailer" id="pricing-tab-retailer" aria-controls="pricing-panel-retailer"
+                            aria-selected="false" tabindex="-1">
+                            <?= e(__('pages.pricing.toggle.retailer')) ?>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="no-sub-pricing__audience is-active" data-audience-panel="brand" id="pricing-panel-brand"
+                    role="tabpanel" tabindex="-1" aria-labelledby="pricing-tab-brand" aria-hidden="false">
+                    <ul class="no-sub-pricing__plans" <?= AOS_CONTENTS ?>>
+                        <?php foreach ($brandCards as $card): ?>
+                        <?php
+                            $rawPrice = $card['price'] ?? '';
+                            $currencyChars = ['$', '€', '£', '¥', '₩'];
+                            $hasCurrency = $rawPrice !== '' && in_array($rawPrice[0], $currencyChars, true);
+                            $priceCurrency = $hasCurrency ? $rawPrice[0] : '';
+                            $priceAmount   = $hasCurrency ? substr($rawPrice, 1) : $rawPrice;
+                        ?>
+                        <?php $priceParts = split_price_parts((string) ($card['price'] ?? '')); ?>
+                        <?php
+                            $cardGroups = is_array($card['groups'] ?? null) ? $card['groups'] : [];
+                            $mainGroups = [];
+                            $excludedGroups = [];
+                            foreach ($cardGroups as $group) {
+                                $groupClass = (string) ($group['card_group_class'] ?? '');
+                                $groupHeading = (string) ($group['heading'] ?? '');
+                                $isExcludedGroup = strpos($groupClass, 'group--excluded') !== false
+                                    || stripos($groupHeading, 'excluded') !== false;
+                                if ($isExcludedGroup) {
+                                    $excludedGroups[] = $group;
+                                } else {
+                                    $mainGroups[] = $group;
+                                }
+                            }
+                        ?>
+                        <li class="no-sub-pricing-card no-sub-pricing-card--pricing">
+                            <div class="no-sub-pricing-card__body">
+                                <div class="no-sub-pricing-card__kicker-wrap">
+                                    <span class="no-sub-pricing-card__kicker f-body-2 --medium"><?= e($card['kicker'] ?? '') ?></span>
+                                </div>
+                                <h3 class="no-sub-pricing-card__title f-heading-2 --semibold"><?= e_nl2br($card['title'] ?? '') ?></h3>
+                                <p class="no-sub-pricing-card__summary f-body-3 --regular"><?= $card['summary_html'] ?? e_nl2br($card['summary'] ?? '') ?></p>
+                                <div class="no-sub-pricing-card__price-line<?= !empty($card['price_trading_fees']) ? ' no-sub-pricing-card__price-line--stacked' : '' ?>">
+                                    <p class="no-sub-pricing-card__price">
+                                        <?php if ($priceParts['prefix_text'] !== ''): ?><span class="no-sub-pricing-card__price-prefix"><?= e($priceParts['prefix_text']) ?></span><?php endif; ?>
+                                        <strong><?php if ($priceParts['currency'] !== ''): ?><span class="no-sub-pricing-card__price-currency"><?= e($priceParts['currency']) ?></span><?php endif; ?><?= e($priceParts['amount']) ?><?php if ($priceParts['suffix'] !== ''): ?><span class="no-sub-pricing-card__price-suffix"><?= e($priceParts['suffix']) ?></span><?php endif; ?></strong>
+                                        <?php if (!empty($card['unit'])): ?><span class="no-sub-pricing-card__price-unit"><?= e($card['unit']) ?></span><?php endif; ?>
+                                    </p>
+                                    <?php if (!empty($card['price_trading_fees'])): ?>
+                                    <p class="no-sub-pricing-card__price-trading f-body-2 --regular"><?= e($card['price_trading_fees']) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <a href="<?= e(localized_path('/pricing')) ?>#request-meeting" class="no-sub-pricing-card__link no-button no-button--md no-button--primary no-button--block"><?= e($card['cta'] ?? __('cta.request_meeting')) ?></a>
+                                <?php if (!empty($card['quote_html'])): ?>
+                                <blockquote class="no-sub-pricing-card__quote f-body-2 --regular"><p><?= $card['quote_html'] ?></p></blockquote>
+                                <?php endif; ?>
+                                <?php foreach ($mainGroups as $group): ?>
+                                <div class="<?= e($group['card_group_class'] ?? 'no-sub-pricing-card__group') ?>">
+                                    <h5 class="no-sub-pricing-card__kpi-heading f-heading-5 --semibold"><?= e_nl2br($group['heading'] ?? '') ?></h5>
+                                    <?php if (!empty($group['subsections']) && is_array($group['subsections'])): ?>
+                                        <?php foreach ($group['subsections'] as $sub): ?>
+                                        <h6 class="no-sub-pricing-card__subsection-title f-body-1 --semibold"><?= e_nl2br($sub['title'] ?? '') ?></h6>
+                                        <ul class="--bullet">
+                                            <?php foreach (($sub['items'] ?? []) as $item): ?><li><p><?= e_nl2br_html($item) ?></p></li><?php endforeach; ?>
+                                        </ul>
+                                        <?php endforeach; ?>
+                                    <?php elseif (!empty($group['text'])): ?>
+                                        <p class="no-sub-pricing-card__excluded"><?= e($group['text'] ?? '') ?></p>
+                                    <?php else: ?>
+                                        <ul class="<?= e($group['list_class'] ?? '--bullet') ?>" role="list">
+                                            <?php foreach (($group['items'] ?? []) as $item): ?>
+                                            <li><?php if (($group['list_class'] ?? '') === '--checklist'): ?><i class="fa-regular fa-check" aria-hidden="true"></i><?php endif; ?><p><?= e_nl2br_html($item) ?></p></li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php foreach ($excludedGroups as $group): ?>
+                            <div class="no-sub-pricing-card__excluded-wrap">
+                                <p class="no-sub-pricing-card__excluded-label f-body-4 --semibold"><?= e_nl2br($group['heading'] ?? '') ?></p>
+                                <p class="no-sub-pricing-card__excluded"><?= e($group['text'] ?? '') ?></p>
+                            </div>
+                            <?php endforeach; ?>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+
+                </div>
+
+                <div class="no-sub-pricing__audience" data-audience-panel="retailer" id="pricing-panel-retailer"
+                    role="tabpanel" tabindex="-1" aria-labelledby="pricing-tab-retailer" aria-hidden="true">
+                    <ul class="no-sub-pricing__plans" <?= AOS_CONTENTS ?>>
+                        <?php foreach ($retailerCards as $card): ?>
+                        <?php
+                            $rawPrice = $card['price'] ?? '';
+                            $currencyChars = ['$', '€', '£', '¥', '₩'];
+                            $hasCurrency = $rawPrice !== '' && in_array($rawPrice[0], $currencyChars, true);
+                            $priceCurrency = $hasCurrency ? $rawPrice[0] : '';
+                            $priceAmount   = $hasCurrency ? substr($rawPrice, 1) : $rawPrice;
+                        ?>
+                        <?php $priceParts = split_price_parts((string) ($card['price'] ?? '')); ?>
+                        <?php
+                            $cardGroups = is_array($card['groups'] ?? null) ? $card['groups'] : [];
+                            $mainGroups = [];
+                            $excludedGroups = [];
+                            foreach ($cardGroups as $group) {
+                                $groupClass = (string) ($group['card_group_class'] ?? '');
+                                $groupHeading = (string) ($group['heading'] ?? '');
+                                $isExcludedGroup = strpos($groupClass, 'group--excluded') !== false
+                                    || stripos($groupHeading, 'excluded') !== false;
+                                if ($isExcludedGroup) {
+                                    $excludedGroups[] = $group;
+                                } else {
+                                    $mainGroups[] = $group;
+                                }
+                            }
+                        ?>
+                        <li class="no-sub-pricing-card no-sub-pricing-card--pricing">
+                            <div class="no-sub-pricing-card__body">
+                                <div class="no-sub-pricing-card__kicker-wrap">
+                                    <span class="no-sub-pricing-card__kicker f-body-2 --medium"><?= e($card['kicker'] ?? '') ?></span>
+                                </div>
+                                <h3 class="no-sub-pricing-card__title f-heading-2 --semibold"><?= e_nl2br($card['title'] ?? '') ?></h3>
+                                <p class="no-sub-pricing-card__summary f-body-3 --regular"><?= $card['summary_html'] ?? e_nl2br($card['summary'] ?? '') ?></p>
+                                <div class="no-sub-pricing-card__price-line">
+                                    <p class="no-sub-pricing-card__price">
+                                        <?php if ($priceParts['prefix_text'] !== ''): ?><span class="no-sub-pricing-card__price-prefix"><?= e($priceParts['prefix_text']) ?></span><?php endif; ?>
+                                        <strong><?php if ($priceParts['currency'] !== ''): ?><span class="no-sub-pricing-card__price-currency"><?= e($priceParts['currency']) ?></span><?php endif; ?><?= e($priceParts['amount']) ?><?php if ($priceParts['suffix'] !== ''): ?><span class="no-sub-pricing-card__price-suffix"><?= e($priceParts['suffix']) ?></span><?php endif; ?></strong>
+                                        <?php if (!empty($card['unit'])): ?><span class="no-sub-pricing-card__price-unit"><?= e($card['unit']) ?></span><?php endif; ?>
+                                    </p>
+                                    <?php if (!empty($card['price_note'])): ?>
+                                    <p class="no-sub-pricing-card__price-note f-body-2 --regular"><?= e_nl2br($card['price_note']) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <a href="<?= e(localized_path('/pricing')) ?>#request-meeting" class="no-sub-pricing-card__link no-button no-button--md no-button--primary no-button--block"><?= e($card['cta'] ?? __('cta.request_meeting')) ?></a>
+                                <?php foreach ($mainGroups as $group): ?>
+                                <div class="<?= e($group['card_group_class'] ?? 'no-sub-pricing-card__group') ?>">
+                                    <h5 class="no-sub-pricing-card__kpi-heading f-heading-5 --semibold"><?= e_nl2br($group['heading'] ?? '') ?></h5>
+                                    <ul class="<?= e($group['list_class'] ?? '--bullet') ?>">
+                                        <?php foreach (($group['items'] ?? []) as $item): ?>
+                                        <li><?php if (($group['list_class'] ?? '') === '--checklist'): ?><i class="fa-regular fa-check" aria-hidden="true"></i><?php endif; ?><p><?= e_nl2br_html($item) ?></p></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php foreach ($excludedGroups as $group): ?>
+                            <div class="no-sub-pricing-card__excluded-wrap">
+                                <p class="no-sub-pricing-card__excluded-label f-body-4 --semibold"><?= e_nl2br($group['heading'] ?? '') ?></p>
+                                <p class="no-sub-pricing-card__excluded"><?= e($group['text'] ?? '') ?></p>
+                            </div>
+                            <?php endforeach; ?>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <?php
+    $pfb = __('pages.pricing.faq.brand');
+    $pfb = is_array($pfb) ? $pfb : [];
+    $pfr = __('pages.pricing.faq.retailer');
+    $pfr = is_array($pfr) ? $pfr : [];
+    ?>
+
+    <div class="no-sub-pricing__audience no-sub-pricing__audience--faq is-active" data-audience-panel="brand"
+        aria-hidden="false">
+        <?= include_view('components.faq', [
+            'faq_items' => is_array($pfb['items'] ?? null) ? $pfb['items'] : [],
+            'faq_prefix' => 'pricing-brand-faq',
+            'faq_title' => __('pages.pricing.faq.title'),
+            'section_class' => 'no-sub-faq no-sub-pricing__faq-section no-section-md',
+            'aria_label' => (string) ($pfb['aria'] ?? ''),
+        ]) ?>
+    </div>
+
+    <div class="no-sub-pricing__audience no-sub-pricing__audience--faq" data-audience-panel="retailer"
+        aria-hidden="true">
+        <?= include_view('components.faq', [
+            'faq_items' => is_array($pfr['items'] ?? null) ? $pfr['items'] : [],
+            'faq_prefix' => 'pricing-retailer-faq',
+            'faq_title' => __('pages.pricing.faq.title'),
+            'section_class' => 'no-sub-faq no-sub-pricing__faq-section no-section-md',
+            'aria_label' => (string) ($pfr['aria'] ?? ''),
+        ]) ?>
+    </div>
+</div>
+
+<?= include_view('components.common-form'); ?>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?= include_view('components.popup'); ?>
+<?php end_section() ?>

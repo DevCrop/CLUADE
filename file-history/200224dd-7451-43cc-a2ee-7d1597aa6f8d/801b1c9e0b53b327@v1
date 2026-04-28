@@ -1,0 +1,510 @@
+<?php
+
+/**
+ * Button Component — button | a | div, 아이콘 선택(앞/뒤/없음)
+ *
+ * @var string $variant corner | prev-button | shiny | default
+ * @var string $text
+ */
+
+if (!function_exists('button_resolve_icon_svg')) {
+    require __DIR__ . '/icons.php';
+}
+
+if (!interface_exists('ButtonVariantRenderer')) {
+    interface ButtonVariantRenderer
+    {
+        /** @param array<string, mixed> $props */
+        public function render(array $props, string $text): void;
+    }
+}
+
+if (!class_exists('ButtonInput')) {
+    final class ButtonInput
+    {
+        private const CTX = 'components.button';
+
+        /** @param array<string, mixed> $props */
+        public static function variant(array $props): string
+        {
+            $variant = self::string($props, 'variant', 'default');
+            self::oneOf($variant, ['corner', 'prev-button', 'shiny', 'default'], 'variant', $variant);
+            return $variant;
+        }
+
+        /** @param array<string, mixed> $props */
+        public static function text(array $props, string $variant): string
+        {
+            if (!isset($props['text'])) {
+                throw new \InvalidArgumentException(self::CTX . "({$variant}): '\$text' is required");
+            }
+            return self::string($props, 'text', null, $variant);
+        }
+
+        /**
+         * @param array<string, mixed> $props
+         * @param ?string $default null means required in caller
+         */
+        public static function string(array $props, string $name, ?string $default = '', string $variant = 'default'): string
+        {
+            $value = $props[$name] ?? $default;
+            if (!is_string($value)) {
+                $actual = gettype($value);
+                throw new \InvalidArgumentException(self::CTX . "({$variant}): '\${$name}' must be string, got {$actual}");
+            }
+            return $value;
+        }
+
+        /** @param array<string, mixed> $props */
+        public static function bool(array $props, string $name, bool $default, string $variant): bool
+        {
+            $value = $props[$name] ?? $default;
+            if (!is_bool($value)) {
+                $actual = gettype($value);
+                throw new \InvalidArgumentException(self::CTX . "({$variant}): '\${$name}' must be boolean, got {$actual}");
+            }
+            return $value;
+        }
+
+        /**
+         * @param array<string, mixed> $props
+         * @param string[] $names
+         */
+        public static function boolAlias(array $props, array $names, bool $default, string $variant): bool
+        {
+            foreach ($names as $name) {
+                if (array_key_exists($name, $props)) {
+                    return self::bool($props, $name, $default, $variant);
+                }
+            }
+            return $default;
+        }
+
+        /**
+         * @param array<string, mixed> $props
+         * @param string[] $names
+         */
+        public static function stringAlias(array $props, array $names, string $default, string $variant): string
+        {
+            foreach ($names as $name) {
+                if (isset($props[$name])) {
+                    return self::string($props, $name, '', $variant);
+                }
+            }
+            return $default;
+        }
+
+        /** @param string[] $allowed */
+        public static function oneOf(string $value, array $allowed, string $name, string $variant): void
+        {
+            if (!in_array($value, $allowed, true)) {
+                throw new \InvalidArgumentException(
+                    self::CTX . "({$variant}): '\${$name}' must be one of [" . implode(', ', $allowed) . "], got '{$value}'"
+                );
+            }
+        }
+    }
+}
+
+if (!class_exists('InteractiveTagBuilder')) {
+    final class InteractiveTagBuilder
+    {
+        /**
+         * @param array<string, string> $extraAttrs
+         * @param 'button'|'a'|'div'|null $tagOverride null이면 href 유무로 a/button 결정
+         * @return array{0: string, 1: string}
+         */
+        public function build(string $href, string $type, string $target, bool $disabled, array $extraAttrs = [], ?string $tagOverride = null): array
+        {
+            $tag = $tagOverride;
+            if ($tag === null || $tag === '') {
+                $tag = $href !== '' ? 'a' : 'button';
+            }
+            if (!in_array($tag, ['button', 'a', 'div'], true)) {
+                $tag = $href !== '' ? 'a' : 'button';
+            }
+            $attrs = '';
+
+            if ($tag === 'a') {
+                $attrs .= ' href="' . e($href) . '"';
+                if ($target !== '') {
+                    $attrs .= ' target="' . e($target) . '"';
+                }
+            } elseif ($tag === 'button') {
+                $attrs .= ' type="' . e($type) . '"';
+                if ($disabled) {
+                    $attrs .= ' disabled';
+                }
+            }
+
+            foreach ($extraAttrs as $name => $value) {
+                if ($value === '') {
+                    $attrs .= ' ' . $name;
+                } else {
+                    $attrs .= ' ' . $name . '="' . e($value) . '"';
+                }
+            }
+
+            return [$tag, $attrs];
+        }
+    }
+}
+
+if (!class_exists('CornerButtonRenderer')) {
+    final class CornerButtonRenderer implements ButtonVariantRenderer
+    {
+        private InteractiveTagBuilder $tagBuilder;
+
+        public function __construct(InteractiveTagBuilder $tagBuilder)
+        {
+            $this->tagBuilder = $tagBuilder;
+        }
+
+        /**
+         * @param array<string, mixed> $props
+         * @return array<string, string>
+         */
+        private static function extraAttrs(array $props, string $variant): array
+        {
+            $raw = $props['extraAttrs'] ?? $props['extra_attrs'] ?? [];
+            if (!is_array($raw)) {
+                return [];
+            }
+            $out = [];
+            foreach ($raw as $name => $value) {
+                if (is_string($name) && (is_string($value) || is_int($value))) {
+                    $out[$name] = (string) $value;
+                }
+            }
+            return $out;
+        }
+
+        /**
+         * @param array<string, mixed> $props
+         * @return array<string, string>
+         */
+        private static function wrapperAttrs(array $props, string $variant): array
+        {
+            $raw = $props['wrapperAttrs'] ?? $props['wrapper_attrs'] ?? [];
+            if (!is_array($raw)) {
+                return [];
+            }
+            $out = [];
+            foreach ($raw as $name => $value) {
+                if (is_string($name) && (is_string($value) || is_int($value))) {
+                    $out[$name] = (string) $value;
+                }
+            }
+            return $out;
+        }
+
+        /** @param array<string, mixed> $props */
+        public function render(array $props, string $text): void
+        {
+            $variant = 'corner';
+            $href = ButtonInput::string($props, 'href', '', $variant);
+            $class = ButtonInput::string($props, 'class', '', $variant);
+            $type = ButtonInput::string($props, 'type', 'button', $variant);
+            $target = ButtonInput::string($props, 'target', '', $variant);
+            $tagOverride = ButtonInput::string($props, 'tag', '', $variant);
+            if ($tagOverride !== '') {
+                ButtonInput::oneOf($tagOverride, ['button', 'a', 'div'], 'tag', $variant);
+            }
+            $ariaCurrent = ButtonInput::string($props, 'ariaCurrent', '', $variant);
+            $ariaLabel = ButtonInput::string($props, 'ariaLabel', '', $variant);
+            $disabled = ButtonInput::bool($props, 'disabled', false, $variant) && $href === '';
+            $withWrapper = ButtonInput::boolAlias($props, ['withWrapper', 'with_wrapper'], true, $variant);
+            $wrapperClass = ButtonInput::stringAlias(
+                $props,
+                ['wrapperClass', 'wrapper_class'],
+                '',
+                $variant
+            );
+
+            $icon = ButtonInput::stringAlias($props, ['icon', 'iconClass'], '', $variant);
+            $iconSvg = ButtonInput::stringAlias($props, ['icon_svg', 'iconSvg'], '', $variant);
+            $iconName = ButtonInput::stringAlias($props, ['name', 'icon_name', 'iconName'], '', $variant);
+            $iconPosition = ButtonInput::stringAlias($props, ['iconPosition', 'icon_position'], 'after', $variant);
+            $iconAction = ButtonInput::string($props, 'icon_action', '', $variant);
+            $beforeTextHtml = ButtonInput::stringAlias(
+                $props,
+                ['beforeTextHtml', 'before_text_html'],
+                '',
+                $variant
+            );
+            $extraAttrs = self::extraAttrs($props, $variant);
+            $wrapperAttrs = self::wrapperAttrs($props, $variant);
+
+            if ($iconSvg === '' && $icon !== '' && strpos($icon, '<svg') !== false) {
+                $iconSvg = $icon;
+                $icon = '';
+            }
+            if ($iconSvg === '' && $icon !== '') {
+                $iconSvg = button_resolve_icon_svg_from_class($icon);
+                if ($iconSvg !== '') {
+                    $icon = '';
+                }
+            }
+            if ($iconSvg === '' && $iconName !== '') {
+                $iconSvg = button_resolve_icon_svg($iconName);
+            }
+            $hasIcon = $icon !== '' || $iconSvg !== '';
+            if ($hasIcon) {
+                ButtonInput::oneOf($iconPosition, ['before', 'after'], 'icon_position', $variant);
+            }
+
+            $tagOverrideForBuild = $tagOverride === '' ? null : $tagOverride;
+            $a11yAttrs = [
+                'aria-current' => $ariaCurrent,
+                'aria-label' => $ariaLabel,
+            ];
+            if ($type !== 'submit') {
+                $a11yAttrs['role'] = 'button';
+            }
+            [$tag, $attrs] = $this->tagBuilder->build(
+                $href,
+                $type,
+                $target,
+                $disabled,
+                array_merge($a11yAttrs, $extraAttrs),
+                $tagOverrideForBuild
+            );
+
+            $rootClass = $class;
+            if ($hasIcon) {
+                $rootClass .= ' no-corner-btn--icon-' . $iconPosition;
+            }
+            if ($hasIcon && $text === '') {
+                $rootClass .= ' no-corner-btn--icon-only';
+            }
+            if ($iconAction !== '') {
+                $rootClass .= ' no-corner-btn--icon-' . $iconAction;
+            }
+            $rootClass = trim($rootClass);
+            $cornerClass = 'no-corner-btn__corner no-corner-bracket--shine';
+            $wrapperClassName = trim('no-corner-btn-wrap ' . $wrapperClass);
+            $wrapperAttrString = '';
+            foreach ($wrapperAttrs as $name => $value) {
+                if ($value === '') {
+                    $wrapperAttrString .= ' ' . $name;
+                    continue;
+                }
+                $wrapperAttrString .= ' ' . $name . '="' . e($value) . '"';
+            }
+            ?>
+            <?php if ($withWrapper): ?>
+            <div class="<?= e($wrapperClassName) ?>"<?= $wrapperAttrString ?>>
+            <?php endif; ?>
+                <<?= $tag ?> class="no-corner-btn <?= e($rootClass) ?>" <?= $attrs ?>>
+                    <?= include_view('components.button.corner-markup', ['class' => $cornerClass]) ?>
+                    <?php if ($hasIcon && $iconPosition === 'before'): ?>
+                    <span class="no-corner-btn__icon" aria-hidden="true">
+                        <?php if ($iconSvg !== ''): ?><?= $iconSvg ?><?php else: ?><i class="<?= e($icon) ?>"></i><?php endif; ?>
+                    </span>
+                    <?php endif; ?>
+                    <?php if ($beforeTextHtml !== ''): ?><?= $beforeTextHtml ?><?php endif; ?>
+                    <?php if ($text !== ''): ?><span class="no-corner-btn__text"><?= e($text) ?></span><?php endif; ?>
+                    <?php if ($hasIcon && $iconPosition === 'after'): ?>
+                    <span class="no-corner-btn__icon" aria-hidden="true">
+                        <?php if ($iconSvg !== ''): ?><?= $iconSvg ?><?php else: ?><i class="<?= e($icon) ?>"></i><?php endif; ?>
+                    </span>
+                    <?php endif; ?>
+                </<?= $tag ?>>
+            <?php if ($withWrapper): ?>
+            </div>
+            <?php endif; ?>
+            <?php
+        }
+    }
+}
+
+if (!class_exists('PrevButtonRenderer')) {
+    final class PrevButtonRenderer implements ButtonVariantRenderer
+    {
+        private InteractiveTagBuilder $tagBuilder;
+
+        public function __construct(InteractiveTagBuilder $tagBuilder)
+        {
+            $this->tagBuilder = $tagBuilder;
+        }
+
+        /** @param array<string, mixed> $props */
+        public function render(array $props, string $text): void
+        {
+            $variant = 'prev-button';
+            $href = ButtonInput::string($props, 'href', '', $variant);
+            $class = ButtonInput::string($props, 'class', '', $variant);
+            $type = ButtonInput::string($props, 'type', 'button', $variant);
+            $target = ButtonInput::string($props, 'target', '', $variant);
+            $ariaLabel = ButtonInput::string($props, 'ariaLabel', '', $variant);
+            $disabled = ButtonInput::bool($props, 'disabled', false, $variant) && $href === '';
+
+            [$tag, $attrs] = $this->tagBuilder->build(
+                $href,
+                $type,
+                $target,
+                $disabled,
+                ['aria-label' => $ariaLabel !== '' ? $ariaLabel : $text]
+            );
+            ?>
+            <<?= $tag ?> class="no-prev-button <?= e($class) ?>"<?= $attrs ?>>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Pro v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2026 Fonticons, Inc.--><path d="M73.6 297.4L51 320L73.6 342.6L233.6 502.6L256.2 525.2L301.5 479.9C300.2 478.6 257.5 435.9 173.5 351.9L576.2 351.9L576.2 287.9L173.5 287.9C257.5 203.9 300.2 161.2 301.5 159.9L256.2 114.6L233.6 137.2L73.6 297.2z"/>
+                </svg>
+            </<?= $tag ?>>
+            <?php
+        }
+    }
+}
+
+if (!class_exists('DefaultButtonRenderer')) {
+    final class DefaultButtonRenderer implements ButtonVariantRenderer
+    {
+        /** @param array<string, mixed> $props */
+        public function render(array $props, string $text): void
+        {
+            $variant = 'default';
+            $href = ButtonInput::string($props, 'href', '#', $variant);
+            $class = ButtonInput::string($props, 'class', '', $variant);
+            $bgColor = ButtonInput::string($props, 'bgColor', 'var(--clr-primary-def)', $variant);
+            $border = ButtonInput::string($props, 'border', 'none', $variant);
+            $icon = ButtonInput::string($props, 'icon', 'fa-regular fa-arrow-right', $variant);
+            $iconSvg = button_resolve_icon_svg_from_class($icon);
+            $iconBg = ButtonInput::string($props, 'iconBg', 'var(--clr-ui-white)', $variant);
+            $iconColor = ButtonInput::string($props, 'iconColor', $bgColor, $variant);
+            $textColor = ButtonInput::string($props, 'textColor', 'var(--clr-ui-white)', $variant);
+            ?>
+            <a href="<?= e($href) ?>" class="no-button <?= e($class) ?>"
+                role="button"
+                aria-label="<?= e($text) ?>"
+                style="--button-bg: <?= e($bgColor) ?>; --button-border: <?= e($border) ?>; --button-icon-bg: <?= e($iconBg) ?>; --button-icon-color: <?= e($iconColor) ?>; --button-text-color: <?= e($textColor) ?>;">
+                <span class="no-button__text"><?= e($text) ?></span>
+                <span class="no-button__icon" aria-hidden="true">
+                    <?php if ($iconSvg !== ''): ?><?= $iconSvg ?><?php endif; ?>
+                </span>
+            </a>
+            <?php
+        }
+    }
+}
+
+if (!class_exists('ShinyButtonRenderer')) {
+    final class ShinyButtonRenderer implements ButtonVariantRenderer
+    {
+        private InteractiveTagBuilder $tagBuilder;
+
+        public function __construct(InteractiveTagBuilder $tagBuilder)
+        {
+            $this->tagBuilder = $tagBuilder;
+        }
+
+        /**
+         * @param array<string, mixed> $props
+         * @return array<string, string>
+         */
+        private static function extraAttrs(array $props): array
+        {
+            $raw = $props['extraAttrs'] ?? $props['extra_attrs'] ?? [];
+            if (!is_array($raw)) {
+                return [];
+            }
+            $out = [];
+            foreach ($raw as $name => $value) {
+                if (is_string($name) && (is_string($value) || is_int($value))) {
+                    $out[$name] = (string) $value;
+                }
+            }
+            return $out;
+        }
+
+        /** @param array<string, mixed> $props */
+        public function render(array $props, string $text): void
+        {
+            $variant = 'shiny';
+            $href = ButtonInput::string($props, 'href', '', $variant);
+            $class = ButtonInput::string($props, 'class', '', $variant);
+            $type = ButtonInput::string($props, 'type', 'button', $variant);
+            $target = ButtonInput::string($props, 'target', '', $variant);
+            $tagOverride = ButtonInput::string($props, 'tag', '', $variant);
+            if ($tagOverride !== '') {
+                ButtonInput::oneOf($tagOverride, ['button', 'a', 'div'], 'tag', $variant);
+            }
+            $ariaLabel = ButtonInput::string($props, 'ariaLabel', '', $variant);
+            $disabled = ButtonInput::bool($props, 'disabled', false, $variant) && $href === '';
+            $extraAttrs = self::extraAttrs($props);
+            $tagOverrideForBuild = $tagOverride === '' ? null : $tagOverride;
+
+            [$tag, $attrs] = $this->tagBuilder->build(
+                $href,
+                $type,
+                $target,
+                $disabled,
+                array_merge(
+                    ['aria-label' => $ariaLabel !== '' ? $ariaLabel : $text],
+                    $extraAttrs
+                ),
+                $tagOverrideForBuild
+            );
+            ?>
+            <<?= $tag ?> class="shiny-cta <?= e(trim($class)) ?>"<?= $attrs ?>>
+                <span><?= e($text) ?></span>
+            </<?= $tag ?>>
+            <?php
+        }
+    }
+}
+
+if (!class_exists('ButtonRendererFactory')) {
+    final class ButtonRendererFactory
+    {
+        private InteractiveTagBuilder $tagBuilder;
+
+        public function __construct(InteractiveTagBuilder $tagBuilder)
+        {
+            $this->tagBuilder = $tagBuilder;
+        }
+
+        public function create(string $variant): ButtonVariantRenderer
+        {
+            switch ($variant) {
+                case 'corner':
+                    return new CornerButtonRenderer($this->tagBuilder);
+                case 'prev-button':
+                    return new PrevButtonRenderer($this->tagBuilder);
+                case 'shiny':
+                    return new ShinyButtonRenderer($this->tagBuilder);
+                default:
+                    return new DefaultButtonRenderer();
+            }
+        }
+    }
+}
+
+if (!class_exists('ButtonComponent')) {
+    final class ButtonComponent
+    {
+        private ButtonRendererFactory $factory;
+
+        public function __construct(ButtonRendererFactory $factory)
+        {
+            $this->factory = $factory;
+        }
+
+        /** @param array<string, mixed> $props */
+        public function render(array $props): void
+        {
+            $variant = ButtonInput::variant($props);
+            $text = ButtonInput::text($props, $variant);
+            $renderer = $this->factory->create($variant);
+            $renderer->render($props, $text);
+        }
+    }
+}
+
+$buttonComponent = new ButtonComponent(
+    new ButtonRendererFactory(
+        new InteractiveTagBuilder()
+    )
+);
+
+$buttonComponent->render(get_defined_vars());
+unset($buttonComponent);

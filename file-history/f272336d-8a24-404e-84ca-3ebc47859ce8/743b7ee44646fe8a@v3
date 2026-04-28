@@ -1,0 +1,14 @@
+<?php section('content') ?>
+
+<?= include_view('components.legal-document', [
+    'pageKey'      => 'pages.legal.marketing_policy',
+    'currentRoute' => 'legal.marketing-policy',
+    'showVisual'   => false,
+    'showNav'      => false,
+]) ?>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?= include_view('components.popup'); ?>
+<?php end_section() ?>

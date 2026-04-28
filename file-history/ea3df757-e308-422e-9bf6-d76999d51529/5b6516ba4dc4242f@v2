@@ -1,0 +1,315 @@
+# SCSS × TS 결합 구조 리팩토링 (mask-target · corner-btn 등)
+
+## Context
+
+### 사용자가 제기한 4가지 증상
+
+1. 스타일 중첩 오류
+2. 트랜지션이 제대로 반영되지 않는 오류
+3. 변수(토큰) 매핑 누락
+4. SCSS 믹스인이 제대로 활용되지 못함
+
+### 근본 원인 — 하나의 요소에 여러 레이어 클래스가 공존
+
+#### 사례 A: mask-target (텍스트 reveal)
+
+```html
+<p class="f-body-1 --regular mask-target is-mask-ready">
+  <span class="masking-text is-inview">
+    <span class="line">…</span>
+  </span>
+</p>
+```
+
+| 레이어 | 클래스 |
+|---|---|
+| Typography | `f-body-1`, `--regular` |
+| Animation 구조 | `mask-target` |
+| Animation state (TS 제어) | `is-mask-ready` |
+| Animation 컴포넌트 | `masking-text` |
+| Animation state (TS 제어) | `is-inview`, `is-down`, `is-hidden` |
+
+관련 파일:
+- [resource/scss/components/_masking-text.scss](resource/scss/components/_masking-text.scss)
+- [resource/ts/animation/TextReveal.ts](resource/ts/animation/TextReveal.ts)
+- [resource/ts/config/dom.config.ts:8-17](resource/ts/config/dom.config.ts#L8-L17)
+
+#### 사례 B: corner-btn (인터랙티브 버튼)
+
+```html
+<div class="no-corner-btn-wrap">
+  <button class="no-corner-btn
+                 no-corner-btn--icon-before
+                 no-corner-btn--icon-only
+                 no-corner-btn--panel
+                 no-corner-btn--highlight
+                 no-corner-btn--icon-rotate
+                 js-work-modal-trigger
+                 no-works-canvas__grid-link
+                 is-active">
+    <span class="no-corner-bracket no-corner-btn__corner no-corner-bracket--shine">…</span>
+    <span class="no-corner-btn__text">…</span>
+  </button>
+</div>
+```
+
+| 레이어 | 클래스 |
+|---|---|
+| Component base | `no-corner-btn` |
+| Variant modifier (다중 공존 가능) | `--icon-before`, `--icon-only`, `--panel`, `--highlight`, `--icon-rotate` |
+| JS hook | `js-work-modal-trigger` |
+| Page-specific | `no-works-canvas__grid-link` |
+| TS state | `is-active` |
+| Sub-element component + modifier + 애니메이션 트리거 (3중 스택) | `no-corner-bracket` + `no-corner-btn__corner` + `no-corner-bracket--shine` |
+
+관련 파일:
+- [resource/scss/components/_button.scss:206-427](resource/scss/components/_button.scss#L206-L427)
+- [resource/scss/components/_corner-bracket.scss](resource/scss/components/_corner-bracket.scss)
+- [views/components/button/button.php:153-319](views/components/button/button.php#L153-L319)
+- [resource/ts/pages/works/runtime/WorksPageRuntime.ts:626-689](resource/ts/pages/works/runtime/WorksPageRuntime.ts#L626-L689)
+- [resource/ts/ui/ContactWizard.ts:875](resource/ts/ui/ContactWizard.ts#L875)
+
+#### 공통 실패 메커니즘
+
+1. **cascade 우선순위가 specificity + 소스 순서에만 의존**  
+   페이지 레이어(`_sub.scss`, `_works-canvas.scss`)가 컴포넌트 레이어(`_masking-text.scss`, `_button.scss`)를 기본적으로 override. 반대로 TS 상태는 낮은 specificity에 묻힘.
+
+2. **variant 상호배타 관계를 구조적으로 강제하지 못함**  
+   `.no-corner-btn--icon-before`와 `.no-corner-btn--icon-only`는 의미상 상호배타지만, HTML 저작자가 둘 다 붙이는 것을 막을 방법이 없음. 같은 `--corner-btn-*` CSS 변수를 각 modifier가 덮어쓰며 중복·충돌 발생.
+
+3. **transition 충돌**  
+   - `_button.scss:234-238`: base `.no-corner-btn`이 4-property transition
+   - `_button.scss:298-303`: `.--panel` modifier가 transform 추가된 5-property transition  
+   → modifier가 base를 완전히 재선언해서 덮어씀 (공유·증분 불가). 하나라도 순서/specificity가 역전되면 transition이 사라지거나 일부만 재생.
+
+4. **TS 상태 클래스(`is-inview`, `is-active`, `is-mask-ready`, `is-down`, `is-hidden`)가 content 클래스와 같은 네임스페이스**  
+   - 콘텐츠 작업자가 실수로 같은 이름을 붙이면 상태머신이 오염
+   - TS가 `classList.remove` 누락하면 상태 누적 (mask-target이 inview + down + hidden을 동시에 가질 수 있음)
+   - 현재 [TextReveal.ts:30-32](resource/ts/animation/TextReveal.ts#L30-L32) 에서 `down`, `hidden` 제거 후 `inview` 추가하지만, 다른 코드가 또 붙일 여지 있음
+
+5. **`@layer` 미사용 + 단일 번들**  
+   [vite.config.ts](vite.config.ts)의 `cssCodeSplit: false`로 단일 CSS 번들. CSS Cascade Layers가 도입되지 않아 레이어 간 우선순위가 느슨한 관례에 의존.
+
+6. **토큰 매핑의 로컬 커스텀 패턴**  
+   `.no-corner-btn--panel`이 `--corner-panel-*` 로컬 변수를 선언한 뒤 `--corner-btn-*`에 매핑 ([_button.scss:271-289](resource/scss/components/_button.scss#L271-L289)). 한 modifier만 쓰면 문제 없지만 여러 modifier가 공존할 때 어떤 변수가 최종 승리하는지 추적 난이도 폭증.
+
+---
+
+## 해결 방안 — 4축 리팩토링
+
+### 축 1: CSS Cascade Layers(`@layer`) 도입  ★ 가장 효과 큼
+
+[resource/scss/style.scss](resource/scss/style.scss) 엔트리에서 레이어 순서를 선언하고, 각 파티셜을 해당 레이어에 소속시킴.
+
+```scss
+// style.scss
+@layer reset, tokens, base, typography, layout, components, animation, state, utilities;
+```
+
+| 레이어 | 소속 파일 | 담당 |
+|---|---|---|
+| `reset` | `base/_reset.scss` | CSS 리셋 |
+| `tokens` | `base/_root.scss`, `abstract/_variables.scss` | CSS 변수·디자인 토큰 |
+| `base` | `base/_fonts.scss`, `base/_init.scss` | 전역 기본값 |
+| `typography` | `abstract/_headings.scss` (출력부) | `.f-body-*`, `.--regular` 등 |
+| `layout` | `layouts/*` | `_drawer.scss`, `_header.scss`, `_footer.scss` |
+| `components` | `components/*` | 버튼·모달·카드 외 20+ |
+| `animation` | `components/_masking-text.scss`, `_corner-bracket.scss` 애니메이션부 | reveal·bracket glow |
+| `state` | (신규) `state/_reveal-state.scss`, `state/_interactive-state.scss` | `is-mask-ready`, `is-inview`, `is-down`, `is-hidden`, `is-active` |
+| `utilities` | `base/_utils.scss` | 유틸리티 |
+
+효과:
+- 페이지 레이어(`_sub.scss`의 `.&__line.mask-target`, `_works-canvas.scss`의 버튼 overrides)가 `components`에 있고, TS가 조작하는 `state`는 더 뒤 레이어 → 상태가 항상 승리, specificity 전쟁 종료
+- 레이어 외 `!important` 제거 가능
+- Chrome 99+, Firefox 97+, Safari 15.4+ 지원 (프로젝트 타깃 충족)
+
+### 축 2: TS 상태를 클래스 → `data-*` 속성으로 이전
+
+상태머신 전용 네임스페이스 분리.
+
+**현재:**
+```ts
+element.classList.add("is-inview");
+element.classList.remove("is-down", "is-hidden");
+button.classList.toggle("is-active", v);
+```
+```scss
+.masking-text.is-inview .line { @include text-reveal-line-visible; }
+.no-corner-btn.is-active { /* ... */ }
+```
+
+**리팩토링 후:**
+```ts
+element.dataset.reveal = "inview";   // 'inview' | 'down' | 'hidden' | ''
+element.dataset.mask   = "ready";    // 'ready' | ''
+button.dataset.active  = "true";     // 'true' | ''
+```
+```scss
+@layer state {
+  [data-mask="ready"]                            { opacity: 1; visibility: visible; }
+  .masking-text[data-reveal="inview"] .line      { @include text-reveal-line-visible; }
+  .masking-text[data-reveal="down"]   .line      { @include text-reveal-line-down; }
+  .masking-text[data-reveal="hidden"] .line      { @include text-reveal-line-hidden; }
+  .no-corner-btn[data-active="true"]             { /* ... */ }
+}
+```
+
+효과:
+- 콘텐츠 저작자가 실수로 `is-inview` 같은 클래스를 붙여 상태머신을 오염시킬 위험 원천 차단
+- `dataset.*` 단일 값은 **상호배타**를 자연스럽게 강제 (`data-reveal`이 'inview'와 'down'을 동시에 가질 수 없음)
+- `classList.remove` 누락으로 인한 상태 누적 버그 제거
+- DevTools로 상태 확인 직관적
+
+### 축 3: 구조적 분리 — `mask-target`은 래퍼로, variant는 상호배타 스위치로
+
+#### 3-A: mask-target을 typography와 같은 요소에 두지 않음
+
+**현재:**
+```html
+<p class="f-body-1 --regular mask-target is-mask-ready">…</p>
+```
+
+**변경:**
+```html
+<div class="mask-target" data-mask="ready">
+  <p class="f-body-1 --regular">…</p>
+</div>
+```
+
+자동 대응: [TextReveal.wrap()](resource/ts/animation/TextReveal.ts#L128-L149)가 이미 `<span class="masking-text"><span class="line">` 구조를 생성하므로, 여기에 "부모가 typography 클래스를 가진 경우 `.mask-target`을 외곽 div로 승격" 로직 추가 가능. 기존 HTML을 유지한 채 런타임 normalization만 추가하면 점진적 이관 가능.
+
+#### 3-B: corner-btn variant를 단일 속성으로
+
+**현재 (여러 modifier 공존 가능):**
+```html
+<button class="no-corner-btn no-corner-btn--icon-before no-corner-btn--panel no-corner-btn--highlight">
+```
+
+**변경 (상호배타 축 분리):**
+```html
+<button class="no-corner-btn"
+        data-variant="panel"
+        data-emphasis="highlight"
+        data-icon="before"
+        data-icon-action="rotate">
+```
+```scss
+@layer components {
+  .no-corner-btn { /* base */ }
+  .no-corner-btn[data-variant="panel"] { /* panel */ }
+  .no-corner-btn[data-emphasis="highlight"] { /* highlight */ }
+  .no-corner-btn[data-icon="before"] .no-corner-btn__icon { margin-right: …; margin-left: 0; }
+  .no-corner-btn[data-icon="after"]  .no-corner-btn__icon { margin-left: …; margin-right: 0; }
+  .no-corner-btn[data-icon="only"] { padding: 0; }
+  .no-corner-btn[data-icon-action="rotate"]:hover .no-corner-btn__icon { transform: rotate(360deg); }
+}
+```
+
+효과:
+- `data-icon`은 'before'|'after'|'only' 중 **단일 값만** 가질 수 있으므로 modifier 공존 충돌 불가
+- PHP 렌더러(`CornerButtonRenderer`)가 스위치 하나 대신 여러 클래스를 문자열로 이어붙이는 현재 구조([button.php:273-283](views/components/button/button.php#L273-L283))보다 타입 안전
+
+### 축 4: Transition·토큰 컨트랙트 재정립
+
+#### 4-A: transition을 modifier가 재선언하지 않고 CSS 변수로 조립
+
+```scss
+// _button.scss
+.no-corner-btn {
+  --corner-btn-transition-props: border-color, background, box-shadow, color;
+  transition-property: var(--corner-btn-transition-props);
+  transition-duration: var(--duration-default);
+  transition-timing-function: var(--easing-default);
+}
+
+@layer components {
+  .no-corner-btn[data-variant="panel"] {
+    --corner-btn-transition-props: border-color, background, box-shadow, color, transform;
+  }
+}
+```
+
+효과: modifier가 `transition`을 통째로 재선언하지 않으므로 겹침 문제 소거. 베이스 duration/easing은 토큰에서 단일 출처.
+
+#### 4-B: 토큰 매핑 정리
+
+현재 `_button.scss:271-289`의 `--corner-panel-*` 로컬 변수는 `panel` modifier 외에서는 재사용 안 됨. 그럼에도 public API처럼 보여 혼란. 두 방향 중 하나 선택:
+- **접두어 명확화**: `--corner-btn-panel-*`로 스코프를 이름에 반영
+- **제거**: 중간 계층 삭제하고 `--corner-btn-border` 등 최종 변수만 직접 설정
+
+[base/_root.scss](resource/scss/base/_root.scss)의 `:root` 토큰과 컴포넌트 로컬 변수의 경계를 명확화.
+
+#### 4-C: 믹스인 재활용
+
+현재 `_masking-text.scss`는 `text-reveal-line-hidden/visible/down` 믹스인을 잘 쓰고 있으나, `_button.scss`·`_corner-bracket.scss`·`_drawer.scss`에 **반복되는 transition 선언**이 믹스인화되지 않음.
+
+제안 믹스인 ([abstract/_mixins.scss](resource/scss/abstract/_mixins.scss)):
+```scss
+@mixin interactive-transition($extra: ()) {
+  transition-property: border-color, background, box-shadow, color, #{$extra};
+  transition-duration: var(--duration-default);
+  transition-timing-function: var(--easing-default);
+}
+```
+
+---
+
+## 변경 대상 파일 (우선순위순)
+
+| 우선 | 경로 | 변경 내용 |
+|---|---|---|
+| P1 | [resource/scss/style.scss](resource/scss/style.scss) | `@layer` 선언 추가 |
+| P1 | 모든 `resource/scss/**/*.scss` | 각 파일을 해당 `@layer` 블록으로 래핑 |
+| P1 | (신규) `resource/scss/state/_reveal-state.scss`, `_interactive-state.scss` | state 레이어 분리 |
+| P2 | [resource/scss/components/_masking-text.scss](resource/scss/components/_masking-text.scss) | 상태 클래스 → `[data-reveal]`, `[data-mask]` |
+| P2 | [resource/ts/animation/TextReveal.ts](resource/ts/animation/TextReveal.ts) | `classList.add/remove` → `dataset.*` |
+| P2 | [resource/ts/config/dom.config.ts:8-17](resource/ts/config/dom.config.ts#L8-L17) | `MASKING` 상수를 속성 기반으로 |
+| P2 | `views/**/*.php` (텍스트 템플릿) | 수동 `is-inview`, `is-mask-ready` 클래스 있는지 전수 검색 후 제거 (TS가 주입하므로 애초에 없어야 함) |
+| P3 | [resource/scss/components/_button.scss](resource/scss/components/_button.scss) | `.no-corner-btn--*` modifier → `[data-variant]`, `[data-emphasis]`, `[data-icon]` 속성 기반 |
+| P3 | [views/components/button/button.php:273-283](views/components/button/button.php#L273-L283) | 클래스 concat → `data-*` 속성으로 출력 |
+| P3 | [resource/ts/pages/works/runtime/WorksPageRuntime.ts:626-689](resource/ts/pages/works/runtime/WorksPageRuntime.ts#L626-L689), [resource/ts/ui/ContactWizard.ts:875](resource/ts/ui/ContactWizard.ts#L875) | TS 측 버튼 동적 생성도 속성 기반으로 |
+| P4 | [abstract/_mixins.scss](resource/scss/abstract/_mixins.scss) | `interactive-transition` 등 공통 믹스인 추가 |
+| P4 | `_button.scss`, `_corner-bracket.scss`, `_drawer.scss`, `_panel.scss` | 중복 transition 선언 → 믹스인 적용 |
+| P4 | 페이지 레이어 override (`_sub.scss`, `_main.scss`, `_works-canvas.scss`) | `@layer` 도입 후 specificity 하이잭 제거, 자연스러운 override 재작성 |
+
+---
+
+## 검증 방법
+
+1. **타입 체크**
+   ```bash
+   chop node_modules/.bin/tsc --noEmit
+   ```
+
+2. **런타임 확인** — 이미 구동 중인 Vite dev server (`http://localhost:8888`)
+   - 홈(`/`) 진입 → `.no-main-intro` 텍스트 reveal 애니메이션 정상
+   - `/about`, `/works`, `/works/:id` 진입 → 페이지별 reveal + 버튼 hover/focus/active 정상
+   - GNB 드로어 오픈 → reveal + 인터랙티브 상태 정상
+   - DevTools Elements: `<p>`에 `mask-target`과 typography 클래스가 더 이상 공존하지 않음을 확인
+   - DevTools Styles: `@layer` 섹션이 보이고 state 레이어가 최상위 적용되는지 확인
+   - 콘텐트 페이지 진입 시 `TextReveal.setVisibleOff()` 호출 결과 `data-reveal="down"`으로 전이되는지 확인
+
+3. **회귀 체크**
+   - `/contact` 위저드 각 스텝 이동 시 `is-active` → `data-active="true"` 정상 토글
+   - `WorksPageRuntime`의 동적 생성 버튼이 새 속성 기반 마크업으로 출력
+   - PHP lint: 수정한 PHP 파일에 대해
+     ```bash
+     chop docker compose exec web php -l views/components/button/button.php
+     ```
+
+---
+
+## 확정 범위 (사용자 승인)
+
+- **풀 리팩토링** — 축 1(@layer) + 축 2(TS 상태 → `data-*`) + 축 3(구조 분리 + variant `data-*` API) + 축 4(transition·토큰·믹스인 정리)
+- **variant API 전환 포함** — `button.php`의 클래스 concat을 `data-variant` / `data-emphasis` / `data-icon` / `data-icon-action` 속성으로 교체. `WorksPageRuntime`·`ContactWizard`의 동적 생성 버튼도 동일 패턴으로 이관.
+
+## 실행 순서 권장
+
+단일 브랜치에서 아래 순서로 커밋을 나눠 롤백 단위를 관리:
+
+1. `chore(scss): introduce @layer ordering` — 축 1 (회귀 없음 확인)
+2. `refactor(reveal): migrate is-* state classes to data attributes` — 축 2 (TextReveal + _masking-text + PHP 템플릿 정리)
+3. `refactor(button): variant modifiers → data attributes` — 축 3-B (button.php + TS 동적 생성 + _button.scss)
+4. `refactor(mask): structural split of mask-target wrapper` — 축 3-A
+5. `refactor(scss): transition/token/mixin consolidation` — 축 4

@@ -1,0 +1,196 @@
+<?php
+
+/**
+ * nb_works 테이블의 모든 이미지(jpg/jpeg/png/gif)를 webp 로 변환하고
+ * DB 컬럼 값을 .webp 파일명으로 갱신한 뒤 원본을 삭제하는 1회성 마이그레이션.
+ *
+ * 사용법:
+ *   php scripts/migrate-works-to-webp.php --dry-run
+ *   php scripts/migrate-works-to-webp.php
+ *   php scripts/migrate-works-to-webp.php --id=1115
+ *   php scripts/migrate-works-to-webp.php --limit=10
+ *
+ * 안전 장치:
+ *   - DB UPDATE 가 성공한 뒤에만 원본 unlink (실패 시 데이터 손실 방지)
+ *   - 컬럼 1건 단위 트랜잭션 — 일부 실패가 다른 항목에 전파되지 않음
+ *   - svg/ico/webp 는 skip
+ *   - 디스크에 파일 없으면 컬럼 그대로 두고 skip
+ */
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('CLI only.' . PHP_EOL);
+}
+
+ini_set('memory_limit', '1024M');
+
+// GD는 width*height*4 바이트를 RAM에 올리고, 인코딩 시 동등한 양을 다시 사용한다.
+// 16MP 초과 이미지는 1024M 한도 내에서도 fatal 위험 — 변환 시도 자체를 skip.
+const MAX_PIXELS = 16_000_000;
+
+$args = $argv ?? [];
+$isDryRun = in_array('--dry-run', $args, true);
+$onlyId = null;
+$limit = null;
+foreach ($args as $a) {
+    if (preg_match('/^--id=(\d+)$/', $a, $m)) {
+        $onlyId = (int) $m[1];
+    } elseif (preg_match('/^--limit=(\d+)$/', $a, $m)) {
+        $limit = (int) $m[1];
+    }
+}
+
+$projectRoot = null;
+$dir = __DIR__;
+while ($dir !== dirname($dir)) {
+    if (is_file($dir . '/vendor/autoload.php')) {
+        $projectRoot = $dir;
+        break;
+    }
+    $dir = dirname($dir);
+}
+if ($projectRoot === null) {
+    fwrite(STDERR, 'ERROR: project root not found' . PHP_EOL);
+    exit(1);
+}
+
+require_once $projectRoot . '/vendor/autoload.php';
+require_once $projectRoot . '/config/setup.php';
+
+use Core\ImageProcessor;
+use Database\DB;
+
+$worksDir = $projectRoot . '/uploads/works';
+if (!is_dir($worksDir)) {
+    fwrite(STDERR, 'ERROR: uploads/works not found at: ' . $worksDir . PHP_EOL);
+    exit(1);
+}
+
+$imageColumns = ['thumb_image', 'file_attach1', 'file_attach2', 'file_attach3', 'file_attach4', 'file_attach5'];
+$convertible = ImageProcessor::CONVERTIBLE;
+$skipExt = array_merge($convertible === [] ? [] : [], ['svg', 'ico', 'webp']);
+
+$pdo = DB::getInstance();
+
+$sql = 'SELECT `id`, `' . implode('`, `', $imageColumns) . '` FROM `nb_works`';
+if ($onlyId !== null) {
+    $sql .= ' WHERE `id` = ' . $onlyId;
+}
+$sql .= ' ORDER BY `id` ASC';
+if ($limit !== null) {
+    $sql .= ' LIMIT ' . $limit;
+}
+
+$stmt = $pdo->query($sql);
+$rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+$counts = [
+    'rows' => 0,
+    'cells_total' => 0,
+    'cells_empty' => 0,
+    'cells_skipped_ext' => 0,
+    'cells_skipped_too_large' => 0,
+    'cells_missing_file' => 0,
+    'cells_converted' => 0,
+    'cells_failed_convert' => 0,
+    'cells_failed_db' => 0,
+    'bytes_saved' => 0,
+];
+
+echo ($isDryRun ? '[DRY-RUN] ' : '') . 'works rows to process: ' . count($rows) . PHP_EOL;
+
+foreach ($rows as $row) {
+    $counts['rows']++;
+    $workId = (int) $row['id'];
+
+    foreach ($imageColumns as $col) {
+        $counts['cells_total']++;
+        $value = trim((string) ($row[$col] ?? ''));
+
+        if ($value === '') {
+            $counts['cells_empty']++;
+            continue;
+        }
+
+        $ext = strtolower(pathinfo($value, PATHINFO_EXTENSION));
+        if (in_array($ext, $skipExt, true) || !in_array($ext, $convertible, true)) {
+            $counts['cells_skipped_ext']++;
+            continue;
+        }
+
+        $absOriginal = $worksDir . '/' . $value;
+        if (!is_file($absOriginal)) {
+            fwrite(STDERR, sprintf("[missing] id=%d %s='%s' (file not on disk)\n", $workId, $col, $value));
+            $counts['cells_missing_file']++;
+            continue;
+        }
+
+        // 16MP 초과는 변환 자체가 fatal 위험 → DB·파일 그대로 두고 skip.
+        $imgSize = @getimagesize($absOriginal);
+        if (is_array($imgSize) && isset($imgSize[0], $imgSize[1])
+            && ($imgSize[0] * $imgSize[1]) > MAX_PIXELS) {
+            fwrite(STDERR, sprintf("[too-large] id=%d %s='%s' (%dx%d)\n",
+                $workId, $col, $value, $imgSize[0], $imgSize[1]));
+            $counts['cells_skipped_too_large']++;
+            continue;
+        }
+
+        $webpName = preg_replace('/\.[^.]+$/', '.webp', $value);
+        $absWebp = $worksDir . '/' . $webpName;
+
+        if ($isDryRun) {
+            echo sprintf("[dry-run] id=%d %s: '%s' -> '%s'\n", $workId, $col, $value, $webpName);
+            $counts['cells_converted']++;
+            continue;
+        }
+
+        $originalSize = (int) @filesize($absOriginal);
+        fwrite(STDOUT, sprintf("[try] id=%d %s='%s' (%dKB)\n", $workId, $col, $value, (int) round($originalSize / 1024)));
+        @ob_flush();
+        @flush();
+
+        $existedBefore = is_file($absWebp);
+        $ok = ImageProcessor::makeWebpSibling($absOriginal);
+        if (!$ok || !is_file($absWebp) || filesize($absWebp) === 0) {
+            fwrite(STDERR, sprintf("[CONVERT-FAIL] id=%d %s='%s'\n", $workId, $col, $value));
+            $counts['cells_failed_convert']++;
+            // 변환 실패로 생긴 0바이트 잔존 파일이 있다면 정리 (이전부터 존재하던 webp 는 보존)
+            if (!$existedBefore && is_file($absWebp) && filesize($absWebp) === 0) {
+                @unlink($absWebp);
+            }
+            continue;
+        }
+
+        try {
+            $update = $pdo->prepare('UPDATE `nb_works` SET `' . $col . '` = :val WHERE `id` = :id');
+            $update->execute([':val' => $webpName, ':id' => $workId]);
+        } catch (\Throwable $e) {
+            fwrite(STDERR, sprintf("[DB-FAIL] id=%d %s='%s': %s\n", $workId, $col, $value, $e->getMessage()));
+            $counts['cells_failed_db']++;
+            if (!$existedBefore && is_file($absWebp)) {
+                @unlink($absWebp);
+            }
+            continue;
+        }
+
+        @unlink($absOriginal);
+        $counts['cells_converted']++;
+        $counts['bytes_saved'] += max(0, $originalSize - (int) @filesize($absWebp));
+        echo sprintf("[ok] id=%d %s: '%s' -> '%s'\n", $workId, $col, $value, $webpName);
+    }
+}
+
+echo PHP_EOL;
+echo "--- Summary " . ($isDryRun ? '(DRY-RUN) ' : '') . "---" . PHP_EOL;
+echo "Rows processed       : {$counts['rows']}" . PHP_EOL;
+echo "Cells total          : {$counts['cells_total']}" . PHP_EOL;
+echo "  empty              : {$counts['cells_empty']}" . PHP_EOL;
+echo "  skipped (svg/ico/webp): {$counts['cells_skipped_ext']}" . PHP_EOL;
+echo "  skipped (too large): {$counts['cells_skipped_too_large']}" . PHP_EOL;
+echo "  missing on disk    : {$counts['cells_missing_file']}" . PHP_EOL;
+echo "  converted          : {$counts['cells_converted']}" . PHP_EOL;
+echo "  convert failed     : {$counts['cells_failed_convert']}" . PHP_EOL;
+echo "  db update failed   : {$counts['cells_failed_db']}" . PHP_EOL;
+echo "Bytes saved          : " . number_format($counts['bytes_saved']) . " (" . round($counts['bytes_saved'] / 1024 / 1024, 2) . " MB)" . PHP_EOL;
+
+exit(($counts['cells_failed_convert'] + $counts['cells_failed_db']) > 0 ? 1 : 0);

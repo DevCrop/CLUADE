@@ -1,0 +1,173 @@
+# Plan — spatie/image 도입 + 자동 WEBP sibling 생성
+
+## Context
+
+Admin 업로드 이미지가 원본 그대로 저장되어 용량이 크고 전송이 느림. spatie/image 를 Composer 로 도입하여 업로드된 이미지를 자동으로 (필요시 리사이즈한 뒤) `.webp` sibling 파일로 함께 저장한다. 원본은 유지하여 기존 DB 레코드와 뷰 코드가 그대로 동작하도록 하며, 추후 프론트에서 `<picture>` 태그로 점진 전환할 수 있게 발판을 마련한다.
+
+조사 결과 `inc/lib/func.php:214` 의 공통 함수 `imageUpload()` 가 Admin 이미지 업로드 전역 진입점(Clients/Popups/Works/SiteSettings 모두 경유)이므로 여기에 훅을 하나 붙이면 전 영역에 일괄 적용된다.
+
+## 핵심 결정
+
+| 결정 | 선택 |
+|------|------|
+| 버전 | `spatie/image:^1.10.6` (PHP 7.4 ~ 8.2 지원하는 유일한 안정 라인) |
+| 원본 파일 | 유지 — `foo.jpg` + `foo.webp` 두 파일 공존 |
+| DB 값 | **변경 없음** — 기존대로 원본 파일명(`foo.jpg`) 저장 |
+| 적용 범위 | `imageUpload()` 경유분만 (ClientController / PopupController / WorkController / setting.process.php) |
+| 제외 | 게시판(board) AJAX 업로드, 문의 첨부(request.php), 기존 업로드본 일괄 백필 |
+| 리사이즈 | 가로 > 2560px 일 때만 2560px 로 비율 유지 축소 |
+| WEBP 품질 | 82 (시각 품질/용량 밸런스) |
+
+## 버전 선정 근거 (PHP 7.4 ~ 8.2)
+
+GitHub/Packagist 릴리즈 조사:
+
+| 버전 | PHP 제약 | PHP 7.4 | 비고 |
+|------|----------|---------|------|
+| 3.x (3.9.4 최신) | `^8.2` | ❌ | 현행 메인 |
+| 2.2.x (2.2.7 최신) | `^8.0` | ❌ | |
+| 2.0.0 | `^7.2\|^8.0` | ✅ | 오래됨, v2 첫 릴리즈 |
+| **1.10.6** | **`^7.2\|^8.0`** | **✅** | **v1 마지막 PHP7 호환 릴리즈 (2021-12)** |
+| 1.11.0+ | `^8.0` | ❌ | |
+
+→ 채택: `spatie/image:^1.10.6`.
+ Docker image(`php:7.4-apache`)에 GD + exif + mbstring 이 이미 설치되어 있어 추가 확장 불필요.
+
+## 현재 이미지 업로드 지형
+
+| 위치 | 호출부 | 수정 여부 |
+|------|--------|-----------|
+| `inc/lib/func.php:214` `imageUpload()` | 공통 함수 | **수정** — 이 함수 한 곳에만 훅 삽입 |
+| `admin/Controller/ClientController.php:34,81` | `imageUpload()` 호출 | 수정 불필요 (자동 적용) |
+| `admin/Controller/PopupController.php:46,111` | `imageUpload()` 호출 | 수정 불필요 |
+| `admin/Controller/WorkController.php:104-126` | `imageUpload()` 호출 | 수정 불필요 |
+| `admin/pages/setting/ajax/setting.process.php:37-44,129-145` | `imageUpload()` 호출 | 수정 불필요 |
+| `admin/pages/board/ajax/upload.php` | 직접 `move_uploaded_file` | **범위 외** (이번 작업 제외) |
+| `module/request.php:250-275` | 직접 `move_uploaded_file` | **범위 외** |
+
+## 설계
+
+### 1. Composer 의존성 추가
+`composer.json` `require` 블록:
+```json
+"spatie/image": "^1.10.6"
+```
+설치 명령 (Docker 컨테이너 내부, PHP 7.4 환경에서 실행해야 호환 해석이 맞음):
+```
+docker compose exec web composer require spatie/image:^1.10.6
+```
+- `vendor/spatie/image` + 전이 의존성 설치
+- `composer.lock` 갱신 → 커밋 필요
+- `vendor/` 자체는 gitignore 되어있어 커밋 안 함
+
+### 2. 신규 클래스 `src/Core/ImageProcessor.php`
+기존 PSR-4 매핑(`Core\` → `src/Core/`)에 얹는다. 네임스페이스: `Core\ImageProcessor`.
+
+```php
+namespace Core;
+
+use Spatie\Image\Image;
+
+class ImageProcessor
+{
+    public const MAX_WIDTH    = 2560;
+    public const WEBP_QUALITY = 82;
+    public const CONVERTIBLE  = ['jpg','jpeg','png','gif'];  // svg/ico 는 skip
+
+    /**
+     * 업로드가 완료된 원본 이미지 옆에 .webp sibling 을 생성한다.
+     * 원본은 그대로 둔다.  실패해도 업로드 플로우는 깨뜨리지 않는다.
+     *
+     * @param string $absolutePath 원본 이미지 절대경로
+     * @return bool  sibling 생성 성공 여부 (호출측은 무시해도 됨)
+     */
+    public static function makeWebpSibling(string $absolutePath): bool
+    {
+        try {
+            if (!is_file($absolutePath)) return false;
+
+            $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+            if (!in_array($ext, self::CONVERTIBLE, true)) return false;
+
+            // 대응 .webp 경로 (같은 디렉터리 + 같은 basename)
+            $webpPath = preg_replace('/\.[^.]+$/', '.webp', $absolutePath);
+
+            $img = Image::load($absolutePath);
+
+            // 가로가 MAX_WIDTH 초과시에만 리사이즈 (비율 유지)
+            $size = @getimagesize($absolutePath);
+            if ($size && $size[0] > self::MAX_WIDTH) {
+                $img->width(self::MAX_WIDTH);
+            }
+
+            $img->format('webp')
+                ->quality(self::WEBP_QUALITY)
+                ->save($webpPath);
+
+            return is_file($webpPath);
+        } catch (\Throwable $e) {
+            error_log('[ImageProcessor] webp sibling failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+}
+```
+
+### 3. `imageUpload()` 수정 — `inc/lib/func.php:214`
+
+`move_uploaded_file()` 성공 분기(현행 ~249줄) 바로 뒤에 한 줄 삽입:
+```php
+\Core\ImageProcessor::makeWebpSibling($path . '/' . $stored);
+```
+- 반환값 `$stored` 는 **원본 파일명 그대로** 유지 → 기존 DB/뷰 영향 0
+- sibling 생성 실패해도 업로드 자체는 성공으로 처리 (try/catch 내장)
+
+### 4. `imageDelete()` 검증 — `inc/lib/func.php:274`
+
+현행 코드(257~263줄 근방)가 이미 `.jpg` 삭제시 같은 이름의 `.webp` 를 함께 삭제하는 로직을 가지고 있음 → sibling 모델과 정확히 맞아떨어짐. **코드 수정 불필요**, 다만 Works 같이 `.png`/`.gif` 확장자도 sibling 삭제가 걸리는지 동작 확인 한 번 필요.
+- 만약 `.jpg`/`.jpeg` 에만 걸려있다면 `.png`/`.gif` 도 `.webp` sibling 을 함께 지우도록 최소 수정.
+
+### 5. `composer.json` 업데이트
+```diff
+  "require": {
++     "spatie/image": "^1.10.6",
+      "phpmailer/phpmailer": "^6.9"
+  }
+```
+
+## 수정/신규 파일 요약
+
+| 종류 | 경로 | 내용 |
+|------|------|------|
+| 수정 | `composer.json` | `spatie/image: ^1.10.6` 추가 |
+| 생성 | `composer.lock` | `composer require` 결과로 갱신 (커밋) |
+| 설치 | `vendor/spatie/image/**` | composer install (gitignored) |
+| 생성 | `src/Core/ImageProcessor.php` | 신규 유틸 클래스 |
+| 수정 | `inc/lib/func.php` (249줄 근방) | `imageUpload()` 끝에 `makeWebpSibling()` 호출 1줄 |
+| 검증/수정 | `inc/lib/func.php` (257~263줄 근방) | `imageDelete()` 의 webp sibling 삭제가 png/gif 도 커버하는지 확인, 필요시 확장 |
+
+## 검증 방법 (End-to-End)
+
+1. **Composer 설치 확인**: `chop docker compose exec web composer show spatie/image` → `1.10.6`, 버전 충돌/PHP 경고 없는지.
+2. **PHP Lint**: `chop docker compose exec web php -l src/Core/ImageProcessor.php` + `chop docker compose exec web php -l inc/lib/func.php`.
+3. **Admin 업로드 테스트** (`http://localhost:8888/admin`):
+   - Clients 에 3MB 짜리 4000×3000 PNG 로고 업로드
+   - `uploads/clients/` 에 원본 `.png` + 같은 이름의 `.webp` 두 파일 생성 확인
+   - `.webp` 가 원본보다 현저히 작은 용량인지 확인
+   - `.webp` 가로폭이 2560px 로 축소되었는지 `getimagesize` 또는 뷰어로 확인
+   - DB `nb_clients.thumb_image` 는 원본 `.png` 파일명 유지 확인
+   - 어드민/프론트에서 기존 이미지 태그가 깨지지 않는지 확인
+4. **확장자별 케이스**:
+   - `.jpg` 600×400 작은 이미지 → 리사이즈 없이 `.webp` sibling 만 생성 (용량만 축소)
+   - `.svg` 업로드 → sibling 생성 skip, 원본만 저장
+   - `.gif` 애니메이션 → 정적 `.webp` 로 생성됨(첫 프레임) 주의
+5. **삭제 테스트**: Client 삭제 → `.png` + `.webp` 둘 다 `uploads/clients/` 에서 사라지는지 확인. 사라지지 않으면 `imageDelete()` 확장자 처리 보완.
+6. **Edge — 손상된 이미지**: 헤더만 `.jpg` 인 텍스트 파일 업로드 → 예외 잡혀 원본만 남고 업로드는 성공 처리되는지 `error_log` 확인.
+7. TypeScript / Vite 영향 없음 (PHP-only 변경), dev 서버 재시작 불필요.
+
+## 범위 외 / 후속 과제 (참고)
+
+- 뷰 레이어에 `<picture><source type="image/webp" srcset="foo.webp">` 전환 — 별도 플랜
+- `admin/pages/board/ajax/upload.php` sibling 변환 적용 — 별도 플랜 (문서/영상 혼합이라 분기 필요)
+- 기존 업로드본 백필 스크립트 (`uploads/**` 순회하며 `.webp` sibling 생성) — 별도 플랜
+- 문의 첨부(request.php) 는 이번 작업 범위 외 유지 (개인정보성 첨부)

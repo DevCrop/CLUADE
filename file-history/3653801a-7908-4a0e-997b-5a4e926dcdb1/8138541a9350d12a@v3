@@ -1,0 +1,52 @@
+$base = "C:\Users\edn_y\.claude"
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+$logFile = "$base\cleanup.log"
+
+# --- plans/: 2일 이상 된 파일 삭제 ---
+$plansDeleted = 0
+Get-ChildItem "$base\plans" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-2) } |
+    ForEach-Object { Remove-Item $_.FullName -Force; $plansDeleted++ }
+
+# --- shell-snapshots/: 7일 이상 된 파일 삭제 ---
+$ssDeleted = 0
+Get-ChildItem "$base\shell-snapshots" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-7) } |
+    ForEach-Object { Remove-Item $_.FullName -Force; $ssDeleted++ }
+
+# --- file-history/: 14일 이상 된 UUID 디렉토리 삭제 ---
+$fhDeleted = 0
+Get-ChildItem "$base\file-history" -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-14) } |
+    ForEach-Object { Remove-Item $_.FullName -Recurse -Force; $fhDeleted++ }
+
+# --- projects/: 30일 이상 미수정 폴더 삭제 (active 프로젝트 보호) ---
+$projDeleted = 0
+Get-ChildItem "$base\projects" -Directory -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.Name -notlike "*renew*nineonelabs*" -and
+        $_.LastWriteTime -lt (Get-Date).AddDays(-30)
+    } |
+    ForEach-Object { Remove-Item $_.FullName -Recurse -Force; $projDeleted++ }
+
+# --- session-env/: 빈 서브디렉토리 제거 ---
+$seDeleted = 0
+Get-ChildItem "$base\session-env" -Directory -ErrorAction SilentlyContinue |
+    Where-Object { (Get-ChildItem $_.FullName -Force).Count -eq 0 } |
+    ForEach-Object { Remove-Item $_.FullName -Force; $seDeleted++ }
+
+# --- MEMORY.md 참조 무결성 체크 ---
+$memoryDir = "$base\projects\c--Users-edn-y-renew-nineonelabs\memory"
+$memIndex = Get-Content "$memoryDir\MEMORY.md" -ErrorAction SilentlyContinue
+if ($memIndex) {
+    $memIndex | Select-String '\[.*\]\(([^)]+\.md)\)' | ForEach-Object {
+        $ref = $_.Matches[0].Groups[1].Value
+        if ($ref -notlike 'http*' -and -not (Test-Path "$memoryDir\$ref")) {
+            "[$timestamp] WARN: MEMORY.md references missing file: $ref" | Add-Content $logFile
+        }
+    }
+}
+
+# --- 감사 로그 기록 ---
+"[$timestamp] plans:$plansDeleted shell-snapshots:$ssDeleted file-history:$fhDeleted projects:$projDeleted session-env:$seDeleted" |
+    Add-Content $logFile

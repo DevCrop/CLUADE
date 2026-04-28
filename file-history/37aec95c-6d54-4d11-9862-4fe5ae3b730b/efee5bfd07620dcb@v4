@@ -1,0 +1,227 @@
+import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import type { SceneObjectContext } from "../../types/engine.types.js";
+import type { GravityBallsObjectOptions } from "../../types/object.types.js";
+
+interface SphereInfo {
+  ID: number;
+  startX: number;
+  startY: number;
+  startZ: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  rotDir: number;
+  shrinkRate: number;
+  sphere: THREE.Sprite;
+  material: THREE.SpriteMaterial;
+}
+
+type ResolvedOpts = {
+  attachTo: string;
+  spawnOffset: { x?: number; y?: number; z?: number };
+  colors: string[];
+  dotsPerInterval: number;
+  physicsScale: number;
+};
+
+const FADE_START_SCALE = 0.65;
+const SMOKE_Z_DRIFT = 0.002;
+const SMOKE_SPREAD = 1.005;
+const MIN_INIT_SCALE = 0.4;
+const MAX_INIT_SCALE = 1.0;
+const LIFETIME_TICKS = 150;
+
+const DEFAULT_TEXTURE_URLS = [
+  "/resource/images/texture/smoke/smoke_01.png",
+  "/resource/images/texture/rocket/smoke.png",
+];
+
+const DEFAULTS = {
+  attachTo: "rocket",
+  spawnOffset: { x: 0 as number, y: -0.34 as number, z: 0 as number },
+  colors: ["#FFFFFF", "#F5F5F5", "#EEEEEE"] as string[],
+  dotsPerInterval: 3,
+  physicsScale: 0.006,
+};
+
+export class GravityBalls extends SceneObject<Record<string, never>> {
+  private readonly _balls = new Map<number, SphereInfo>();
+  private _idx = 0;
+  private _accumMs = 0;
+  private readonly _spawnPt = new THREE.Vector3();
+  private _opts: GravityBallsObjectOptions = {};
+  private _baseMats: THREE.SpriteMaterial[] = [];
+
+  setOptions(props: Partial<GravityBallsObjectOptions> | undefined): this {
+    if (props) this._opts = { ...this._opts, ...props };
+    return this;
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._opts as Record<string, unknown>;
+  }
+
+  override async runObject(): Promise<void> {
+    const ctx = this._context;
+    if (!ctx) return;
+
+    const urls: string[] =
+      this._opts.textureUrls?.length ? this._opts.textureUrls
+      : this._opts.textureUrl ? [this._opts.textureUrl]
+      : DEFAULT_TEXTURE_URLS;
+
+    const textures = await Promise.all(
+      urls.map(async (url): Promise<THREE.Texture | null> => {
+        if (!url || !ctx.loadTexture) return null;
+        try { return await ctx.loadTexture(this.resolveAssetPath(url)); }
+        catch { return null; }
+      }),
+    );
+
+    this._baseMats = textures.length > 0
+      ? textures.map(tex => new THREE.SpriteMaterial({
+          map: tex ?? null,
+          transparent: true,
+          depthWrite: false,
+          opacity: 0.8,
+        }))
+      : [new THREE.SpriteMaterial({ transparent: true, depthWrite: false, opacity: 0.8 })];
+
+    this._applyOptionVisibility();
+  }
+
+  override runUpdate(delta: number): void {
+    const ctx = this._context;
+    if (!ctx || this._disposed) return;
+
+    this._accumMs += delta * 1000;
+    if (this._accumMs >= 15) {
+      this._accumMs -= 15;
+      this._tick(ctx);
+    }
+  }
+
+  private _tick(ctx: SceneObjectContext): void {
+    const o = this._resolve();
+
+    if (o.attachTo) {
+      const rkt = ctx.getObject(o.attachTo);
+      if (rkt instanceof THREE.Object3D) {
+        rkt.getWorldPosition(this._spawnPt);
+        this._spawnPt.x += o.spawnOffset.x ?? 0;
+        this._spawnPt.y += o.spawnOffset.y ?? 0;
+        this._spawnPt.z += o.spawnOffset.z ?? 0;
+      }
+    }
+
+    for (let i = 0; i < o.dotsPerInterval; i++) this._spawn(ctx, o);
+
+    const dead: number[] = [];
+    this._balls.forEach((b, id) => { if (this._step(b)) dead.push(id); });
+    for (const id of dead) this._balls.delete(id);
+  }
+
+  private _spawn(ctx: SceneObjectContext, o: ResolvedOpts): void {
+    if (this._baseMats.length === 0) return;
+
+    const s = o.physicsScale;
+    const baseMat = this._baseMats[Math.floor(Math.random() * this._baseMats.length)];
+    const mat = baseMat.clone();
+
+    const color = o.colors[this._rnd(0, o.colors.length)] ?? o.colors[0];
+    mat.color.set(color);
+    mat.rotation = Math.random() * Math.PI * 2;
+
+    const initScale = MIN_INIT_SCALE + Math.random() * (MAX_INIT_SCALE - MIN_INIT_SCALE);
+    const shrinkRate = -(initScale - 0.1) / LIFETIME_TICKS;
+
+    const isXNeg = this._rnd(1, 2) === 1;
+    const isZNeg = this._rnd(1, 2) === 1;
+
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.setScalar(initScale);
+
+    const info: SphereInfo = {
+      ID: ++this._idx,
+      startX: this._spawnPt.x,
+      startY: this._spawnPt.y,
+      startZ: this._spawnPt.z,
+      vx: isXNeg ? this._rnd(0, 50) * -0.15 * s : this._rnd(0, 50) * 0.15 * s,
+      vy: this._rnd(-10, 20) * s,
+      vz: isZNeg ? this._rnd(-25, 25) * -0.4 * s : this._rnd(-25, 25) * 0.4 * s,
+      rotDir: (Math.random() < 0.5 ? 1 : -1) * (0.003 + Math.random() * 0.006),
+      shrinkRate,
+      sphere: sprite,
+      material: mat,
+    };
+
+    ctx.scene.add(sprite);
+    this._balls.set(info.ID, info);
+  }
+
+  private _step(b: SphereInfo): boolean {
+    const sp = b.sphere;
+
+    sp.scale.x += b.shrinkRate;
+    sp.scale.y += b.shrinkRate;
+
+    b.startX += b.vx * 0.6;
+    b.startY -= b.vy * 0.5;
+    b.startZ -= b.vz * 0.6;
+    sp.position.x = b.startX;
+    sp.position.y = b.startY;
+    sp.position.z = b.startZ;
+
+    b.material.rotation += b.rotDir;
+
+    if (sp.scale.y < FADE_START_SCALE) {
+      b.material.opacity = Math.max(0, (sp.scale.y - 0.1) / (FADE_START_SCALE - 0.1));
+      sp.position.z -= SMOKE_Z_DRIFT;
+      b.startX *= SMOKE_SPREAD;
+      b.startY *= SMOKE_SPREAD;
+    }
+
+    if (sp.scale.y <= 0.1) {
+      this._context?.scene.remove(sp);
+      b.material.dispose();
+      return true;
+    }
+    return false;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    this._balls.forEach(b => { b.sphere.visible = visible; });
+  }
+
+  override dispose(): void {
+    if (this._disposed) return;
+    const scene = this._context?.scene;
+
+    this._balls.forEach(b => {
+      scene?.remove(b.sphere);
+      b.material.dispose();
+    });
+    this._balls.clear();
+
+    for (const mat of this._baseMats) mat.dispose();
+    this._baseMats = [];
+
+    super.dispose();
+  }
+
+  private _resolve(): ResolvedOpts {
+    const o = this._opts;
+    return {
+      attachTo: o.attachTo ?? DEFAULTS.attachTo,
+      spawnOffset: o.spawnOffset ?? DEFAULTS.spawnOffset,
+      colors: (o.colors && o.colors.length > 0) ? o.colors : DEFAULTS.colors,
+      dotsPerInterval: o.dotsPerInterval ?? DEFAULTS.dotsPerInterval,
+      physicsScale: o.physicsScale ?? DEFAULTS.physicsScale,
+    };
+  }
+
+  private _rnd(min: number, max: number): number {
+    return Math.floor(Math.random() * max) + min;
+  }
+}

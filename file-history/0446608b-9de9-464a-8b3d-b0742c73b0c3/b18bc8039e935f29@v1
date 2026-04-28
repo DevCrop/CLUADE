@@ -1,0 +1,165 @@
+# Copy Templates
+
+Use this file for homepage copy direction. Templates are not fixed copy; they are shape, purpose, and guardrails.
+
+## 01. Intro
+
+| Item | Direction |
+|---|---|
+| Section job | Invite the user into the journey |
+| Reader state | First visual contact |
+| Message to land | This is a digital launch point |
+| Shape | short English headline + 2 Korean lines |
+| Avoid | abstract space fantasy |
+
+Example:
+
+```text
+WE DESIGN YOUR JOURNEY
+브랜드가 처음 세상과 만나는 순간,
+웹은 가장 선명한 출발점이 됩니다.
+```
+
+## 02. introAction
+
+| Item | Direction |
+|---|---|
+| Section job | Align with the client and move toward launch |
+| Reader state | Accepted the start |
+| Message to land | We start beside you and turn direction into structure |
+| Shape | two short beats |
+| Avoid | overusing mission/signal language |
+
+## 03. Hero
+
+| Item | Direction |
+|---|---|
+| Section job | Land the slogan |
+| Reader state | Direction has become motion |
+| Message to land | The journey starts on the web |
+| Shape | `JOIN THE JOURNEY` + short Korean clarification |
+| Avoid | remixing the slogan |
+
+## 04. Story
+
+| Item | Direction |
+|---|---|
+| Section job | Reveal belief and rejected convention |
+| Reader state | The journey has started |
+| Message to land | A new brand cannot rely on default answers |
+| Shape | belief headline + concrete Korean proof |
+| Avoid | process lists, service lists, tech lists |
+
+## 05. Who
+
+| Item | Direction |
+|---|---|
+| Section job | Clarify client role and NINEONELABS role |
+| Reader state | Understands the philosophy |
+| Message to land | The client leads; NINEONELABS builds the route and structure |
+| Shape | partnership headline + role-defining Korean body |
+| Avoid | making NINEONELABS the hero |
+
+Example:
+
+```text
+BEYOND THE START.
+브랜드는 출발한 뒤에도 계속 나아가야 합니다.
+나인원랩스는 같은 여정 안에서,
+다음 장면으로 향하는 웹의 구조를 설계합니다.
+```
+
+## 06. Why / Skills
+
+| Item | Direction |
+|---|---|
+| Section job | Earn trust through capability and proof |
+| Reader state | Knows our role |
+| Message to land | We have the tools and systems to build the journey |
+| Shape | compact skill labels + short proof descriptors |
+| Avoid | service explanations, generic persuasion |
+
+Example:
+
+```text
+THREE.JS / INTERACTIVE WEB
+GSAP / MOTION & ANIMATION
+CMS SYSTEM / CONTENT CONTROL
+```
+
+## 07. Services
+
+| Item | Direction |
+|---|---|
+| Section job | Name what we actually ship |
+| Reader state | Trust is established |
+| Message to land | NINEONELABS builds web, app, brand, UI/UX, and maintenance systems |
+| Shape | service category + concise outcome copy |
+| Avoid | raw technology list, brand philosophy |
+
+## 08. Portfolio Intro
+
+| Item | Direction |
+|---|---|
+| Section job | Prepare evidence |
+| Reader state | Understands deliverables |
+| Message to land | The work became real |
+| Shape | short proof-oriented transition |
+| Avoid | vague gallery language |
+
+## 09. Portfolio Detail
+
+| Item | Direction |
+|---|---|
+| Section job | Show selected work |
+| Reader state | Ready for evidence |
+| Message to land | This is how the system behaves in real work |
+| Shape | project title + problem/result angle |
+| Avoid | screenshots with no reason |
+
+Example:
+
+```text
+FROM PLAN TO SCREEN
+WORK BECOMES REAL
+설계하던 구조와 경험이 이제 실제 화면과 사용 흐름으로 공개됩니다.
+```
+
+## 10. Portfolio Gallery
+
+| Item | Direction |
+|---|---|
+| Section job | Let evidence accumulate |
+| Reader state | Has seen one proof point |
+| Message to land | This is a repeatable standard |
+| Shape | visual proof with minimal text |
+| Avoid | over-explaining every item |
+
+## 11. Clients / Partners
+
+| Item | Direction |
+|---|---|
+| Section job | Build trust |
+| Reader state | Work is proven |
+| Message to land | Other brands have joined the journey |
+| Shape | direct title (`PARTNERS` or `CLIENTS`) + trust line + brand list |
+| Avoid | inflated partnership claims, metaphor-heavy titles for simple logo lists |
+
+## 12. Contact
+
+| Item | Direction |
+|---|---|
+| Section job | Convert interest into a signal |
+| Reader state | Ready to act |
+| Message to land | The next journey can begin now |
+| Shape | direct CTA + brief invitation |
+| Avoid | poetic ending without action |
+| CTA rule | Use direct labels such as `Contact`, `Works`, `Start`, `Send Brief` |
+
+Example:
+
+```text
+YOUR JOURNEY STARTS HERE.
+새로운 여정을 위한 길은 열려 있습니다.
+브랜드가 다음 장면으로 나아가기 위한 첫 방향을 함께 정리하겠습니다.
+```

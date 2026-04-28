@@ -1,0 +1,1441 @@
+import { CONTACT_WIZARD } from "../config/component.config.js";
+import {
+  CONTACT_THEATRE_SUCCESS_DEFAULT_MESSAGE,
+  CONTACT_THEATRE_SUCCESS_FLOW_REQUEST_EVENT,
+} from "../pages/contact/theatre/ContactTheatreConfig.js";
+import { BlockReveal } from "../animation/BlockReveal.js";
+import { BLOCK_HIDDEN_CLASS, INIT_DOM_CLASSES } from "../config/dom.config.js";
+import { Debounce } from "../utils/Debounce.js";
+import type {
+  ContactWizardChipData,
+  ContactWizardInitOptions,
+} from "../types/component.types.js";
+import type {
+  ContactSubmitResponse,
+  ContactSuccessFlowRequestDetail,
+} from "../types/contact.types.js";
+
+export class ContactWizard {
+  private static readonly _CLASS = "ContactWizard";
+  private readonly _root: HTMLElement;
+  private readonly _form: HTMLFormElement | null;
+  private readonly _viewport: HTMLElement | null;
+  private readonly _steps: HTMLElement[];
+  private readonly _overviewList: HTMLOListElement | null;
+  private readonly _prevButtons: HTMLButtonElement[];
+  private readonly _primaryActionButtons: HTMLButtonElement[];
+  private readonly _projectOtherToggle: HTMLInputElement | null;
+  private readonly _projectOtherPanel: HTMLElement | null;
+  private readonly _projectOtherInput: HTMLInputElement | null;
+  private readonly _sidebarSyncDebounce: Debounce;
+  private readonly _chipLeaveTimers = new WeakMap<HTMLElement, number>();
+  private readonly _chipMoveAnimations = new WeakMap<HTMLElement, Animation>();
+  private readonly _previousActionHideTimers = new WeakMap<HTMLElement, number>();
+  private readonly _activeTimers = new Set<number>();
+  private readonly _activeAnimations = new Set<Animation>();
+  private readonly _onClickBound: (event: Event) => void;
+  private readonly _onChangeBound: () => void;
+  private readonly _onInputBound: (event: Event) => void;
+  private readonly _onSubmitBound: (event: Event) => void;
+  private readonly _onFormKeydownBound: (event: KeyboardEvent) => void;
+  private _mounted = false;
+  private _disposed = false;
+  private _navItems: HTMLElement[] = [];
+  private _stepValues: HTMLElement[] = [];
+  private _current = 0;
+  private _busy = false;
+  private _submitting = false;
+  private _lastOverviewScrollIndex = -1;
+
+  private static _instances = new Set<ContactWizard>();
+
+  static init(options: ContactWizardInitOptions = {}): void {
+    const scope = options.root ?? document;
+    scope
+      .querySelectorAll<HTMLElement>(CONTACT_WIZARD.selector)
+      .forEach((element) => {
+        const instance = new ContactWizard(element);
+        ContactWizard._instances.add(instance);
+        instance.mount();
+      });
+  }
+
+  static dispose(): void {
+    ContactWizard._instances.forEach((instance) => instance.dispose());
+    ContactWizard._instances.clear();
+  }
+
+  constructor(root: HTMLElement) {
+    this._root = root;
+    this._form = root.closest("form");
+    this._viewport = root.querySelector<HTMLElement>("[data-wizard-viewport]");
+    this._steps = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-wizard-step]"),
+    );
+    this._overviewList = root.querySelector<HTMLOListElement>(
+      "[data-wizard-overview-list]",
+    );
+    this._prevButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>("[data-wizard-prev]"),
+    );
+    this._primaryActionButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>("[data-wizard-primary-action]"),
+    );
+    this._projectOtherToggle = root.querySelector<HTMLInputElement>(
+      "[data-project-other-toggle]",
+    );
+    this._projectOtherPanel = root.querySelector<HTMLElement>(
+      "[data-project-other-panel]",
+    );
+    this._projectOtherInput = root.querySelector<HTMLInputElement>(
+      "[data-project-other-input]",
+    );
+    this._sidebarSyncDebounce = new Debounce(
+      CONTACT_WIZARD.summaryInputDebounceMs,
+    );
+    this._onClickBound = (event) => this._onClick(event as MouseEvent);
+    this._onChangeBound = () => {
+      this._sidebarSyncDebounce.offCancel();
+      this._syncProjectOtherField();
+      this._syncSidebar();
+    };
+    this._onInputBound = (event) => {
+      this._syncProjectOtherField();
+      if (this._shouldDebounceSidebarSync(event.target)) {
+        this._sidebarSyncDebounce.runDebounce(() => this._syncSidebar());
+        return;
+      }
+      this._syncSidebar();
+    };
+    this._onSubmitBound = (event) => this._onSubmit(event as SubmitEvent);
+    this._onFormKeydownBound = (event) => this._onFormKeydown(event);
+  }
+
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    if (this._mounted) {
+      this._root.removeEventListener("click", this._onClickBound);
+      this._root.removeEventListener("change", this._onChangeBound);
+      this._root.removeEventListener("input", this._onInputBound);
+      this._form?.removeEventListener("submit", this._onSubmitBound);
+      this._form?.removeEventListener("keydown", this._onFormKeydownBound, true);
+      this._mounted = false;
+    }
+    this._sidebarSyncDebounce.offCancel();
+    this._activeTimers.forEach((id) => window.clearTimeout(id));
+    this._activeTimers.clear();
+    this._activeAnimations.forEach((animation) => animation.cancel());
+    this._activeAnimations.clear();
+    ContactWizard._instances.delete(this);
+  }
+
+  private _trackedTimeout(callback: () => void, delay: number): number {
+    const id = window.setTimeout(() => {
+      this._activeTimers.delete(id);
+      if (this._disposed) return;
+      callback();
+    }, delay);
+    this._activeTimers.add(id);
+    return id;
+  }
+
+  private _trackAnimation(animation: Animation): Animation {
+    this._activeAnimations.add(animation);
+    const cleanup = () => this._activeAnimations.delete(animation);
+    animation.addEventListener("finish", cleanup, { once: true });
+    animation.addEventListener("cancel", cleanup, { once: true });
+    return animation;
+  }
+
+  private mount(): void {
+    if (!this._viewport || this._steps.length === 0) return;
+
+    const totalElement =
+      this._root.querySelector<HTMLElement>("[data-wizard-total]");
+    if (totalElement) {
+      totalElement.textContent = String(this._steps.length).padStart(2, "0");
+    }
+
+    this._renderOverview();
+    this._root.addEventListener("click", this._onClickBound);
+    this._root.addEventListener("change", this._onChangeBound);
+    this._root.addEventListener("input", this._onInputBound);
+    this._form?.addEventListener("submit", this._onSubmitBound);
+    this._form?.addEventListener("keydown", this._onFormKeydownBound, true);
+    this._mounted = true;
+
+    this._steps.forEach((step, index) => {
+      step.classList.toggle("is-active", index === 0);
+      step.classList.remove("is-prev");
+    });
+
+    this._syncIndicator(true);
+    this._syncProjectOtherField();
+    this._syncSidebar();
+  }
+
+  private _renderOverview(): void {
+    if (!this._overviewList) return;
+
+    const fragment = document.createDocumentFragment();
+    this._steps.forEach((step, index) => {
+      const item = document.createElement("li");
+      item.className = "no-wizard-overview__item";
+      item.dataset.wizardNavItem = "";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "no-wizard-overview__button";
+      button.dataset.wizardJump = String(index);
+
+      const corner = this._createOverviewCorner();
+
+      const head = document.createElement("span");
+      head.className = "no-wizard-overview__head";
+
+      const rect = this._createOverviewRect();
+
+      const indexNode = document.createElement("span");
+      indexNode.className = "no-wizard-overview__index f-body-3 --regular";
+      indexNode.textContent = this._resolveNavLabel(index);
+
+      const body = document.createElement("span");
+      body.className = "no-wizard-overview__body";
+
+      const value = document.createElement("span");
+      value.className = "no-wizard-overview__value f-body-3 --regular";
+      value.dataset.wizardStepValue = String(index);
+
+      head.append(rect, indexNode);
+      body.append(value);
+      button.append(corner, head, body);
+      item.append(button);
+      fragment.append(item);
+    });
+
+    this._overviewList.replaceChildren(fragment);
+    this._navItems = Array.from(
+      this._root.querySelectorAll<HTMLElement>("[data-wizard-nav-item]"),
+    );
+    this._stepValues = Array.from(
+      this._root.querySelectorAll<HTMLElement>("[data-wizard-step-value]"),
+    );
+  }
+
+  private _onClick(event: Event): void {
+    if (this._submitting) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const jumpButton = target.closest<HTMLElement>("[data-wizard-jump]");
+    if (jumpButton) {
+      event.preventDefault();
+      const nextIndex = Number(jumpButton.dataset.wizardJump);
+      if (Number.isNaN(nextIndex) || nextIndex > this._resolveFurthestAccessibleStep()) return;
+      this._jump(nextIndex);
+      return;
+    }
+
+    if (target.closest("[data-wizard-next]")) {
+      event.preventDefault();
+      this._next();
+      return;
+    }
+
+    if (target.closest("[data-wizard-prev]")) {
+      event.preventDefault();
+      this._prev();
+    }
+  }
+
+  private _onSubmit(event: Event): void {
+    if (this._submitting) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    if (!this._isSubmitAllowed()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    const currentStep = this._steps[this._current];
+    if (!currentStep) return;
+    if (!this._triggerValidationAndCheck(currentStep)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    void this._submit();
+  }
+
+  private _onFormKeydown(event: KeyboardEvent): void {
+    if (this._submitting) {
+      event.preventDefault();
+      return;
+    }
+    if (event.key !== "Enter") return;
+    if (this._isSubmitAllowed()) return;
+
+    const target = event.target;
+    if (target instanceof HTMLTextAreaElement) return;
+    if (target instanceof HTMLButtonElement) return;
+
+    event.preventDefault();
+  }
+
+  private _next(): void {
+    if (this._busy || this._submitting || this._current >= this._steps.length - 1) return;
+    const currentStep = this._steps[this._current];
+    if (!currentStep) return;
+    if (!this._triggerValidationAndCheck(currentStep)) return;
+    this._go(this._current + 1, "next");
+  }
+
+  private _prev(): void {
+    if (this._busy || this._submitting || this._current <= 0) return;
+    this._go(this._current - 1, "prev");
+  }
+
+  private _jump(nextIndex: number): void {
+    if (this._busy || this._submitting) return;
+    if (nextIndex < 0 || nextIndex >= this._steps.length) return;
+    if (nextIndex === this._current) return;
+    this._go(nextIndex, nextIndex > this._current ? "next" : "prev");
+  }
+
+  private _go(nextIndex: number, direction: string): void {
+    const currentStep = this._steps[this._current];
+    const nextStep = this._steps[nextIndex];
+    if (!currentStep || !nextStep) return;
+
+    this._busy = true;
+
+    requestAnimationFrame(() => {
+      currentStep.classList.remove("is-active");
+      currentStep.classList.toggle("is-prev", direction === "next");
+
+      requestAnimationFrame(() => {
+        nextStep.classList.remove("is-prev");
+        nextStep.classList.add("is-active");
+        nextStep.scrollTop = 0;
+
+        this._current = nextIndex;
+        this._syncIndicator();
+        this._syncSidebar();
+
+        this._trackedTimeout(() => {
+          currentStep.classList.remove("is-prev");
+          this._busy = false;
+        }, CONTACT_WIZARD.transitionMs + CONTACT_WIZARD.transitionBufferMs);
+      });
+    });
+  }
+
+  private _syncIndicator(immediate = false): void {
+    const currentElement =
+      this._root.querySelector<HTMLElement>("[data-wizard-current]");
+    const barElement = this._root.querySelector<HTMLElement>("[data-wizard-bar]");
+
+    if (currentElement) {
+      currentElement.textContent = String(this._current + 1).padStart(2, "0");
+    }
+
+    if (barElement) {
+      const scale = (this._current + 1) / this._steps.length;
+      barElement.style.transform = `scaleX(${scale})`;
+    }
+
+    this._syncActionState(immediate);
+    this._syncSubmitAvailability();
+  }
+
+  private _syncActionState(immediate = false): void {
+    const isFirstStep = this._current === 0;
+    const isLastStep = this._current === this._steps.length - 1;
+
+    this._prevButtons.forEach((button) => {
+      this._syncPreviousAction(button, isFirstStep, immediate);
+    });
+
+    this._primaryActionButtons.forEach((button) => {
+      this._syncPrimaryAction(button, isLastStep);
+    });
+  }
+
+  private _syncPreviousAction(
+    button: HTMLButtonElement,
+    isFirstStep: boolean,
+    immediate = false,
+  ): void {
+    const target = this._resolvePreviousActionTarget(button);
+    this._clearPreviousActionHideTimer(target);
+
+    if (isFirstStep) {
+      button.disabled = true;
+      button.setAttribute("aria-disabled", "true");
+      target.setAttribute("aria-hidden", "true");
+      target.toggleAttribute("inert", true);
+
+      if (
+        immediate ||
+        target.hidden ||
+        target.classList.contains(INIT_DOM_CLASSES.boxHidden)
+      ) {
+        this._hidePreviousActionImmediately(target);
+        return;
+      }
+
+      this._hidePreviousActionWithTransition(target);
+      return;
+    }
+
+    this._showPreviousActionTarget(target, immediate);
+    button.disabled = this._submitting;
+    button.setAttribute(
+      "aria-disabled",
+      this._submitting ? "true" : "false",
+    );
+  }
+
+  private _syncPrimaryAction(
+    button: HTMLButtonElement,
+    isSubmitMode: boolean,
+  ): void {
+    button.type = isSubmitMode ? "submit" : "button";
+    button.disabled = this._submitting;
+    button.classList.toggle("no-wizard-action--next", !isSubmitMode);
+    button.classList.toggle("no-wizard-action--submit", isSubmitMode);
+    button.setAttribute("aria-hidden", "false");
+    button.setAttribute("aria-disabled", this._submitting ? "true" : "false");
+
+    if (isSubmitMode) {
+      button.removeAttribute("data-wizard-next");
+    } else {
+      button.dataset.wizardNext = "";
+    }
+
+    const text = button.querySelector<HTMLElement>(".no-corner-btn__text");
+    if (text) {
+      const nextLabel = isSubmitMode ? "Submit" : "Next";
+      if (text.textContent !== nextLabel) {
+        text.textContent = nextLabel;
+      }
+    }
+  }
+
+  private _syncSidebar(): void {
+    this._syncStepSummaries();
+    this._syncNavigationState();
+  }
+
+  private _syncNavigationState(): void {
+    const furthestAccessibleStep = this._resolveFurthestAccessibleStep();
+
+    this._navItems.forEach((item, index) => {
+      const isCurrent = index === this._current;
+      const isComplete = this._isStepSatisfied(this._steps[index]);
+      const button = item.querySelector<HTMLButtonElement>(
+        ".no-wizard-overview__button",
+      );
+
+      item.classList.toggle("is-current", isCurrent);
+      item.classList.toggle("is-complete", isComplete);
+      item.classList.toggle("is-available", index <= furthestAccessibleStep);
+
+      if (!button) return;
+      button.classList.toggle("is-framed", isCurrent);
+      button.disabled = this._submitting || index > furthestAccessibleStep;
+      button.setAttribute(
+        "aria-label",
+        `${this._resolveNavLabel(index)} ${this._resolveStepLabel(index)}`,
+      );
+      if (isCurrent) {
+        button.setAttribute("aria-current", "step");
+        return;
+      }
+      button.removeAttribute("aria-current");
+    });
+
+    this._syncOverviewScroll();
+  }
+
+  private _syncOverviewScroll(): void {
+    if (!this._overviewList) return;
+    if (this._lastOverviewScrollIndex === this._current) return;
+
+    const currentItem = this._navItems[this._current];
+    if (!currentItem) return;
+
+    this._lastOverviewScrollIndex = this._current;
+
+    requestAnimationFrame(() => {
+      const container = this._overviewList;
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const itemRect = currentItem.getBoundingClientRect();
+      const padding = CONTACT_WIZARD.overviewScrollPadding;
+      const offsetTop = itemRect.top - containerRect.top;
+      const offsetBottom = itemRect.bottom - containerRect.bottom;
+
+      if (offsetTop < padding) {
+        container.scrollTo({
+          top: container.scrollTop + offsetTop - padding,
+          behavior: "smooth",
+        });
+        return;
+      }
+
+      if (offsetBottom > -padding) {
+        container.scrollTo({
+          top: container.scrollTop + offsetBottom + padding,
+          behavior: "smooth",
+        });
+      }
+    });
+  }
+
+  private _syncStepSummaries(): void {
+    this._stepValues.forEach((node) => {
+      const stepIndex = Number(node.dataset.wizardStepValue);
+      if (Number.isNaN(stepIndex)) return;
+      this._renderStepValue(node, stepIndex);
+    });
+  }
+
+  private _renderStepValue(node: HTMLElement, stepIndex: number): void {
+    if (stepIndex === 4) {
+      this._renderDetailStepValue(node);
+      return;
+    }
+
+    const chipValues = this._resolveStepChipValues(stepIndex);
+    const chipData = chipValues.map((value) => ({
+      key: value,
+      label: value,
+    }));
+    node.classList.toggle("is-chip-list", chipData.length > 0);
+
+    if (chipData.length > 0) {
+      this._syncChipList(node, chipData);
+      return;
+    }
+
+    node.replaceChildren();
+    node.textContent = "";
+  }
+
+  private _renderDetailStepValue(node: HTMLElement): void {
+    const detail = this._truncate(
+      this._resolveInputValue("detail"),
+      CONTACT_WIZARD.detailPreviewLength,
+    );
+    const attachment = this._resolveAttachmentName();
+    const chipListSelector = ".no-wizard-overview__chip-list";
+    const currentChipList = node.querySelector<HTMLElement>(chipListSelector);
+    const chipData: ContactWizardChipData[] = [];
+
+    if (detail !== "") {
+      chipData.push({
+        key: "detail",
+        label: detail,
+      });
+    }
+
+    if (attachment !== "") {
+      chipData.push({
+        key: "attachment",
+        label: attachment,
+        iconClass: this._resolveAttachmentIconClass(attachment),
+      });
+    }
+
+    node.classList.add("is-chip-list");
+
+    if (chipData.length === 0) {
+      currentChipList?.remove();
+      node.textContent = "";
+      return;
+    }
+
+    const chipList = currentChipList ?? document.createElement("span");
+    chipList.className = "no-wizard-overview__chip-list is-chip-list";
+    if (!chipList.parentElement) {
+      node.append(chipList);
+    }
+    this._syncChipList(chipList, chipData);
+  }
+
+  private _syncChipList(
+    node: HTMLElement,
+    chipValues: ContactWizardChipData[],
+  ): void {
+    const previousPositions = this._captureChipPositions(node);
+    const chipSet = new Set(chipValues.map((chip) => chip.key));
+    const existingChips = new Map(
+      Array.from(
+        node.querySelectorAll<HTMLElement>(".no-wizard-overview__chip:not(.is-ghost)"),
+      ).map((chip) => [chip.dataset.wizardChipKey ?? "", chip]),
+    );
+    let layoutChanged = false;
+
+    chipValues.forEach((value, index) => {
+      const existingChip = existingChips.get(value.key);
+      const chip = existingChip ?? this._createChip(value, index);
+      this._cancelChipLeave(chip);
+      this._syncChipContent(chip, value);
+      chip.style.animationDelay = `${index * CONTACT_WIZARD.chipStaggerMs}ms`;
+
+      if (!existingChip) {
+        node.append(chip);
+        layoutChanged = true;
+      }
+    });
+
+    existingChips.forEach((chip, value) => {
+      if (chipSet.has(value)) return;
+      this._detachChipWithGhost(node, chip);
+      layoutChanged = true;
+    });
+
+    if (!layoutChanged) return;
+    this._animateChipReflow(node, previousPositions);
+  }
+
+  private _createChip(value: ContactWizardChipData, index: number): HTMLElement {
+    const chip = document.createElement("span");
+    chip.className = "no-wizard-overview__chip is-entering";
+    chip.dataset.wizardChipKey = value.key;
+    chip.dataset.wizardChipValue = value.label;
+    this._syncChipContent(chip, value);
+    chip.style.animationDelay = `${index * CONTACT_WIZARD.chipStaggerMs}ms`;
+    chip.addEventListener(
+      "animationend",
+      () => {
+        chip.classList.remove("is-entering");
+      },
+      { once: true },
+    );
+    return chip;
+  }
+
+  private _syncChipContent(
+    chip: HTMLElement,
+    value: ContactWizardChipData,
+  ): void {
+    chip.dataset.wizardChipKey = value.key;
+    chip.dataset.wizardChipValue = value.label;
+    chip.classList.toggle(
+      "no-wizard-overview__chip--with-icon",
+      value.iconClass !== undefined,
+    );
+
+    const currentLabel = chip.querySelector<HTMLElement>(
+      ".no-wizard-overview__chip-label",
+    );
+    const currentIcon = chip.querySelector<HTMLElement>(
+      ".no-wizard-overview__chip-icon",
+    );
+
+    if (value.iconClass !== undefined) {
+      const icon = currentIcon ?? document.createElement("i");
+      icon.className = `no-wizard-overview__chip-icon ${value.iconClass}`;
+      icon.setAttribute("aria-hidden", "true");
+      this._syncAttachmentChipIcon(icon, value.iconClass);
+      if (!icon.parentElement) {
+        chip.prepend(icon);
+      }
+    } else {
+      currentIcon?.remove();
+    }
+
+    const label = currentLabel ?? document.createElement("span");
+    label.className = "no-wizard-overview__chip-label";
+    if (label.textContent !== value.label) {
+      label.textContent = value.label;
+    }
+    if (!label.parentElement) {
+      chip.append(label);
+    }
+  }
+
+  private _syncFileChipIcon(icon: HTMLElement): void {
+    this._syncAttachmentChipIcon(
+      icon,
+      CONTACT_WIZARD.attachmentIconClass.file,
+    );
+  }
+
+  private _resolveAttachmentIconClass(attachmentName: string): string {
+    const extension = this._resolveAttachmentExtension(attachmentName);
+    if (this._matchesAttachmentExtension(extension, CONTACT_WIZARD.attachmentImageExtensions)) {
+      return CONTACT_WIZARD.attachmentIconClass.image;
+    }
+    if (this._matchesAttachmentExtension(extension, CONTACT_WIZARD.attachmentPdfExtensions)) {
+      return CONTACT_WIZARD.attachmentIconClass.pdf;
+    }
+    if (this._matchesAttachmentExtension(extension, CONTACT_WIZARD.attachmentExcelExtensions)) {
+      return CONTACT_WIZARD.attachmentIconClass.excel;
+    }
+    return CONTACT_WIZARD.attachmentIconClass.file;
+  }
+
+  private _resolveAttachmentExtension(attachmentName: string): string {
+    const segments = attachmentName.toLowerCase().split(".");
+    return segments.length > 1 ? segments[segments.length - 1] ?? "" : "";
+  }
+
+  private _matchesAttachmentExtension(
+    extension: string,
+    extensions: readonly string[],
+  ): boolean {
+    return extensions.some((candidate) => candidate === extension);
+  }
+
+  private _syncAttachmentChipIcon(
+    icon: HTMLElement,
+    iconClass: string,
+  ): void {
+    icon.replaceChildren(this._createAttachmentIconSvg(iconClass));
+  }
+
+  private _createAttachmentIconSvg(iconClass: string): SVGSVGElement {
+    if (iconClass === CONTACT_WIZARD.attachmentIconClass.image) {
+      return this._createImageIconSvg();
+    }
+    if (iconClass === CONTACT_WIZARD.attachmentIconClass.pdf) {
+      return this._createPdfIconSvg();
+    }
+    if (iconClass === CONTACT_WIZARD.attachmentIconClass.excel) {
+      return this._createExcelIconSvg();
+    }
+    return this._createFileIconSvg();
+  }
+
+  private _detachChipWithGhost(node: HTMLElement, chip: HTMLElement): void {
+    this._cancelChipLeave(chip);
+
+    const nodeRect = node.getBoundingClientRect();
+    const chipRect = chip.getBoundingClientRect();
+    const ghost = chip.cloneNode(true);
+    if (!(ghost instanceof HTMLElement)) {
+      chip.remove();
+      return;
+    }
+
+    ghost.classList.remove("is-entering");
+    ghost.classList.add("is-leaving", "is-ghost");
+    ghost.style.left = `${chipRect.left - nodeRect.left}px`;
+    ghost.style.top = `${chipRect.top - nodeRect.top}px`;
+    ghost.style.width = `${chipRect.width}px`;
+    ghost.style.height = `${chipRect.height}px`;
+
+    node.append(ghost);
+    chip.remove();
+
+    const timer = this._trackedTimeout(() => {
+      this._chipLeaveTimers.delete(ghost);
+      ghost.remove();
+    }, CONTACT_WIZARD.chipLeaveMs);
+
+    this._chipLeaveTimers.set(ghost, timer);
+  }
+
+  private _cancelChipLeave(chip: HTMLElement): void {
+    const timer = this._chipLeaveTimers.get(chip);
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      this._chipLeaveTimers.delete(chip);
+    }
+    chip.classList.remove("is-leaving");
+  }
+
+  private _captureChipPositions(node: HTMLElement): Map<HTMLElement, DOMRect> {
+    return new Map(
+      Array.from(
+        node.querySelectorAll<HTMLElement>(".no-wizard-overview__chip:not(.is-ghost)"),
+      ).map((chip) => [chip, chip.getBoundingClientRect()]),
+    );
+  }
+
+  private _animateChipReflow(
+    node: HTMLElement,
+    previousPositions: Map<HTMLElement, DOMRect>,
+  ): void {
+    requestAnimationFrame(() => {
+      node
+        .querySelectorAll<HTMLElement>(".no-wizard-overview__chip:not(.is-ghost)")
+        .forEach((chip) => {
+          if (chip.classList.contains("is-entering")) return;
+
+          const previousRect = previousPositions.get(chip);
+          if (!previousRect) return;
+
+          const currentRect = chip.getBoundingClientRect();
+          const deltaX = previousRect.left - currentRect.left;
+          const deltaY = previousRect.top - currentRect.top;
+
+          if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+
+          this._chipMoveAnimations.get(chip)?.cancel();
+          const animation = this._trackAnimation(
+            chip.animate(
+              [
+                { transform: `translate(${deltaX}px, ${deltaY}px)` },
+                { transform: "translate(0, 0)" },
+              ],
+              {
+                duration: CONTACT_WIZARD.chipMoveMs,
+                easing: CONTACT_WIZARD.chipMoveEase,
+                fill: "both",
+              },
+            ),
+          );
+
+          this._chipMoveAnimations.set(chip, animation);
+          animation.addEventListener(
+            "finish",
+            () => {
+              this._chipMoveAnimations.delete(chip);
+            },
+            { once: true },
+          );
+        });
+    });
+  }
+
+  private _resolveStepChipValues(stepIndex: number): string[] {
+    if (stepIndex === 0) {
+      return this._resolveProjectChipValues();
+    }
+
+    if (stepIndex === 1) {
+      return this._resolveSingleValueChip('input[name="budget"]:checked');
+    }
+
+    if (stepIndex === 2) {
+      return this._resolveSingleValueChip('input[name="period"]:checked');
+    }
+
+    if (stepIndex === 3) {
+      return this._resolveContactInfoChipValues();
+    }
+
+    return [];
+  }
+
+  private _resolveSingleValueChip(selector: string): string[] {
+    const value = this._resolveChoiceLabel(selector);
+    return value === "" ? [] : [value];
+  }
+
+  private _resolveProjectChipValues(): string[] {
+    return Array.from(
+      this._root.querySelectorAll<HTMLInputElement>('input[name="project[]"]'),
+    )
+      .filter((input) => input.checked)
+      .flatMap((input) => {
+        const label = this._resolveLabelText(input);
+        if (label === "") return [];
+        if (!input.hasAttribute("data-project-other-toggle")) return [label];
+
+        const otherValue = this._projectOtherInput?.value.trim() ?? "";
+        return otherValue === "" ? [label] : [`${label}: ${otherValue}`];
+      });
+  }
+
+  private _resolveContactInfoChipValues(): string[] {
+    return ["company", "name", "position", "phone", "email", "homepage"]
+      .map((name) => this._resolveInputValue(name))
+      .filter((value) => value !== "");
+  }
+
+
+  private _resolveStepLabel(stepIndex: number): string {
+    return this._steps[stepIndex]?.dataset.wizardLabel?.trim() ?? "";
+  }
+
+  private _resolveNavLabel(stepIndex: number): string {
+    return (
+      this._steps[stepIndex]?.dataset.wizardNavLabel?.trim() ??
+      this._resolveStepLabel(stepIndex)
+    );
+  }
+
+  private _createOverviewCorner(): HTMLElement {
+    const root = document.createElement("span");
+    root.className =
+      "no-corner-bracket no-wizard-overview__corner no-corner-btn__corner no-corner-bracket--shine";
+    root.setAttribute("aria-hidden", "true");
+
+    const corners: Array<"tl" | "tr" | "bl" | "br"> = ["tl", "tr", "bl", "br"];
+    corners.forEach((position) => {
+      root.append(this._createOverviewCornerPiece(position));
+    });
+
+    return root;
+  }
+
+  private _createOverviewRect(): HTMLElement {
+    const rect = document.createElement("span");
+    rect.className = "no-loop-filter-rect no-wizard-overview__rect";
+    rect.setAttribute("aria-hidden", "true");
+
+    for (let index = 0; index < 4; index += 1) {
+      rect.append(document.createElement("span"));
+    }
+
+    return rect;
+  }
+
+  private _createOverviewCornerPiece(position: "tl" | "tr" | "bl" | "br"): HTMLElement {
+    const piece = document.createElement("span");
+    piece.className = `no-corner-bracket__corner no-corner-bracket__corner--${position}`;
+    piece.append(this._createOverviewCornerSvg(position));
+    return piece;
+  }
+
+  private _createOverviewCornerSvg(position: "tl" | "tr" | "bl" | "br"): SVGSVGElement {
+    const namespace = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(namespace, "svg");
+    svg.setAttribute("viewBox", "0 0 26 26");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "3");
+    svg.setAttribute("stroke-linecap", "square");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+    const [firstPath, secondPath] = this._resolveCornerPaths(position);
+    svg.append(this._createOverviewCornerPath(firstPath));
+    svg.append(this._createOverviewCornerPath(secondPath));
+    return svg;
+  }
+
+  private _createOverviewCornerPath(value: string): SVGPathElement {
+    const namespace = "http://www.w3.org/2000/svg";
+    const path = document.createElementNS(namespace, "path");
+    path.setAttribute("d", value);
+    return path;
+  }
+
+  private _createFileIconSvg(): SVGSVGElement {
+    const namespace = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(namespace, "svg");
+    svg.setAttribute("viewBox", "0 0 640 640");
+    svg.setAttribute("fill", "none");
+
+    const path = document.createElementNS(namespace, "path");
+    path.setAttribute(
+      "d",
+      "M128 96C128 60.7 156.7 32 192 32H352C369 32 385.3 38.7 397.3 50.7L525.3 178.7C537.3 190.7 544 207 544 224V512C544 547.3 515.3 576 480 576H192C156.7 576 128 547.3 128 512V96zM384 77.3V192H498.7L384 77.3z",
+    );
+    path.setAttribute("fill", "currentColor");
+    svg.append(path);
+    return svg;
+  }
+
+  private _createImageIconSvg(): SVGSVGElement {
+    const namespace = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(namespace, "svg");
+    svg.setAttribute("viewBox", "0 0 640 640");
+    svg.setAttribute("fill", "none");
+
+    const frame = document.createElementNS(namespace, "path");
+    frame.setAttribute(
+      "d",
+      "M96 160C96 124.7 124.7 96 160 96H480C515.3 96 544 124.7 544 160V480C544 515.3 515.3 544 480 544H160C124.7 544 96 515.3 96 480V160zM160 144C151.2 144 144 151.2 144 160V430.1L239.4 334.8C251.9 322.3 272.1 322.3 284.6 334.8L345.4 395.6L431.4 309.7C443.9 297.2 464.1 297.2 476.6 309.7L496 329.1V160C496 151.2 488.8 144 480 144H160zM496 396.9L454 354.9L368 440.8C355.5 453.3 335.3 453.3 322.8 440.8L262 380L144 498V480C144 479.7 144 479.3 144 479V476.7L250.6 370.1L327.5 447C352.4 471.9 392.7 471.9 417.6 447L496 368.6V396.9z",
+    );
+    frame.setAttribute("fill", "currentColor");
+
+    const sun = document.createElementNS(namespace, "circle");
+    sun.setAttribute("cx", "224");
+    sun.setAttribute("cy", "224");
+    sun.setAttribute("r", "40");
+    sun.setAttribute("fill", "currentColor");
+
+    svg.append(frame, sun);
+    return svg;
+  }
+
+  private _createPdfIconSvg(): SVGSVGElement {
+    const namespace = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(namespace, "svg");
+    svg.setAttribute("viewBox", "0 0 640 640");
+    svg.setAttribute("fill", "none");
+
+    const file = document.createElementNS(namespace, "path");
+    file.setAttribute(
+      "d",
+      "M128 96C128 60.7 156.7 32 192 32H352C369 32 385.3 38.7 397.3 50.7L525.3 178.7C537.3 190.7 544 207 544 224V512C544 547.3 515.3 576 480 576H192C156.7 576 128 547.3 128 512V96zM384 77.3V192H498.7L384 77.3z",
+    );
+    file.setAttribute("fill", "currentColor");
+
+    const badge = document.createElementNS(namespace, "rect");
+    badge.setAttribute("x", "152");
+    badge.setAttribute("y", "384");
+    badge.setAttribute("width", "336");
+    badge.setAttribute("height", "96");
+    badge.setAttribute("rx", "24");
+    badge.setAttribute("fill", "currentColor");
+
+    const letters = document.createElementNS(namespace, "path");
+    letters.setAttribute(
+      "d",
+      "M194 456V408H236C260.3 408 278 425.7 278 450C278 474.3 260.3 492 236 492H222V456H194zM222 432V468H236C246 468 254 460 254 450C254 440 246 432 236 432H222zM302 492V408H334L366 453.2V408H394V492H364L330 444.9V492H302zM420 492V408H490V432H448V441H486V465H448V492H420z",
+    );
+    letters.setAttribute("fill", "var(--clr-ui-bg, #000)");
+
+    svg.append(file, badge, letters);
+    return svg;
+  }
+
+  private _createExcelIconSvg(): SVGSVGElement {
+    const namespace = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(namespace, "svg");
+    svg.setAttribute("viewBox", "0 0 640 640");
+    svg.setAttribute("fill", "none");
+
+    const file = document.createElementNS(namespace, "path");
+    file.setAttribute(
+      "d",
+      "M160 64C160 46.3 174.3 32 192 32H352C369 32 385.3 38.7 397.3 50.7L525.3 178.7C537.3 190.7 544 207 544 224V512C544 547.3 515.3 576 480 576H192C174.3 576 160 561.7 160 544V64zM384 77.3V192H498.7L384 77.3z",
+    );
+    file.setAttribute("fill", "currentColor");
+
+    const panel = document.createElementNS(namespace, "rect");
+    panel.setAttribute("x", "120");
+    panel.setAttribute("y", "224");
+    panel.setAttribute("width", "200");
+    panel.setAttribute("height", "224");
+    panel.setAttribute("rx", "24");
+    panel.setAttribute("fill", "currentColor");
+
+    const mark = document.createElementNS(namespace, "path");
+    mark.setAttribute(
+      "d",
+      "M172 400L212.9 336L176 272H208.5L230.4 311.7L252.3 272H284.8L247.9 336L288.8 400H256.3L230.4 357.8L204.5 400H172z",
+    );
+    mark.setAttribute("fill", "var(--clr-ui-bg, #000)");
+
+    const grid = document.createElementNS(namespace, "path");
+    grid.setAttribute(
+      "d",
+      "M352 248H496V288H352V248zM352 328H496V368H352V328zM352 408H496V448H352V408zM368 240H408V456H368V240zM440 240H480V456H440V240z",
+    );
+    grid.setAttribute("fill", "currentColor");
+
+    svg.append(file, panel, mark, grid);
+    return svg;
+  }
+
+  private _resolveCornerPaths(position: "tl" | "tr" | "bl" | "br"): [string, string] {
+    if (position === "tl") return ["M 0 0 L 14 0", "M 0 0 L 0 14"];
+    if (position === "tr") return ["M 26 0 L 12 0", "M 26 0 L 26 14"];
+    if (position === "bl") return ["M 0 26 L 14 26", "M 0 26 L 0 12"];
+    return ["M 26 26 L 12 26", "M 26 26 L 26 12"];
+  }
+
+  private _resolveCheckedLabels(selector: string): string[] {
+    return Array.from(this._root.querySelectorAll<HTMLInputElement>(selector))
+      .filter((input) => input.checked)
+      .flatMap((input) => {
+        const text = this._resolveLabelText(input);
+        return text === "" ? [] : [text];
+      });
+  }
+
+  private _resolveChoiceLabel(selector: string): string {
+    const input = this._root.querySelector<HTMLInputElement>(selector);
+    if (!input) return "";
+
+    return this._resolveLabelText(input);
+  }
+
+  private _resolveLabelText(input: HTMLInputElement): string {
+    const label = this._root.querySelector<HTMLLabelElement>(
+      `label[for="${input.id}"]`,
+    );
+    return label?.textContent?.trim() ?? "";
+  }
+
+  private _resolveInputValue(name: string): string {
+    const field = this._root.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+      `[name="${name}"]`,
+    );
+    return field?.value.trim() ?? "";
+  }
+
+  private _resolveAttachmentName(): string {
+    const input = this._root.querySelector<HTMLInputElement>(
+      'input[name="attachment"]',
+    );
+    return input?.files?.[0]?.name ?? "";
+  }
+
+  private _resolveFurthestAccessibleStep(): number {
+    let furthestAccessibleStep = 0;
+
+    this._steps.forEach((step, index) => {
+      if (index > furthestAccessibleStep) return;
+      if (!this._isStepSatisfied(step)) return;
+      furthestAccessibleStep = Math.min(index + 1, this._steps.length - 1);
+    });
+
+    return furthestAccessibleStep;
+  }
+
+  private _truncate(value: string, limit: number): string {
+    if (value.length <= limit) return value;
+    return `${value.slice(0, limit).trimEnd()}...`;
+  }
+
+  private _isSubmitAllowed(): boolean {
+    return this._current === this._steps.length - 1;
+  }
+
+  private _syncSubmitAvailability(): void {
+    if (this._form) {
+      this._form.dataset.loadingOnSubmit = CONTACT_WIZARD.loadingOff;
+    }
+  }
+
+  private _triggerValidationAndCheck(stepElement: HTMLElement): boolean {
+    this._dispatchValidationEvents(stepElement);
+
+    const invalidField = this._resolveFirstInvalidField(stepElement);
+    if (!invalidField) return true;
+
+    invalidField.focus();
+    invalidField.scrollIntoView({ behavior: "smooth", block: "center" });
+    return false;
+  }
+
+  private _dispatchValidationEvents(stepElement: HTMLElement): void {
+    const seenNames = new Set<string>();
+
+    stepElement
+      .querySelectorAll<HTMLInputElement>('input[type="checkbox"], input[type="radio"]')
+      .forEach((input) => {
+        if (seenNames.has(input.name)) return;
+        seenNames.add(input.name);
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+    this._resolveFieldCandidates(stepElement).forEach((field) => {
+      field.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+  }
+
+  private _resolveFirstInvalidField(
+    stepElement: HTMLElement,
+  ): HTMLInputElement | HTMLTextAreaElement | null {
+    const invalidSelectionGroup = this._resolveSelectionGroups(stepElement).find(
+      (inputs) => !inputs.some((input) => input.checked),
+    );
+    if (invalidSelectionGroup?.[0]) return invalidSelectionGroup[0];
+
+    return (
+      this._resolveFieldCandidates(stepElement).find(
+        (field) => !this._isValidField(field),
+      ) ?? null
+    );
+  }
+
+  private _isStepSatisfied(stepElement: HTMLElement): boolean {
+    return this._resolveFirstInvalidField(stepElement) === null;
+  }
+
+  private _resolveSelectionGroups(stepElement: HTMLElement): HTMLInputElement[][] {
+    const groups = new Map<string, HTMLInputElement[]>();
+
+    stepElement
+      .querySelectorAll<HTMLInputElement>('input[type="checkbox"], input[type="radio"]')
+      .forEach((input) => {
+        const currentGroup = groups.get(input.name);
+        if (currentGroup) {
+          currentGroup.push(input);
+          return;
+        }
+        groups.set(input.name, [input]);
+      });
+
+    return Array.from(groups.values());
+  }
+
+  private _resolveFieldCandidates(
+    stepElement: HTMLElement,
+  ): Array<HTMLInputElement | HTMLTextAreaElement> {
+    return Array.from(
+      stepElement.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+        'input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(:disabled), textarea:not(:disabled)',
+      ),
+    );
+  }
+
+  private _isValidField(field: HTMLInputElement | HTMLTextAreaElement): boolean {
+    if (field.disabled) return true;
+    const value = field.value.trim();
+    if (field.hasAttribute("required") && value === "") return false;
+    if (value === "") return true;
+    if (field instanceof HTMLInputElement) {
+      return field.validity.valid;
+    }
+    return true;
+  }
+
+  private _shouldDebounceSidebarSync(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+      return false;
+    }
+
+    if (target instanceof HTMLTextAreaElement) return true;
+    return !["checkbox", "radio", "file"].includes(target.type);
+  }
+
+  private async _submit(): Promise<void> {
+    if (!this._form || this._submitting) return;
+    this._setSubmittingState(true);
+    this._clearSubmitFeedback();
+
+    try {
+      const response = await this._sendSubmitRequest();
+      if (!response.success) {
+        this._showSubmitFeedback(response.message);
+        return;
+      }
+      await this._requestSuccessFlow(response);
+    } catch (error) {
+      this._showSubmitFeedback(this._resolveSubmitErrorMessage(error));
+    } finally {
+      this._setSubmittingState(false);
+    }
+  }
+
+  private async _sendSubmitRequest(): Promise<ContactSubmitResponse> {
+    const form = this._form;
+    if (!form) {
+      throw new Error("Missing contact form.");
+    }
+
+    const action = form.action.trim() === "" ? window.location.pathname : form.action;
+    const response = await fetch(action, {
+      method: (form.method || "POST").toUpperCase(),
+      body: new FormData(form),
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
+    const payload = await this._readSubmitResponse(response);
+    if (response.ok && payload.success) {
+      return payload;
+    }
+    throw new Error(payload.message);
+  }
+
+  private async _readSubmitResponse(
+    response: Response,
+  ): Promise<ContactSubmitResponse> {
+    let parsed: unknown = null;
+    try {
+      parsed = await response.json();
+    } catch (_error) {
+      parsed = null;
+    }
+
+    if (this._isSubmitResponse(parsed)) {
+      return parsed;
+    }
+
+    return {
+      success: false,
+      message: "문의 접수 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+
+  private _isSubmitResponse(value: unknown): value is ContactSubmitResponse {
+    if (value == null || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+    const response = value as Record<string, unknown>;
+    return (
+      typeof response.success === "boolean" &&
+      typeof response.message === "string"
+    );
+  }
+
+  private async _requestSuccessFlow(
+    response: ContactSubmitResponse,
+  ): Promise<void> {
+    const message =
+      response.message.trim() === ""
+        ? CONTACT_THEATRE_SUCCESS_DEFAULT_MESSAGE
+        : response.message;
+
+    await new Promise<void>((resolve, reject) => {
+      const detail: ContactSuccessFlowRequestDetail = {
+        handled: false,
+        message,
+        resolve,
+        reject,
+      };
+      window.dispatchEvent(
+        new CustomEvent<ContactSuccessFlowRequestDetail>(
+          CONTACT_THEATRE_SUCCESS_FLOW_REQUEST_EVENT,
+          { detail },
+        ),
+      );
+      if (detail.handled) return;
+      resolve();
+    });
+  }
+
+  private _setSubmittingState(isSubmitting: boolean): void {
+    this._submitting = isSubmitting;
+    this._root.classList.toggle("is-submitting", isSubmitting);
+    this._root.setAttribute("aria-busy", isSubmitting ? "true" : "false");
+    this._syncActionState();
+    this._syncNavigationState();
+  }
+
+  private _resolveSubmitFeedbackNode(): HTMLElement | null {
+    return this._form?.querySelector<HTMLElement>("[data-contact-submit-feedback]") ?? null;
+  }
+
+  private _clearSubmitFeedback(): void {
+    const feedback = this._resolveSubmitFeedbackNode();
+    if (!feedback) return;
+    feedback.hidden = true;
+    feedback.textContent = "";
+  }
+
+  private _showSubmitFeedback(message: string): void {
+    const feedback = this._resolveSubmitFeedbackNode();
+    if (!feedback) return;
+    feedback.hidden = false;
+    feedback.textContent =
+      message.trim() === ""
+        ? "문의 접수 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
+        : message;
+  }
+
+  private _resolveSubmitErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim() !== "") {
+      return error.message;
+    }
+    return "문의 접수 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+
+  private _syncProjectOtherField(): void {
+    const toggle = this._projectOtherToggle;
+    const panel = this._projectOtherPanel;
+    const input = this._projectOtherInput;
+    if (!toggle || !panel || !input) return;
+
+    const isActive = toggle.checked;
+    panel.classList.toggle("is-active", isActive);
+    panel.setAttribute("aria-hidden", isActive ? "false" : "true");
+    input.disabled = !isActive;
+    input.toggleAttribute("required", isActive);
+  }
+
+  private _resolvePreviousActionTarget(button: HTMLButtonElement): HTMLElement {
+    return (
+      button.closest<HTMLElement>(CONTACT_WIZARD.previousActionWrapperSelector) ??
+      button
+    );
+  }
+
+  private _showPreviousActionTarget(
+    target: HTMLElement,
+    immediate = false,
+  ): void {
+    target.classList.add(INIT_DOM_CLASSES.blockBase);
+    target.hidden = false;
+    target.style.removeProperty("display");
+    target.setAttribute("aria-hidden", "false");
+    target.toggleAttribute("inert", false);
+    target.classList.remove(BLOCK_HIDDEN_CLASS, INIT_DOM_CLASSES.boxHidden);
+    target.classList.remove("is-block-reveal-down");
+
+    if (immediate) {
+      target.classList.add(INIT_DOM_CLASSES.blockUp);
+      return;
+    }
+
+    if (target.classList.contains(INIT_DOM_CLASSES.blockUp)) return;
+
+    void target.getBoundingClientRect();
+    BlockReveal.reveal(target);
+  }
+
+  private _hidePreviousActionImmediately(target: HTMLElement): void {
+    target.hidden = true;
+    target.style.display = "none";
+    target.classList.remove(INIT_DOM_CLASSES.blockUp, "is-block-reveal-down");
+    target.classList.add(INIT_DOM_CLASSES.blockBase, INIT_DOM_CLASSES.boxHidden);
+  }
+
+  private _hidePreviousActionWithTransition(target: HTMLElement): void {
+    target.classList.add(INIT_DOM_CLASSES.blockBase);
+    target.hidden = false;
+    target.style.removeProperty("display");
+    target.classList.remove(BLOCK_HIDDEN_CLASS, INIT_DOM_CLASSES.boxHidden);
+    target.classList.remove(INIT_DOM_CLASSES.blockUp);
+    void target.getBoundingClientRect();
+    target.classList.add("is-block-reveal-down");
+
+    const timerId = this._trackedTimeout(() => {
+      this._previousActionHideTimers.delete(target);
+      this._hidePreviousActionImmediately(target);
+    }, this._resolveRevealTransitionMs(target));
+
+    this._previousActionHideTimers.set(target, timerId);
+  }
+
+  private _clearPreviousActionHideTimer(target: HTMLElement): void {
+    const timerId = this._previousActionHideTimers.get(target);
+    if (timerId == null) return;
+    window.clearTimeout(timerId);
+    this._previousActionHideTimers.delete(target);
+  }
+
+  private _resolveRevealTransitionMs(target: HTMLElement): number {
+    const computedStyle = window.getComputedStyle(target);
+    const durations = this._parseCssTimeList(computedStyle.transitionDuration);
+    const delays = this._parseCssTimeList(computedStyle.transitionDelay);
+    const entries = Math.max(durations.length, delays.length, 1);
+    let maxMs = 0;
+
+    for (let index = 0; index < entries; index += 1) {
+      const duration = durations[index] ?? durations[durations.length - 1] ?? 0;
+      const delay = delays[index] ?? delays[delays.length - 1] ?? 0;
+      maxMs = Math.max(maxMs, duration + delay);
+    }
+
+    return Math.max(maxMs, CONTACT_WIZARD.transitionMs) + CONTACT_WIZARD.transitionBufferMs;
+  }
+
+  private _parseCssTimeList(value: string): number[] {
+    return value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry !== "")
+      .map((entry) => {
+        if (entry.endsWith("ms")) {
+          return Number.parseFloat(entry);
+        }
+        if (entry.endsWith("s")) {
+          return Number.parseFloat(entry) * 1000;
+        }
+        return 0;
+      })
+      .filter((entry) => Number.isFinite(entry));
+  }
+}

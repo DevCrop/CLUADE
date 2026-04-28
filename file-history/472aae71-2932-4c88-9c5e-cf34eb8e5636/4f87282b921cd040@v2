@@ -1,0 +1,248 @@
+# RTK 100% 전환 + 다중 프로젝트 BEST PRACTICE 가이드
+
+## Context
+
+- 현재 프로젝트는 **CHOP**(셸 출력 압축 도구, v1.38.1 Windows native)를 광범위하게 강제하는 룰을 운영 중. AGENTS.md / CLAUDE.md / `.claude/settings.json` PostToolUse 훅 / `.claude/rules` / `.cursor/rules` / `.codex/rules` 10개 파일 + 글로벌 `~/.claude/CLAUDE.md` + 메모리 `feedback_chop.md`까지 분산되어 있음.
+- 동일 목적의 **RTK**(Rust Token Killer, https://github.com/rtk-ai/rtk)가 더 광범위한 100+ 명령 필터·자동 재작성 훅·12종 AI 툴 통합을 제공. 누군가 이미 `.rtk/filters.toml`을 "migrated from .chop-filters.yml" 주석과 함께 만들어 둠 → 이전 의도가 명확.
+- 사용자 결정 (이번 세션):
+  1. CHOP **100% 제거**, RTK **100% 단일 도구**로 교체
+  2. RTK **풀 기능** 환경 = WSL Ubuntu-24.04 (Windows 네이티브는 CLAUDE.md injection만 가능 → 자동 재작성 X)
+  3. 타 프로젝트 재사용 가이드는 **BEST PRACTICE 관점** 글로벌 위치 (`~/.claude/templates/rtk-setup.md`)
+- 사용자는 Claude Code · Codex · Cursor 3종을 사용. 현재 도커 워크플로우 중심(다른 프로젝트도 도커).
+- 환경 사전 점검 완료:
+  - WSL Ubuntu 24.04.2 LTS 가동, `curl`/`sh`/`git`/`node` 사용 가능
+  - WSL 내 Docker 28.0.4 인식(Docker Desktop WSL2 통합 ON)
+  - 프로젝트 접근: `/mnt/c/Users/edn_y/renew_nineonelabs`
+  - `.rtk/filters.toml` 이미 존재 (4개 필터: docker-compose-logs / docker-compose-php-lint / php-lint / docker-compose-ps)
+- **목표 산출물**: ① RTK가 WSL에서 fully-hooked로 동작 ② Claude/Codex/Cursor 3종 모두 RTK init 완료 ③ repo·글로벌·메모리에서 chop 흔적 0 ④ 다른 도커 프로젝트에 그대로 적용 가능한 BEST PRACTICE 문서.
+
+## 결정 사항 요약
+
+| 항목 | 선택 |
+|---|---|
+| chop 처리 | 완전 삭제(uninstall + 모든 룰 교체) |
+| RTK 설치 위치 | WSL Ubuntu-24.04 (`~/.local/bin/rtk`) |
+| AI 툴 init | Claude Code(`-g`) + Codex(`-g --codex`) + Cursor(`-g --agent cursor`) |
+| 워크플로우 | VS Code · Cursor를 **WSL Remote**로 프로젝트 오픈 (Claude Code 확장이 WSL Linux 환경에서 실행되어 RTK 자동 재작성 훅 적용) |
+| 포터블 가이드 | 글로벌 `~/.claude/templates/rtk-setup.md` (BEST_PRACTICES 톤) |
+| 프로젝트 훅 | `.claude/settings.json` PostToolUse `chop tsc` → `rtk tsc` |
+
+## 작업 순서
+
+### Phase A — WSL에 RTK 설치 + 3종 AI 툴 초기화
+
+1. WSL 셸 진입(`wsl -d Ubuntu-24.04`) 후 다음을 순차 실행:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+   source ~/.bashrc
+   rtk --version          # 0.28.x 확인
+   rtk gain               # 분석 명령 동작 확인
+   ```
+2. AI 툴 초기화 (WSL 내, 어떤 디렉토리에서 실행해도 글로벌 설정):
+   ```bash
+   rtk init -g                        # Claude Code: PreToolUse 훅 + RTK.md 글로벌
+   rtk init -g --codex                # Codex: AGENTS.md + RTK.md 인스트럭션
+   rtk init -g --agent cursor         # Cursor: hooks.json
+   rtk init --show                    # 설치 검증
+   ```
+3. WSL 측 글로벌 Claude 설정(`~/.claude/settings.json`)에 RTK 훅이 들어갔는지 확인. 충돌이 있으면 사용자가 수동 머지(이번에는 WSL `~/.claude`가 fresh일 가능성이 높음 → init이 깔끔히 작성).
+4. `rtk` 텔레메트리는 default disabled. opt-in 묻는 프롬프트가 뜨면 사용자 판단(권장: disable, 사적 명령 흐름 노출 우려).
+
+### Phase B — VS Code · Cursor를 WSL Remote로 전환
+
+이 단계가 빠지면 RTK 훅이 Windows 네이티브 Claude Code에 닿지 않아 "100% 사용 환경" 요건 미달.
+
+1. VS Code: 좌하단 ⟨⟩ 원격 인디케이터 → "Connect to WSL" → 디스트로 `Ubuntu-24.04` 선택 → 폴더 열기 `/mnt/c/Users/edn_y/renew_nineonelabs`.
+2. Claude Code 확장이 자동으로 WSL-Server 모드로 재기동. 이때부터 Bash 도구 호출은 WSL bash를 거쳐 RTK 훅이 적용됨.
+3. Cursor: 동일하게 "Open Folder in WSL". Cursor도 `~/.cursor/hooks.json`을 WSL 측에 사용.
+4. Codex CLI: WSL 터미널에서 `codex` 실행. 프로젝트 루트에 진입한 상태에서 `rtk init --show`로 활성 확인.
+5. 검증 절차(아래 Phase E)를 WSL Remote 세션에서 실행.
+
+> **주의**: WSL 기본 사용자가 root인지 비root인지 사전에 확인. `whoami` 결과가 `root`라면 `~/.local/bin/rtk`는 `/root/.local/bin/rtk`. Claude/Cursor가 WSL Remote에서 실행되면 같은 사용자로 동작하므로 정합. 비root 추가 사용자가 따로 있다면 그쪽에도 설치 반복 필요.
+
+### Phase C — CHOP 흔적 0으로 만들기 (repo + 글로벌 + 메모리 + 바이너리)
+
+#### C-1. Repo 파일 (10개) 일괄 교체
+
+| 파일 | 변경 요지 |
+|---|---|
+| [AGENTS.md](AGENTS.md) | "Project Defaults"의 chop 단락(line 24 근방) 삭제·`rtk` 단락으로 재작성. "Verification"의 `chop node_modules/.bin/tsc --noEmit` → `rtk tsc` (line 45). "Forbidden commands" 단락은 그대로 유지. |
+| [CLAUDE.md](CLAUDE.md) | "Hook-Aware Behavior"의 chop 문장(line 9) → `rtk` 자동 재작성/명시 호출 모두 가능 문구로 교체. |
+| [.claude/settings.json](.claude/settings.json) | `allowedTools` 배열 line 3 `"Bash(chop *)"` → `"Bash(rtk *)"`. PostToolUse 훅 line 23의 명령어 `chop node_modules/.bin/tsc --noEmit` → `rtk tsc --noEmit` (또는 `rtk node_modules/.bin/tsc --noEmit` — RTK는 둘 다 매칭). |
+| [.claude/settings.local.json](.claude/settings.local.json) | line 4 `"Bash(chop npx *)"` → `"Bash(rtk npx *)"`. |
+| [.claude/SETUP_CHECKLIST.md](.claude/SETUP_CHECKLIST.md) | chop 언급 단락 → rtk로 재작성. (실제 라인은 본 작업 시 grep으로 확인) |
+| [.claude/skills/new-route/SKILL.md](.claude/skills/new-route/SKILL.md) | chop 언급 단락 → rtk |
+| [.claude/skills/migration/SKILL.md](.claude/skills/migration/SKILL.md) | chop 언급 단락 → rtk |
+| [.cursor/rules/project-core.mdc](.cursor/rules/project-core.mdc) | chop 룰 단락 → rtk |
+| [.codex/rules/default.rules](.codex/rules/default.rules) | chop 룰 → rtk |
+| [.rtk/filters.toml](.rtk/filters.toml) | line 2의 `# (migrated from .chop-filters.yml)` 주석 제거 또는 유지(이력 남기려면 유지). 결정: 제거 후 `# Project-level RTK filters`만 남김. |
+
+`.claude/rules/{frontend,php,scss}.md`에 chop 언급이 있는지 변경 시점에 한번 더 grep. (현재 grep 결과엔 안 나오지만 이전에 추가됐을 가능성).
+
+#### C-2. 글로벌 (모든 프로젝트 공통)
+
+- [C:\Users\edn_y\.claude\CLAUDE.md](C:\Users\edn_y\.claude\CLAUDE.md) — 파일 전체가 CHOP 가이드. 통째로 RTK 가이드로 재작성:
+  - "RTK — Token-Optimized Commands"
+  - Golden Rule: "WSL Remote 모드라면 자동 재작성됨. 명시 `rtk <command>`도 항상 안전."
+  - Commands by Category: README의 Files / Git / GH / Tests / Build & Lint / Containers / Data 섹션을 압축한 치트시트.
+  - When to Use: 노이즈 큰 출력엔 자동, 짧은 출력엔 패스스루.
+- WSL 내 `~/.claude/CLAUDE.md`는 `rtk init -g`가 자체적으로 RTK.md를 작성하므로 별도 작업 불필요(또는 편집 시 RTK.md 내용을 살피기).
+
+#### C-3. 메모리
+
+- [C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\feedback_chop.md](C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\feedback_chop.md) → 삭제 후 `feedback_rtk.md`로 신규 작성:
+  - name: `RTK token optimization — mandatory prefix`
+  - description: 모든 Bash 명령은 `rtk` prefix. WSL Remote 모드에선 훅이 자동 적용. Windows 네이티브 모드에서는 명시 prefix 필수.
+  - body: Why(토큰 절약 60-90%), How to apply(`rtk git status`, `rtk tsc --noEmit`, `rtk docker compose ps` 등).
+- [C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\MEMORY.md](C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\MEMORY.md) — `[CHOP mandatory prefix](feedback_chop.md)` 줄을 `[RTK mandatory prefix](feedback_rtk.md)` — RTK는 WSL hook 자동 적용으로 변경.
+
+#### C-4. CHOP 바이너리 제거
+
+- 위치: `C:\Users\edn_y\AppData\Local\Programs\chop\chop` (PATH 등록 디렉토리).
+- 단계:
+  1. `chop --version` 결과 보존(이력용).
+  2. 윈도우 "앱 및 기능"에 `chop`이 등록돼 있으면 설치 제거. 없으면 디렉토리 통째로 삭제.
+  3. Windows PATH에서 `C:\Users\edn_y\AppData\Local\Programs\chop` 제거(시스템 환경 변수 편집).
+  4. 새 PowerShell/Bash 세션에서 `where chop` / `which chop` 모두 not found 확인.
+- WSL은 chop 바이너리가 따로 설치돼 있지 않음(`/mnt/c/.../chop` 경로가 PATH에 묻어 있을 뿐). WSL 측 PATH에서도 해당 경로 제거 권장(`~/.bashrc` / `~/.profile` 점검).
+
+### Phase D — `.rtk/filters.toml` 검증·확장
+
+- 기존 4개 필터(docker-compose-logs / docker-compose-php-lint / php-lint / docker-compose-ps)는 정규식 그대로 동작 가능 — RTK는 chop과 호환 매칭 문법.
+- 추가 후보(이번 작업에 같이 넣을지 사용자 판단):
+  - `tsc-noemit` — `^node_modules/.bin/tsc --noEmit\b` 매칭 (RTK 기본 `rtk tsc` 필터와 중복일 수 있어 우선 보류).
+  - `vite-dev` — `vite` 출력의 HMR 노이즈 제거.
+- 결정: 이번 PR에선 **검증만** 수행하고 신규 필터 추가는 별 작업으로 분리.
+
+### Phase E — End-to-End 검증
+
+WSL Remote 세션에서 다음 시나리오를 모두 통과해야 종료:
+
+1. **설치 검증**
+   - `rtk --version` → `rtk 0.28.x`
+   - `rtk init --show` → Claude/Codex/Cursor 모두 active
+   - `which rtk` → `~/.local/bin/rtk`
+2. **명시 호출 동작**
+   - `rtk git status` → 압축 출력
+   - `rtk docker compose ps` → 20줄 이내 (`.rtk/filters.toml` 적용)
+   - `rtk tsc --noEmit` → 에러만 그룹핑된 출력 (또는 0개)
+3. **자동 재작성 훅** (Claude Code WSL Remote)
+   - 새 채팅에서 `git status` 입력 → 도구 로그에 `rtk git status`로 재작성됐는지 확인 (RTK README의 "How It Works")
+4. **PostToolUse 훅 마이그레이션**
+   - 임의 `.ts` 파일에 공백 한 줄 추가 후 저장 → settings.json의 PostToolUse가 `rtk tsc --noEmit`을 실행, 출력 로그에서 chop 호출 흔적 0 확인
+5. **CHOP 잔존 검증**
+   - WSL: `which chop` → not found
+   - PowerShell: `Get-Command chop -ErrorAction SilentlyContinue` → empty
+   - repo: `grep -r 'chop' .claude .cursor .codex AGENTS.md CLAUDE.md` → 매치 0
+   - 글로벌: `grep -r 'chop' C:\Users\edn_y\.claude\CLAUDE.md` → 0
+6. **타 AI 툴 검증**
+   - Cursor: WSL Remote 열고 hover hint나 chat에서 `git status` 입력 → `rtk git status` 재작성 (Cursor `hooks.json` 경유)
+   - Codex: `codex` 셸 띄운 뒤 `rtk gain` 동작 확인 (Codex는 hooks 없이 AGENTS.md/RTK.md 인스트럭션 모드)
+7. **분석**: `rtk gain` → 이번 세션의 절약 토큰 카운트 표시 (>0).
+
+### Phase F — 글로벌 BEST PRACTICE 가이드 작성
+
+파일: [C:\Users\edn_y\.claude\templates\rtk-setup.md](C:\Users\edn_y\.claude\templates\rtk-setup.md) (디렉토리 신규 생성)
+
+목차 (BEST_PRACTICES.md 톤):
+
+1. **Why RTK** — 토큰 절약(60-90%), 100+ 명령, <10ms 오버헤드, MIT.
+2. **Prerequisites**
+   - macOS/Linux: 네이티브 셸로 fully-hooked.
+   - **Windows + Docker (이 가이드의 주 시나리오)**: WSL2 + Docker Desktop WSL Integration ON. 프로젝트는 NTFS에 두고 `/mnt/c/...`로 접근해도 무방하지만, 자주 빌드하는 프로젝트는 WSL ext4로 옮기면 IO 빠름.
+3. **One-shot install (WSL/Linux/macOS)**
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+   rtk --version
+   ```
+4. **Per-AI init (실행할 것만 골라 실행)**
+   ```bash
+   rtk init -g                       # Claude Code
+   rtk init -g --codex               # Codex
+   rtk init -g --agent cursor        # Cursor
+   rtk init -g --gemini              # Gemini CLI (옵션)
+   rtk init -g --copilot             # Copilot (옵션)
+   ```
+5. **VS Code / Cursor → WSL Remote 연결**
+   - 좌하단 원격 인디케이터 → Connect to WSL → 디스트로 선택 → 폴더 오픈.
+   - 한 번만 하면 해당 워크스페이스가 WSL 모드로 기억됨.
+6. **Project-level filters template** (`.rtk/filters.toml`):
+   - 도커 프로젝트 공통 4개 (compose logs / php-lint / compose-ps / generic logs).
+   - 한 줄짜리 추가 패턴 예시.
+7. **Hook integration (PostToolUse)** — TypeScript 프로젝트 예시:
+   ```json
+   {
+     "matcher": "Edit|Write",
+     "hooks": [{
+       "type": "command",
+       "command": "node -e \"...; execSync('rtk tsc --noEmit', ...)\""
+     }]
+   }
+   ```
+8. **Verification checklist** (Phase E의 7단계 일반화: 설치/명시호출/훅/PostTool/잔존chop/타 AI/gain).
+9. **Migrating from CHOP** (체크리스트):
+   - 모든 프로젝트 룰에서 `chop ` → `rtk ` 일괄 치환.
+   - chop 바이너리 제거 + PATH 정리.
+   - `.chop-filters.yml`이 있으면 `.rtk/filters.toml`로 schema_version=1 로 변환.
+10. **Troubleshooting** (Windows에서 훅이 안 뜸 → WSL Remote 미사용; `rtk gain`이 0 → 명시 호출이 안 되어 모니터링 안 됨; 텔레메트리 끄기).
+11. **Uninstall** — `rtk init -g --uninstall && cargo uninstall rtk` (또는 binary 삭제).
+
+### Phase G — 메모리 인덱스 갱신
+
+[C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\MEMORY.md](C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\MEMORY.md):
+
+- 기존: `- [CHOP mandatory prefix](feedback_chop.md) — all Bash commands must use chop prefix`
+- 변경: `- [RTK mandatory prefix](feedback_rtk.md) — Bash 명령은 rtk 프리픽스, WSL Remote에서 자동 재작성`
+- 추가: `- [RTK setup template](~/.claude/templates/rtk-setup.md) — 도커+Windows 신규 프로젝트 RTK 적용 표준 (재사용)` (글로벌 파일이지만 인덱스에 가리킴 정도는 OK)
+
+`feedback_chop.md` 파일은 삭제, `feedback_rtk.md` 신규 생성 (Phase C-3 참고).
+
+## 핵심 변경 파일 (한눈에)
+
+```
+SHARED REPO (renew_nineonelabs)
+├── AGENTS.md                                  # chop → rtk
+├── CLAUDE.md                                  # chop → rtk
+├── .claude/settings.json                      # allowedTools + PostToolUse 훅
+├── .claude/settings.local.json                # allow 패턴
+├── .claude/SETUP_CHECKLIST.md                 # chop 언급 교체
+├── .claude/skills/new-route/SKILL.md          # chop 언급 교체
+├── .claude/skills/migration/SKILL.md          # chop 언급 교체
+├── .cursor/rules/project-core.mdc             # chop → rtk
+├── .codex/rules/default.rules                 # chop → rtk
+└── .rtk/filters.toml                          # 헤더 주석 정리
+
+GLOBAL (~/.claude on Windows)
+├── CLAUDE.md                                  # CHOP 섹션 → RTK 섹션 전체 재작성
+├── projects/.../memory/feedback_chop.md       # 삭제
+├── projects/.../memory/feedback_rtk.md        # 신규
+├── projects/.../memory/MEMORY.md              # 인덱스 줄 업데이트
+└── templates/rtk-setup.md                     # 신규 (다른 프로젝트 재사용용 BEST PRACTICE)
+
+WSL (~/.local/bin, ~/.claude on Linux)
+└── rtk binary + Claude/Codex/Cursor init 결과물 (자동 생성)
+
+WINDOWS NATIVE
+└── C:\Users\edn_y\AppData\Local\Programs\chop\* 디렉토리 삭제 + PATH 제거
+```
+
+## 위험 / 롤백
+
+- **WSL Remote 전환 자체가 워크플로우 변경**: 재기동 후 첫 세션은 일부 VS Code 확장이 WSL 측에 다시 깔리느라 잠깐 느림 (1회성).
+- **PATH에 chop 흔적이 남으면 일부 자동 재작성이 chop을 부를 수 있음** → Phase E-5 잔존 검증 통과 필수.
+- **`.claude/settings.json` PostToolUse 훅에서 `rtk` 실패 시 빌드 차단**: 훅이 `process.exit(1)`. 이전 chop과 동일 거동 — 우려 적음.
+- **롤백**: 모든 변경은 git 추적. `git restore` + chop 바이너리 재설치(현재 v1.38.1, https://github.com/-... ) 가능. 글로벌 `~/.claude/CLAUDE.md`만 백업본을 plan 파일에 임시 보관할 것 (실 작업 시 변경 직전 cat → plan에 첨부).
+
+## Verification (요약 — 실행 시 체크)
+
+- [ ] WSL `rtk --version` 0.28.x
+- [ ] `rtk init --show` Claude/Codex/Cursor 3종 active
+- [ ] VS Code `Connect to WSL` 후 Claude Code 새 세션에서 `git status` → 로그에 `rtk git status` 재작성
+- [ ] `.ts` 파일 수정 → PostToolUse가 `rtk tsc --noEmit` 호출
+- [ ] `rtk docker compose ps` 20줄 이내 (`.rtk/filters.toml` 적용)
+- [ ] repo+global+WSL+Windows PATH 모두에서 chop 흔적 0
+- [ ] `~/.claude/templates/rtk-setup.md` 작성 완료, 다른 도커 프로젝트에서 1번 읽고 실행 가능한 self-contained 가이드
+- [ ] 메모리 `feedback_chop.md` 삭제 + `feedback_rtk.md` 신규 + MEMORY.md 인덱스 업데이트
+- [ ] `rtk gain` > 0 토큰 절약 표시

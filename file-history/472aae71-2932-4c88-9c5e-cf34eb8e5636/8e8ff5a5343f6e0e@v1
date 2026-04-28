@@ -1,0 +1,27 @@
+schema_version = 1
+# Project-level RTK filters (migrated from .chop-filters.yml)
+
+[filters.docker-compose-logs]
+description = "Filter docker compose logs to relevant lines"
+match_command = "^docker compose logs\\b"
+strip_ansi = true
+strip_lines_matching = ["^(?!web\\s+\\||db\\s+\\|).*(?<!(error|warn|warning|exception|fatal|critical|traceback|deprecated|notice|apache|php))$"]
+max_lines = 120
+
+[filters.docker-compose-php-lint]
+description = "PHP lint via docker compose — errors/warnings only"
+match_command = "^docker compose exec web php -l\\b"
+strip_ansi = true
+strip_lines_matching = ["^(?!.*(no syntax errors detected|parse error|fatal error|warning|notice)).*$"]
+
+[filters.php-lint]
+description = "PHP lint — errors/warnings only"
+match_command = "^php -l\\b"
+strip_ansi = true
+strip_lines_matching = ["^(?!.*(no syntax errors detected|parse error|fatal error|warning|notice)).*$"]
+
+[filters.docker-compose-ps]
+description = "docker compose ps — first 20 lines"
+match_command = "^docker compose ps\\b"
+strip_ansi = true
+max_lines = 20

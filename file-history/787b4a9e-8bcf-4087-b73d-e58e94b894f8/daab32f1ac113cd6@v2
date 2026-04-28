@@ -1,0 +1,46 @@
+# auto-pin.ps1 — SessionStart 시 현재 프로젝트를 active-projects.json pinned 에 자동 등록.
+# Idempotent. <50ms. async:false 실행 시 stdin payload 수신 가능.
+
+$ErrorActionPreference = 'SilentlyContinue'
+$base        = 'D:\.claude'
+$projectsDir = "$base\projects"
+$registryPath = "$base\active-projects.json"
+
+# SessionStart payload에서 cwd 추출 시도
+$cwd = $null
+try {
+    $raw = [Console]::In.ReadToEnd()
+    if ($raw) { $cwd = ($raw | ConvertFrom-Json).cwd }
+} catch {}
+
+# projects/ 에서 대상 폴더 탐색 — cwd 마지막 세그먼트로 부분 일치
+$match = $null
+if ($cwd) {
+    $seg = Split-Path $cwd -Leaf
+    $match = Get-ChildItem $projectsDir -Directory -ErrorAction SilentlyContinue |
+             Where-Object { $_.Name -like "*$seg*" } |
+             Select-Object -First 1 -ExpandProperty Name
+}
+
+# cwd payload 없으면 추측 불가 — 조용히 종료 (async:true 환경에서는 cwd 못 받음)
+if (-not $match) { exit 0 }
+
+# active-projects.json 읽기
+$registry = if (Test-Path $registryPath) {
+    Get-Content $registryPath -Raw | ConvertFrom-Json
+} else {
+    [PSCustomObject]@{ pinned = @() }
+}
+
+$pinned = @($registry.pinned)
+if ($pinned -contains $match) { exit 0 }
+
+# 추가 후 저장
+$pinned += $match
+$registry.pinned = $pinned
+$registry | ConvertTo-Json | Set-Content $registryPath -Encoding UTF8
+
+$ts = Get-Date -Format 'yyyy-MM-dd HH:mm'
+"[$ts] auto-pin: $match" | Add-Content "$base\cleanup.log"
+
+exit 0

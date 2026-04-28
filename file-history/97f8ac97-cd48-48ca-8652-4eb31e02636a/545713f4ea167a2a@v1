@@ -1,0 +1,617 @@
+﻿import type * as THREE from "three";
+import type { ComponentConfig } from "./dom.types.js";
+import type { SceneObject } from "../core/SceneObject.js";
+import type {
+  BackgroundLookOptions,
+  ObjectEffects,
+  ObjectOptionsByKey,
+} from "./object.types.js";
+import type {
+  ITimelineActionTarget,
+  Object3DLike,
+  ProjectionMatrixUpdatable,
+} from "./engine.types.js";
+import type {
+  BackgroundTransitionRule,
+  BackgroundVariantKey,
+  SceneProgressTransitionWindow,
+  TransitionEaseKey,
+  TransitionVeilRuntimePort,
+  TransitionVeilRuntimeState,
+} from "./object-runtime.types.js";
+import type { IntroConfig } from "./core.types.js";
+import type { GsapGlobal } from "./gsap.types.js";
+import type { AboutPageConfig } from "./about.types.js";
+import type { ContactPageConfig } from "./contact.types.js";
+import type { MainPageConfig } from "./main.types.js";
+import type { Engine } from "../core/Engine.js";
+import type { SceneSheetEffectRuntime } from "../runtime/SceneSheetEffectRuntime.js";
+import type { BackgroundController } from "../controller/BackgroundController.js";
+import type { ShaderController } from "../controller/ShaderController.js";
+import type { ShaderManager } from "../manager/ShaderManager.js";
+import type { ObjectSetup } from "../app/ObjectSetup.js";
+import type { UiSetup } from "../app/UiSetup.js";
+import type { ResizeSetup } from "../app/ResizeSetup.js";
+import type { PageConfig } from "./core.types.js";
+
+export interface ISetup<TArgs extends unknown[] = [], TReturn = void> {
+  init(...args: TArgs): TReturn;
+  dispose(): void;
+}
+
+export type ManagedPageConfig =
+  | MainPageConfig
+  | AboutPageConfig
+  | ContactPageConfig;
+
+export type AppPageConfig =
+  | MainPageConfig
+  | AboutPageConfig
+  | ContactPageConfig;
+
+export type ScrollDirection = "up" | "down" | "idle";
+
+export type TheatreBridgeFactory = (
+  engine: Engine,
+  controls: import("three/addons/controls/OrbitControls.js").OrbitControls,
+  hooks: import("./theatre.types.js").TheatreAuthorBridgeHooks,
+) => Promise<import("./theatre.types.js").TheatreBridgePort | null>;
+
+export type PageTheatreAdapterFactory = () => Promise<PageTheatreAdapter | null>;
+
+export type ResponsiveListener = (
+  snapshot: Readonly<ResponsiveSnapshot>,
+) => void;
+
+export interface PinnedRevealEntry {
+  target: HTMLElement;
+  timeline: import("./gsap.types.js").GSAPTimeline;
+  trigger: { kill: () => void };
+}
+
+export interface DebugHelperHandle {
+  root: HTMLDivElement;
+  dispose(): void;
+}
+
+export interface DebugHelperState {
+  axisHelper: THREE.AxesHelper | null;
+  gridHelper: THREE.GridHelper | null;
+  cameraHelper: THREE.CameraHelper | null;
+  lightHelpers: THREE.Object3D[];
+  syncLoopId: number | null;
+}
+
+export interface SceneBoundaryBlendConfig {
+  enabled: boolean;
+  startEpsilon: number;
+  durationRatio: number;
+  minDuration: number;
+  maxDuration: number;
+  excludedTargets?: readonly string[];
+}
+
+export interface TimelineBuilderOptions {
+  camera?: Object3DLike & Partial<ProjectionMatrixUpdatable>;
+  cameraTarget?: Object3DLike;
+  getSceneObject?: { get(id: string): unknown };
+  sceneBoundaryBlend?: SceneBoundaryBlendConfig;
+}
+
+export interface GsapTimelineDefaultsTarget {
+  defaults?(vars: { ease: string }): unknown;
+}
+
+export interface DomStyleAdapter {
+  set(target: string, vars: object): void;
+}
+
+export type DomStyleEntry = readonly [property: string, value: string];
+export type DomStyleEntries = readonly DomStyleEntry[];
+
+export interface DomVisibilityState {
+  visible: boolean;
+  opacity?: number;
+}
+
+export type SceneDomTargetKey =
+  | "mainOverlay"
+  | "portfolioHead"
+  | "portfolioGallery";
+
+export interface SceneActiveState<
+  TSceneKey extends string = string,
+  TSheetId extends string = string,
+> {
+  sceneKey: TSceneKey;
+  sheetId: TSheetId;
+}
+
+export interface SceneOverlayPolicy<
+  TSceneKey extends string = string,
+  TSheetId extends string = string,
+> {
+  targetKey: SceneDomTargetKey;
+  windows: readonly SceneProgressTransitionWindow<TSceneKey, TSheetId>[];
+}
+
+export interface SceneVisibilityPolicy<
+  TSceneKey extends string = string,
+  TSheetId extends string = string,
+> {
+  targetKey: SceneDomTargetKey;
+  datasetKey: string;
+  activeStates: readonly SceneActiveState<TSceneKey, TSheetId>[];
+}
+
+export interface SceneVeilPolicy<
+  TSceneKey extends string = string,
+  TSheetId extends string = string,
+> {
+  objectId: string;
+  windows: readonly SceneProgressTransitionWindow<TSceneKey, TSheetId>[];
+  inactiveProgress?: number;
+}
+
+export interface SceneBackgroundState {
+  variant: BackgroundVariantKey;
+  look?: Required<BackgroundLookOptions>;
+}
+
+export interface SceneBackgroundResolverContext {
+  sceneKey: string;
+  progress: number;
+  sheetId: string | null;
+}
+
+export type SceneBackgroundStateResolver = (
+  context: SceneBackgroundResolverContext,
+  baseState: Readonly<SceneBackgroundState>,
+) => SceneBackgroundState;
+
+export interface SceneBackgroundPolicy<
+  TSceneKey extends string = string,
+  TSheetId extends string = string,
+> {
+  backgroundId: string;
+  defaultState: Readonly<SceneBackgroundState>;
+  statesBySceneKey?: Readonly<
+    Partial<Record<TSceneKey, Readonly<SceneBackgroundState>>>
+  >;
+  statesBySheetId?: Readonly<Partial<Record<TSheetId, Readonly<SceneBackgroundState>>>>;
+  transitionRules?: readonly BackgroundTransitionRule<TSheetId>[];
+  resetShaderClockOnVariant?: BackgroundVariantKey | null;
+  resolveState?: SceneBackgroundStateResolver;
+}
+
+export interface PageSceneRuntimePolicy<
+  TSceneKey extends string = string,
+  TSheetId extends string = string,
+> {
+  domTargets?: Readonly<Partial<Record<SceneDomTargetKey, string>>>;
+  overlays?: readonly SceneOverlayPolicy<TSceneKey, TSheetId>[];
+  visibility?: readonly SceneVisibilityPolicy<TSceneKey, TSheetId>[];
+  veils?: readonly SceneVeilPolicy<TSceneKey, TSheetId>[];
+}
+
+export interface ElementTranslatePosition {
+  x: number;
+  y: number;
+}
+
+export type SceneSelectorMap<TSceneKey extends string> = Readonly<
+  Record<TSceneKey, string>
+>;
+
+export type SceneProgressOptionsMap<TSceneKey extends string> = Readonly<
+  Partial<Record<TSceneKey, ScrollSceneProgressOptions>>
+>;
+
+export interface SceneSyncState<TSceneKey extends string, TSheetId extends string> {
+  sceneKey: TSceneKey;
+  progress: number;
+  sheetId: TSheetId | null;
+}
+
+export interface Vec3NumberRecord {
+  x?: number;
+  y?: number;
+  z?: number;
+}
+
+export interface RuntimeOptionsTarget<TOptions extends object> {
+  setOptions?(props: Partial<TOptions> | undefined): void;
+}
+
+export interface SceneShakeOptions {
+  stepDuration?: number;
+  ease?: string;
+}
+
+export interface SceneShakeStateSnapshot {
+  intensity: number;
+}
+
+export interface SceneShakeRunOptions {
+  stepDuration?: number;
+  ease?: string;
+  amplitudeScale?: number;
+  manualIntensity?: boolean;
+}
+
+export interface GsapState {
+  rotationX: number;
+  rotationY: number;
+  rotationZ: number;
+  scale: number;
+  opacity: number;
+}
+
+export interface ScrollLockOptions {
+  pauseLenis?: boolean;
+}
+
+export interface LightSpec {
+  id: string;
+  type?: "directional" | "point" | "spot" | "ambient" | "hemisphere";
+  intensity?: number;
+  color?: number;
+  skyColor?: number;
+  groundColor?: number;
+  affectsEarth?: boolean;
+  affectsRocket?: boolean;
+  position?: { x?: number; y?: number; z?: number };
+  target?: { x?: number; y?: number; z?: number };
+  angle?: number;
+  penumbra?: number;
+  castShadow?: boolean;
+  shadow?: { mapSize?: number; bias?: number; normalBias?: number; radius?: number };
+  distance?: number;
+  decay?: number;
+  followCamera?:
+    | boolean
+    | {
+        enabled?: boolean;
+        positionOffset?: { x?: number; y?: number; z?: number };
+        targetOffset?: { x?: number; y?: number; z?: number };
+        rotateWithCamera?: boolean;
+      };
+  followObjectId?: string;
+  followObjectTargetId?: string;
+  followObjectPositionOffset?: { x?: number; y?: number; z?: number };
+  followObjectTargetOffset?: { x?: number; y?: number; z?: number };
+  followObjectRotateWithObject?: boolean;
+  emitter?: {
+    enabled?: boolean;
+    radius?: number;
+    color?: number;
+    opacity?: number;
+    haloScale?: number;
+    haloOpacity?: number;
+  };
+}
+
+export type LerpFn<T> = (t: number, a: T, b: T) => T;
+export type FrameCallback = (time: number) => void;
+
+export interface LoopHandle {
+  dispose(): void;
+}
+
+export interface ResizeSetupOptions {
+  debounceMs?: number;
+  scrollDriver?: { refresh?: () => void } | null;
+}
+
+export interface WaitForClickOptions {
+  onTrigger?: () => void | Promise<void>;
+  preventDefault?: boolean;
+  delegate?: boolean;
+}
+
+export interface FrameBudgetLike {
+  startFrame(): void;
+  endFrame(): void;
+  readonly exceeded: boolean;
+}
+
+export interface AnimationLoopOptions {
+  onUpdate?: (deltaTime: number) => void;
+  onRender?: () => void;
+  frameBudget?: FrameBudgetLike;
+  budgetMs?: number;
+}
+
+export interface LoadGLTFOptions {
+  position?: [number, number, number];
+  scale?: [number, number, number];
+  rotation?: [number, number, number];
+  addToScene?: boolean;
+}
+
+export interface LoadGLTFResult {
+  model: THREE.Group | null;
+  mixers: THREE.AnimationMixer[];
+}
+
+export interface GLTFLoaderPlugin {
+  name: string;
+}
+
+export interface GLTFLoaderPluginRegister {
+  register?(factory: (parser: unknown) => GLTFLoaderPlugin): void;
+}
+
+export type DeviceType = "ios" | "android" | "desktop" | "unknown";
+
+export interface DeviceSnapshot {
+  readonly viewportWidth: number;
+  readonly viewportHeight: number;
+  readonly deviceType: DeviceType;
+  readonly isMobile: boolean;
+}
+
+export type ResponsiveBreakpoint = "mobile" | "tablet" | "desktop" | "wide";
+
+export interface ResponsiveEnvironmentInput {
+  viewportWidth: number;
+  viewportHeight: number;
+  devicePixelRatio: number;
+  isMobile: boolean;
+  reducedMotion: boolean;
+  hardwareConcurrency: number;
+  deviceMemory?: number;
+}
+
+export interface ResponsiveRenderSnapshot {
+  devicePixelRatio: number;
+  pixelRatioMax: number;
+  clampedPixelRatio: number;
+}
+
+export interface ResponsiveFlagsSnapshot {
+  reducedMotion: boolean;
+  hoverCapable: boolean;
+  coarsePointer: boolean;
+}
+
+export interface ResponsiveTokenSnapshot {
+  viewportScale: number;
+  typographyScale: number;
+  worldScale: number;
+}
+
+export interface ResponsiveSnapshot extends DeviceSnapshot {
+  breakpoint: ResponsiveBreakpoint;
+  render: ResponsiveRenderSnapshot;
+  flags: ResponsiveFlagsSnapshot;
+  performance: MainPerformanceProfile;
+  tokens: ResponsiveTokenSnapshot;
+}
+
+
+export interface IRocketMotionData {
+  getAltitude(): number;
+  getSpeed(): number;
+  getAltitudeNormalized(): number;
+  getSpeedNormalized(): number;
+}
+
+export interface ITimelineTargetResolver {
+  registerTarget(target: ITimelineActionTarget): void;
+  unregisterTarget(key: string): void;
+  resolve(key: string, vars: Record<string, unknown>): (() => void) | null;
+}
+
+export interface ObjectRegistrationSpec {
+  id: keyof ObjectOptionsByKey;
+  create: () => SceneObject;
+  applyOptions?: (
+    instance: SceneObject,
+    options: Record<string, unknown> | undefined,
+  ) => void;
+}
+
+export type ObjectFactoryRegistry = Record<string, ObjectRegistrationSpec>;
+
+export interface SceneSheetChangeEvent<
+  TSceneKey extends string = string,
+  TSheetId extends string = string,
+> {
+  sceneKey: TSceneKey;
+  previousSceneKey: TSceneKey | null;
+  sheetId: TSheetId | null;
+  previousSheetId: TSheetId | null;
+}
+
+export interface SceneSheetReactive {
+  onSceneSheetChange(event: SceneSheetChangeEvent): void;
+}
+
+export interface ImagePreviewBinding {
+  item: HTMLElement;
+  onEnter: (event: MouseEvent) => void;
+  onMove: (event: MouseEvent) => void;
+  onLeave: () => void;
+}
+
+export type PerformanceTier = "low" | "mid" | "high";
+
+export interface MainPerformanceProfile {
+  tier: PerformanceTier;
+  rendererPowerPreference: "default" | "high-performance" | "low-power";
+  rendererAntialias: boolean;
+  enginePixelRatioMax: number;
+  backgroundResolutionScale: number;
+  heroRaymarchSteps: number;
+  transitionEnabled: boolean;
+  attitudeMaxDpr: number;
+  cloudCount: number;
+  svgSampleStep: number;
+  svgPixelRatioMax: number;
+  svgTargetFps: number;
+  svgAntialias: boolean;
+  svgEnableMouseTracking: boolean;
+  svgPowerPreference: "default" | "high-performance" | "low-power";
+  bloom: {
+    strength: number;
+    radius: number;
+    threshold: number;
+    compositeStrength: number;
+    selective: boolean;
+  };
+}
+
+export interface ScrollSceneProgressOptions {
+  scrollSpanVh?: number;
+  progressLagMs?: number;
+  progressStart?: number;
+  progressEnd?: number;
+  progressPower?: number;
+  progressMode?: ScrollSceneProgressMode;
+  activationMode?: ScrollSceneActivationMode;
+  activationOffsetRatio?: number;
+}
+
+export type ScrollSceneProgressMode = "viewport" | "top";
+
+export type ScrollSceneActivationMode = "viewportCenter" | "sectionTop";
+
+export interface ScrollSceneProgressState {
+  target: number;
+  display: number;
+  updatedAt: number;
+}
+
+export interface SceneTransitionStep {
+  from: number;
+  to: number;
+  duration: number;
+  ease?: TransitionEaseKey;
+}
+
+export interface SceneTransitionPlayOptions {
+  veil: TransitionVeilRuntimePort | null;
+  steps: readonly SceneTransitionStep[];
+  onStepComplete?: (stepIndex: number) => void | Promise<void>;
+  initialState?: Partial<TransitionVeilRuntimeState>;
+  finalState?: Partial<TransitionVeilRuntimeState>;
+}
+
+export interface IntroFlowRunOptions {
+  introConfig: IntroConfig;
+  gsap: GsapGlobal;
+  loadPromise: Promise<void>;
+  root?: ParentNode | null;
+  disableScrollLock?: boolean;
+  showDebugDomState?: boolean;
+  keepIntroActionVisible?: boolean;
+  onAfterIntroAutoplay?: () => Promise<void>;
+  onIntroDomRevealComplete?: () => void;
+  onIntroActionAutoplay?: () => Promise<void>;
+  onIntroActionTransition?: () => Promise<void>;
+  onPreviewStart?: () => Promise<void>;
+}
+
+export interface IntroFlowDomElements {
+  introSection: HTMLElement | null;
+  introActionSection: HTMLElement | null;
+  introText: HTMLElement | null;
+  introActionTrigger: HTMLElement | null;
+  introActionCountdown: HTMLElement | null;
+  introActionCountdownOrbit: HTMLElement | null;
+  introActionCountdownValue: HTMLElement | null;
+  introActionSkip: HTMLElement | null;
+  introActionContents: HTMLElement[];
+}
+
+export interface IntroHeroTransitionOptions {
+  gsap: GsapGlobal | null;
+  transitionRuntime: import("../runtime/SceneTransitionRuntime.js").SceneTransitionRuntime;
+  veil: TransitionVeilRuntimePort | null;
+  steps: readonly SceneTransitionStep[];
+  inactiveProgress: number;
+  actionContentSelector: string;
+  actionContentOffsetY: number;
+  actionContentDuration: number;
+  onCoverComplete?: () => Promise<void>;
+  onTransitionComplete?: () => void;
+}
+
+export interface ObjectResolvedConfig {
+  options?: Record<string, unknown>;
+  effects?: ObjectEffects;
+}
+
+export interface ScrollSceneElementEntry {
+  element: HTMLElement;
+}
+
+export interface PageSceneSyncPort<TSceneKey extends string, TSheetId extends string> {
+  apply: (
+    engine: Engine,
+    sceneKey: TSceneKey,
+    progress: number,
+  ) => TSheetId | null;
+}
+
+export interface PageTheatreAdapter {
+  applyBootStateIfNeeded?(engine: Engine): Promise<void>;
+  startPreviewIfNeeded?(engine: Engine): Promise<void>;
+  startIntroIfNeeded?(engine: Engine): Promise<void>;
+  startAfterIntroIfNeeded?(engine: Engine): Promise<void>;
+  startIntroActionPhaseOneIfNeeded?(engine: Engine): Promise<void>;
+  startIntroActionPhaseTwoIfNeeded?(engine: Engine): Promise<void>;
+  stopPreview?(): Promise<void>;
+  getSceneSyncPort?(): Promise<PageSceneSyncPort<string, string>>;
+}
+
+export interface ScenePolicyRuntimeOptions<
+  TSceneKey extends string,
+  TSheetId extends string,
+> {
+  root?: ParentNode | null;
+  engine: Engine | null;
+  isTheatreAuthorMode: boolean;
+  skipVeilPolicies?: boolean;
+  pageRuntimePolicies?: PageSceneRuntimePolicy<TSceneKey, TSheetId>;
+  backgroundPolicy?: SceneBackgroundPolicy<TSceneKey, TSheetId> | null;
+  backgroundController?: BackgroundController | null;
+  sceneSheetEffectRuntime: SceneSheetEffectRuntime<TSceneKey, string>;
+  resolveTransitionVeil?: (objectId?: string) => TransitionVeilRuntimePort | null;
+}
+
+export interface AppEngineRuntimeContext {
+  engine: Engine;
+  shaderManager: ShaderManager;
+  shaderController: ShaderController;
+  backgroundController: BackgroundController;
+  objectSetup: ObjectSetup;
+  uiSetup: UiSetup;
+  resizeSetup: ResizeSetup;
+}
+
+export interface AppEngineRuntimeInitOptions {
+  pageConfig: PageConfig;
+  root?: ParentNode | null;
+  canvasElement?: HTMLCanvasElement | null;
+}
+
+export interface AppStartupRuntimeOptions {
+  engine: Engine;
+  engineContext: AppEngineRuntimeContext;
+  pageConfig: PageConfig;
+  objectSetupPromise: Promise<void>;
+  onBootStateApply?: () => Promise<void>;
+  pageBootRuntime: {
+      apply(engine: Engine, pageId: string): Promise<void>;
+    };
+  onOrbitSetup: () => Promise<void>;
+  onShaderUpdate: (deltaTime: number) => void;
+  onOrbitUpdate: () => void;
+  onScrollSyncStart?: () => void;
+}
+
+export interface AppStartupRuntimeResult {
+  debugPanelDispose: (() => void) | null;
+}

@@ -1,0 +1,36 @@
+<?php
+/**
+ * cors-test config.local.php — bluesquare.kr
+ * gitignore 대상. FTP 직접 업로드 전용.
+ */
+
+// === 자기 호스트 ===
+define('THIS_HOST',      'bluesquare.kr');
+
+// === peer (반대편 호스팅) ===
+define('PEER_BASE_URL',  'https://www.noltheater-daehakro.com/cors-test');
+
+// === 시크릿 (noltheater 측과 반드시 동일) ===
+// 생성: openssl rand -hex 32
+define('SYNC_SECRET',    '510cab4fa2e011135d277a089e9929652e1b6e51ad2d424c0b09d129d5aa4ce6');
+
+// === 관리자 토큰 (bluesquare 전용 — noltheater와 다른 값) ===
+// 생성: openssl rand -hex 16
+define('ADMIN_TOKEN',    '33f2a17510d5429db2562e9536735d8f');
+
+// === peer IP 화이트리스트 ===
+// 빈 배열 = IP 검증 skip (처음엔 빈 배열로 시작)
+define('ALLOWED_PEER_IPS', []);
+
+// === DB 자격증명 ===
+define('DB_HOST', '211.47.74.49');
+define('DB_NAME', 'dbusrbluesq0211');
+define('DB_USER', 'usrbluesq0211');
+define('DB_PASS', 'sqrblue#1100^ble');
+
+// === 역할 ===
+define('ROLE', 'BOTH');
+
+// === 비상 차단 스위치 ===
+// 최초 배포 시 반드시 true — whoami.php 503 확인 후 false로 토글
+define('KILL_SWITCH', true);

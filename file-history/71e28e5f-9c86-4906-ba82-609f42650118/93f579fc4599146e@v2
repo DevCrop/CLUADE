@@ -1,0 +1,105 @@
+varying vec2 vUv;
+
+uniform vec2 uResolution;
+uniform sampler2D tNoise;
+uniform sampler2D tPerlin;
+uniform sampler2D tMouse;
+uniform float uPage;
+uniform float uChapter;
+uniform float uTime;
+
+vec2 rotateUV(vec2 uv, vec2 mid, float rotation) {
+  return vec2(
+    cos(rotation) * (uv.x - mid.x) + sin(rotation) * (uv.y - mid.y) + mid.x,
+    cos(rotation) * (uv.y - mid.y) - sin(rotation) * (uv.x - mid.x) + mid.y
+  );
+}
+
+// Precomputed: cos(0.3)=0.95534, sin(0.3)=0.29552
+#define ROT1_COS 0.95534
+#define ROT1_SIN 0.29552
+// Precomputed: cos(-0.04)=0.99920, sin(-0.04)=-0.03999
+#define ROT2_COS 0.99920
+#define ROT2_SIN -0.03999
+
+void main() {
+  vec2 sUv = gl_FragCoord.xy / uResolution;
+  float time = 0.01 * uTime;
+  float amount = smoothstep(0.1, 0.5, length(sUv - 0.5));
+  float thickTransition = smoothstep(2.6, 2.9, uChapter - 0.2 * sUv.y);
+  float globeTransition = smoothstep(3.0, 3.5, uChapter - 0.02 * sUv.y);
+  float dezoom = smoothstep(2.5, 3.5, uChapter);
+  vec2 uv = (vUv - vec2(0.5, 1.5)) * (1.0 + dezoom) + vec2(0.5, -1.0);
+  float perlin = texture2D(tPerlin, vec2(3.5, 2.0) * uv + vec2(-0.2 * time)).r;
+  float noise = texture2D(tNoise, vec2(2.0, 1.0) * uv + vec2(-time)).r;
+  vec4 mouseSample = texture2D(
+    tMouse,
+    sUv + 0.1 * (noise - 0.5) + 0.05 * (perlin - 0.5)
+  );
+  float mouse = clamp(mouseSample.r * 0.8 + mouseSample.g * 0.2, 0.0, 1.0);
+  uv = (uv - 0.5) * (1.0 + 0.01 * mouse) + 0.5;
+  // Inline rotateUV(uv, vec2(0.5), 0.3) with precomputed constants
+  vec2 _d1 = uv - 0.5;
+  vec2 dUv = vec2(ROT1_COS * _d1.x + ROT1_SIN * _d1.y + 0.5,
+                  ROT1_COS * _d1.y - ROT1_SIN * _d1.x + 0.5);
+  dUv += 0.02 * perlin;
+  dUv += 0.1 * noise;
+  float bigNoise = texture2D(
+    tNoise,
+    0.5 * dUv + vec2(0.2 * time, 0.1 * time)
+  ).r;
+  float clouds = smoothstep(0.5 - 0.1 * amount, 1.0, bigNoise - 0.2 * globeTransition);
+  // Inline rotateUV(vec2(0.2,0.7)*uv - vec2(0,0.3*time), vec2(0.5), -0.04)
+  vec2 _rBase = vec2(0.2, 0.7) * uv - vec2(0.0, 0.3 * time);
+  vec2 _d2 = _rBase - 0.5;
+  vec2 rUv = vec2(ROT2_COS * _d2.x + ROT2_SIN * _d2.y + 0.5,
+                  ROT2_COS * _d2.y - ROT2_SIN * _d2.x + 0.5);
+  rUv += bigNoise * 0.04;
+  float sparse = texture2D(tNoise, rUv).r;
+  sparse *= 1.0 + 0.1 * noise;
+  clouds += 0.6 * smoothstep(0.55, 0.8, sparse) * (1.0 - thickTransition);
+  float fluff = texture2D(tNoise, vec2(1.2, 0.6) * uv + 0.02 * perlin + 0.04 * noise + vec2(time * 0.3)).r;
+  clouds += 0.5 * smoothstep(mix(0.5 - 0.2 * amount, 0.78, globeTransition), 0.8, fluff);
+  float count = 4.0;
+  vec2 fUv = uv;
+  vec2 cUv = vec2(fUv.x, fUv.y * count) + 0.01 * mouse;
+  float offset = 1.5 * (smoothstep(0.7 + 0.2 * texture2D(tNoise, fUv * 4.0).r, 1.0, fract(cUv.y)) + floor(cUv.y));
+  float cloudShape = (
+      -0.01 * abs(fract((fUv.x * 50.0 + offset) * 0.15915) * 2.0 - 1.0)
+      -0.03 * abs(fract((fUv.x * 15.0 + offset) * 0.15915) * 2.0 - 1.0)
+      -0.02 * abs(fract((fUv.x * 17.0 + offset) * 0.15915) * 2.0 - 1.0)
+  ) * count;
+  cUv.y += cloudShape;
+  cUv += 2.0 * (texture2D(tNoise, fUv * 0.2).rg - 0.5);
+  cUv *= 1.0 + 0.2 * (bigNoise - 0.5);
+  cUv.y += 0.2 * (perlin - 0.5);
+  cUv.y -= 0.05 * count * texture2D(tNoise, fUv * 4.0).r;
+  float cloudRows = fract(cUv.y);
+  cloudRows += smoothstep(0.5, 0.0, cloudRows);
+  cloudRows *= thickTransition;
+  clouds = mix(clouds, cloudRows, cloudRows);
+  float opening = smoothstep(0.2, 1.0, 0.9 * length(sUv - 0.5) + 0.3 * smoothstep(-0.1, 0.1, texture2D(tNoise, 0.2 * uv + 0.01 * noise + 0.005 * perlin).g - 0.5) + smoothstep(3.5, 2.8, uChapter));
+  opening *= smoothstep(3.5, 3.4, uChapter);
+  clouds *= opening;
+  vec3 color = mix(vec3(0.737, 0.773, 0.8), vec3(0.961, 0.969, 0.976), clamp(clouds, 0.0, 1.0));
+  color *= vec3(0.8, 0.85, 0.87);
+  float alpha = min(1.0, clouds + thickTransition) * opening;
+  float godrayMask = smoothstep(2.4, 2.7, uChapter) * smoothstep(3.0, 2.9, uChapter);
+  float godrays = 0.0;
+  if (godrayMask > 0.001) {
+    float _godAngle = 0.1 + 0.1 * uChapter;
+    float _godCos = cos(_godAngle);
+    float _godSin = sin(_godAngle);
+    vec2 _dg = vUv - 0.5;
+    vec2 godUv = vec2(_godCos * _dg.x + _godSin * _dg.y + 0.5,
+                      _godCos * _dg.y - _godSin * _dg.x + 0.5);
+    godrays = texture2D(tNoise, vec2(4.0, 0.01) * godUv + vec2(-0.005 * uTime, 0.0)).r;
+    godrays *= smoothstep(0.61 - 0.05 * (godUv.y - 1.0), 1.0, godrays);
+    godrays *= smoothstep(0.4, 0.5, texture2D(tNoise, vec2(4.0, 0.01) * godUv + vec2(0.005 * uTime, 0.0)).r);
+    godrays *= smoothstep(0.0, 0.5, sUv.y) * smoothstep(0.0, 0.6, sUv.x) * smoothstep(1.0, 0.7, sUv.x);
+    godrays *= godrayMask;
+  }
+  color = mix(color, vec3(0.95, 1.0, 0.9), smoothstep(0.1, 0.0, alpha));
+  alpha += 2.0 * godrays * (1.0 - alpha);
+  gl_FragColor = vec4(color, alpha);
+}

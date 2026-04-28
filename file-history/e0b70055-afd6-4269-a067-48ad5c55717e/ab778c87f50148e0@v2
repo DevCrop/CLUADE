@@ -1,0 +1,28 @@
+{
+  "allowedTools": [
+    "Bash(rtk *)",
+    "Bash(git status*)",
+    "Bash(git log*)",
+    "Bash(git diff*)",
+    "Bash(git branch*)",
+    "Bash(git stash*)",
+    "Bash(docker compose ps*)",
+    "Bash(docker compose logs*)",
+    "Bash(docker compose exec web php -l*)",
+    "Bash(npm run test*)",
+    "Bash(npm install*)"
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const i=JSON.parse(d);const f=(i.tool_input&&i.tool_input.file_path)||'';if(f.endsWith('.ts')){const {execSync}=require('child_process');try{execSync('rtk tsc --noEmit',{stdio:'inherit',cwd:process.cwd()})}catch(e){process.exit(1)}}}catch(e){}});\""
+          }
+        ]
+      }
+    ]
+  }
+}

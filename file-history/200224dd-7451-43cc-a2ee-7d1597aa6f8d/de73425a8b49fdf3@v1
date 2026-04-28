@@ -1,0 +1,411 @@
+<?php
+if (!function_exists('button_resolve_icon_svg')) {
+    require dirname(__DIR__, 2) . '/components/button/icons.php';
+}
+section('content');
+?>
+<div class="canvas-container no-sub-contact__canvas-container" aria-hidden="true">
+    <canvas id="canvas"></canvas>
+</div>
+
+<div class="main-content">
+    <section class="no-sub-contact">
+        <div class="no-container-xl">
+            <form action="/contact" method="post" enctype="multipart/form-data" autocomplete="on" novalidate
+                data-loading-on-submit="off">
+                <?php
+                try {
+                    $contactFormUid = 'contact-' . bin2hex(random_bytes(8));
+                } catch (\Throwable $e) {
+                    $contactFormUid = str_replace('.', '-', uniqid('contact-', true));
+                }
+
+                $contactFieldId = static fn(string $key): string => $contactFormUid . '-' . $key;
+
+                $projectOptions = $contact_request_project_options ?? [];
+                $projectOtherLabel = null;
+                foreach ($projectOptions as $projectKey => $projectLabel) {
+                    if ($projectLabel !== '기타') {
+                        continue;
+                    }
+                    $projectOtherLabel = $projectLabel;
+                    unset($projectOptions[$projectKey]);
+                    break;
+                }
+                $projectOptions[] = 'SEO 최적화';
+                $projectOptions[] = 'CMS 구축';
+                $projectOptions[] = 'UI/UX 디자인';
+                if ($projectOtherLabel !== null) {
+                    $projectOptions[] = $projectOtherLabel;
+                }
+                $budgetOptions = $contact_request_budget_options ?? [];
+                $periodOptions = $contact_request_period_options ?? [];
+            ?>
+                <div class="no-contact-flow">
+                    <div class="no-contact-flow__stage">
+                        <div class="no-contact-flow__form-shell" data-contact-form-shell>
+                            <div class="no-wizard" data-contact-wizard>
+                                <aside class="no-wizard-sidebar" aria-label="문의 진행 상태">
+                                    <div class="no-wizard-sidebar__inner">
+                                        <div class="no-wizard-sidebar__status">
+                                            <div class="no-wizard-sidebar__counter">
+                                                <span class="no-wizard-sidebar__current f-display-1 --medium"
+                                                    data-wizard-current>01</span>
+                                                <span class="no-wizard-sidebar__sep f-body-2 --regular">/</span>
+                                                <span class="no-wizard-sidebar__total f-body-2 --regular"
+                                                    data-wizard-total>06</span>
+                                            </div>
+
+                                            <div class="no-wizard-sidebar__progress">
+                                                <div class="no-wizard-indicator" aria-hidden="true">
+                                                    <div class="no-wizard-indicator__track">
+                                                        <div class="no-wizard-indicator__fill" data-wizard-bar></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <nav class="no-wizard-overview" aria-label="문의 단계" data-lenis-prevent
+                                            data-lenis-prevent-wheel data-lenis-prevent-touch>
+                                            <ol class="no-wizard-overview__list" data-wizard-overview-list></ol>
+                                        </nav>
+                                    </div>
+                                </aside>
+
+                                <div class="no-wizard-main">
+                                    <div class="no-wizard-viewport" data-wizard-viewport data-lenis-prevent>
+                                        <div class="no-wizard-step" data-wizard-step="0" data-wizard-label="프로젝트 유형"
+                                            data-wizard-nav-label="Project">
+                                            <div class="no-form-group">
+                                                <div class="no-form-head">
+                                                    <h2 class="f-display-2 --regular --fm-en-title">Project <span
+                                                            class="--required">*</span></h2>
+                                                </div>
+                                                <div class="no-form-wrap">
+                                                    <div class="no-form-body">
+                                                        <ul class="no-form-list">
+                                                            <?php foreach ($projectOptions as $pk => $label) : ?>
+                                                            <li class="no-form-item">
+                                                                <?php $projectId = $contactFieldId('project-' . (int) $pk); ?>
+                                                                <input type="checkbox" id="<?= $projectId ?>"
+                                                                    name="project[]" value="<?= (int) $pk ?>"
+                                                                    <?= $label === '기타' ? 'data-project-other-toggle' : '' ?>>
+                                                                <label for="<?= $projectId ?>"><?= $label ?></label>
+                                                            </li>
+                                                            <?php endforeach; ?>
+                                                        </ul>
+
+                                                        <div class="no-form-reveal no-form-reveal--project-other"
+                                                            data-project-other-panel aria-hidden="true">
+                                                            <div class="no-form-field no-form-field--inline">
+                                                                <label for="<?= $contactFieldId('project-other') ?>"
+                                                                    class="f-body-1 --bold">기타</label>
+                                                                <div class="no-form-field__control">
+                                                                    <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                    <input type="text"
+                                                                        id="<?= $contactFieldId('project-other') ?>"
+                                                                        name="project_other"
+                                                                        placeholder="어떤 프로젝트인지 적어주세요."
+                                                                        data-project-other-input disabled>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        <div class="no-wizard-step" data-wizard-step="1" data-wizard-label="예산 범위"
+                                            data-wizard-nav-label="Budget">
+                                            <div class="no-form-group">
+                                                <div class="no-form-head">
+                                                    <h2 class="f-display-2 --regular --fm-en-title">Budget <span
+                                                            class="--required">*</span></h2>
+                                                </div>
+                                                <div class="no-form-wrap">
+                                                    <div class="no-form-body">
+                                                        <ul class="no-form-list">
+                                                            <?php foreach ($budgetOptions as $bk => $label) : ?>
+                                                            <li class="no-form-item">
+                                                                <?php $budgetId = $contactFieldId('budget-' . (int) $bk); ?>
+                                                                <input type="radio" id="<?= $budgetId ?>" name="budget"
+                                                                    value="<?= (int) $bk ?>">
+                                                                <label for="<?= $budgetId ?>"><?= $label ?></label>
+                                                            </li>
+                                                            <?php endforeach; ?>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        <div class="no-wizard-step" data-wizard-step="2" data-wizard-label="예상 일정"
+                                            data-wizard-nav-label="Schedule">
+                                            <div class="no-form-group">
+                                                <div class="no-form-head">
+                                                    <h2 class="f-display-2 --regular --fm-en-title">Schedule <span
+                                                            class="--required">*</span></h2>
+                                                </div>
+                                                <div class="no-form-wrap">
+                                                    <div class="no-form-body">
+                                                        <ul class="no-form-list">
+                                                            <?php foreach ($periodOptions as $pkp => $label) : ?>
+                                                            <li class="no-form-item">
+                                                                <?php $periodId = $contactFieldId('period-' . (int) $pkp); ?>
+                                                                <input type="radio" id="<?= $periodId ?>" name="period"
+                                                                    value="<?= (int) $pkp ?>">
+                                                                <label for="<?= $periodId ?>"><?= $label ?></label>
+                                                            </li>
+                                                            <?php endforeach; ?>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        <div class="no-wizard-step" data-wizard-step="3" data-wizard-label="담당자 정보"
+                                            data-wizard-nav-label="Info">
+                                            <div class="no-form-group">
+                                                <div class="no-form-head">
+                                                    <h2 class="f-display-2 --regular --fm-en-title">Info <span
+                                                            class="--required">*</span></h2>
+                                                </div>
+                                                <div class="no-form-wrap">
+                                                    <div class="no-form-body no-form-fields">
+                                                        <div class="no-form-field">
+                                                            <label for="<?= $contactFieldId('company') ?>"
+                                                                class="f-body-1 --bold">회사명
+                                                                *</label>
+                                                            <div class="no-form-field__control">
+                                                                <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                <input type="text"
+                                                                    id="<?= $contactFieldId('company') ?>"
+                                                                    name="company" autocomplete="organization"
+                                                                    placeholder="회사명을 입력해 주세요." required>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="no-form-field">
+                                                            <label for="<?= $contactFieldId('name') ?>"
+                                                                class="f-body-1 --bold">이름
+                                                                *</label>
+                                                            <div class="no-form-field__control">
+                                                                <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                <input type="text" id="<?= $contactFieldId('name') ?>"
+                                                                    name="name" autocomplete="name"
+                                                                    placeholder="이름을 입력해 주세요." required>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="no-form-field">
+                                                            <label for="<?= $contactFieldId('position') ?>"
+                                                                class="f-body-1 --bold">부서 /
+                                                                직책 *</label>
+                                                            <div class="no-form-field__control">
+                                                                <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                <input type="text"
+                                                                    id="<?= $contactFieldId('position') ?>"
+                                                                    name="position" autocomplete="organization-title"
+                                                                    placeholder="부서 또는 직책을 입력해 주세요." required>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="no-form-field">
+                                                            <label for="<?= $contactFieldId('phone') ?>"
+                                                                class="f-body-1 --bold">연락처
+                                                                *</label>
+                                                            <div class="no-form-field__control">
+                                                                <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                <input type="tel" id="<?= $contactFieldId('phone') ?>"
+                                                                    name="phone" autocomplete="tel" inputmode="numeric" maxlength="13"
+                                                                    placeholder="연락처를 입력해 주세요." required>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="no-form-field">
+                                                            <label for="<?= $contactFieldId('email') ?>"
+                                                                class="f-body-1 --bold">이메일</label>
+                                                            <div class="no-form-field__control">
+                                                                <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                <input type="email" id="<?= $contactFieldId('email') ?>"
+                                                                    name="email" autocomplete="email" inputmode="email"
+                                                                    placeholder="이메일을 입력해 주세요.">
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="no-form-field">
+                                                            <label for="<?= $contactFieldId('homepage') ?>"
+                                                                class="f-body-1 --bold">홈페이지
+                                                                주소</label>
+                                                            <div class="no-form-field__control">
+                                                                <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                <input type="url"
+                                                                    id="<?= $contactFieldId('homepage') ?>"
+                                                                    name="homepage" autocomplete="url"
+                                                                    placeholder="홈페이지 주소를 입력해 주세요.">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        <div class="no-wizard-step" data-wizard-step="4" data-wizard-label="상세 문의"
+                                            data-wizard-nav-label="Details">
+                                            <div class="no-form-group">
+                                                <div class="no-form-head">
+                                                    <h2 class="f-display-2 --regular --fm-en-title">Details <span
+                                                            class="--required">*</span></h2>
+                                                </div>
+                                                <div class="no-form-wrap">
+                                                    <div class="no-form-body">
+                                                        <div class="no-form-field">
+                                                            <label for="<?= $contactFieldId('detail') ?>"
+                                                                class="f-body-1 --bold">상세내용
+                                                                *</label>
+                                                            <div class="no-form-field__control">
+                                                                <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                <textarea id="<?= $contactFieldId('detail') ?>"
+                                                                    name="detail" placeholder="상세 내용을 입력해 주세요."
+                                                                    required></textarea>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="no-form-field no-form-field--file">
+                                                            <label for="<?= $contactFieldId('attachment') ?>"
+                                                                class="f-body-1 --bold">첨부파일</label>
+                                                            <div class="no-form-file-row">
+                                                                <div class="no-form-field__control">
+                                                                    <?= include_view('components.button.corner-markup', ['class' => 'no-form-field__corner']) ?>
+                                                                    <span
+                                                                        class="no-form-file-placeholder f-body-2 --regular">최대
+                                                                        30MB까지
+                                                                        첨부 가능합니다.</span>
+                                                                    <input type="file"
+                                                                        id="<?= $contactFieldId('attachment') ?>"
+                                                                        name="attachment">
+                                                                    <button type="button" class="no-form-file-clear"
+                                                                        aria-label="선택 파일 제거" hidden>
+                                                                        <?= button_resolve_icon_svg('xmark') ?>
+                                                                    </button>
+                                                                </div>
+                                                                <label for="<?= $contactFieldId('attachment') ?>"
+                                                                    class="no-form-file-button f-body-1 --bold">파일선택</label>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="no-form-field no-form-field--policy">
+                                                            <label for="<?= $contactFieldId('agree-privacy') ?>"
+                                                                class="no-form-policy">
+                                                                <input type="checkbox"
+                                                                    id="<?= $contactFieldId('agree-privacy') ?>"
+                                                                    name="agree_privacy" required>
+                                                                <span class="no-form-policy__check" aria-hidden="true">
+                                                                    <?= button_resolve_icon_svg('check') ?>
+                                                                </span>
+                                                                <span class="no-form-policy__text f-body-2 --regular">
+                                                                    <a href="#" target="_blank"
+                                                                        rel="noopener noreferrer">개인정보처리방침</a>에
+                                                                    동의합니다. *
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                    <div class="no-wizard-nav no-wizard-nav--shared">
+                                        <?= include_view('components.button', [
+                              'variant' => 'corner',
+                              'tag' => 'button',
+                              'type' => 'button',
+                              'text' => 'Previous',
+                              'withWrapper' => true,
+                              'wrapperClass' => 'no-wizard-action-wrap',
+                              'wrapperAttrs' => [
+                                  'data-wizard-prev-wrap' => '',
+                                  'hidden' => '',
+                                  'aria-hidden' => 'true',
+                              ],
+                              'disabled' => true,
+                              'class' => 'no-wizard-action no-wizard-action--prev',
+                              'icon' => 'fa-sharp fa-regular fa-arrow-left',
+                              'iconPosition' => 'before',
+                              'extraAttrs' => [
+                                  'data-wizard-prev' => '',
+                                  'aria-disabled' => 'true',
+                              ],
+                            ]) ?>
+                                        <div class="no-wizard-nav__primary" data-wizard-primary>
+                                            <?= include_view('components.button', [
+                                  'variant' => 'corner',
+                                  'tag' => 'button',
+                                  'type' => 'button',
+                                  'text' => 'Next',
+                                  'withWrapper' => false,
+                                  'class' => 'no-wizard-action no-wizard-action--next no-wizard-action--primary',
+                                  'icon' => 'fa-sharp fa-regular fa-arrow-right',
+                                  'iconPosition' => 'after',
+                                  'extraAttrs' => [
+                                      'data-wizard-primary-action' => '',
+                                      'data-wizard-next' => '',
+                                  ],
+                                ]) ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <section class="no-contact-flow__success" data-contact-success aria-hidden="true">
+                            <div class="no-contact-flow__success-inner">
+                                <h2 class="no-contact-flow__title f-display-1 --regular --fm-en">Submission Received
+                                </h2>
+                                <p class="no-contact-flow__description f-body-1 --regular" data-contact-success-message>
+                                    담당자가 내용을 확인한 뒤 빠르게 연락드리겠습니다.
+                                </p>
+                                <div class="no-contact-flow__actions">
+                                    <?= include_view('components.button', [
+                                        'variant' => 'corner',
+                                        'tag' => 'a',
+                                        'href' => '/',
+                                        'text' => 'Home',
+                                        'withWrapper' => true,
+                                        'class' => 'no-contact-flow__action',
+                                        'icon' => 'fa-sharp fa-regular fa-arrow-right',
+                                        'iconPosition' => 'after',
+                                        'beforeTextHtml' => '<span class="no-loop-filter-rect no-contact-flow__action-rect" aria-hidden="true"><span></span><span></span><span></span><span></span></span>',
+                                    ]) ?>
+                                    <?= include_view('components.button', [
+                                        'variant' => 'corner',
+                                        'tag' => 'a',
+                                        'href' => '/works',
+                                        'text' => 'Works',
+                                        'withWrapper' => true,
+                                        'class' => 'no-contact-flow__action',
+                                        'icon' => 'fa-sharp fa-regular fa-arrow-right',
+                                        'iconPosition' => 'after',
+                                        'beforeTextHtml' => '<span class="no-loop-filter-rect no-contact-flow__action-rect" aria-hidden="true"><span></span><span></span><span></span><span></span></span>',
+                                    ]) ?>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <p class="no-contact-flow__feedback f-body-3 --regular" data-contact-submit-feedback hidden></p>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

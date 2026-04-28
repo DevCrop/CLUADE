@@ -1,0 +1,529 @@
+﻿import * as THREE from "three";
+import { ResponsiveRuntime } from "../../runtime/ResponsiveRuntime.js";
+import { SceneObject } from "../../core/SceneObject.js";
+import { GROUND_SHADER_DEFAULTS } from "../../config/ground.config.js";
+import {
+  createPointLightFromSpec,
+  LightSpec,
+} from "../env/SceneLights.js";
+import type {
+  GroundObjectOptions,
+  GroundTweenProps,
+} from "../../types/object.types.js";
+import type {
+  GroundRuntimePort,
+  GroundRuntimeState,
+} from "../../types/object-runtime.types.js";
+import { Helpers } from "../../utils/Helpers.js";
+import groundSurfaceVertexShader from "../../../shaders/ground/surface.vertex.glsl?raw";
+import groundSurfaceFragmentShader from "../../../shaders/ground/surface.fragment.glsl?raw";
+
+const GROUND_MOUSE_TEXTURE_CHANNELS = 4;
+const GROUND_MOUSE_TEXTURE_FADE = 0.94;
+const GROUND_MOUSE_TEXTURE_RADIUS = 0.055;
+const GROUND_MOUSE_TEXTURE_FALLOFF = 1.85;
+const GROUND_DEFAULT_RESOLUTION = 1;
+const GROUND_DEFAULT_POINTER = 0.5;
+
+export class Ground
+  extends SceneObject<GroundTweenProps>
+  implements GroundRuntimePort
+{
+  private _model: THREE.Group | null = null;
+  private _panelLights: THREE.PointLight[] = [];
+  private _options: Partial<GroundObjectOptions> = {};
+  private _shaderMaterials: THREE.ShaderMaterial[] = [];
+  private _shaderNoiseTexture: THREE.Texture | null = null;
+  private _shaderNearestNoiseTexture: THREE.Texture | null = null;
+  private _mouseTexture: THREE.DataTexture | null = null;
+  private _mouseTextureData: Float32Array | null = null;
+  private _mouseTextureSize: number = GROUND_SHADER_DEFAULTS.mouseTextureSize;
+  private _elapsedTime = 0;
+  private readonly _pointerUv = new THREE.Vector2(
+    GROUND_DEFAULT_POINTER,
+    GROUND_DEFAULT_POINTER,
+  );
+  private readonly _resolution = new THREE.Vector2(
+    GROUND_DEFAULT_RESOLUTION,
+    GROUND_DEFAULT_RESOLUTION,
+  );
+  private _pointerActive = false;
+  private _pointerListenersAttached = false;
+  private readonly _transitionColor = new THREE.Color();
+  private readonly _lightColor = new THREE.Color();
+  private readonly _darkColor = new THREE.Color();
+  private _runtimeState: GroundRuntimeState = {};
+  private _resolutionDirty = true;
+  private _unsubscribeResponsive: (() => void) | null = null;
+  private _cachedTransitionHex = -1;
+  private _cachedLightHex = -1;
+  private _cachedDarkHex = -1;
+  private readonly _onPointerMove = (event: PointerEvent): void => {
+    if (typeof window === "undefined") return;
+    const responsive = ResponsiveRuntime.getDefault().getSnapshot();
+    const width = Math.max(
+      GROUND_DEFAULT_RESOLUTION,
+      responsive.viewportWidth,
+    );
+    const height = Math.max(
+      GROUND_DEFAULT_RESOLUTION,
+      responsive.viewportHeight,
+    );
+    this._pointerUv.set(event.clientX / width, 1 - event.clientY / height);
+    this._pointerActive = true;
+  };
+  private readonly _onPointerLeave = (): void => {
+    this._pointerActive = false;
+  };
+
+  setOptions(props: Partial<GroundObjectOptions> | undefined): this {
+    if (props != null) this._options = { ...this._options, ...props };
+    return this;
+  }
+
+  override getAnimationTarget(): THREE.Object3D | null {
+    return this.getTimelineRoot();
+  }
+
+  override getTweenApplyMode(): "gsapOnly" {
+    return "gsapOnly";
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (root) root.visible = visible;
+  }
+
+  protected override syncFromOptions(): void {
+    this._syncTransform();
+    if (this._model) this._applyMeshShadowSettings(this._model);
+    this._syncShaderUniforms();
+  }
+
+  override async runObject(): Promise<void> {
+    const ctx = this._context;
+    if (!ctx) return;
+
+    const modelUrl = this._options.modelUrl;
+    if (!modelUrl) {
+      return;
+    }
+
+    this._unsubscribeResponsive = ResponsiveRuntime.getDefault().subscribe(() => {
+      this._resolutionDirty = true;
+    });
+
+    try {
+      await this._prepareShaderResources();
+      const model = await ctx.loadModel(this.resolveAssetPath(modelUrl));
+      const group = model as THREE.Group;
+      this._model = group;
+      this._applyMeshShadowSettings(group);
+      this._applyGroundShader(group);
+      this._attachPanelLights(group);
+      this.attachToTimelineRoot(group, "groundRoot");
+      this._syncTransform();
+      this._syncShaderUniforms();
+    } catch (error) {
+    }
+  }
+
+  override runUpdate(delta: number): void {
+    this._elapsedTime += delta;
+    this._updateResolution();
+    this._updateMouseTexture();
+    this._syncShaderUniforms();
+  }
+
+  override dispose(): void {
+    this._unsubscribeResponsive?.();
+    this._unsubscribeResponsive = null;
+    this._removePointerListeners();
+    this._disposeShaderResources();
+    this._disposeGroup(this._model);
+    this._panelLights.length = 0;
+    this._model = null;
+    this._runtimeState = {};
+    super.dispose();
+  }
+
+  setRuntimeState(state: Partial<GroundRuntimeState>): void {
+    this._runtimeState = { ...this._runtimeState, ...state };
+    this._syncShaderUniforms();
+  }
+
+  getRuntimeState(): GroundRuntimeState {
+    return { ...this._runtimeState };
+  }
+
+  private _applyMeshShadowSettings(group: THREE.Group): void {
+    const cast = this._options.meshShadow?.cast;
+    const receive = this._options.meshShadow?.receive;
+    group.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      obj.castShadow = cast ?? false;
+      obj.receiveShadow = receive ?? false;
+    });
+  }
+
+  private _attachPanelLights(group: THREE.Group): void {
+    const specs = this._options.panelLights ?? [];
+    if (!specs.length) return;
+
+    const exactById = new Map(specs.map((spec) => [spec.id, spec as LightSpec]));
+    const partialSpecs = specs
+      .map((spec) => {
+        const raw = (spec as LightSpec & { match?: string | string[] }).match;
+        const tokens = Array.isArray(raw)
+          ? raw
+          : typeof raw === "string"
+            ? [raw]
+            : [];
+        const normalized = tokens
+          .map((token) => token.trim().toLowerCase())
+          .filter((token) => token.length > 0);
+        return { spec: spec as LightSpec, tokens: normalized };
+      })
+      .filter((entry) => entry.tokens.length > 0);
+
+    group.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mat = obj.material;
+      const matName =
+        (Array.isArray(mat) ? mat[0]?.name : (mat as THREE.Material)?.name) ??
+        "";
+      const objName = obj.name ?? "";
+      const names = [objName, matName]
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+      const namesLower = names.map((name) => name.toLowerCase());
+      const exactKey = names.find((name) => exactById.has(name));
+      const partial = partialSpecs.find((entry) =>
+        entry.tokens.some((token) =>
+          namesLower.some((name) => name.includes(token)),
+        ),
+      );
+      const spec = exactKey ? exactById.get(exactKey)! : partial?.spec;
+      if (!spec) return;
+
+      if (
+        !Number.isFinite(spec.color as number) ||
+        !Number.isFinite(spec.intensity as number)
+      ) {
+        return;
+      }
+
+      const light = createPointLightFromSpec(
+        spec,
+        Number(spec.color),
+        Number(spec.intensity),
+      );
+      const position = spec.position ?? {};
+      light.position.set(position.x ?? 0, position.y ?? 0, position.z ?? 0);
+      light.name = `ground:${spec.id}`;
+      obj.add(light);
+      this._panelLights.push(light);
+    });
+  }
+
+  private _syncTransform(): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    Helpers.applyTransform(root, this._options);
+  }
+
+  private async _prepareShaderResources(): Promise<void> {
+    this._disposeShaderResources();
+    if (!this._isShaderEnabled()) return;
+    const ctx = this._context;
+    const noiseTextureUrl = this._options.shader?.noiseTextureUrl?.trim();
+    if (!ctx?.loadTexture || !noiseTextureUrl) return;
+    const noiseTexture = await ctx.loadTexture(this.resolveAssetPath(noiseTextureUrl));
+    this._shaderNoiseTexture = noiseTexture;
+    this._shaderNoiseTexture.wrapS = THREE.RepeatWrapping;
+    this._shaderNoiseTexture.wrapT = THREE.RepeatWrapping;
+    this._shaderNoiseTexture.magFilter = THREE.LinearFilter;
+    this._shaderNoiseTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    this._shaderNoiseTexture.needsUpdate = true;
+    ctx.prepareTexture?.(this._shaderNoiseTexture);
+
+    this._shaderNearestNoiseTexture = this._shaderNoiseTexture.clone();
+    this._shaderNearestNoiseTexture.wrapS = THREE.RepeatWrapping;
+    this._shaderNearestNoiseTexture.wrapT = THREE.RepeatWrapping;
+    this._shaderNearestNoiseTexture.magFilter = THREE.NearestFilter;
+    this._shaderNearestNoiseTexture.minFilter = THREE.NearestFilter;
+    this._shaderNearestNoiseTexture.generateMipmaps = false;
+    this._shaderNearestNoiseTexture.needsUpdate = true;
+    ctx.prepareTexture?.(this._shaderNearestNoiseTexture);
+
+    this._mouseTextureSize = this._resolveMouseTextureSize();
+    this._mouseTextureData = new Float32Array(
+      this._mouseTextureSize *
+        this._mouseTextureSize *
+        GROUND_MOUSE_TEXTURE_CHANNELS,
+    );
+    this._mouseTexture = new THREE.DataTexture(
+      this._mouseTextureData,
+      this._mouseTextureSize,
+      this._mouseTextureSize,
+      THREE.RGBAFormat,
+      THREE.FloatType,
+    );
+    this._mouseTexture.wrapS = THREE.ClampToEdgeWrapping;
+    this._mouseTexture.wrapT = THREE.ClampToEdgeWrapping;
+    this._mouseTexture.magFilter = THREE.LinearFilter;
+    this._mouseTexture.minFilter = THREE.LinearFilter;
+    this._mouseTexture.generateMipmaps = false;
+    this._mouseTexture.needsUpdate = true;
+    ctx.prepareTexture?.(this._mouseTexture);
+    this._installPointerListeners();
+  }
+
+  private _applyGroundShader(group: THREE.Group): void {
+    this._shaderMaterials = [];
+    if (!this._isShaderEnabled()) return;
+    if (!this._shaderNoiseTexture || !this._shaderNearestNoiseTexture || !this._mouseTexture) {
+      return;
+    }
+    const replacedMaterials = new Set<THREE.Material>();
+    group.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const currentMaterials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+      if (currentMaterials.some((m) => m?.userData?.__groundShaderApplied)) {
+        return;
+      }
+      for (const material of currentMaterials) replacedMaterials.add(material);
+      child.material = this._createShaderMaterialSet(child.material);
+    });
+    for (const material of replacedMaterials) material.dispose();
+  }
+
+  private _createShaderMaterialSet(
+    material: THREE.Material | THREE.Material[],
+  ): THREE.Material | THREE.Material[] {
+    if (Array.isArray(material)) {
+      return material.map((entry) => this._createShaderMaterial(entry));
+    }
+    return this._createShaderMaterial(material);
+  }
+
+  private _createShaderMaterial(material: THREE.Material): THREE.Material {
+    const nextMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uGroundResolution: { value: this._resolution.clone() },
+        uGroundTime: { value: this._elapsedTime },
+        uGroundPage: { value: this._readShaderRuntimeValue("page") },
+        uGroundScrollProgress: {
+          value: this._readShaderRuntimeValue("scrollProgress"),
+        },
+        uGroundTransition: {
+          value: this._readShaderRuntimeValue("transition"),
+        },
+        uGroundTransitionDirection: {
+          value: this._readShaderRuntimeValue("transitionDirection"),
+        },
+        uGroundChapter: {
+          value: this._readShaderRuntimeValue("chapter"),
+        },
+        uGroundTransitionColor: {
+          value: this._transitionColor.clone(),
+        },
+        uGroundLightColor: {
+          value: this._lightColor.clone(),
+        },
+        uGroundDarkColor: {
+          value: this._darkColor.clone(),
+        },
+        tGroundNoise: { value: this._shaderNoiseTexture },
+        tGroundNearestNoise: {
+          value: this._shaderNearestNoiseTexture,
+        },
+        tGroundMouse: { value: this._mouseTexture },
+      },
+      vertexShader: groundSurfaceVertexShader,
+      fragmentShader: groundSurfaceFragmentShader,
+      transparent: false,
+      depthTest: true,
+      depthWrite: true,
+      side: material.side,
+    });
+    nextMaterial.userData.__groundShaderApplied = true;
+    this._shaderMaterials.push(nextMaterial);
+    return nextMaterial;
+  }
+
+  private _syncShaderUniforms(): void {
+    if (this._shaderMaterials.length === 0) return;
+    this._updateResolution();
+    this._resolveShaderColors();
+    const page = this._readShaderRuntimeValue("page");
+    const scrollProgress = this._readShaderRuntimeValue("scrollProgress");
+    const transition = this._readShaderRuntimeValue("transition");
+    const transitionDirection = this._readShaderRuntimeValue(
+      "transitionDirection",
+    );
+    const chapter = this._readShaderRuntimeValue("chapter");
+    for (const material of this._shaderMaterials) {
+      material.uniforms.uGroundResolution.value.copy(this._resolution);
+      material.uniforms.uGroundTime.value = this._elapsedTime;
+      material.uniforms.uGroundPage.value = page;
+      material.uniforms.uGroundScrollProgress.value = scrollProgress;
+      material.uniforms.uGroundTransition.value = transition;
+      material.uniforms.uGroundTransitionDirection.value = transitionDirection;
+      material.uniforms.uGroundChapter.value = chapter;
+      material.uniforms.uGroundTransitionColor.value.copy(
+        this._transitionColor,
+      );
+      material.uniforms.uGroundLightColor.value.copy(this._lightColor);
+      material.uniforms.uGroundDarkColor.value.copy(this._darkColor);
+    }
+  }
+
+  private _readShaderRuntimeValue(
+    key: "page" | "scrollProgress" | "transition" | "transitionDirection" | "chapter",
+  ): number {
+    const runtimeValue = this._runtimeState[key];
+    if (typeof runtimeValue === "number" && Number.isFinite(runtimeValue)) {
+      return runtimeValue;
+    }
+    const runtime = this._options.shader?.runtime;
+    const fallback = GROUND_SHADER_DEFAULTS.runtime[key];
+    const value = runtime?.[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    return fallback;
+  }
+
+  private _resolveMouseTextureSize(): number {
+    const raw = this._options.shader?.mouseTextureSize;
+    if (!Number.isFinite(raw)) return GROUND_SHADER_DEFAULTS.mouseTextureSize;
+    return Math.max(8, Math.round(raw as number));
+  }
+
+  private _resolveShaderColors(): void {
+    const colors = this._options.shader?.colors;
+    const tHex = colors?.transition ?? GROUND_SHADER_DEFAULTS.colors.transition;
+    const lHex = colors?.light ?? GROUND_SHADER_DEFAULTS.colors.light;
+    const dHex = colors?.dark ?? GROUND_SHADER_DEFAULTS.colors.dark;
+    if (tHex !== this._cachedTransitionHex) { this._cachedTransitionHex = tHex; this._transitionColor.setHex(tHex); }
+    if (lHex !== this._cachedLightHex) { this._cachedLightHex = lHex; this._lightColor.setHex(lHex); }
+    if (dHex !== this._cachedDarkHex) { this._cachedDarkHex = dHex; this._darkColor.setHex(dHex); }
+  }
+
+  private _updateResolution(): void {
+    if (!this._resolutionDirty) return;
+    this._resolutionDirty = false;
+    if (typeof window === "undefined") {
+      this._resolution.set(GROUND_DEFAULT_RESOLUTION, GROUND_DEFAULT_RESOLUTION);
+      return;
+    }
+    const snapshot = ResponsiveRuntime.getDefault().getSnapshot();
+    this._resolution.set(
+      Math.max(GROUND_DEFAULT_RESOLUTION, snapshot.viewportWidth),
+      Math.max(GROUND_DEFAULT_RESOLUTION, snapshot.viewportHeight),
+    );
+  }
+
+  private _updateMouseTexture(): void {
+    const mouseTexture = this._mouseTexture;
+    const mouseTextureData = this._mouseTextureData;
+    if (!mouseTexture || !mouseTextureData) return;
+    for (
+      let index = 0;
+      index < mouseTextureData.length;
+      index += GROUND_MOUSE_TEXTURE_CHANNELS
+    ) {
+      mouseTextureData[index] *= GROUND_MOUSE_TEXTURE_FADE;
+      mouseTextureData[index + 1] *= GROUND_MOUSE_TEXTURE_FADE;
+      mouseTextureData[index + 2] *= GROUND_MOUSE_TEXTURE_FADE;
+      mouseTextureData[index + 3] = 1;
+    }
+    if (!this._pointerActive) {
+      mouseTexture.needsUpdate = true;
+      return;
+    }
+
+    const size = this._mouseTextureSize;
+    const pointerX = this._pointerUv.x * (size - 1);
+    const pointerY = this._pointerUv.y * (size - 1);
+    const radius = Math.max(1, Math.round(size * GROUND_MOUSE_TEXTURE_RADIUS));
+
+    for (let y = -radius; y <= radius; y += 1) {
+      const pixelY = Math.round(pointerY + y);
+      if (pixelY < 0 || pixelY >= size) continue;
+      for (let x = -radius; x <= radius; x += 1) {
+        const pixelX = Math.round(pointerX + x);
+        if (pixelX < 0 || pixelX >= size) continue;
+        const distance = Math.sqrt(x * x + y * y) / radius;
+        if (distance > 1) continue;
+        const strength = Math.pow(1 - distance, GROUND_MOUSE_TEXTURE_FALLOFF);
+        const pixelIndex =
+          (pixelY * size + pixelX) * GROUND_MOUSE_TEXTURE_CHANNELS;
+        mouseTextureData[pixelIndex] = Math.max(
+          mouseTextureData[pixelIndex],
+          strength,
+        );
+        mouseTextureData[pixelIndex + 1] = Math.max(
+          mouseTextureData[pixelIndex + 1],
+          strength * 0.6,
+        );
+        mouseTextureData[pixelIndex + 2] = Math.max(
+          mouseTextureData[pixelIndex + 2],
+          strength * 0.85,
+        );
+      }
+    }
+
+    mouseTexture.needsUpdate = true;
+  }
+
+  private _installPointerListeners(): void {
+    if (this._pointerListenersAttached || typeof window === "undefined") return;
+    window.addEventListener("pointermove", this._onPointerMove, { passive: true });
+    window.addEventListener("pointerleave", this._onPointerLeave);
+    this._pointerListenersAttached = true;
+  }
+
+  private _removePointerListeners(): void {
+    if (!this._pointerListenersAttached || typeof window === "undefined") return;
+    window.removeEventListener("pointermove", this._onPointerMove);
+    window.removeEventListener("pointerleave", this._onPointerLeave);
+    this._pointerListenersAttached = false;
+  }
+
+  private _disposeShaderResources(): void {
+    this._shaderMaterials = [];
+    this._shaderNoiseTexture?.dispose();
+    this._shaderNearestNoiseTexture?.dispose();
+    this._mouseTexture?.dispose();
+    this._shaderNoiseTexture = null;
+    this._shaderNearestNoiseTexture = null;
+    this._mouseTexture = null;
+    this._mouseTextureData = null;
+    this._mouseTextureSize = GROUND_SHADER_DEFAULTS.mouseTextureSize;
+  }
+
+  private _isShaderEnabled(): boolean {
+    return this._options.shader?.enabled ?? GROUND_SHADER_DEFAULTS.enabled;
+  }
+
+  private _disposeGroup(group: THREE.Group | null): void {
+    if (!group) return;
+    group.traverse((child) => {
+      if (!(child as THREE.Mesh).isMesh) return;
+      const mesh = child as THREE.Mesh;
+      mesh.geometry?.dispose();
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (const material of materials) {
+        material?.dispose?.();
+      }
+    });
+  }
+}

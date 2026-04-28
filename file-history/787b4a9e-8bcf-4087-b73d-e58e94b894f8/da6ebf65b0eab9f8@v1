@@ -1,0 +1,9 @@
+# SessionStart entry point. Calls all session-start tasks.
+# All called scripts are idempotent and exit fast.
+
+$ErrorActionPreference = 'SilentlyContinue'
+
+& "$PSScriptRoot\check-updates.ps1"
+& "$PSScriptRoot\archive-plans.ps1"
+
+exit 0

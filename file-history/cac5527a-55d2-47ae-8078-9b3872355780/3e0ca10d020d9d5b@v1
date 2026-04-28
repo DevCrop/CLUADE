@@ -1,0 +1,60 @@
+import { AppManager } from "../../../manager/AppManager.js";
+import { aboutConfig, registerProofProgressCallback } from "../scene/about.scene.js";
+import { EnvSetup } from "../../../app/EnvSetup.js";
+import type { IPageRuntime } from "../../../types/engine.types.js";
+import { AboutProofRenderer } from "../render/AboutProofRenderer.js";
+import { InfiniteGalleryRenderer } from "../render/InfiniteGalleryRenderer.js";
+
+const PROOF_CANVAS_ID = "about-proof-canvas";
+const GALLERY_CANVAS_ID = "about-gallery-canvas";
+
+export class AboutPageRuntime implements IPageRuntime {
+  private _appManager: AppManager | null = null;
+  private _proofRenderer: AboutProofRenderer | null = null;
+  private _galleryRenderer: InfiniteGalleryRenderer | null = null;
+
+  async init(root?: ParentNode | null): Promise<void> {
+    const three = aboutConfig.three;
+    if (three) {
+      const env = EnvSetup.shouldInit({
+        canvasId: three.canvasId,
+        root,
+        allowedPageTypes: new Set(["about"]),
+      });
+      if (env.shouldInit) {
+        this._appManager?.dispose();
+        this._appManager = new AppManager();
+        await this._appManager.run(aboutConfig, root);
+      }
+    }
+
+    const canvas = (root ?? document).querySelector<HTMLCanvasElement>(
+      `#${PROOF_CANVAS_ID}`,
+    );
+    if (canvas instanceof HTMLCanvasElement) {
+      this._proofRenderer?.dispose();
+      this._proofRenderer = new AboutProofRenderer();
+      await this._proofRenderer.init(canvas);
+      const proofRenderer = this._proofRenderer;
+      registerProofProgressCallback((p) => proofRenderer.setScrollProgress(p));
+    }
+
+    const galleryCanvas = (root ?? document).querySelector<HTMLCanvasElement>(
+      `#${GALLERY_CANVAS_ID}`,
+    );
+    if (galleryCanvas instanceof HTMLCanvasElement) {
+      this._galleryRenderer?.dispose();
+      this._galleryRenderer = new InfiniteGalleryRenderer();
+      await this._galleryRenderer.init(galleryCanvas);
+    }
+  }
+
+  dispose(): void {
+    this._appManager?.dispose();
+    this._appManager = null;
+    this._proofRenderer?.dispose();
+    this._proofRenderer = null;
+    this._galleryRenderer?.dispose();
+    this._galleryRenderer = null;
+  }
+}

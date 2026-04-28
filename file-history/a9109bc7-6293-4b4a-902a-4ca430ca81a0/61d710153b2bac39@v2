@@ -1,0 +1,44 @@
+import { SceneObject } from "../../core/SceneObject.js";
+import type { SmokeFloorObjectOptions, SmokeFloorRuntime } from "../../types/object.types.js";
+
+const RUNTIME_KEY = "smokeFloor.runtime";
+const DEFAULT_FLOOR_Y = -2.5;
+const DEFAULT_FLOOR_DIM = 25;
+
+export class SmokeFloor
+  extends SceneObject<Record<string, never>>
+  implements SmokeFloorRuntime
+{
+  private _opts: SmokeFloorObjectOptions = {};
+
+  setOptions(props: Partial<SmokeFloorObjectOptions> | undefined): this {
+    if (props) this._opts = { ...this._opts, ...props };
+    return this;
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._opts as Record<string, unknown>;
+  }
+
+  override runObject(): void {
+    this._context?.registerObject(RUNTIME_KEY, this as unknown as Record<string, unknown>);
+  }
+
+  override runUpdate(_delta: number): void {}
+
+  protected override applyVisibility(_visible: boolean): void {}
+
+  getFloorY(): number {
+    return this._opts.floorLevel ?? DEFAULT_FLOOR_Y;
+  }
+
+  getFloorDimensions(): number {
+    return this._opts.floorDimensions ?? DEFAULT_FLOOR_DIM;
+  }
+
+  override dispose(): void {
+    if (this._disposed) return;
+    this._context?.unregisterObject(RUNTIME_KEY);
+    super.dispose();
+  }
+}

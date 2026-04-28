@@ -1,0 +1,110 @@
+# TypeScript Architecture Guidelines
+
+Source of truth for code additions and refactors in `resource/ts/`. Read this before writing new TypeScript, Three.js, Theatre.js, or runtime code.
+
+Setup-time Claude harness notes live in `.claude/SETUP_CHECKLIST.md`. This file is for code-writing decisions.
+
+## 1. Where New Code Goes
+
+Use this routing before adding files:
+
+- Visible 3D object: `resource/ts/objects/<env|sub|main|rocket|shared>/`, extending `SceneObject`.
+- Main/about/contact scene graph composition: `resource/ts/pages/<page>/scene/`.
+- Works scatter renderer changes: `resource/ts/pages/works/render/WorksSceneManager.ts` or a sibling class under `pages/works/render/`.
+- Works DOM/grid/API/filter lifecycle: `resource/ts/pages/works/runtime/`.
+- Page Theatre binding/config/autoplay: `resource/ts/pages/<page>/theatre/`.
+- Cross-page runtime state: `resource/ts/runtime/`.
+- Heavy orchestration that already exists: `resource/ts/manager/`; prefer `runtime/` or `core/` for new single-purpose code.
+- DOM singleton UI: `resource/ts/ui/`.
+- Reusable DOM widget: `resource/ts/components/`.
+- Pure helper: `resource/ts/utils/`.
+- Shared type: `resource/ts/types/*.types.ts`.
+- Shared constant/selector/timing: `resource/ts/config/*.config.ts`.
+
+Every new file should fit one row. If it does not, pause and split the design.
+
+For large orchestrator classes (AppManager, WorksPageRuntime, ContactWizard, TimelineBuilder), add new behavior via sibling classes rather than growing the file.
+
+## 2. WebGL Lifecycle Rules
+
+- Main renderer lifecycle is `AppEngineRuntime.init()` -> `Engine.init()` -> `Engine.start()` -> `Engine.dispose()`.
+- Main renderer resize path is `ResizeSetup` / `ResponsiveRuntime` -> `Engine.applyResponsiveSnapshot()` -> `Engine.setViewport()` -> `PostProcessor.resize()` and `BackgroundManager.resize()`.
+- `WorksSceneManager` is the current secondary-renderer exception. It owns its own `WebGLRenderer`, RAF loop, `window.resize` listener, and must clean all of them in `dispose()`.
+- Secondary renderers must call both `renderer.dispose()` and `renderer.forceContextLoss()`.
+- `Engine.dispose()` must stop the loop, dispose post-processing/background/model loader/scene, detach context listeners, then dispose the renderer.
+- `Scene.dispose()` must dispose registered `SceneObject`s and then object graphs.
+- Event listeners, RAFs, timers, observers, Theatre subscriptions, and scene subscriptions must have symmetric cleanup.
+
+## 3. Three.js Hot Path Rules
+
+Hard rules for `runUpdate`, `render`, RAF callbacks, and other per-frame paths:
+
+- Do not allocate `new Vector2`, `new Vector3`, `Matrix4`, `Quaternion`, `Euler`, arrays, sets, or object literals per frame.
+- Use instance scratch fields and mutate with `.set()`, `.copy()`, `.applyMatrix4()`, etc.
+- Do not call `scene.getObjectByName()` per frame. Use `context.getObject(id)` or subscribe through `Scene.onObjectRegistered`.
+- Do not call `Object.keys()`, `Array.from()`, or `new Set()` in a hot path unless the source changes rarely and the result is cached.
+- Call `ResponsiveRuntime.getDefault().getSnapshot()` once per frame at most and pass the local snapshot down.
+- Do not assign texture uniforms per frame. Set texture uniforms once; update scalar/vector uniforms only.
+- Do not call `renderer.setSize()` inside the render loop.
+
+Known current exceptions to treat carefully:
+
+- `WorksSceneManager` currently creates small pointer sample object literals during pointer events, not per-frame rendering.
+- `Engine.setFollowObject()` may clone a center vector when a follow object is assigned, not every frame.
+
+## 4. Disposal Checklist
+
+| Creates | Must release |
+|---|---|
+| `addEventListener` | `removeEventListener` with the same function reference |
+| `setTimeout` / `setInterval` | `clearTimeout` / `clearInterval` |
+| `requestAnimationFrame` / `FrameScheduler.request` | matching cancel call |
+| `MutationObserver`, `IntersectionObserver`, `ResizeObserver` | `.disconnect()` |
+| `THREE.BufferGeometry` | `.dispose()` |
+| `THREE.Material` | `.dispose()` plus owned texture slots |
+| `THREE.Texture` | `.dispose()` or register via `SceneObject._ownedTextures` |
+| `THREE.WebGLRenderTarget` | `.dispose()` |
+| `THREE.Light` with target | remove light and target, then dispose if supported |
+| `Element.animate()` | `.cancel()` |
+| Theatre subscription | call returned unsubscribe |
+| Scene pub/sub subscription | call returned unsubscribe |
+
+Use `utils/disposeObject3D.ts` for object graph disposal. Use `removeAndDispose(node)` when the object should also be detached from its parent.
+
+## 5. Responsive Rules
+
+- Shared responsive state comes from `ResponsiveRuntime`.
+- New cross-page responsive behavior should subscribe to `ResponsiveRuntime` and unsubscribe in `dispose()`.
+- Existing works scatter resize is direct `window.resize`; follow its cleanup pattern only for standalone secondary renderers.
+- Prefer `snapshot.device.isMobile`, `snapshot.breakpoint`, `snapshot.reducedMotion`, and `snapshot.render.clampedPixelRatio` over ad-hoc `window.innerWidth`, UA sniffing, or per-component `matchMedia`.
+- Reduced motion must degrade autoplay/parallax/infinite motion paths.
+
+## 6. Theatre Rules
+
+- Add main/about/contact Theatre variants through `PageTheatreBinder` adapter factories.
+- Works Theatre is page-local under `pages/works/theatre/` because it feeds the works intro/background and author bridge instead of the main scroll-scene adapter map.
+- Adapter interfaces are capability-based. Implement only the capabilities needed by the page.
+- Theatre preview/author bridges must remove controls listeners and stop preview runtimes on dispose.
+
+## 7. Review Triggers
+
+Use `$scene-explorer` or manually audit this file before changes that touch the listed paths. The `<!-- DOC-REF: ... -->` markers are consumed by the global `drift-detect-worker.ps1` to flag stale references when the underlying source files change.
+
+<!-- DOC-REF: resource/ts/core/Engine.ts -->
+<!-- DOC-REF: resource/ts/core/Scene.ts -->
+<!-- DOC-REF: resource/ts/core/PostProcessor.ts -->
+<!-- DOC-REF: resource/ts/core/PageTheatreBinder.ts -->
+<!-- DOC-REF: resource/ts/manager/AppManager.ts -->
+<!-- DOC-REF: resource/ts/manager/BackgroundManager.ts -->
+<!-- DOC-REF: resource/ts/manager/ShaderManager.ts -->
+<!-- DOC-REF: resource/ts/runtime/AppEngineRuntime.ts -->
+<!-- DOC-REF: resource/ts/runtime/PageRuntime.ts -->
+<!-- DOC-REF: resource/ts/runtime/ResponsiveRuntime.ts -->
+<!-- DOC-REF: resource/ts/pages/works/render/WorksSceneManager.ts -->
+<!-- DOC-REF: resource/ts/utils/disposeObject3D.ts -->
+
+- `core/Engine.ts`, `core/Scene.ts`, `core/PostProcessor.ts`, `core/PageTheatreBinder.ts`.
+- `manager/AppManager.ts`, `manager/BackgroundManager.ts`, `manager/ShaderManager.ts`.
+- `runtime/AppEngineRuntime.ts`, `runtime/PageRuntime.ts`, `runtime/ResponsiveRuntime.ts`.
+- `pages/*/scene/`, `pages/*/theatre/`, `pages/works/render/`, `pages/works/runtime/`.
+- Any file that creates a `THREE.WebGLRenderer`, render target, geometry, material, texture, RAF loop, or global event listener.

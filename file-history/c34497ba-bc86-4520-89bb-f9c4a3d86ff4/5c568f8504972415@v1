@@ -1,0 +1,94 @@
+﻿import * as THREE from "three";
+import type { AnimationLoopOptions } from "../types/runtime.types.js";
+import { FrameScheduler } from "../utils/FrameScheduler.js";
+export { type AnimationLoopOptions } from "../types/runtime.types.js";
+
+export const MAX_DELTA_SECONDS = 0.1;
+
+const BUDGET_MS = 33;
+
+export class AnimationLoop {
+  private _onUpdate: (deltaTime: number) => void;
+  private _onRender: () => void;
+  private _clock: THREE.Clock;
+  private _id: number | null = null;
+  private _running = false;
+  private _frameStart = 0;
+  private _frameExceeded = false;
+  private _budgetMs = BUDGET_MS;
+  private _visibilityListenerAttached = false;
+  private _resumeOnVisible = false;
+  private readonly _visibilityHandler = (): void => {
+    if (typeof document === "undefined") return;
+    if (document.hidden) {
+      if (!this._running) return;
+      this._resumeOnVisible = true;
+      this.stop();
+      return;
+    }
+    if (!this._resumeOnVisible) return;
+    this._resumeOnVisible = false;
+    this.start();
+  };
+
+  get frameExceeded(): boolean {
+    return this._frameExceeded;
+  }
+
+  private _loop = (): void => {
+    if (!this._running) return;
+    this._id = FrameScheduler.request(this._loop);
+    if (this._frameStart > 0) {
+      this._frameExceeded =
+        performance.now() - this._frameStart > this._budgetMs;
+    }
+    this._frameStart = performance.now();
+    const delta = Math.min(this._clock.getDelta(), MAX_DELTA_SECONDS);
+    this._onUpdate(delta);
+    this._onRender();
+  };
+
+  constructor(opts: AnimationLoopOptions = {}) {
+    this._onUpdate = opts.onUpdate ?? (() => {});
+    this._onRender = opts.onRender ?? (() => {});
+    if (
+      Number.isFinite(opts.budgetMs as number) &&
+      (opts.budgetMs as number) > 0
+    ) {
+      this._budgetMs = opts.budgetMs as number;
+    }
+    this._clock = new THREE.Clock();
+  }
+
+  start(): void {
+    if (this._running) return;
+    if (typeof document !== "undefined" && !this._visibilityListenerAttached) {
+      document.addEventListener("visibilitychange", this._visibilityHandler);
+      this._visibilityListenerAttached = true;
+    }
+    this._running = true;
+    this._clock.start();
+    this._loop();
+  }
+
+  stop(): void {
+    if (!this._running) return;
+    this._running = false;
+    if (this._id != null) {
+      FrameScheduler.cancel(this._id);
+      this._id = null;
+    }
+    this._clock?.stop();
+  }
+
+  dispose(): void {
+    this.stop();
+    if (typeof document !== "undefined" && this._visibilityListenerAttached) {
+      document.removeEventListener("visibilitychange", this._visibilityHandler);
+      this._visibilityListenerAttached = false;
+    }
+    this._resumeOnVisible = false;
+  }
+}
+
+

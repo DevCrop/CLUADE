@@ -1,0 +1,147 @@
+<?php
+section('content');
+
+$worksState = $worksState ?? [
+    'view' => 'scatter',
+    'category' => null,
+    'page' => 1,
+    'limit' => 12,
+];
+$worksCategories = $worksCategories ?? [];
+
+$isGridView = ($worksState['view'] ?? 'scatter') === 'grid';
+$activeCategory = $worksState['category'] ?? null;
+
+$buildWorksHref = static function (array $overrides = []) use ($worksState): string {
+    $params = [
+        'view' => $worksState['view'] ?? 'scatter',
+    ];
+
+    if (!empty($worksState['category'])) {
+        $params['category'] = $worksState['category'];
+    }
+
+    if (($worksState['page'] ?? 1) > 1) {
+        $params['page'] = (int) $worksState['page'];
+    }
+
+    foreach ($overrides as $key => $value) {
+        if ($value === null || $value === '' || ($key === 'page' && (int) $value <= 1)) {
+            unset($params[$key]);
+            continue;
+        }
+        $params[$key] = $value;
+    }
+
+    $query = http_build_query($params);
+    return '/works' . ($query !== '' ? '?' . $query : '');
+};
+?>
+
+    <div class="no-works-canvas" data-works-root data-view="<?= e($worksState['view'] ?? 'scatter') ?>"
+        data-category="<?= e((string) ($worksState['category'] ?? '')) ?>"
+        data-page="<?= (int) ($worksState['page'] ?? 1) ?>" data-limit="<?= (int) ($worksState['limit'] ?? 12) ?>"
+        data-grid-next-offset="" data-grid-has-more="false" data-ui-ready="false">
+    <div class="no-works-canvas__bottom-controls" data-ready="false" aria-hidden="true" hidden>
+        <nav class="no-works-canvas__bottom-toggle" role="tablist" aria-label="View switcher"
+            data-view="<?= e($worksState['view'] ?? 'scatter') ?>">
+            <span class="no-works-canvas__toggle-rect" aria-hidden="true"></span>
+            <a href="<?= e($buildWorksHref(['view' => 'grid'])) ?>" id="works-view-grid" role="tab"
+                aria-selected="<?= $isGridView ? 'true' : 'false' ?>" aria-controls="works-grid"
+                class="<?= $isGridView ? 'is-active' : '' ?>">Grid</a>
+            <a href="<?= e($buildWorksHref(['view' => 'scatter'])) ?>" id="works-view-scatter" role="tab"
+                aria-selected="<?= $isGridView ? 'false' : 'true' ?>" aria-controls="works-canvas"
+                class="<?= $isGridView ? '' : 'is-active' ?>">Scatter</a>
+        </nav>
+        <div class="no-works-canvas__filter-wrap"<?= $isGridView ? ' aria-hidden="true" hidden inert' : '' ?>>
+            <button type="button" class="no-works-canvas__filter-button" data-works-filter-button aria-haspopup="true"
+                aria-expanded="false" aria-controls="works-scatter-filter-panel">
+                <span class="no-works-canvas__filter-button-label">전체</span>
+            </button>
+            <div id="works-scatter-filter-panel" class="no-works-canvas__filter-panel" data-works-filter-panel
+                aria-hidden="true">
+                <button type="button"
+                    class="no-works-canvas__filter-option<?= $activeCategory === null ? ' is-active' : '' ?>"
+                    data-works-filter-option data-category="" data-label="전체">전체</button>
+                <?php foreach ($worksCategories as $category): ?>
+                <?php
+                    $slug = $category['slug'] ?? '';
+                    if ($slug === '' || $slug === 'all') {
+                        continue;
+                    }
+                    $label = $category['label'] ?? $slug;
+                    ?>
+                <button type="button"
+                    class="no-works-canvas__filter-option<?= $slug === $activeCategory ? ' is-active' : '' ?>"
+                    data-works-filter-option data-category="<?= e($slug) ?>"
+                    data-label="<?= e($label) ?>"><?= e($label) ?></button>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+
+    <canvas id="works-background-canvas" class="no-works-canvas__background" aria-hidden="true"></canvas>
+    <canvas id="works-canvas" class="no-works-canvas__canvas<?= $isGridView ? ' is-hidden' : '' ?>"
+        aria-hidden="<?= $isGridView ? 'true' : 'false' ?>"></canvas>
+
+    <div class="no-works-canvas__drag-hint" data-works-drag-hint aria-hidden="true" hidden>
+        <div class="no-works-canvas__drag-hint-card" aria-live="polite">
+            <?= include_view('components.button.corner-markup', ['class' => 'no-works-canvas__drag-hint-corner no-corner-bracket--shine']) ?>
+            <span class="no-works-canvas__drag-hint-icon" aria-hidden="true">
+                <lord-icon src="https://cdn.lordicon.com/obvxyuis.json" trigger="loop" delay="600"
+                    colors="primary:#ffffff,secondary:#ffffff" style="width:88px;height:88px"></lord-icon>
+            </span>
+            <p class="no-works-canvas__drag-hint-text">Drag to explore</p>
+        </div>
+    </div>
+
+    <div id="works-grid" class="no-works-canvas__grid<?= $isGridView ? '' : ' is-hidden' ?>"
+        aria-hidden="<?= $isGridView ? 'false' : 'true' ?>" <?= $isGridView ? '' : 'hidden' ?>>
+        <section class="no-sub-works">
+            <div class="no-container-2xl">
+                <div class="no-sub-works__inner">
+                    <aside class="no-sub-works__filter" aria-label="Works category filter">
+                        <ul class="no-sub-works__filter-list">
+                            <?php foreach ($worksCategories as $category): ?>
+                            <?php
+                                $slug = $category['slug'] ?? 'all';
+                                $isActive = ($slug === 'all' && $activeCategory === null) || $slug === $activeCategory;
+                                $href = $buildWorksHref([
+                                    'view' => 'grid',
+                                    'category' => $slug === 'all' ? null : $slug,
+                                    'page' => null,
+                                ]);
+                                ?>
+                            <li class="no-sub-works__filter-item<?= $isActive ? ' active' : '' ?>">
+                                <a href="<?= e($href) ?>" class="no-sub-works__filter-button">
+                                    <span class="no-loop-filter-rect no-sub-works__filter-rect" aria-hidden="true">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </span>
+                                    <span><?= e($category['label'] ?? '') ?></span>
+                                </a>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </aside>
+
+                    <div class="no-sub-works__gallery">
+                        <ul class="no-sub-works__gallery-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>
+
+<?php section('script') ?>
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<?php end_section() ?>

@@ -1,0 +1,116 @@
+# Plan: TransitionVeil 깜박임 수정 + 클라우드 시각 개선
+
+## Context
+
+인트로→히어로 전환 시 두 가지 문제:
+1. **깜박임(flicker)**: hold 페이즈(progress=0, 뷰가 완전히 덮여있어야 할 타이밍)에서 화면 중앙이 실제로는 완전히 불투명하지 않아 배경 씬 전환(intro→hero) 순간 짧게 비침.
+2. **시각 품질**: 뷰가 뿌연 단면 느낌 — 구름 간격(gaps) 및 명암 대비가 없어 입체감 부재.
+
+---
+
+## Issue 1 — Flicker 버그 (shader 수정)
+
+**파일**: `resource/shaders/who-reveal/fragment.glsl`
+
+### 근본 원인
+
+```glsl
+// L170 현재
+float revealRadius = mix(-0.18, 1.78, saturateFloat(uProgress));
+```
+
+`progress=0`일 때 `revealRadius = -0.18`. 화면 중앙(`centerDistance=0`):
+```
+revealEdge = 0 - (-0.18) - noise ≈ 0.18
+smoothstep(-0.24, 0.24, 0.18) ≈ 0.957  →  reveal = 0.043
+```
+→ **중앙이 4.3% reveal(= 86~87% 불투명)** 상태. hold 페이즈에서 씬이 바뀌면 이 4~14% 영역이 깜박임으로 감지됨.
+
+수학적 안전 조건: `|revealRadius| ≥ revealSoftness + maxNoise = 0.24 + 0.03 = 0.27`
+
+### 수정
+
+```glsl
+// L170
+float revealRadius = mix(-0.36, 1.78, saturateFloat(uProgress));
+//                        ↑ -0.18 → -0.36 (안전 마진 0.36 > 0.27 ✓)
+```
+
+progress=0 중앙: `revealEdge = 0.36 - 0.03 = 0.33 > 0.24(softness)` → `reveal = 0` 보장.  
+reveal 시작 딜레이: `progress ≈ 0.04` 부터 중앙 reveal 시작 (현재와 ≈ 80ms 차이, 시각적으로 무관).
+
+---
+
+## Issue 2 — 클라우드 시각 품질 개선 (shader + config)
+
+### 파일 A: `resource/shaders/who-reveal/fragment.glsl`
+
+**변경 1 — blanket 가중치 감소 (L144)**
+
+```glsl
+// 현재
+float density = max(blanket * 0.42, cloudMass * 0.82);
+// 변경
+float density = max(blanket * 0.24, cloudMass * 0.82);
+//                          ↑ 0.42→0.24: 하부 균일 fill 감소, 구름 덩어리 간 간격 확보
+```
+
+**변경 2 — cloudGapMask 강화 (L153)**
+
+```glsl
+// 현재
+density *= mix(1.0, 0.52, cloudGapMask);
+// 변경
+density *= mix(1.0, 0.36, cloudGapMask);
+//                   ↑ 0.52→0.36: 간격 영역 density를 더 낮춰 하늘 구멍 뚜렷하게
+```
+
+**변경 3 — color 명암 대비 (L181)**
+
+```glsl
+// 현재
+color = mix(vec3(0.94, 0.945, 0.952), vec3(1.0), smoothstep(0.25, 1.0, density));
+// 변경
+color = mix(vec3(0.80, 0.83, 0.88), vec3(1.0), smoothstep(0.25, 1.0, density));
+//           ↑ 밝은 회색→청회색: shadow 영역에 blue-grey 더해 입체감/깊이 추가
+//             명암 대비: 6% → 20%
+```
+
+**변경 4 — density final threshold 조정 (L160)**
+
+```glsl
+// 현재
+density = smoothstep(0.18, 0.88, density);
+// 변경
+density = smoothstep(0.24, 0.90, density);
+//                   ↑ 하한선 높여 gap 영역을 더 투명하게, 구름 경계 선명하게
+```
+
+### 파일 B: `resource/ts/config/transition.config.ts`
+
+```typescript
+// 현재
+revealSoftness: 0.24,
+size: { x: 2.4, y: 1.8 },
+// 변경
+revealSoftness: 0.32,   // reveal 엣지를 더 부드럽게 — 구름 경계처럼
+size: { x: 3.0, y: 2.2 },  // 구름 스케일 키워 큰 덩어리/간격 형성
+```
+
+---
+
+## 수정 파일 요약
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `resource/shaders/who-reveal/fragment.glsl` | L170: `-0.18→-0.36` (flicker fix) / L144: blanket 0.42→0.24 / L153: gapMask 0.52→0.36 / L160: threshold 0.18→0.24 / L181: color 0.94→0.80 |
+| `resource/ts/config/transition.config.ts` | revealSoftness 0.24→0.32, size x 2.4→3.0, y 1.8→2.2 |
+
+---
+
+## Verification
+
+1. `http://localhost:8888` 로드
+2. 인트로 재생 → hold 페이즈(흰 뷰가 꽉 찼을 때) 중앙 깜박임 없는지 확인
+3. reveal 단계에서 구름 엣지 부드럽고 gap이 뚜렷한지 확인
+4. `rtk tsc --noEmit` — TS 에러 없음 확인 (config 값만 변경이라 거의 통과)

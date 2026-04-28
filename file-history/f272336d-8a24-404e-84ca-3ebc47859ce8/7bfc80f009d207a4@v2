@@ -1,0 +1,29 @@
+<div class="no-legal-doc">
+
+    <p class="no-legal-doc__effective">Current · Effective April 1, 2026</p>
+
+    <div class="no-legal-doc__section" style="margin-top:0">
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. Purpose of Collection and Use</p>
+            <p class="no-legal-doc__body">Statistics on customer service usage, and introduction and guidance on various information and event-related matters.</p>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. Items Collected</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>Personal identification information: name, company name, phone number, email address, etc.</li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">3. Retention Period</p>
+            <p class="no-legal-doc__body">1 year</p>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">4. Policy Amendments</p>
+            <p class="no-legal-doc__body">These terms may be amended when there is a valid reason to do so, in which case the Company will notify users through the official website.</p>
+        </div>
+    </div>
+
+</div>

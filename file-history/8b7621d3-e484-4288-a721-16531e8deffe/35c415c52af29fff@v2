@@ -1,0 +1,47 @@
+# Custom status line: cwd-leaf | model | effort | today's session count from token-usage.md.
+# Stdin payload: { session_id, model:{id,display_name}, workspace:{current_dir,project_dir}, ... }
+
+$ErrorActionPreference = 'SilentlyContinue'
+
+$obj = $null
+try {
+    $raw = [Console]::In.ReadToEnd()
+    if ($raw) { $obj = $raw | ConvertFrom-Json }
+} catch {}
+
+$model = '?'
+if ($obj -and $obj.model -and $obj.model.display_name) { $model = $obj.model.display_name }
+
+$cwd = $null
+if ($obj -and $obj.workspace -and $obj.workspace.current_dir) { $cwd = $obj.workspace.current_dir }
+elseif ($obj -and $obj.cwd) { $cwd = $obj.cwd }
+if (-not $cwd) { $cwd = (Get-Location).Path }
+$leaf = Split-Path $cwd -Leaf
+
+# Effort level from global settings
+$effort = '?'
+try {
+    $settings = Get-Content 'D:/.claude/settings.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($settings.effortLevel) { $effort = $settings.effortLevel }
+} catch {}
+
+# Today's session count from token-usage.md
+$sessions = '0'
+$tu = 'D:/.claude/reports/token-usage.md'
+if (Test-Path $tu) {
+    $today = Get-Date -Format 'yyyy-MM-dd'
+    $body  = Get-Content $tu -Raw -Encoding UTF8
+    if ($body -and $body -match "(?ms)## $today\s*\r?\n(.+?)(?=\r?\n## |\z)") {
+        $section = $matches[1]
+        $rows = @(($section -split "`r?`n") | Where-Object { $_ -match '^\|\s*\d{2}:\d{2}\b' })
+        $sessions = $rows.Count.ToString()
+    }
+}
+
+# Cache hit indicator from prefix-version.txt (presence => 1h cache active)
+$cacheTag = ''
+if (Test-Path 'D:/.claude/.docs-cache/prefix-version.txt') { $cacheTag = ' cache:1h' }
+
+Write-Output ("{0} | {1} | effort:{2}{3} | sessions:{4}" -f $leaf, $model, $effort, $cacheTag, $sessions)
+
+exit 0

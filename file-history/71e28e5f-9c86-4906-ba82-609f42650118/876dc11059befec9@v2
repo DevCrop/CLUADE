@@ -1,0 +1,180 @@
+uniform float uTime;
+uniform vec2 uResolution;
+uniform sampler2D uNoiseTexture;
+uniform vec2 uPointer;
+uniform vec2 uPointerVelocity;
+uniform float uPointerStrength;
+uniform float uPointerActive;
+uniform float uHeroDarken;
+
+#define SPEED 5.0
+
+float speed;
+
+float hash12(vec2 point) {
+  vec3 p3 = fract(vec3(point.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+float noise(in vec3 point) {
+  vec3 cell = floor(point);
+  vec3 local = fract(point);
+  vec2 uv = (cell.xy + vec2(37.0, 17.0) * cell.z) + local.xy;
+  vec2 rg = texture2D(uNoiseTexture, 0.00390625 * uv).yx;
+  return 1.5 * mix(rg.x, rg.y, local.z) - 0.75;
+}
+
+float map5(in vec3 point) {
+  vec3 q = point - vec3(0.0, 0.1, 1.0) * speed;
+  float value;
+  value = 0.50000 * noise(q);
+  q = q * 2.02;
+  value += 0.25000 * noise(q);
+  q = q * 2.03;
+  value += 0.12500 * noise(q);
+  q = q * 2.01;
+  value += 0.06250 * noise(q);
+  q = q * 2.02;
+  value += 0.03125 * noise(q);
+  return clamp(-point.y - 0.5 + 1.75 * value, 0.0, 1.0);
+}
+
+float map4(in vec3 point) {
+  vec3 q = point - vec3(0.0, 0.1, 1.0) * speed;
+  float value;
+  value = 0.50000 * noise(q);
+  q = q * 2.02;
+  value += 0.25000 * noise(q);
+  q = q * 2.03;
+  value += 0.12500 * noise(q);
+  q = q * 2.01;
+  value += 0.06250 * noise(q);
+  return clamp(-point.y - 0.5 + 1.75 * value, 0.0, 1.0);
+}
+
+float map3(in vec3 point) {
+  vec3 q = point - vec3(0.0, 0.1, 1.0) * speed;
+  float value;
+  value = 0.50000 * noise(q);
+  q = q * 2.02;
+  value += 0.25000 * noise(q);
+  q = q * 2.03;
+  value += 0.12500 * noise(q);
+  return clamp(-point.y - 0.5 + 1.75 * value, 0.0, 1.0);
+}
+
+float map2(in vec3 point) {
+  vec3 q = point - vec3(0.0, 0.1, 1.0) * speed;
+  float value;
+  value = 0.50000 * noise(q);
+  q = q * 2.02;
+  value += 0.25000 * noise(q);
+  return clamp(-point.y - 0.5 + 1.75 * value, 0.0, 1.0);
+}
+
+vec3 sundir = normalize(vec3(0.0, 0.22, -1.0));
+
+vec3 renderSun(in vec3 dir, in vec3 accentColor) {
+  float alignment = clamp(dot(dir, sundir), 0.0, 1.0);
+  float core = pow(alignment, 900.0);
+  float innerCorona = pow(alignment, 140.0);
+  float outerCorona = pow(alignment, 26.0);
+  float atmosphericScatter = pow(alignment, 5.5);
+
+  vec3 warmCore = vec3(1.0, 0.98, 0.94) * core * 8.5;
+  vec3 hotCorona = mix(vec3(1.0, 0.94, 0.82), accentColor, 0.18) * innerCorona * 2.6;
+  vec3 wideHalo = mix(accentColor, vec3(0.84, 0.9, 1.0), 0.34) * outerCorona * 0.72;
+  vec3 airGlow = mix(accentColor, vec3(0.96, 0.86, 0.7), 0.42) * atmosphericScatter * 0.18;
+
+  return warmCore + hotCorona + wideHalo + airGlow;
+}
+
+vec4 integrate(in vec4 sum, in float diffuse, in float density, in vec3 backgroundColor, in float travel) {
+  float densityContrast = smoothstep(0.08, 0.92, density);
+  vec3 lighting = vec3(0.58, 0.64, 0.74) * 1.08 + 0.72 * vec3(0.82, 0.88, 0.98) * diffuse;
+  vec4 color = vec4(
+    mix(vec3(1.18, 1.2, 1.24), vec3(0.46, 0.5, 0.58), densityContrast),
+    densityContrast
+  );
+  color.xyz *= lighting;
+  color.xyz = mix(color.xyz, backgroundColor, 1.0 - exp(-0.0025 * travel * travel));
+  color.a *= 0.52;
+  color.rgb *= color.a;
+  return sum + color * (1.0 - sum.a);
+}
+
+#define MARCH(STEPS, MAPLOD) for (int index = 0; index < STEPS; index += 1) { vec3 pos = rayOrigin + travel * rayDirection; if (pos.y < -3.0 || pos.y > 1.2 || sum.a > 0.99) break; float density = MAPLOD(pos); if (density > 0.1) { float diffuse = clamp((density - MAPLOD(pos + 0.5 * sundir)) * 2.0, 0.0, 1.0); sum = integrate(sum, diffuse, density, backgroundColor, travel); } travel += max(0.16, 0.022 * travel); }
+
+vec4 raymarch(
+  in vec3 rayOrigin,
+  in vec3 rayDirection,
+  in vec3 backgroundColor,
+  in float jitter
+) {
+  vec4 sum = vec4(0.0);
+  float travel = 0.18 * jitter;
+
+  MARCH(20, map4);
+  MARCH(15, map3);
+  MARCH(22, map2);
+
+  return clamp(sum, 0.0, 1.0);
+}
+
+mat3 setCamera(in vec3 forward) {
+  vec3 cw = normalize(forward);
+  vec3 cu = vec3(-cw.z, 0.0, cw.x);
+  vec3 cv = normalize(cross(cu, cw));
+  return mat3(cu, cv, cw);
+}
+
+vec2 applyPointerDistortion(vec2 uv, vec2 safeResolution) {
+  vec2 pointer = vec2(uPointer.x, 1.0 - uPointer.y);
+  vec2 delta = uv - pointer;
+  float distance = length(delta);
+  float ripple = (1.0 - smoothstep(0.0, 0.26, distance)) * uPointerStrength;
+  float flowNoise = texture2D(uNoiseTexture, uv * 1.6 + uTime * 0.02).r - 0.5;
+  vec2 swirl = vec2(-delta.y, delta.x) * ripple * 0.22;
+  vec2 drift = uPointerVelocity * safeResolution * 0.012 * ripple;
+  vec2 pulse = delta * flowNoise * ripple * 0.28;
+  return uv + swirl + drift - pulse;
+}
+
+vec3 cloudRender(in vec3 rayOrigin, in vec3 rayDirection) {
+  vec3 heroTopColor = vec3(0.005, 0.012, 0.05);
+  vec3 heroBottomColor = vec3(0.02, 0.09, 0.34);
+  vec3 heroAccentColor = vec3(0.08, 0.24, 0.62);
+  float verticalMix = smoothstep(-0.45, 0.95, rayDirection.y * 1.12);
+  vec3 skyBase = mix(heroBottomColor, heroTopColor, verticalMix);
+  vec3 deepSky = mix(skyBase, heroAccentColor, 0.1);
+  float sunAlignment = clamp(dot(rayDirection, sundir), 0.0, 1.0);
+  vec3 color = deepSky * mix(0.42, 0.82, clamp(rayDirection.y * 0.5 + 0.5, 0.0, 1.0));
+  color -= rayDirection.y * 0.18 * deepSky;
+  color += mix(heroAccentColor, vec3(0.9, 0.93, 1.0), 0.18) * pow(sunAlignment, 7.0) * 0.07;
+  color += renderSun(rayDirection, heroAccentColor);
+
+  float jitter = hash12(gl_FragCoord.xy);
+  vec4 clouds = raymarch(rayOrigin, rayDirection, color, jitter);
+  color = color * (1.0 - clouds.w) + clouds.xyz;
+  color *= 0.78;
+  color *= mix(1.0, 0.42, clamp(uHeroDarken, 0.0, 1.0));
+  return color;
+}
+
+void main() {
+  vec2 safeResolution = max(uResolution, vec2(1.0));
+  vec2 q = gl_FragCoord.xy / safeResolution;
+  q = mix(q, applyPointerDistortion(q, safeResolution), clamp(uPointerActive + uPointerStrength, 0.0, 1.0));
+  vec2 p = -1.0 + 2.0 * q;
+  p.x *= safeResolution.x / safeResolution.y;
+
+  speed = uTime * SPEED;
+  vec3 rayOrigin = 4.0 * normalize(vec3(0.0, 0.3, 5.0));
+  vec3 target = vec3(0.0, -1.0, 0.0);
+  mat3 camera = setCamera(target - rayOrigin);
+  vec3 rayDirection = camera * normalize(vec3(p.xy, 1.0));
+  vec3 color = cloudRender(rayOrigin, rayDirection);
+
+  gl_FragColor = vec4(color, 1.0);
+}

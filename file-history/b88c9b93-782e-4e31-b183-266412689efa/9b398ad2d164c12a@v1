@@ -1,0 +1,182 @@
+@use "../abstract" as *;
+
+/* #main-header(.no-header) 초기 상태: SCSS에서만. intro to.dom 애니메이션 전까지 숨김 유지. */
+
+.no-header {
+  $root: &;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--header-height);
+  background: transparent;
+  z-index: var(--z-index-header);
+  overflow: visible;
+  transition:
+    background var(--transition-default),
+    backdrop-filter var(--transition-default),
+    -webkit-backdrop-filter var(--transition-default),
+    border-color var(--transition-default),
+    opacity var(--transition-default),
+    transform var(--transition-default);
+  transform: translateY(0);
+  opacity: 1;
+  border-bottom: 1px solid var(--clr-border-default);
+  html.is-intro & {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &.visual {
+    background: var(--clr-surface-weak);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
+  &[aria-expanded="true"] {
+    background: var(--clr-ui-bg);
+    #{$root}__inner {
+      border-color: var(--clr-border-default);
+    }
+  }
+
+  &.visual[aria-expanded="true"] {
+    background: var(--clr-background-active);
+  }
+
+  &__inner {
+    position: relative;
+    z-index: calc(var(--z-index-drawer) + 1);
+    @include flex-center();
+    height: var(--header-height);
+    transition: var(--transition-default);
+    border-bottom: 1px solid transparent;
+  }
+
+  &__wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--gutter-sm);
+    height: var(--header-height);
+    width: 100%;
+  }
+
+  &-right {
+    display: flex;
+    align-items: center;
+    gap: var(--gutter-sm);
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  &__gnb {
+    display: flex;
+    align-items: center;
+    gap: var(--gutter-lg);
+  }
+
+  &__gnb-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--gutter-xs);
+  }
+
+  &__gnb-link {
+    display: inline-flex;
+    align-items: center;
+    color: var(--clr-text-title);
+    font-family: var(--family-en-title);
+    @include font("f-body-1");
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: fluid(0, 1);
+    transition: var(--transition-fast);
+
+    &:hover {
+      color: var(--clr-text-body);
+    }
+
+    &.is-active {
+      color: var(--clr-primary-300);
+    }
+  }
+
+  &__works-signboard {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: var(--gutter-2xs);
+    padding: 0 var(--gutter-xs);
+    border-radius: 999px;
+    background: var(--clr-white-24);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  &__works-signboard__count {
+    display: block;
+    @include font("f-body-3");
+    color: var(--clr-text-title);
+  }
+
+  &__container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--header-height);
+    width: 100%;
+    padding: 0 var(--gutter-container);
+  }
+
+  &__logo {
+    @include flex-center();
+    svg {
+      display: block;
+      height: auto;
+      width: fluid(140, 180);
+    }
+  }
+
+  &__action {
+    @include flex-center();
+    gap: var(--gutter-sm);
+  }
+
+  &__menu-btn {
+    @include flex-center();
+    width: fluid(36, 44);
+    height: fluid(36, 44);
+    padding: 0 !important;
+    color: var(--clr-text-title);
+    cursor: pointer;
+    border: 1px solid var(--clr-border-default);
+    border-radius: var(--scrollbar-radius);
+    transition: var(--transition-fast);
+
+    .no-corner-btn__icon {
+      margin: 0;
+      svg {
+        width: fluid(14, 20);
+        height: fluid(14, 20);
+        transition: transform var(--transition-fast);
+      }
+    }
+
+    &[aria-expanded="true"] .no-corner-btn__icon svg,
+    &:hover .no-corner-btn__icon svg {
+      transform: rotate(45deg);
+    }
+
+    &:hover .no-corner-btn__icon svg {
+      width: fluid(16, 20);
+      height: fluid(16, 20);
+    }
+  }
+}

@@ -1,0 +1,79 @@
+import type {
+  MainSceneSectionKey,
+  MainTheatrePlaybackRange,
+  MainTheatrePlaybackStep,
+  MainTheatreSheetId,
+} from "../../../types/main.types.js";
+
+export const MAIN_THEATRE_PROJECT_ID = "main-orbit-recorder-config-v2";
+export const MAIN_THEATRE_OBJECT_ID = "orbitCamera";
+export const MAIN_THEATRE_QUERY_KEY = "theatre";
+export const MAIN_THEATRE_QUERY_ENABLED = "1";
+export const MAIN_THEATRE_PREVIEW_QUERY_KEY = "theatrePreview";
+export const MAIN_THEATRE_PREVIEW_QUERY_ENABLED = "1";
+export const MAIN_THEATRE_SAVE_FILE_STORAGE_KEY =
+  "main-theatre-project-savefile-v2";
+export const MAIN_THEATRE_FILE_SEED_STORAGE_KEY =
+  "main-theatre-project-savefile-v2.seeded-from-file";
+export const MAIN_THEATRE_STUDIO_CLEAR_STORAGE_KEY =
+  "main-theatre-project-savefile-v2.cleared-studio-persistence";
+export const MAIN_THEATRE_OBSOLETE_SAVE_FILE_STORAGE_KEYS = [
+  "main-theatre-project-savefile-v4",
+  "main-theatre-project-savefile-v3",
+  "main-theatre-project-savefile-v1",
+] as const;
+export const MAIN_THEATRE_STORAGE_OPTIONS = {
+  storageKey: MAIN_THEATRE_SAVE_FILE_STORAGE_KEY,
+  obsoleteStorageKeys: MAIN_THEATRE_OBSOLETE_SAVE_FILE_STORAGE_KEYS,
+  fileSeedStorageKey: MAIN_THEATRE_FILE_SEED_STORAGE_KEY,
+  studioClearStorageKey: MAIN_THEATRE_STUDIO_CLEAR_STORAGE_KEY,
+} as const;
+export const MAIN_PREVIEW_RATE = 1;
+export const MAIN_AFTER_INTRO_AUTOPLAY_RATE = 1.08;
+export const MAIN_INTRO_ACTION_PHASE_SPLIT_POSITION = 1.633;
+export const MAIN_INTRO_ACTION_PHASE_ONE_RATE = 0.92;
+/** introAction phase 2 (rocket Y, story copy): wall time ≈ span / rate, span = sequence end − split. `10` matches `introAction.sequence.length` in main.json. Target ~22s so story text stays readable. */
+export const MAIN_INTRO_ACTION_PHASE_TWO_RATE =
+  (10 - MAIN_INTRO_ACTION_PHASE_SPLIT_POSITION) / 22;
+
+export const MAIN_THEATRE_PLAYBACK_RANGES: Readonly<
+  Partial<Record<MainTheatreSheetId, MainTheatrePlaybackRange>>
+> = {};
+
+export const MAIN_SCENE_THEATRE_STEPS = {
+  intro: [
+    {
+      sheetId: "intro",
+      progressRange: { start: 0, end: 1 },
+      playbackRangeSource: "camera",
+    },
+  ],
+  hero: [
+    {
+      sheetId: "hero",
+      progressRange: { start: 0, end: 1 },
+    },
+  ],
+  story: [{ sheetId: "story", progressRange: { start: 0, end: 1 } }],
+  who: [{ sheetId: "who", progressRange: { start: 0, end: 1 } }],
+  whyus: [{ sheetId: "why", progressRange: { start: 0, end: 1 } }],
+  services: [{ sheetId: "services", progressRange: { start: 0, end: 1 } }],
+  works: [{ sheetId: "works", progressRange: { start: 0, end: 1 } }],
+  worksDetail: [{ sheetId: "worksDetail", progressRange: { start: 0, end: 1 } }],
+  worksFinal: [{ sheetId: "worksFinal", progressRange: { start: 0, end: 1 } }],
+  client: [{ sheetId: "client", progressRange: { start: 0, end: 1 } }],
+  contact: [{ sheetId: "contact", progressRange: { start: 0, end: 1 } }],
+} as const satisfies Record<
+  MainSceneSectionKey,
+  readonly MainTheatrePlaybackStep[]
+>;
+
+export const MAIN_CAMERA_TRACK_DEBUG_NAMES = [
+  '["camera","position","x"]',
+  '["camera","position","y"]',
+  '["camera","position","z"]',
+  '["camera","target","x"]',
+  '["camera","target","y"]',
+  '["camera","target","z"]',
+  '["camera","fov"]',
+] as const;

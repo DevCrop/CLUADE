@@ -1,0 +1,48 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk *)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git branch*)",
+      "Bash(git stash*)",
+      "Bash(docker compose ps*)",
+      "Bash(docker compose logs*)",
+      "Bash(docker compose exec*)",
+      "Bash(npm run test*)",
+      "Bash(npm install*)",
+      "Bash(npx --no-install*)"
+    ],
+    "deny": [
+      "Bash(rm -rf C:/*)",
+      "Bash(rm -rf C:\\*)",
+      "Bash(rm -rf /c/*)",
+      "Bash(rm -rf //c/*)",
+      "Write(C:/**)",
+      "Write(C:\\**)",
+      "Write(/c/**)",
+      "Write(//c/**)",
+      "Edit(C:/**)",
+      "Edit(C:\\**)",
+      "Edit(/c/**)",
+      "Edit(//c/**)"
+    ]
+  },
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": [],
+  "disabledMcpjsonServers": [],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const i=JSON.parse(d);const f=(i.tool_input&&i.tool_input.file_path)||'';if(!f)return;const {execSync}=require('child_process');const opts={stdio:'inherit',cwd:process.cwd()};const q=JSON.stringify;if(f.endsWith('.test.ts')||f.endsWith('.test.tsx')){try{execSync('rtk vitest run '+q(f)+' --reporter=dot',opts)}catch(e){}}else if(f.endsWith('.ts')||f.endsWith('.tsx')){try{execSync('rtk tsc --noEmit',opts)}catch(e){process.exit(1)}}else if(f.endsWith('.php')){try{const root=process.cwd().replace(/\\\\/g,'/');const rel=f.replace(/\\\\/g,'/').replace(root+'/','');const cp='/var/www/html/'+rel;execSync('rtk docker compose exec -T web php -l '+q(cp),opts)}catch(e){}}else if(f.endsWith('.scss')){try{execSync('npx --no-install stylelint '+q(f),opts)}catch(e){}}}catch(e){}});\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,442 @@
+# NINEONELABS 메인 + About 컨텐츠 진단 보고서
+
+## Context
+
+NINEONELABS는 한국의 **디지털 웹 에이전시**다. 하지만 메인(`/`)과 About(`/about`) 페이지의 카피는 "여정(Journey)" 우주 메타포를 짙게 사용한다. 사용자(클라이언트)는 한국인 의사결정자(브랜드 매니저, 마케터, 대표) — 이들에게 **3초 안에 "여기 뭐 하는 회사인가"**가 잡혀야 발주 검토가 시작된다.
+
+이 보고서는 다음 4개 축으로 현재 카피를 진단한다:
+
+1. **후킹 속도** — 한국 발주자 시각에서 정체성/가치가 즉시 잡히는가
+2. **여정 컨셉 적합도** — 우주 메타포가 디지털 에이전시 제안을 보조하는가, 흐리는가
+3. **문법·표현 자연성** — 한국어 레지스터, 어휘 다양성, 줄바꿈
+4. **중복·불필요 컨텐츠** — 메인 vs About의 역할 분리, 삭제·통합 후보
+
+브랜드 가이드(`brand/voice.md`, `brand/homepage-flow.md`, `brand/review-algorithm.md`, `brand/client-archetypes.md`)의 11가지 검토 알고리즘을 적용했다.
+
+---
+
+## 1. 메인 페이지 (`views/pages/index.php`) 섹션별 진단
+
+### [INTRO] `views/pages/index.php:32-72`
+
+```
+YOUR BRAND HAS ONE FIRST SCREEN.
+IT SHOULD PROVE SOMETHING.
+브랜드가 처음 세상과 만나는 순간,
+웹은 가장 선명한 출발점이 됩니다.
+[START]
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 후킹(3초) | **약함 (D)** | "처음 세상과 만나는 순간"이 추상. 한국 발주자가 "이 회사가 뭐하는 회사"를 즉시 모름. 첫 화면에 **"디지털 웹 에이전시"라는 정체성 단어가 0회**. |
+| 여정 컨셉 | OK | "출발점"이라는 약한 메타포. Poetic 섹션이라 OK. |
+| 문법 | OK | 자연스러움. |
+| 영문 | 어색함 | "ONE FIRST SCREEN"은 한국 독자가 한 번 더 해석해야 들어옴. "ONLY ONE FIRST SCREEN" 또는 "YOUR FIRST SCREEN" 고려. |
+
+**Hard Stop 여부**: 가이드의 *Service-fit Test* 미통과 — "여기가 무슨 서비스를 파는지" 첫 인상에서 안 잡힘.
+
+### [INTRO ACTION] `views/pages/index.php:82-132`
+
+```
+WE START BESIDE YOU.
+같은 자리에서 방향을 맞춥니다.
+브랜드가 해야 할 말을 정리하고,
+웹으로 이어질 구조를 세웁니다.
+
+READY TO LAUNCH.
+구조가 잡히면 경험은 움직입니다.
+첫 화면에서 기준이 보이고,
+함께 만든 브랜드가 출발합니다.
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 후킹 | **중간 (C)** | "같은 자리에서 방향을 맞춥니다" → "같은 자리"가 모호. **두 번째 한글 본문("브랜드가 해야 할 말을 정리하고, 웹으로 이어질 구조를 세웁니다")은 매우 좋음** ✓ — 구체적 행동 명시. |
+| 여정 컨셉 | OK | "LAUNCH"는 실제 출시와 메타포 양쪽으로 작동. ✓ |
+| 문법 | OK | "구조가 잡히면 경험은 움직입니다"는 시적이지만 자연스러움. |
+| 줄 단독 가독성 | 부분 통과 | "함께 만든 브랜드가 출발합니다" — '출발'이 주어 뒤에 와서 약간 불안. |
+
+### [HERO] `views/pages/index.php:142-162`
+
+```
+JOIN THE JOURNEY
+브랜드가 처음 세상에 말을 거는 방법,
+우리는 그걸 웹으로 설계합니다.
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 후킹 | **양호 (B)** | "**우리는 그걸 웹으로 설계합니다**" — 처음으로 "웹"이라는 핵심 단어가 등장. 이 섹션이 사실상 첫 정체성 선언. |
+| 여정 컨셉 | 매우 적합 | 슬로건이 헤드라인. 가이드 준수. ✓ |
+| 약점 | "그걸"의 지시 모호. 윗줄("말을 거는 방법")을 받는다고 머리에서 한 번 더 연결해야 함. |
+| 권장 | "브랜드가 처음 세상에 말을 거는 방법, / **그것을 웹으로 설계하는 일이 우리의 시작입니다**." 정도로 명사화. |
+
+### [STORY] `views/pages/index.php:172-216`
+
+```
+WHY WE BUILD THIS WAY.
+A NEW BRAND NEEDS AN UNCHARTED WEB.
+우리는 웹을 결과물이 아니라
+브랜드가 세상에 처음 증명되는 장면으로 봅니다.
+
+DEFAULT IS SAFE.
+UNCHARTED IS WHERE BRANDS BEGIN.
+그래서 우리는 익숙한 답을 고르기보다,
+브랜드가 선택받을 이유를 새로 설계합니다.
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 후킹 | **우수 (A)** | "**결과물이 아니라 ... 장면으로 봅니다**" — 차별화된 관점. 브랜드 신념 진술로 적합. ✓ |
+| 여정 컨셉 | 매우 적합 | "UNCHARTED"라는 우주 어휘가 "**브랜드가 선택받을 이유를 새로 설계합니다**"라는 구체로 착지. 가이드의 "메타포 → 구체 착지" 모범. ✓ |
+| 문법 | OK | |
+| 약점 | "UNCHARTED" 영문이 한국 독자에게 즉시 와닿지 않음(미지의/개척되지 않은). 한글 본문이 워낙 강해서 보완됨. |
+
+### [WHO] `views/pages/index.php:227-249`
+
+```
+YOUR BRAND LEADS.
+WE BUILD THE ROUTE.
+브랜드의 방향은 클라이언트가 정합니다.
+우리는 그 방향을 실제 웹 구조와 화면으로 구현합니다.
+같은 여정 안에서, 함께 움직입니다.
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 후킹 | **최우수 (A+)** | "**실제 웹 구조와 화면으로 구현합니다**" — 가장 구체적 정체성 진술. ✓ |
+| 여정 컨셉 | 모범 | 가이드의 핵심 포지셔닝("클라이언트가 주인공, 우리는 조력자")이 명문화. ✓ |
+| 권장 | 이 섹션의 한글 본문은 **첫 화면(INTRO)에 더 가까이 옮길 가치**가 있을 만큼 명료. |
+
+### [WHYUS / Skills] `views/pages/index.php:260-300`
+
+```
+THREE.JS - INTERACTIVE WEB
+GSAP - MOTION & ANIMATION
+WEBFLOW - NO-CODE BUILD
+UI / UX DESIGN - USER EXPERIENCE
+BRANDING SYSTEM - BRAND IDENTITY
+3D MODELING - SPATIAL DESIGN
+SEO STRATEGY - SEARCH GROWTH
+CMS SYSTEM - CONTENT CONTROL
+```
+
+| 항목 | 평가 |
+|------|------|
+| 후킹 | **양호 (B+)** — 한국 발주자에게 "기술 스택"이 즉시 잡힘. ✓ |
+| 약점 | "**3D MODELING — SPATIAL DESIGN**" 라벨 모호. 한국 발주자는 "스페이셜 디자인이 뭐지?"가 즉시 떠오름. "3D MODELING — BRAND ASSETS" 또는 "3D MODELING — VISUAL DEPTH" 권장. |
+| 약점 | "WEBFLOW - NO-CODE BUILD"는 발주자 입장에서 "이 회사 웹플로우만 쓰는 회사인가?"로 오해 가능. 다른 풀스택 항목과 균형 맞춤 필요(예: "WEBFLOW & CMS - LIGHT BUILD"). |
+
+### [SERVICES] `views/pages/index.php:311-376`
+
+5개 서비스(Web Build / App Build / Branding / UI·UX / Maintenance) 모두 **각 2줄 한국어 설명**. 가이드의 *Concrete 섹션* 규정을 준수. 중복은 About과의 관계에서 다룸.
+
+| 항목 | 평가 |
+|------|------|
+| 후킹 | 우수 (A) |
+| 약점 | "**Web Build / App Build**" 영문이 한국식 영어. 일반적으로는 "Web Development / App Development" 또는 "Website / Mobile App". 의도된 톤일 수 있으나, 발주자가 실제 검색하는 단어와 거리가 있어 SEO에도 약함. |
+
+### [PORTFOLIO HEAD] `views/pages/index.php:397-422`
+
+```
+FROM PLAN
+TO SCREEN
+
+WORK
+BECOMES REAL
+
+설계하던 구조와 경험이
+이제 실제 화면과 사용 흐름으로 공개됩니다.
+```
+
+평가: **A**. 메타포 없이 깨끗하게 "Plan → Screen"으로 전환. ✓
+
+### [CLIENTS / PARTNERS] `views/pages/index.php:507-530`
+
+```
+PARTNERS
+같은 여정을 함께한 파트너들입니다.
+각 브랜드는 더 선명한 구조와 경험으로 다음 단계에 도달했습니다.
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 후킹 | **약함 (C-)** | "**다음 단계에 도달했습니다**"가 모호. 어떤 단계? 발주자는 "구체적 결과 한 줄"(전환율 +N%, 리뉴얼 후 트래픽 변화, 협업 기간 등)을 기대. |
+| 가이드 위반 | 가이드의 *Proof-fit Test*("주장 → 증거 → 클라이언트 결과")가 결여. |
+| 권장 | "각 브랜드는 새로운 웹 구조 위에서 자신만의 첫 화면을 가졌습니다." 정도의 **검증 가능한 결과**로 재작성. |
+
+### [CONTACT] `views/pages/index.php:540-577`
+
+```
+YOUR JOURNEY
+STARTS HERE.
+브랜드의 다음 여정이 시작될 때,
+우리는 그 첫 번째 화면을 함께 설계합니다.
+[Contact] [Works]
+```
+
+평가: **A**. 메인의 가장 모범적 섹션. 메타포 + 구체 + 명확한 CTA 버튼. ✓
+
+---
+
+## 2. About 페이지 (`views/pages/about/index.php`) 섹션별 진단
+
+### [HERO INTRO] `views/pages/about/index.php:88-125`
+
+```
+WE ARE EXPLORERS
+DIGITAL WEB AGENCY
+브랜드가 나아갈 좌표를 정의합니다.
+사용자가 자연스럽게 움직이는 흐름을 설계하고,
+웹·앱·브랜드 시스템으로 여정을 완성합니다.
+그것이 나인원랩스입니다.
+[Start Here]
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 후킹 | **A** | About의 후킹은 메인보다 **빠름**. "**DIGITAL WEB AGENCY**" 명시. ✓ |
+| 여정 컨셉 | OK | "좌표"가 우주 메타포지만 다음 줄들로 빠르게 착지. |
+| 문법 | OK |
+| 약점 | "**좌표를 정의합니다**" — 한국 일반어휘로 어색. "방향" 또는 "출발점"이 자연스러움. 좌표는 GPS/지도 어휘. |
+| 약점 | "그것이 나인원랩스입니다" — 좋은 클로징이지만 그 위 3줄이 동시에 일을 하려다 보니 한 줄당 의미가 옅어짐(설계+연결+완성). |
+
+### [HERO SLOGAN] `views/pages/about/index.php:127-173`
+
+```
+WE LEAD YOUR (DESIGN / DEVELOPMENT / BRANDING / UI/UX) JOURNEY
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| **🚨 가이드 위반 (Hard Stop)** | "**WE LEAD**"는 브랜드 가이드 핵심 원칙 정면 위반. |
+| 근거 | 가이드(`brand/identity.md`, `brand/homepage-flow.md`)의 명시 규칙: "**The client's brand is the main character. NINEONELABS is the companion.**" 또한 메인 WHO 섹션에서 "**YOUR BRAND LEADS. WE BUILD THE ROUTE.**"를 선언. About에서 "WE LEAD"를 다시 외치는 것은 **메인과 About 간 메시지 모순**. |
+| 권장 | "**WE BUILD YOUR (...) JOURNEY**" 또는 "**WE BUILD THE ROUTE FOR YOUR (...) JOURNEY**" 또는 "**WE GUIDE YOUR (...) JOURNEY**". `lead`는 가이드에서 클라이언트 전용 동사. |
+
+### [WHO — WE BUILD THE ROUTE] `views/pages/about/index.php:175-226`
+
+평가: **A**. 메인과 동일 헤드라인. 본문이 짧아 메인과의 중복도는 헤드라인 한 줄 수준. OK.
+
+### [BUILT TO PROVE] `views/pages/about/index.php:229-263`
+
+```
+BUILT TO PROVE
+브랜드가 선택받는 이유를 화면에서 증명합니다.
+[8개 스킬 카드 — 메인 WHYUS와 동일]
+```
+
+| 항목 | 평가 |
+|------|------|
+| **중복 경고** | 8개 스킬 카드가 메인 WHYUS와 동일. About에서 한 번 더 봐야 할 이유는 부족 — 발주자는 메인에서 이미 봄. |
+| 권장 옵션 A | About의 BUILT TO PROVE를 **삭제**하고 그 자리에 "팀 구성/프로세스/스튜디오 사진" 등 **About 고유** 컨텐츠로 교체. |
+| 권장 옵션 B | About에서는 같은 스킬을 **케이스별 결과치**(예: "Three.js — 스크롤 인터랙션을 운영 사이트에 통합한 작업 N건")로 변형하여 *Proof-fit Test* 통과. |
+
+### [VISION & MISSION] `views/pages/about/index.php:265-311`
+
+```
+OUR VISION IS TO TURN BOLD BRANDS INTO LIVING DIGITAL JOURNEYS.
+브랜드의 방향성과 감도를 선명하게 설계하고,
+사용자의 흐름을 세심하게 연결합니다.
+오래 기억되는 여정으로 브랜드의 다음 움직임을 함께 만들어갑니다.
+
+01 UNCHARTED — 정해진 답이 없는 지점에서 시작합니다. 기대된 결과가 아닌, 브랜드만의 경로를 만듭니다.
+02 PROOF — 완성도는 디테일로 쌓입니다. 목표에 도달하는 결과로 증명합니다.
+03 LAUNCH — 브랜드의 개성을 실제 화면에 담습니다. 평범한 기본값을 넘어서는 웹 경험을 출시합니다.
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 미션 카드 3개 | **A** | UNCHARTED/PROOF/LAUNCH가 핵심가치(Experiment·Challenge·Proof)와 매칭. ✓ |
+| 비전 본문 | **C** | "**감도**" — 한국어 일상 어휘 아님(감도는 대개 광학/오디오 용어). "**감각**" 또는 "**톤**"이 자연스러움. |
+| 비전 본문 | "선명하게 설계하고 / 세심하게 연결합니다 / 함께 만들어갑니다" — 부사 3연속(선명하게/세심하게)으로 리듬 단조. |
+| 권장 한글 비전 | "브랜드의 방향과 감각을 선명하게 정리하고, / 사용자의 동선을 화면 흐름으로 잇습니다. / 오래 기억되는 여정을 함께 만듭니다." |
+
+### [SERVICES] `views/pages/about/index.php:313-350`
+
+| 항목 | 평가 |
+|------|------|
+| **중복 경고** | 5개 서비스 카드가 **메인 SERVICES와 100% 동일 텍스트**. |
+| 권장 | About에서는 **삭제** 또는 **단축**(서비스명 + 1줄). About의 컨텐츠 자리는 "팀/프로세스/철학"이 차지해야 함. |
+
+### [AWARDS] `views/pages/about/index.php:352-433`
+
+평가: **양호**. 단, "**등록된 수상 작업이 없습니다**"라는 빈 상태가 노출되면 신뢰도 하락. 운영상 빈 상태는 섹션 자체를 숨기는 게 권장.
+
+### [CTA — Contact] `views/pages/about/index.php:462-498`
+
+```
+YOUR JOURNEY STARTS HERE.
+브랜드의 첫 발사를 함께할 준비가 됐습니다.
+지금, 나인원랩스와 궤도를 그립니다.
+[Contact] [Works]
+```
+
+| 항목 | 평가 | 근거 |
+|------|------|------|
+| 후킹 | **약함 (C)** | "**첫 발사**", "**궤도를 그립니다**" — 우주 메타포가 가장 짙은 곳. 한국 발주자가 "그래서 지금 뭐 하라는 거지?"가 즉시 안 잡힘. |
+| 가이드 위반 | "Every space metaphor must land on a concrete digital outcome" — Concrete 섹션(contact)에서 메타포가 착지하지 않음. |
+| 메인과 비교 | 메인 CONTACT는 "**그 첫 번째 화면을 함께 설계합니다**"로 명료 착지. About은 그렇지 못함. |
+| 권장 | "**브랜드의 다음 화면을 함께 시작할 준비가 됐습니다. / 지금, 첫 미팅으로 궤도를 그립시다.**" 또는 메인 CTA를 그대로 재사용. |
+
+---
+
+## 3. 횡단 진단 — 한국 발주자 후킹 시뮬레이션
+
+### 3-1. 첫 5초 시나리오 — 메인 진입
+
+| 0–1초 | 1–3초 | 3–5초 |
+|-------|-------|-------|
+| "YOUR BRAND HAS ONE FIRST SCREEN" | "브랜드가 처음 세상과 만나는 순간..." | (스크롤) |
+| 시각적 임팩트는 있으나 **업종 정보 0** | "출발점이 됩니다" — 추상적 | "WE START BESIDE YOU" — 여전히 모호 |
+
+→ **5초 안에 "디지털 웹 에이전시"가 안 잡힘**. About은 **0–1초에 "DIGITAL WEB AGENCY" 명시**되어 후킹 빠름. **메인이 About보다 후킹이 약한 역전 현상**.
+
+### 3-2. 디지털 웹 에이전시 정체성 노출 위치
+
+| 페이지 | 첫 정체성 단어 출현 섹션 |
+|--------|------------------------|
+| 메인 | **3번째 섹션(HERO, "웹으로 설계합니다")** — 너무 늦음 |
+| About | **1번째 섹션(HERO INTRO, "DIGITAL WEB AGENCY")** — 적정 |
+
+### 3-3. 여정 어휘(`여정`) 출현 횟수 — 가이드 한도 초과 점검
+
+가이드(`brand/voice.md`)는 **페이지당 최대 4회** 권장.
+
+| 페이지 | "여정" 출현 횟수 | 한도 |
+|--------|----------------|------|
+| 메인 | 약 5회 (HERO, WHO 본문, PARTNERS, CONTACT 등) | **초과 1회** |
+| About | 약 4–5회 (HERO INTRO, HERO SLOGAN의 회전 키워드 제외시 4회) | **상한 근접/초과** |
+
+→ **메인 PARTNERS의 "같은 여정을 함께한 파트너들"**과 **메인 WHO의 "같은 여정 안에서, 함께 움직입니다"**가 가까이 위치 — 인접 반복(가이드 *Adjacent-Shape Repetition Test* 위반 가능). 둘 중 하나는 다른 표현으로 분산 권장.
+
+### 3-4. 어휘 단조성 — 동사·명사 반복 체크
+
+| 단어 | 메인+About 합산 출현 (대략) | 평가 |
+|------|--------------------------|------|
+| 설계합니다 | 10회 이상 | **과다** |
+| 흐름 | 8회 이상 | **과다** |
+| 선명한/선명하게 | 4회 이상 | 양호 |
+| 구조 | 8회 이상 | 양호(핵심 어휘) |
+| 화면 | 7회 이상 | 양호(핵심 어휘) |
+| 증명 | 5회 이상 | 양호 |
+
+→ "**설계합니다**"가 한국어 카피의 디폴트 동사가 됨. **만듭니다, 잇습니다, 정리합니다, 짓습니다, 새깁니다, 다듬습니다** 등으로 분산 필요.
+
+### 3-5. 메인 vs About 컨텐츠 중복
+
+| 컨텐츠 | 메인 | About | 처리 권장 |
+|--------|------|-------|---------|
+| 8개 스킬 카드 | WHYUS | BUILT TO PROVE | About에서 변형(결과치 포함) 또는 삭제 |
+| 5개 서비스 카드 | SERVICES | SERVICES | About에서는 단축형(서비스명 + 1줄) 또는 삭제 |
+| "YOUR JOURNEY STARTS HERE" | CONTACT | CTA | About 변형 권장(예: "READY FOR THE NEXT SCREEN") |
+| "WE BUILD THE ROUTE" | WHO | WHO | 짧은 헤드라인이라 OK |
+
+About이 메인의 **3분의 2를 그대로 재방문**시키는 구조. About 고유 가치(팀, 프로세스, 사례 깊이, 발자취)가 **현재 0%**.
+
+### 3-6. 가이드 11개 테스트 통과 매트릭스
+
+| 테스트 | 메인 통과? | About 통과? |
+|--------|-----------|-----------|
+| 1. Usefulness | ◐ (INTRO 추상) | ◐ |
+| 2. Section-Definition | ◐ (Story와 Why 경계 양호) | ✗ (BUILT TO PROVE가 WHY와 중복) |
+| 3. Service-fit | ✓ | ✓ |
+| 4. Client-fit | ◐ (Launching brand만 다룸, Repositioning/Operating 부재) | ◐ |
+| 5. Proof-fit | ✗ (Partners에 결과치 없음) | ✗ (Awards 외 결과 신호 부재) |
+| 6. Positioning-fit | ◐ (Story가 시도) | ✗ |
+| 7. Process-fit | n/a | ✗ (About에 프로세스 부재 — 명백한 누락) |
+| 8. Context-Naturalness | ◐ | ◐ (HERO SLOGAN 모순) |
+| 9. Scene Comment Alignment | 코드 미확인 | 코드 미확인 |
+| 10. Adjacent-Shape Repetition | ✗ (여정 인접 반복) | ✗ |
+| 11. Line-Break | ✓ | ◐ ("좌표를 정의합니다" 부자연) |
+
+---
+
+## 4. 핵심 결론 (Why this matters)
+
+1. **메인 첫 화면이 About보다 후킹이 느리다.** 디지털 웹 에이전시라는 정체성이 메인 1번째 섹션에 부재. 한국 발주자는 5초 안에 이탈할 수 있다.
+2. **About `WE LEAD`는 브랜드 가이드 정면 위반**이며, 메인의 "YOUR BRAND LEADS"와 메시지 모순.
+3. **메인↔About 컨텐츠 중복 60%** — About의 존재 이유가 "메인의 확장판"에 머물러 발주자에게 가치 추가 없음. About 고유의 "**팀·프로세스·증명 깊이**"가 빠져 있다.
+4. **여정/우주 메타포가 Concrete 섹션(About CTA)에서 착지하지 않는다.** "첫 발사 / 궤도를 그립니다"는 행동 유도 약함.
+5. **"설계합니다 / 흐름"의 동사·명사 단조성**으로 카피 전체 리듬이 평탄. 한국어는 동사 다양화에 민감하다.
+6. **PARTNERS 섹션이 *Proof-fit*에 실패** — 결과치 없이 "다음 단계에 도달했습니다" 추상.
+
+---
+
+## 5. 권장 수정 우선순위
+
+### P0 (즉시 — 가이드 위반·메시지 모순)
+
+| # | 위치 | 변경 |
+|---|------|------|
+| P0-1 | `views/pages/about/index.php:127-173` | "**WE LEAD YOUR ... JOURNEY**" → "**WE BUILD YOUR ... JOURNEY**" 또는 "**WE BUILD THE ROUTE FOR YOUR ... JOURNEY**" |
+| P0-2 | `views/pages/index.php:32-72` (INTRO) | 첫 화면에 "**DIGITAL WEB AGENCY**" 또는 동급 정체성 명시 추가. 영문 헤드라인 또는 한글 본문에 "디지털 웹 에이전시" 한 줄 삽입. |
+
+### P1 (높음 — 후킹·증명)
+
+| # | 위치 | 변경 |
+|---|------|------|
+| P1-1 | `views/pages/index.php:507-530` (PARTNERS) | "다음 단계에 도달했습니다" → 검증 가능한 결과 한 줄(예: "각 브랜드는 새로운 웹 구조 위에서 자신만의 첫 화면을 가졌습니다") |
+| P1-2 | `views/pages/about/index.php:462-498` (CTA) | "**첫 발사 / 궤도를 그립니다**" → 메인 CONTACT 톤으로 정렬("다음 화면을 함께 시작할 준비가 됐습니다") |
+| P1-3 | `views/pages/about/index.php:265-311` (VISION) | "감도" → "감각" 또는 "톤". 부사 3연속(선명하게/세심하게) 분산. |
+| P1-4 | `views/pages/index.php:142-162` (HERO) | "그걸 웹으로 설계합니다" → "그것을 웹으로 설계하는 일이 우리의 시작입니다" 등 명사화 |
+
+### P2 (중간 — 중복 정리)
+
+| # | 위치 | 변경 |
+|---|------|------|
+| P2-1 | About `BUILT TO PROVE` (8 skills) | 메인 WHYUS와 중복. **삭제** 후 팀/프로세스로 대체, 또는 **결과치 동반**으로 변형 |
+| P2-2 | About `SERVICES` (5 cards) | 메인 SERVICES와 100% 동일. **단축형**(서비스명 + 1줄) 또는 **삭제** |
+| P2-3 | About 페이지 | About 고유 섹션 신설: **PROCESS**(Discover→Build→Orbit 3단계의 클라이언트 시점 설명) — 가이드 *Process-fit Test* 충족 |
+
+### P3 (낮음 — 어휘 다양성)
+
+| # | 위치 | 변경 |
+|---|------|------|
+| P3-1 | 메인+About 전체 | "설계합니다" 10회 → 5회 이하로 축소. "만듭니다 / 잇습니다 / 정리합니다 / 짓습니다 / 다듬습니다"로 분산. |
+| P3-2 | 메인+About 전체 | "흐름" 8회 → "동선 / 리듬 / 경로 / 이어짐"으로 분산. |
+| P3-3 | 메인 WHYUS `views/pages/index.php:260-300` | "3D MODELING - SPATIAL DESIGN" 라벨 명료화 ("VISUAL DEPTH" 또는 "BRAND ASSETS") |
+| P3-4 | 메인 WHYUS | "WEBFLOW - NO-CODE BUILD"가 단독으로 보이는 인상 정리("LIGHT BUILD" 등) |
+
+---
+
+## 6. 검증 방법
+
+이 보고서는 **분석 보고서**이며, 코드 변경 자체는 포함하지 않는다. 사용자가 우선순위(P0/P1/P2/P3) 중 어느 것을 진행할지 선택한 뒤, 다음 단계로 진행:
+
+1. **카피 변경 후 검증**:
+   - 가이드 11개 테스트(`brand/review-algorithm.md`)를 변경 부위에 적용
+   - "여정" 단어 페이지당 출현 횟수 카운트 (`grep -c "여정" views/pages/index.php`)
+   - 인접 섹션의 영문 헤드라인 형태(명사/문장/명령형) 다양성 확인
+2. **시각적 검증**: `http://localhost:8888/` 및 `/about` 직접 확인 (Vite dev 자동 빌드)
+3. **PHP 린트** (구조 변경 시): `docker compose exec web php -l views/pages/index.php`
+4. **타입 체크** (TypeScript 카피 데이터 변경 시): `chop node_modules/.bin/tsc --noEmit`
+
+---
+
+## 7. 핵심 파일 인덱스
+
+| 파일 | 역할 |
+|------|------|
+| `views/pages/index.php` | 메인 페이지 — INTRO/INTRO ACTION/HERO/STORY/WHO/WHYUS/SERVICES/PORTFOLIO/CLIENTS/CONTACT |
+| `views/pages/about/index.php` | About 페이지 — HERO INTRO/HERO SLOGAN/WHO/BUILT TO PROVE/VISION & MISSION/SERVICES/AWARDS/PARTNERS/CTA |
+| `views/pages/about/index.php:2-28` | `$aboutServices` 데이터 (5개 서비스) |
+| `views/pages/about/index.php:39-55` | `$aboutMission` 데이터 (UNCHARTED/PROOF/LAUNCH) |
+| `views/pages/about/index.php:57-66` | `$aboutProofSkills` 데이터 (8개 스킬) |
+| `routes/web.php:55-64, 68-76` | `/`, `/about` 라우트 정의 |
+| `BRAND.md`, `brand/identity.md` | 브랜드 정체성·슬로건·역할(조력자) 규정 |
+| `brand/voice.md` | 카피 톤·여정 어휘 한도·온도 조절 |
+| `brand/homepage-flow.md` | 12개 섹션의 기승전결과 각 섹션 일자 |
+| `brand/review-algorithm.md` | 11개 검토 테스트 |
+| `brand/client-archetypes.md` | Launching/Repositioning/Operating 3 페르소나 |
+
+---
+
+## 다음 행동 결정 필요
+
+본 보고서는 진단까지다. 사용자는 다음 중 하나를 선택할 수 있다:
+
+- **A안**: P0(2건)만 즉시 수정 — 가이드 위반·메시지 모순 차단
+- **B안**: P0+P1(6건) — 후킹과 증명까지 보강
+- **C안**: P0~P2(9건) — About 페이지 구조 재설계 포함
+- **D안**: P0~P3(13건) — 카피 전반 리프레시

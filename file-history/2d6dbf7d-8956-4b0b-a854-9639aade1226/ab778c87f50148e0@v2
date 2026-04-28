@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); file=$(echo \"$input\" | grep -o '\"file_path\":\"[^\"]*\"' | head -1 | sed 's/\"file_path\":\"//;s/\"//g'); if [[ \"$file\" == *.ts ]]; then node_modules/.bin/tsc --noEmit 2>&1 | tail -20; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

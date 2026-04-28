@@ -1,0 +1,166 @@
+# GravityBalls — Rocket 하단부 파티클 이펙트 추가
+
+## Context
+
+사용자가 제공한 CoffeeScript 컴파일 결과물(`new GravityBalls()`)을 NINEONELABS의 TypeScript/Three.js 파이프라인에 그대로 이식한다. 이 코드는 마우스 위치에서 `#bada55` 색의 작은 원형 점 5개를 15ms마다 spawn하고, 중력으로 떨어뜨려 floor에서 튕기게 한다.
+
+요구사항:
+
+1. 렌더 위치는 **rocket 하단부** (jetEngine과 동일한 attach 패턴)
+2. Theatre에서 **transform + visible** 만 우선 제어 (디테일 prop들은 추후 확장)
+3. 클릭 pause 같은 인터랙션은 제거
+4. **나머지 모든 물리/spawn/색/floor 로직은 원본 100% 재현** (mouse listener / resize / Stats / click pause만 제외)
+5. 원본 좌표계는 유지하되 root group을 0.01배 scale-down 하여 rocket scale에 정합
+
+대상 페이지: **main** 만 (about은 추후 확장)
+Floor mesh: **포함** (원본 1500×1500 BoxBuffer, 검정 #000000, opacity 0.2)
+
+원본 코드의 mouse 추적은 제거하므로 `canvasMouse` 기본값 `(0, 100, 0)`이 spawn 좌표가 됨 → root가 rocket 하단에 attach되어 있으므로 자연히 rocket 노즐 부근에서 점들이 튀어나오게 됨.
+
+## 파일 변경 요약
+
+### 신규
+
+#### 1. `resource/ts/objects/rocket/GravityBalls.ts` (신규)
+
+`SceneObject<GravityBallsTweenProps>`를 상속한 메인 클래스. JetEngine 패턴과 동일하게 작성.
+
+핵심 구현:
+
+- **속성**: `_options`, `_built`, `_floor: THREE.Mesh | null`, `_spheresInfo: Map<number, BallInfo>`, `_sphereIndex`, `_canvasMouse: THREE.Vector3`(원본의 default 값 `(0,100,0)` 유지), `_spawnAccumulator: number`(setInterval → deltaTime accumulator로 치환)
+- **`BallInfo` 내부 타입**: 원본의 `info` 객체 그대로 (color, radius, radiusStart, radiusDeincrement, startX/Y/Z, isXNegative, isZNegative, vx/vxMult/vy/vyMult/vz/vzMult, ID, bounced, startGravity, gravity, mesh)
+- **상수** (private static): `COLORS = ['#bada55', '#bada55', '#bada55', 'bada55']` (원본 오타 그대로), `RADIUS = 3`, `DOTS_PER_INTERVAL = 5`, `SPAWN_INTERVAL_SEC = 0.015`, `FLOOR_LEVEL = -100`, `FLOOR_DIMENSIONS = 1500`, `ROOT_SCALE = 0.01`(rocket 정합용)
+- **`runObject()`**: jetEngine과 동일한 attach 흐름 — `ensureTimelineRoot("gravityBallsRoot")` → `attachTo === "rocket"`이면 `ctx.getObject("rocket")`에 add, offset 적용 / 없으면 position 적용 → rotation/scale 적용 → root scale에 `ROOT_SCALE` 곱하여 적용 → `THREE_LAYER_ROCKET` 트래버스 → floor 메쉬 1회 생성·attach → `_built = true`
+- **`runUpdate(deltaTime)`**: `_spawnAccumulator += deltaTime`; `while (_spawnAccumulator >= SPAWN_INTERVAL_SEC)` → 5번 `_initDot()` 호출, accumulator 차감 (원본 `setInterval(init, 15)` + `dotsPerInterval=5` 의 RAF-friendly 등가). 이후 `_spheresInfo` 순회하며 `_drawDot(info)` 호출. 원본 `init()` 끝의 spheresInfo 루프와 동일한 의미.
+- **`_initDot()`**: 원본 `initDot()` 100% 동일. `Math.random` / `random(min,max)` 헬퍼 / `CircleBufferGeometry(radius, 20)` / `MeshBasicMaterial({color})` / `_canvasMouse` 기본값 `(0,100,0)`을 startX/Y/Z의 fallback로 사용. 새 mesh는 `getTimelineRoot()`에 `add()`.
+- **`_drawDot(info)`**: 원본 `drawDot()` 100% 동일 — scale.x/y/z deincrement, position 업데이트, floor bounce(vxMult/vyMult/vzMult 처리), boundary 체크, gravity 누적, `info.sphere.scale.y <= 0.1` 시 `_spheresInfo.delete(info.ID)` + mesh 제거 + geometry/material dispose.
+- **`getAnimationTarget()`**: `getTimelineRoot()` 반환
+- **`getTweenApplyMode()`**: `"mergeAndSync"` (jetEngine과 동일)
+- **`applyVisibility(visible)`**: `getTimelineRoot().visible = visible`. `false`이면 추가로 모든 활성 sphere mesh 즉시 제거 + `_spheresInfo` clear (재활성 시 처음부터 spawn). 원본에 없던 안전장치지만 visible toggle 시 floor만 남고 dot은 깨끗이 비움.
+- **`syncFromOptions()`**: 현 단계에서는 transform/visible만 처리하므로 base의 기본 동작에 의존 — 별도 override 불필요. 단 `_options`을 `getOptions()`로 반환하도록 protected method override.
+- **`dispose()`**: `_spheresInfo` 전체 순회하며 mesh.geometry/material dispose 후 parent.remove → floor의 geometry/material dispose 및 parent.remove → `_built = false` → `super.dispose()`.
+
+원본에서 **제거되는 것** (조건 3, 그리고 프로젝트 정책):
+- `setInterval` / `clearInterval` / click pause listener
+- `mousemove` listener / `canvasMouse` 동적 갱신
+- `resize` listener (Engine이 카메라/렌더러 리사이즈 담당)
+- `Stats` 의존성
+- `setStage()` 내부의 renderer/scene/camera 생성 (Engine이 이미 보유)
+- `setLighting()` 의 ambientLight (sceneLights가 이미 처리)
+- `animate()` / `render()` (AnimationLoop가 처리)
+
+원본에서 **유지되는 것**:
+- 모든 색 배열 (오타 포함)
+- radius=3, dotsPerInterval=5, spawn interval=15ms, floorLevel=-100, floorDimensions=1500, gravity=10
+- 모든 random vector (vx/vy/vz/vxMult/vyMult/vzMult) 식
+- bounce 후 boundary 밖일 때의 다른 동작 (`info.gravity = startGravity / 4` 등)
+- `radiusDeincrement = radius * -0.002`로 천천히 사라지는 fade out
+
+### 수정
+
+#### 2. `resource/ts/core/setup.ts`
+
+`jetEngine` 라인 바로 아래에 추가:
+
+```ts
+export const gravityBalls = "gravityBalls";
+```
+
+#### 3. `resource/ts/types/object.types.ts`
+
+- 신규 `GravityBallsObjectOptions` (`extends BaseObjectOptions`) — `attachTo?`, `offset?`, `visible?` 만. 모든 물리값은 클래스 내부 상수로 보유 (Theatre scope = transform+visible, 추후 확장 시 여기에 prop 추가).
+- 신규 `GravityBallsTweenProps = ObjectTweenProps<Pick<GravityBallsObjectOptions, "visible">>` (transform은 ObjectTweenProps 자체에서 제공).
+- `TimelineTweenPropsMap`에 `gravityBalls: GravityBallsTweenProps` 추가.
+- `ObjectOptionsByKey`에 `gravityBalls: GravityBallsObjectOptions` 추가.
+- `TWEEKABLE_KEYS_BY_ID`에 `gravityBalls: ["position", "rotation", "scale", "visible"]` 추가.
+- `CREATION_ONLY_KEYS_BY_ID`에 `gravityBalls: ["attachTo", "offset"]` 추가.
+
+#### 4. `resource/ts/config/object.config.ts`
+
+`jetEngine` 블록 바로 아래에 추가 (offset은 jetEngine과 동일한 `y: -0.34`):
+
+```ts
+gravityBalls: {
+  visible: true,
+  attachTo: rocketObjectId,
+  offset: { x: 0, y: -0.34, z: 0 },
+  rotation: { x: 0, y: 0, z: 0 },
+  scale: { x: 1, y: 1, z: 1 },
+},
+```
+
+#### 5. `resource/ts/app/ObjectSetup.ts`
+
+- `import { GravityBalls } from "../objects/rocket/GravityBalls.js";`
+- `core/setup.js` import 블록에 `gravityBalls` 추가
+- `createDefaultRegistry()` 내부 `[jetEngine]` 라인 다음에 `[gravityBalls]: createSetOptionsSpec(gravityBalls, () => new GravityBalls()),` 추가
+
+#### 6. `resource/ts/pages/main/scene/main.scene.ts`
+
+- `core/setup.js` import 라인에 `gravityBalls` 추가
+- `objects` 블록의 `[jetEngine]: true,` 다음에 `[gravityBalls]: true,` 추가
+
+#### 7. `resource/ts/pages/main/theatre/MainSceneState.ts`
+
+- `MainTheatreState` (또는 동등 인터페이스)에 `gravityBalls: { position, rotation, scale, visible }` 필드 추가
+- `DEFAULT_MAIN_SCENE_STATE`에 `gravityBalls`의 transform/visible 기본값 추가 (config과 일치)
+- `cloneVec3` / state-clone 헬퍼가 있다면 동일 패턴 따름
+- `mergeMainSceneState` 가 generic하게 처리하지 않는 경우, gravityBalls 머지 케이스 추가
+
+#### 8. `resource/ts/pages/main/theatre/MainSceneRig.ts`
+
+`jetEngine` 처리 라인을 그대로 mirror하여:
+
+- imports에 `gravityBalls as gravityBallsId` 추가
+- `compose()`의 `[jetEngineId]: { ... }` 옆에 동일 형태로 `[gravityBallsId]: { position, rotation, scale, visible }` 추가
+- `apply()`에 `this._applyGravityBalls(engine, state.gravityBalls);` 호출 추가
+- `read()`에 `gravityBalls: this._readGravityBalls(engine),` 추가
+- private `_applyGravityBalls` 메서드 — jetEngine의 `_applyJetEngine` 와 동일한 패턴(`setTimelineVars(rest, "to")`)이지만 transform 외 prop이 없으므로 `rest`는 `{ visible? }` 뿐
+- private `_readGravityBalls` 메서드 — `_readTransform(engine, gravityBallsId)`로 transform 읽고 `visible`는 runtime options에서 가져옴
+
+## 핵심 파일 (이미 존재 — 수정 대상 또는 참조)
+
+수정:
+- [resource/ts/core/setup.ts](resource/ts/core/setup.ts) — ID 상수
+- [resource/ts/types/object.types.ts](resource/ts/types/object.types.ts) — 타입·맵
+- [resource/ts/config/object.config.ts](resource/ts/config/object.config.ts:423-437) — config (jetEngine 블록 참조)
+- [resource/ts/app/ObjectSetup.ts](resource/ts/app/ObjectSetup.ts) — factory 등록
+- [resource/ts/pages/main/scene/main.scene.ts](resource/ts/pages/main/scene/main.scene.ts:855) — objects 블록
+- [resource/ts/pages/main/theatre/MainSceneState.ts](resource/ts/pages/main/theatre/MainSceneState.ts) — Theatre state
+- [resource/ts/pages/main/theatre/MainSceneRig.ts](resource/ts/pages/main/theatre/MainSceneRig.ts) — compose/apply/read
+
+참조 (수정 안 함, 패턴 미러링용):
+- [resource/ts/objects/rocket/JetEngine.ts](resource/ts/objects/rocket/JetEngine.ts:308-343) — `runObject()` attach 흐름 그대로 차용
+- [resource/ts/core/SceneObject.ts](resource/ts/core/SceneObject.ts) — base class 계약 (`ensureTimelineRoot`, `getTimelineRoot`, `applyVisibility`, `dispose`)
+- [resource/ts/utils/disposeObject3D.ts](resource/ts/utils/disposeObject3D.ts) — dispose 헬퍼 (geometry/material)
+
+## 재사용 항목
+
+- `SceneObject` base class — `ensureTimelineRoot`, `setTimelineVars`, `_applyOptionVisibility` 흐름 활용
+- `Helpers.applyRotationDeg(root, r)` — rotation 적용 (JetEngine과 동일)
+- `THREE_LAYER_ROCKET` (`core/setup.ts`) — rocket과 동일 레이어
+- `SceneObjectContext.getObject` — rocket 인스턴스 조회 (jetEngine 패턴)
+
+## Verification
+
+1. **TypeScript**: `rtk tsc --noEmit` — 신규 타입 정의 및 모든 import 경로 확인. 에러 0건이어야 함.
+2. **Vite dev server**: 이미 `http://localhost:8888`에서 자동 빌드되므로 별도 명령 없이 저장 후 새로고침.
+3. **브라우저 확인 (main 페이지)**:
+   - 로켓 하단부에서 작은 연두색(`#bada55`) 점들이 끊임없이 튀어나와 떨어지는지
+   - 점들이 어두운 floor에서 튕기고, floor 영역(±15unit, scale 적용 후) 밖에서는 떨어져 사라지는지
+   - 점들이 천천히 작아지다 사라지는지(`scale.y <= 0.1` 임계)
+   - rocket이 움직이거나 회전할 때 GravityBalls 시스템 전체가 따라 움직이는지 (attach 검증)
+   - 클릭해도 일시정지되지 않는지 (조건 3)
+4. **Theatre Studio**:
+   - main 페이지 author mode 진입 시 `gravityBalls` 패널이 노출되는지
+   - position/rotation/scale 조정 시 점 분출 위치가 바뀌는지
+   - visible off 시 점과 floor 모두 사라지고, on 시 자연스럽게 재개되는지
+5. **Memory**: 점들이 사라질 때 geometry/material이 dispose되는지 — DevTools Performance Memory 패널에서 GC 후 안정화 확인 (FPS 영향 없어야 함; rocket 화면 진입/이탈 시 누수 없어야 함).
+6. **Lint/Test**: `rtk npm run test` (Vitest 단발) — 기존 테스트 그린 유지.
+
+## 주의 사항
+
+- 원본 코드의 `THREE.BoxBufferGeometry` / `THREE.CircleBufferGeometry`는 최신 three.js에서 `BoxGeometry` / `CircleGeometry`로 변경되었으나, 이 프로젝트는 명시적으로 `BoxBufferGeometry` 별칭을 import하거나 `BoxGeometry`로 사용 중일 가능성. 신규 파일에서는 **`BoxGeometry`/`CircleGeometry`** 사용 (현행 three 버전에 맞춤). 원본 동작은 동일.
+- `dotsPerInterval=5`을 매 프레임 spawn하면 60fps 기준 ~333개/초 → 짧은 lifetime(`scale.y <= 0.1`)으로 자연 정리되지만, 화면 밖 점이 누적될 가능성 → **screen boundary 체크는 원본 그대로 유지**(이미 boundary 밖 점은 다른 gravity 분기로 떨어져 사라짐).
+- root group `scale = 0.01`을 적용하므로, Theatre에서 사용자가 `scale`을 1,1,1로 설정하면 0.01이 곱해진 최종 0.01,0.01,0.01이 되어야 함 → **클래스 내부에서 `ROOT_SCALE`을 base로 두고, options.scale을 그 위에 곱하는 방식**으로 구현 (Theatre가 1을 보내도 시각적으로는 정상 크기). 또는 Theatre default를 100으로 잡아서 `100 × 0.01 = 1`이 되게 하는 방안도 가능 — 코드 단순성 위해 클래스가 ROOT_SCALE을 곱하는 쪽을 선택.
+- about 페이지에는 등록하지 않으므로 `objects` 블록 추가 없음. 추후 필요 시 about도 동일 절차로 확장 가능.

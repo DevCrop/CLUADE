@@ -1,0 +1,73 @@
+import * as THREE from "three";
+import type {
+  MaterialWithTextures,
+  Object3DWithResources,
+  TextureSlotKey,
+} from "../types/engine.types.js";
+
+const TEXTURE_SLOTS: readonly TextureSlotKey[] = [
+  "map",
+  "normalMap",
+  "roughnessMap",
+  "metalnessMap",
+  "aoMap",
+  "emissiveMap",
+  "bumpMap",
+  "displacementMap",
+  "alphaMap",
+  "envMap",
+  "lightMap",
+  "specularMap",
+  "clearcoatMap",
+  "clearcoatNormalMap",
+  "clearcoatRoughnessMap",
+  "sheenColorMap",
+  "sheenRoughnessMap",
+  "transmissionMap",
+  "thicknessMap",
+  "gradientMap",
+  "matcap",
+] as const;
+
+function disposeShaderUniformTextures(material: THREE.Material): void {
+  const shader = material as THREE.ShaderMaterial;
+  if (!shader.uniforms) return;
+  for (const key of Object.keys(shader.uniforms)) {
+    const value = shader.uniforms[key]?.value;
+    if (value instanceof THREE.Texture) value.dispose();
+  }
+}
+
+export function disposeMaterial(material: THREE.Material): void {
+  const mat = material as MaterialWithTextures;
+  for (const slot of TEXTURE_SLOTS) {
+    const tex = mat[slot];
+    if (tex) tex.dispose();
+  }
+  disposeShaderUniformTextures(material);
+  material.dispose();
+}
+
+export function disposeObject3D(object3D: THREE.Object3D): void {
+  object3D.traverse((child) => {
+    const node = child as Object3DWithResources;
+    node.geometry?.dispose();
+    const material = node.material;
+    if (Array.isArray(material)) {
+      material.forEach(disposeMaterial);
+    } else if (material) {
+      disposeMaterial(material);
+    }
+  });
+}
+
+export function removeAndDispose(
+  node: THREE.Object3D | null,
+  parent?: THREE.Object3D | null,
+): null {
+  if (!node) return null;
+  const host = parent ?? node.parent;
+  host?.remove(node);
+  disposeObject3D(node);
+  return null;
+}

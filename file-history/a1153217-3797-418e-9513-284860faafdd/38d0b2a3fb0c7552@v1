@@ -1,0 +1,70 @@
+import { Debounce } from "../utils/Debounce.js";
+import type { Engine } from "../core/Engine.js";
+import type { ISetup, ResizeSetupOptions } from "../types/runtime.types.js";
+import { ResponsiveRuntime } from "../runtime/ResponsiveRuntime.js";
+
+export { type ResizeSetupOptions } from "../types/runtime.types.js";
+
+export class ResizeSetup
+  implements ISetup<[Engine, ResizeSetupOptions | number | undefined], void>
+{
+  private _engine: Engine | null = null;
+  private _scrollDriver: { refresh?: () => void } | null = null;
+  private _debounce: Debounce | null = null;
+  private _boundHandler: (() => void) | null = null;
+  private _disposed = false;
+
+  init(
+    engine: Engine,
+    options: ResizeSetupOptions | number | undefined = 250,
+  ): void {
+    this.startListening(engine, options);
+  }
+
+  startListening(
+    engine: Engine,
+    options: ResizeSetupOptions | number = 250,
+  ): void {
+    if (this._disposed || this._boundHandler) return;
+    const opts: ResizeSetupOptions =
+      typeof options === "number" ? { debounceMs: options } : options;
+    const delayMs = opts.debounceMs ?? 250;
+    this._engine = engine;
+    this._scrollDriver = opts.scrollDriver ?? null;
+    this._debounce = new Debounce(delayMs);
+    this._boundHandler = (): void => {
+      this._debounce?.runDebounce(() => {
+        const runtime = ResponsiveRuntime.getDefault();
+        runtime.init();
+        const snapshot = runtime.updateFromWindow();
+        this._engine?.applyResponsiveSnapshot(snapshot);
+        this._scrollDriver?.refresh?.();
+      });
+    };
+    const runtime = ResponsiveRuntime.getDefault();
+    runtime.init();
+    this._engine.applyResponsiveSnapshot(runtime.getSnapshot());
+    window.addEventListener("resize", this._boundHandler);
+  }
+
+  register(engine: Engine, options: ResizeSetupOptions | number = 250): void {
+    this.startListening(engine, options);
+  }
+
+  dispose(): void {
+    this.stopListening();
+  }
+
+  stopListening(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    if (this._boundHandler) {
+      window.removeEventListener("resize", this._boundHandler);
+      this._boundHandler = null;
+    }
+    this._debounce?.dispose();
+    this._debounce = null;
+    this._engine = null;
+    this._scrollDriver = null;
+  }
+}

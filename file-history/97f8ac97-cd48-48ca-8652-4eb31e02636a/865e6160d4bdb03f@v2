@@ -1,0 +1,95 @@
+import * as THREE from "three";
+
+export class CameraTargetRuntime {
+  private _followObject: THREE.Object3D | null = null;
+  private _followAnchorNode: THREE.Object3D | null = null;
+  private _followLocalAnchor: THREE.Vector3 | null = null;
+  private readonly _followBounds = new THREE.Box3();
+  private readonly _followCenter = new THREE.Vector3();
+  private readonly _followWorldPos = new THREE.Vector3();
+
+  constructor(private readonly _cameraTarget: THREE.Object3D) {}
+
+  setTargetPosition(x: number, y: number, z: number): void {
+    this.offFollowObject();
+    this._cameraTarget.position.set(
+      Number.isFinite(x) ? x : this._cameraTarget.position.x,
+      Number.isFinite(y) ? y : this._cameraTarget.position.y,
+      Number.isFinite(z) ? z : this._cameraTarget.position.z,
+    );
+  }
+
+  setFollowObject(object3D: THREE.Object3D): void {
+    this._followObject = object3D;
+    this._followAnchorNode = null;
+    this._followLocalAnchor = null;
+    const namedAnchor = object3D.getObjectByName("cameraAnchor");
+    if (namedAnchor) {
+      this._followAnchorNode = namedAnchor;
+    } else {
+      this._followBounds.setFromObject(object3D);
+      if (!this._followBounds.isEmpty()) {
+        this._followBounds.getCenter(this._followCenter);
+        this._followLocalAnchor = object3D.worldToLocal(
+          this._followCenter.clone(),
+        );
+      }
+    }
+    this._cameraTarget.position.copy(this.resolveFollowAnchor(object3D));
+  }
+
+  offFollowObject(): void {
+    this._followObject = null;
+    this._followAnchorNode = null;
+    this._followLocalAnchor = null;
+  }
+
+  runBlendObject(
+    object3D: THREE.Object3D,
+    duration: number,
+    animate?: (
+      target: THREE.Vector3,
+      destination: THREE.Vector3,
+      duration: number,
+    ) => void,
+  ): void {
+    this.offFollowObject();
+    const anchor = this.resolveFollowAnchor(object3D);
+    if (animate) {
+      animate(this._cameraTarget.position, anchor, duration);
+      return;
+    }
+    this._cameraTarget.position.copy(anchor);
+  }
+
+  syncFollowTarget(): void {
+    if (!this._followObject) return;
+    this._cameraTarget.position.copy(this.resolveFollowAnchor(this._followObject));
+  }
+
+  dispose(): void {
+    this.offFollowObject();
+  }
+
+  private resolveFollowAnchor(object3D: THREE.Object3D): THREE.Vector3 {
+    if (this._followAnchorNode) {
+      this._followAnchorNode.updateWorldMatrix(true, false);
+      this._followAnchorNode.getWorldPosition(this._followWorldPos);
+      return this._followWorldPos;
+    }
+    object3D.updateWorldMatrix(true, false);
+    if (this._followLocalAnchor) {
+      this._followWorldPos
+        .copy(this._followLocalAnchor)
+        .applyMatrix4(object3D.matrixWorld);
+      return this._followWorldPos;
+    }
+    this._followBounds.setFromObject(object3D);
+    if (!this._followBounds.isEmpty()) {
+      this._followBounds.getCenter(this._followCenter);
+      return this._followCenter;
+    }
+    object3D.getWorldPosition(this._followWorldPos);
+    return this._followWorldPos;
+  }
+}

@@ -1,0 +1,54 @@
+# Plan: 뒤로가기 시 캔버스 멈춤 수정 (bfcache 대응)
+
+## Context
+브라우저 뒤로가기 버튼을 누르면 Three.js 캔버스가 멈추는 문제. 근본 원인은 `app.ts`의 `beforeunload` 리스너가 bfcache 진입을 차단하고 엔진을 조기 파괴하는 것. Lenis도 bfcache 복원 후 RAF 체인이 끊어짐.
+
+## 변경 파일 2개
+
+### 1. `resource/ts/app.ts` ✅ 완료
+- `beforeunload` → `pagehide + !e.persisted` 로 교체
+- `pageshow + e.persisted` 에서 `AppManager.init()` 재호출 추가
+
+### 2. `resource/ts/lib/lenis/LenisRuntime.ts`
+`onInit()`에 pageshow 리스너 등록, `onDispose()`에서 제거.
+
+```typescript
+// 필드 추가 (line 21 이후)
+private _pageshowListenerAttached = false;
+private readonly _pageshowHandler = (e: PageTransitionEvent): void => {
+  if (!e.persisted) return;
+  if (!this.instance) return;
+  if (this.rafId !== null) {
+    FrameScheduler.cancel(this.rafId);
+    this.rafId = null;
+  }
+  const onRaf = (time: number): void => {
+    this.instance?.raf(time);
+    this._syncScrollTrigger();
+    this.rafId = FrameScheduler.request(onRaf);
+  };
+  this.rafId = FrameScheduler.request(onRaf);
+};
+```
+
+`onInit()` 끝 (line 99 이후):
+```typescript
+if (!this._pageshowListenerAttached) {
+  window.addEventListener("pageshow", this._pageshowHandler);
+  this._pageshowListenerAttached = true;
+}
+```
+
+`onDispose()` 끝 (line 119 이후):
+```typescript
+if (this._pageshowListenerAttached) {
+  window.removeEventListener("pageshow", this._pageshowHandler);
+  this._pageshowListenerAttached = false;
+}
+```
+
+## 검증
+1. DevTools → Application → Back/forward cache → 페이지 bfcache 적격 확인
+2. 캔버스 페이지에서 다른 페이지로 이동 후 뒤로가기 → 캔버스 정상 동작 확인
+3. 스크롤 기반 씬 애니메이션 정상 작동 확인
+4. TypeScript: `chop npx tsc --noEmit`

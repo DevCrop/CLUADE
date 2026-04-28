@@ -1,0 +1,40 @@
+# PostCompact hook: verify @import chain integrity in core AI-consumed files.
+# Surfaces broken @path.md references via stderr so Claude can react in the next turn.
+
+$ErrorActionPreference = 'SilentlyContinue'
+
+function Get-BrokenImports {
+    param([string]$File)
+    if (-not (Test-Path $File)) { return @() }
+    $body = Get-Content $File -Raw -Encoding UTF8
+    if (-not $body) { return @() }
+    $broken = @()
+    $matches = [regex]::Matches($body, '@([^\s)]+\.md)')
+    foreach ($m in $matches) {
+        $ref = $m.Groups[1].Value
+        $abs = if ([System.IO.Path]::IsPathRooted($ref)) {
+            $ref
+        } else {
+            Join-Path (Split-Path $File -Parent) $ref
+        }
+        if (-not (Test-Path $abs)) {
+            $broken += "$File -> $ref"
+        }
+    }
+    return $broken
+}
+
+$candidates = @(
+    'D:\.claude\CLAUDE.md',
+    'D:\.claude\RTK.md'
+)
+
+$broken = @()
+foreach ($c in $candidates) { $broken += (Get-BrokenImports $c) }
+
+if ($broken.Count -gt 0) {
+    [Console]::Error.WriteLine('[postcompact-verify] broken @imports:')
+    foreach ($b in $broken) { [Console]::Error.WriteLine("  - $b") }
+}
+
+exit 0

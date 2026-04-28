@@ -1,0 +1,505 @@
+import worksIntroState from "../../../../json/works.json";
+import { MAIN_SCENE_LIGHT_STATE_DEFAULTS } from "../../../config/scene-light.config.js";
+import { sceneLights } from "../../../core/setup.js";
+import { TheatreProjectSession } from "../../../lib/theatre/TheatreProjectSession.js";
+import { TheatreSheetSession } from "../../../lib/theatre/TheatreSheetSession.js";
+import type { SceneFromState } from "../../../types/core.types.js";
+import type { SceneLightsStateSnapshot } from "../../../types/object.types.js";
+import type { TheatreProjectPort, TheatreSequencePort } from "../../../types/theatre.types.js";
+import type {
+  WorksIntroSheetStepConfig,
+  WorksIntroTheatreConfig,
+  WorksTheatrePlaybackRange,
+  WorksTheatreSnapshot,
+  WorksTheatreSheetId,
+  WorksTheatreValue,
+} from "../../../types/work.types.js";
+import { Helpers } from "../../../utils/Helpers.js";
+import {
+  readWorksTheatreConfigSource,
+  WORKS_INTRO_TRACK_DEBUG_NAMES,
+  WORKS_THEATRE_OBJECT_ID,
+  WORKS_THEATRE_PROJECT_ID,
+  WORKS_THEATRE_SHEET_IDS,
+} from "./WorksTheatreConfig.js";
+
+function sanitizeWorksTheatreState(
+  state: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (!state) return null;
+  const sheetsByIdValue = state.sheetsById;
+  if (
+    sheetsByIdValue == null ||
+    typeof sheetsByIdValue !== "object" ||
+    Array.isArray(sheetsByIdValue)
+  ) {
+    return state;
+  }
+  const sheetsById = sheetsByIdValue as Record<string, unknown>;
+  const nextSheetsById: Record<string, unknown> = {};
+  WORKS_THEATRE_SHEET_IDS.forEach((sheetId) => {
+    if (!Object.prototype.hasOwnProperty.call(sheetsById, sheetId)) return;
+    nextSheetsById[sheetId] = sheetsById[sheetId];
+  });
+  return {
+    ...state,
+    sheetsById: nextSheetsById,
+  };
+}
+
+function hasWorksTheatreSheets(
+  state: Record<string, unknown> | null,
+): state is Record<string, unknown> {
+  if (!state) return false;
+  const sheetsByIdValue = state.sheetsById;
+  if (
+    sheetsByIdValue == null ||
+    typeof sheetsByIdValue !== "object" ||
+    Array.isArray(sheetsByIdValue)
+  ) {
+    return false;
+  }
+  const sheetsById = sheetsByIdValue as Record<string, unknown>;
+  return WORKS_THEATRE_SHEET_IDS.every((sheetId) =>
+    Object.prototype.hasOwnProperty.call(sheetsById, sheetId),
+  );
+}
+
+function readWorksTheatrePrimaryState(): Record<string, unknown> | null {
+  const parsedState = worksIntroState as Record<string, unknown>;
+  const sanitizedState = sanitizeWorksTheatreState(parsedState);
+  if (!hasWorksTheatreSheets(sanitizedState)) return null;
+  return sanitizedState;
+}
+
+function readWorksTheatreStateSource(): Record<string, unknown> | null {
+  return readWorksTheatrePrimaryState();
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function readNumber(value: unknown, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return value;
+}
+
+function cloneDefaultWorksSceneLightsState(): SceneLightsStateSnapshot {
+  return {
+    ...MAIN_SCENE_LIGHT_STATE_DEFAULTS,
+    ground: {
+      position: { ...MAIN_SCENE_LIGHT_STATE_DEFAULTS.ground.position },
+      rotation: { ...MAIN_SCENE_LIGHT_STATE_DEFAULTS.ground.rotation },
+      scale: { ...MAIN_SCENE_LIGHT_STATE_DEFAULTS.ground.scale },
+      visible: MAIN_SCENE_LIGHT_STATE_DEFAULTS.ground.visible,
+    },
+  };
+}
+
+export function normalizeWorksSceneLightsState(
+  value: unknown,
+): SceneLightsStateSnapshot {
+  const defaults = cloneDefaultWorksSceneLightsState();
+  const sceneLightsState = readRecord(value);
+  const groundState = readRecord(sceneLightsState?.ground);
+  const groundPosition = readRecord(groundState?.position);
+  const groundRotation = readRecord(groundState?.rotation);
+  const groundScale = readRecord(groundState?.scale);
+
+  return {
+    visible:
+      typeof sceneLightsState?.visible === "boolean"
+        ? sceneLightsState.visible
+        : defaults.visible,
+    intensity: readNumber(
+      sceneLightsState?.intensity,
+      defaults.intensity,
+    ),
+    flightProgress: readNumber(
+      sceneLightsState?.flightProgress,
+      defaults.flightProgress,
+    ),
+    groundLight: readNumber(
+      sceneLightsState?.groundLight,
+      defaults.groundLight,
+    ),
+    rocketFillLight: readNumber(
+      sceneLightsState?.rocketFillLight,
+      defaults.rocketFillLight,
+    ),
+    rocketRimLightLeft: readNumber(
+      sceneLightsState?.rocketRimLightLeft,
+      defaults.rocketRimLightLeft,
+    ),
+    rocketRimLightRight: readNumber(
+      sceneLightsState?.rocketRimLightRight,
+      defaults.rocketRimLightRight,
+    ),
+    ground: {
+      position: {
+        x: readNumber(groundPosition?.x, defaults.ground.position.x),
+        y: readNumber(groundPosition?.y, defaults.ground.position.y),
+        z: readNumber(groundPosition?.z, defaults.ground.position.z),
+      },
+      rotation: {
+        x: readNumber(groundRotation?.x, defaults.ground.rotation.x),
+        y: readNumber(groundRotation?.y, defaults.ground.rotation.y),
+        z: readNumber(groundRotation?.z, defaults.ground.rotation.z),
+      },
+      scale: {
+        x: readNumber(groundScale?.x, defaults.ground.scale.x),
+        y: readNumber(groundScale?.y, defaults.ground.scale.y),
+        z: readNumber(groundScale?.z, defaults.ground.scale.z),
+      },
+      visible:
+        typeof groundState?.visible === "boolean"
+          ? groundState.visible
+          : defaults.ground.visible,
+    },
+  };
+}
+
+function createDefaultWorksTheatreValue(): WorksTheatreSnapshot {
+  return {
+    camera: {
+      position: { x: 0, y: 0, z: 0 },
+      target: { x: 0, y: 0, z: 0 },
+      fov: 64,
+    },
+    sceneLights: cloneDefaultWorksSceneLightsState(),
+    window: {
+      position: { x: 0, y: 0, z: -10 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 20, y: 20, z: 20 },
+      visible: true,
+    },
+  };
+}
+
+function normalizeWorksTheatreValue(
+  value: Record<string, unknown> | null,
+): WorksTheatreSnapshot {
+  const defaults = createDefaultWorksTheatreValue();
+  const state = value ?? {};
+  const camera = readRecord(state.camera);
+  const cameraPosition = readRecord(camera?.position);
+  const cameraTarget = readRecord(camera?.target);
+  const sceneLightsState = readRecord(state.sceneLights);
+  const windowState = readRecord(state.window);
+  const windowPosition = readRecord(windowState?.position);
+  const windowRotation = readRecord(windowState?.rotation);
+  const windowScale = readRecord(windowState?.scale);
+  return {
+    camera: {
+      position: {
+        x: readNumber(cameraPosition?.x, defaults.camera.position.x),
+        y: readNumber(cameraPosition?.y, defaults.camera.position.y),
+        z: readNumber(cameraPosition?.z, defaults.camera.position.z),
+      },
+      target: {
+        x: readNumber(cameraTarget?.x, defaults.camera.target.x),
+        y: readNumber(cameraTarget?.y, defaults.camera.target.y),
+        z: readNumber(cameraTarget?.z, defaults.camera.target.z),
+      },
+      fov: readNumber(camera?.fov, defaults.camera.fov),
+    },
+    sceneLights: normalizeWorksSceneLightsState(sceneLightsState),
+    window: {
+      position: {
+        x: readNumber(windowPosition?.x, 0),
+        y: readNumber(windowPosition?.y, 0),
+        z: readNumber(windowPosition?.z, -10),
+      },
+      rotation: {
+        x: readNumber(windowRotation?.x, 0),
+        y: readNumber(windowRotation?.y, 0),
+        z: readNumber(windowRotation?.z, 0),
+      },
+      scale: {
+        x: readNumber(windowScale?.x, 20),
+        y: readNumber(windowScale?.y, 20),
+        z: readNumber(windowScale?.z, 20),
+      },
+      visible:
+        typeof windowState?.visible === "boolean" ? windowState.visible : true,
+    },
+  };
+}
+
+function readWorksInitialObjectState(
+  stateSource: Record<string, unknown> | null,
+  sheetId: WorksTheatreSheetId,
+): WorksTheatreSnapshot {
+  const defaults = createDefaultWorksTheatreValue();
+  if (!stateSource) return defaults;
+  const sheetsById = readRecord(stateSource.sheetsById);
+  if (!sheetsById) return defaults;
+  const sheetState = readRecord(sheetsById[sheetId]);
+  if (!sheetState) return defaults;
+  const staticOverrides = readRecord(sheetState.staticOverrides);
+  const byObject = readRecord(staticOverrides?.byObject);
+  const objectState = readRecord(byObject?.[WORKS_THEATRE_OBJECT_ID]);
+  if (!objectState) return defaults;
+  return normalizeWorksTheatreValue(objectState);
+}
+
+class WorksTheatreRuntime {
+  private static _instance: WorksTheatreRuntime | null = null;
+
+  private readonly _config: WorksIntroTheatreConfig;
+  private readonly _stateSource: Record<string, unknown> | null;
+  private readonly _project: TheatreProjectPort<Record<string, unknown>, Record<string, unknown>>;
+  private readonly _ready: Promise<void>;
+  private readonly _objectBySheetId = new Map<WorksTheatreSheetId, { value: Record<string, unknown> }>();
+  private readonly _sequenceBySheetId = new Map<WorksTheatreSheetId, TheatreSequencePort>();
+  private readonly _lengthBySheetId = new Map<WorksTheatreSheetId, number>();
+  private readonly _cameraPlaybackRangeBySheetId = new Map<
+    WorksTheatreSheetId,
+    WorksTheatrePlaybackRange
+  >();
+
+  private constructor() {
+    this._config = readWorksTheatreConfigSource();
+    this._stateSource = readWorksTheatreStateSource();
+    this._project = TheatreProjectSession.open<Record<string, unknown>, Record<string, unknown>>(
+      WORKS_THEATRE_PROJECT_ID,
+      this._stateSource ? { state: this._stateSource } : undefined,
+    );
+    this._ready = Promise.resolve(this._project.ready).then(() => undefined);
+    WORKS_THEATRE_SHEET_IDS.forEach((sheetId) => {
+      const sheet = TheatreSheetSession.open(this._project, sheetId);
+      const object = sheet.object(
+        WORKS_THEATRE_OBJECT_ID,
+        readWorksInitialObjectState(
+          this._stateSource,
+          sheetId,
+        ) as unknown as Record<string, unknown>,
+        { reconfigure: true },
+      );
+      const length = this._resolveSheetLength(sheetId, sheet.sequence);
+      const cameraRange = this._resolveCameraPreviewRange(sheetId, length);
+      this._objectBySheetId.set(sheetId, object);
+      this._sequenceBySheetId.set(sheetId, sheet.sequence);
+      this._lengthBySheetId.set(sheetId, length);
+      if (cameraRange) {
+        this._cameraPlaybackRangeBySheetId.set(sheetId, cameraRange);
+      }
+    });
+  }
+
+  static getInstance(): WorksTheatreRuntime {
+    if (!WorksTheatreRuntime._instance) {
+      WorksTheatreRuntime._instance = new WorksTheatreRuntime();
+    }
+    return WorksTheatreRuntime._instance;
+  }
+
+  readConfig(): WorksIntroTheatreConfig {
+    return this._config;
+  }
+
+  async ready(): Promise<void> {
+    await this._ready;
+  }
+
+  readState(sheetId: WorksTheatreSheetId, progress: number): WorksTheatreValue {
+    const range = this.readCameraPlaybackRange(sheetId);
+    const position =
+      range.start + (range.end - range.start) * Helpers.clamp01(progress);
+    const state = this._readSheetState(sheetId, position);
+    return {
+      camera: {
+        position: { ...state.camera.position },
+        fov: state.camera.fov,
+      },
+      cameraTarget: {
+        position: { ...state.camera.target },
+      },
+      sceneLights: {
+        ...state.sceneLights,
+        ground: {
+          position: { ...state.sceneLights.ground.position },
+          rotation: { ...state.sceneLights.ground.rotation },
+          scale: { ...state.sceneLights.ground.scale },
+          visible: state.sceneLights.ground.visible,
+        },
+      },
+      window: {
+        ...state.window,
+      },
+    };
+  }
+
+  readStepState(
+    step: WorksIntroSheetStepConfig | null,
+    progress: number,
+  ): SceneFromState {
+    const sheetId = step?.sheetId ?? "works";
+    const progressStart = step?.progressStart ?? 0;
+    const progressEnd = step?.progressEnd ?? 0;
+    const state = this.readState(
+      sheetId,
+      progressStart + (progressEnd - progressStart) * Helpers.clamp01(progress),
+    );
+    return {
+      camera: state.camera,
+      cameraTarget: state.cameraTarget,
+      [sceneLights]: {
+        ...state.sceneLights,
+        ground: {
+          position: { ...state.sceneLights.ground.position },
+          rotation: { ...state.sceneLights.ground.rotation },
+          scale: { ...state.sceneLights.ground.scale },
+          visible: state.sceneLights.ground.visible,
+        },
+      } as Record<string, unknown>,
+      window: state.window,
+    };
+  }
+
+  private readCameraPlaybackRange(sheetId: WorksTheatreSheetId): WorksTheatrePlaybackRange {
+    const length = this._lengthBySheetId.get(sheetId) ?? 0;
+    const configuredRange = this._cameraPlaybackRangeBySheetId.get(sheetId);
+    if (!configuredRange) {
+      return {
+        start: 0,
+        end: Number.isFinite(length) && length > 0 ? length : 0,
+      };
+    }
+    return {
+      start: this._clampPosition(configuredRange.start, length),
+      end: this._clampPosition(configuredRange.end, length),
+    };
+  }
+
+  private _readSheetState(
+    sheetId: WorksTheatreSheetId,
+    position: number,
+  ): WorksTheatreSnapshot {
+    const sequence = this._sequenceBySheetId.get(sheetId);
+    const object = this._objectBySheetId.get(sheetId);
+    if (!sequence || !object) return createDefaultWorksTheatreValue();
+    const previousPosition = sequence.position;
+    sequence.position = this._clampPosition(
+      position,
+      this._lengthBySheetId.get(sheetId) ?? 0,
+    );
+    const state = normalizeWorksTheatreValue(object.value);
+    sequence.position = previousPosition;
+    return state;
+  }
+
+  private _resolveSheetLength(
+    sheetId: WorksTheatreSheetId,
+    sequence: TheatreSequencePort,
+  ): number {
+    const directLength = typeof sequence.length === "number" ? sequence.length : null;
+    if (directLength != null && Number.isFinite(directLength) && directLength > 0) {
+      return directLength;
+    }
+    return this._readSheetLengthFromState(sheetId);
+  }
+
+  private _readSheetLengthFromState(sheetId: WorksTheatreSheetId): number {
+    if (!this._stateSource) return 0;
+    const sheetsById = readRecord(this._stateSource.sheetsById);
+    if (!sheetsById) return 0;
+    const sheetState = readRecord(sheetsById[sheetId]);
+    if (!sheetState) return 0;
+    const sequence = readRecord(sheetState.sequence);
+    if (!sequence) return 0;
+    const length = sequence.length;
+    if (typeof length !== "number" || !Number.isFinite(length) || length <= 0) {
+      return 0;
+    }
+    return length;
+  }
+
+  private _resolveCameraPreviewRange(
+    sheetId: WorksTheatreSheetId,
+    sheetLength: number,
+  ): WorksTheatrePlaybackRange | null {
+    const tracksByObject = this._readSheetTracksByObject(sheetId);
+    const objectTracks = tracksByObject?.[WORKS_THEATRE_OBJECT_ID];
+    if (!objectTracks || typeof objectTracks !== "object") return null;
+    const trackData = (objectTracks as Record<string, unknown>).trackData;
+    if (!trackData || typeof trackData !== "object") return null;
+    let minPosition = Number.POSITIVE_INFINITY;
+    let maxPosition = Number.NEGATIVE_INFINITY;
+    Object.values(trackData as Record<string, unknown>).forEach((trackState) => {
+      if (!trackState || typeof trackState !== "object") return;
+      const debugName = (trackState as Record<string, unknown>).__debugName;
+      if (
+        typeof debugName !== "string" ||
+        !WORKS_INTRO_TRACK_DEBUG_NAMES.some((path) => debugName.includes(path))
+      ) {
+        return;
+      }
+      const keyframes = (trackState as Record<string, unknown>).keyframes;
+      if (!Array.isArray(keyframes)) return;
+      const positions = keyframes
+        .map((keyframe) => {
+          if (!keyframe || typeof keyframe !== "object") return null;
+          const keyframePosition = (keyframe as Record<string, unknown>).position;
+          return typeof keyframePosition === "number" ? keyframePosition : null;
+        })
+        .filter(
+          (keyframePosition): keyframePosition is number =>
+            typeof keyframePosition === "number" && Number.isFinite(keyframePosition),
+        );
+      if (positions.length < 2) return;
+      minPosition = Math.min(minPosition, ...positions);
+      maxPosition = Math.max(maxPosition, ...positions);
+    });
+    if (!Number.isFinite(minPosition) || !Number.isFinite(maxPosition)) return null;
+    if (maxPosition <= minPosition) return null;
+    return {
+      start: this._clampPosition(minPosition, sheetLength),
+      end: this._clampPosition(maxPosition, sheetLength),
+    };
+  }
+
+  private _readSheetTracksByObject(
+    sheetId: WorksTheatreSheetId,
+  ): Record<string, unknown> | null {
+    if (!this._stateSource) return null;
+    const sheetsById = readRecord(this._stateSource.sheetsById);
+    if (!sheetsById) return null;
+    const sheetState = readRecord(sheetsById[sheetId]);
+    if (!sheetState) return null;
+    const sequence = readRecord(sheetState.sequence);
+    if (!sequence) return null;
+    return readRecord(sequence.tracksByObject);
+  }
+
+  private _clampPosition(position: number, length: number): number {
+    if (!Number.isFinite(length) || length <= 0) return 0;
+    if (!Number.isFinite(position)) return 0;
+    if (position <= 0) return 0;
+    if (position >= length) return length;
+    return position;
+  }
+}
+
+export function readWorksTheatreConfig(): WorksIntroTheatreConfig {
+  return WorksTheatreRuntime.getInstance().readConfig();
+}
+
+export async function ensureWorksTheatreRuntimeReady(): Promise<void> {
+  await WorksTheatreRuntime.getInstance().ready();
+}
+
+export function readWorksTheatreAuthorStateSource(): Record<string, unknown> | null {
+  return readWorksTheatrePrimaryState();
+}
+
+export function readWorksTheatreStepState(
+  step: WorksIntroSheetStepConfig | null,
+  progress: number,
+): SceneFromState {
+  return WorksTheatreRuntime.getInstance().readStepState(step, progress);
+}

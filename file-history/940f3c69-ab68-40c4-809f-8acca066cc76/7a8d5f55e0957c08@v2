@@ -1,0 +1,76 @@
+---
+name: 프로젝트 문서·규칙·brand 파일 인덱스
+description: .claude/rules, .claude/skills, .claude/agents, brand/*, .codex/, BEST_PRACTICES.md 위치와 한 줄 요약
+type: reference
+originSessionId: 940f3c69-ab68-40c4-809f-8acca066cc76
+---
+NINEONELABS 프로젝트 내 문서·설정·brand 파일 빠른 참조.
+
+## .claude/rules/ (파일타입별 개발 규칙)
+
+| 파일 | 한 줄 요약 |
+|---|---|
+| `.claude/rules/frontend.md` | Vite/TS/Three.js 규칙 — 타입은 `*.types.ts`만, 3D 패턴, npm build 금지 |
+| `.claude/rules/php.md` | 커스텀 MVC(PHP 7.4) 규칙 — closure 라우팅, `nb_` 프리픽스, 마이그레이션 필수 |
+| `.claude/rules/scss.md` | BEM, 토큰 기반, `_init.scss` 전역 0값, 빌드 금지 |
+
+## .claude/agents/ (커스텀 에이전트)
+
+| 에이전트 | 트리거/제한 |
+|---|---|
+| `php-explorer` | PHP 라우팅·뷰·DB 구조 탐색·감사 (Read/Grep/Glob만) |
+| `scene-explorer` | Three.js 씬·소유권·셰이더 탐색 (Read/Grep/Glob만) |
+
+## .claude/skills/ (재사용 작업 템플릿)
+
+| 스킬 | 트리거 |
+|---|---|
+| `migration` | DB 스키마 변경 — `database/migrations/YYYYMMDD_*.sql` 또는 PHP 마이그레이션 생성 |
+| `new-route` | 신규 공개 페이지 — 라우트 등록 → 뷰 생성 → TS 전략(선택) |
+
+## .claude/ 기타
+
+- **`.claude/BEST_PRACTICES.md`** — Part A: TS 아키텍처(god objects 현황, 확장 결정트리, SOLID, Three.js 최적화, 반응형) / Part B: Claude Code 하네스(토큰 효율, 훅, 설정)
+- **`.claude/settings.json`** — 허용 도구(git/chop/tsc/docker/npm), TS 파일 Edit 후 자동 tsc 검사 훅
+- **`.claude/settings.local.json`** — 로컬 오버라이드
+
+## brand/ 파일 (BRAND.md가 라우팅)
+
+| 파일 | 한 줄 책임 |
+|---|---|
+| `brand/README.md` | brand 폴더 네비게이션·로딩 전략·비협상 규칙 |
+| `brand/identity.md` | 정체성·스페이스 은유·서비스 범위 (WEB·APP·BRANDING·UI/UX·MAINTENANCE) |
+| `brand/voice.md` | 톤(대담함·정확·증명-주도)·피하는 패턴·리듬 룰 |
+| `brand/personas.md` | 언어 에디터 + 브랜드 리뷰어 2 페르소나 체크리스트 |
+| `brand/vocabulary.md` | NINEONELABS 표기·기술 소문자·개념어휘 테스트 |
+| `brand/homepage-flow.md` | 홈페이지 10구간 순서·기승전결 그룹핑 |
+| `brand/review-algorithm.md` | 복사 승인/삭제/이동 11단계 알고리즘 |
+| `brand/services.md` | 5 서비스 매니페스트·구체 산출물·최적 클라이언트 |
+| `brand/client-archetypes.md` | 클라이언트 상황·목표·공포·공감 언어 |
+| `brand/positioning.md` | 핵심 포지셔닝·프리랜서/대행사/템플릿/제너릭 비교 |
+| `brand/proof-system.md` | 증명 공식(주장→증거→결과)·증명 타입 |
+| `brand/process.md` | Discover·Build·Orbit 3단계 방법론·역할·결과물 |
+| `brand/copy-templates.md` | 홈페이지 10섹션별 복사 방향·독자 상태·형태·피할 것 |
+
+## .codex/ 설정 (외부 Codex 런타임)
+
+| 파일 | 내용 |
+|---|---|
+| `.codex/config.toml` | 모델 gpt-5.4 / 추론 medium / 승인 on-request / 샌드박스 workspace-write |
+| `.codex/rules/default.rules` | chop, git, rg, tsc, docker compose 화이트리스트 + 정당화 |
+
+## 루트
+
+- `README.md` — Docker Compose 스택, Node 22.15+, PHP 7.4, MySQL 8.0 + 문서·스킬·에이전트 위치 명시
+
+## 작업별 참고 순서
+
+| 작업 | 읽을 순서 |
+|---|---|
+| 코드 작성 | `.claude/rules/[php\|frontend\|scss].md` → `.claude/BEST_PRACTICES.md` Part A |
+| 마이그레이션 | `/migration` skill |
+| 신규 페이지 | `/new-route` skill |
+| 복사/브랜드 | `BRAND.md` → `brand/voice.md` → `personas.md` → `review-algorithm.md` → 필요 docs |
+| 구조 감사 | `php-explorer` 또는 `scene-explorer` 에이전트 |
+
+**How to use:** 어떤 문서를 읽어야 할지 모를 때 이 인덱스부터 본다. brand/* 파일은 BRAND.md에서 task별 매핑 표 참조 권장 (default 로딩 금지).

@@ -1,0 +1,176 @@
+<?php
+section('content');
+
+$buildWorksReturnHref = static function (): string {
+    $viewRaw = strtolower(trim((string) ($_GET['view'] ?? 'scatter')));
+    $view = in_array($viewRaw, ['grid', 'scatter'], true) ? $viewRaw : 'scatter';
+    $category = trim((string) ($_GET['category'] ?? ''));
+    $pageValidated = filter_var($_GET['page'] ?? 1, FILTER_VALIDATE_INT);
+    $page = $pageValidated === false ? 1 : max(1, (int) $pageValidated);
+
+    $params = ['view' => $view];
+    if ($category !== '') {
+        $params['category'] = $category;
+    }
+    if ($page > 1) {
+        $params['page'] = $page;
+    }
+
+    $query = http_build_query($params);
+    return '/works' . ($query !== '' ? '?' . $query : '');
+};
+
+$worksReturnHref = $buildWorksReturnHref();
+$work = is_array($work ?? null) ? $work : null;
+?>
+<section class="no-sub-work-view">
+    <div class="no-container-2xl">
+        <?= include_view('components.button', [
+          'variant' => 'prev-button',
+          'text' => 'Previous',
+          'href' => $worksReturnHref,
+          'class' => 'no-sub-work-view__prev',
+        ]) ?>
+        <?php if ($work === null): ?>
+        <div class="no-sub-work-view__inner">
+            <div class="no-sub-work-view__content-wrap">
+                <div class="no-sub-work-view__content">
+                    <?= include_view('components.button.corner-markup', ['class' => 'no-sub-work-view__corner']) ?>
+                    <div class="no-sub-work-view__content__overview">
+                        <h2 class="no-sub-work-view__content-title">WORK NOT FOUND</h2>
+                        <p class="no-sub-work-view__content-description">요청한 작업 데이터를 찾을 수 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
+        <?php
+        $title = e((string) ($work['title'] ?? ''));
+        $services = is_array($work['services'] ?? null) ? $work['services'] : [];
+        $categories = is_array($work['categories'] ?? null) ? $work['categories'] : [];
+        $client = e((string) ($work['client'] ?? '-'));
+        $updatedAtLabel = e((string) ($work['updatedAtLabel'] ?? '-'));
+        $linkUrl = is_string($work['linkUrl'] ?? null) ? $work['linkUrl'] : null;
+        $overviewText = trim((string) ($work['overviewText'] ?? ''));
+        $contentsHtml = is_string($work['contentsHtml'] ?? null) ? $work['contentsHtml'] : null;
+        $detailImages = is_array($work['detailImages'] ?? null) ? $work['detailImages'] : [];
+        $award = is_array($work['award'] ?? null) ? $work['award'] : null;
+        $thumbnailVideo = is_string($work['thumbnailVideo'] ?? null) ? $work['thumbnailVideo'] : null;
+        $thumbnailImage = e((string) ($work['thumbnailImage'] ?? ''));
+        ?>
+        <div class="no-sub-work-view__inner">
+            <div class="no-sub-work-view__head">
+                <h2 class="no-sub-work-view__title"><?= $title ?></h2>
+                <?php if ($award !== null): ?>
+                <div class="no-sub-work-view__award">
+                    <?php if (!empty($award['icon'])): ?>
+                    <img src="<?= e((string) $award['icon']) ?>" alt="<?= e((string) $award['label']) ?>">
+                    <?php endif; ?>
+                    <span><?= e((string) $award['label']) ?></span>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="no-sub-work-view__info">
+                <ul class="no-sub-work-view__info-list">
+                    <li class="no-sub-work-view__info-item">
+                        <span class="no-sub-work-view__info-label">SERVICE</span>
+                        <ul class="no-sub-work-view__info-sub-list">
+                            <?php foreach ($services as $service): ?>
+                            <li class="no-sub-work-view__info-sub-item no-tag-rect">
+                                <span class="no-sub-work-view__info-sub-text"><?= e((string) $service) ?></span>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </li>
+                    <li class="no-sub-work-view__info-item">
+                        <span class="no-sub-work-view__info-label">CLIENT</span>
+                        <span class="no-sub-work-view__info-value"><?= $client ?></span>
+                    </li>
+                    <li class="no-sub-work-view__info-item">
+                        <span class="no-sub-work-view__info-label">CATEGORY</span>
+                        <ul class="no-sub-work-view__info-sub-list">
+                            <?php foreach ($categories as $category): ?>
+                            <li class="no-sub-work-view__info-sub-item no-tag-rect">
+                                <span class="no-sub-work-view__info-sub-text"><?= e((string) ($category['label'] ?? '')) ?></span>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </li>
+                    <li class="no-sub-work-view__info-item">
+                        <span class="no-sub-work-view__info-label">UPDATE</span>
+                        <span class="no-sub-work-view__info-value"><?= $updatedAtLabel ?></span>
+                    </li>
+                </ul>
+                <?php if ($linkUrl !== null): ?>
+                <div class="no-sub-work-view__visit-bar">
+                    <?= include_view('components.button', [
+                    'variant' => 'corner',
+                    'tag' => 'a',
+                    'text' => 'Visit Website',
+                    'href' => $linkUrl,
+                    'target' => '_blank',
+                    'class' => 'no-sub-work-view__button',
+                    'iconName' => 'arrow-right',
+                    'iconPosition' => 'after',
+                    'extraAttrs' => ['rel' => 'noopener noreferrer'],
+                ]) ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="no-sub-work-view__content-wrap">
+                <div class="no-sub-work-view__thumbnail">
+                    <?= include_view('components.button.corner-markup', ['class' => 'no-sub-work-view__corner']) ?>
+                    <?php if ($thumbnailVideo !== null): ?>
+                    <video src="<?= e($thumbnailVideo) ?>" autoplay muted loop playsinline></video>
+                    <?php else: ?>
+                    <?= render_uploaded_image(
+                        (string) ($work['thumbnailImage'] ?? ''),
+                        $title,
+                        '',
+                        'eager'
+                    ) ?>
+                    <?php endif; ?>
+                </div>
+                <div class="no-sub-work-view__content">
+                    <?= include_view('components.button.corner-markup', ['class' => 'no-sub-work-view__corner']) ?>
+                    <?php if ($overviewText !== ''): ?>
+                    <div class="no-sub-work-view__content__overview">
+                        <h2 class="no-sub-work-view__content-title">OVERVIEW</h2>
+                        <p class="no-sub-work-view__content-description"><?= nl2br(e($overviewText)) ?></p>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($contentsHtml !== null): ?>
+                    <div class="no-sub-work-view__content__overview">
+                        <h2 class="no-sub-work-view__content-title">CONTENTS</h2>
+                        <div class="no-sub-work-view__content-description"><?= $contentsHtml ?></div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <div class="no-sub-work-view__content__image">
+                    <?php foreach ($detailImages as $detailImage): ?>
+                    <?= render_uploaded_image((string) $detailImage, $title, '', 'lazy') ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div class="no-view-more">
+                <?= include_view('components.button', [
+              'variant' => 'corner',
+              'tag' => 'a',
+              'text' => 'Go To List',
+              'href' => $worksReturnHref,
+              'class' => 'no-sub-work-view__list-btn',
+              'iconName' => 'plus',
+              'iconPosition' => 'before',
+              'icon_action' => 'rotate',
+          ]) ?>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

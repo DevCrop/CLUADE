@@ -1,0 +1,102 @@
+# Plan: Scatter 전체 모드 — 수상작·중요작 중앙 배치
+
+## Context
+
+현재 상황:
+- SQL은 `sort_no DESC, id DESC` 단순 정렬 → is_awarded 구분 없음
+- TypeScript `applyCategory(null)` (전체)는 `scatterPositions`(row-major) 사용
+  → index 0 = 격자 **좌하단**. 최우선 카드가 중앙이 아닌 구석에 배치됨
+- 카테고리 필터 모드는 이미 `categoryScatterPositions`(중앙 기준 가까운 순)를 사용 → index 0이 중앙
+
+목표: "전체" 모드에서도 is_awarded='Y' + sort_no 높은 작업이 화면 정중앙에 오도록
+
+---
+
+## 변경 방향
+
+### 사용자 제안 검토
+
+| 방안 | 평가 |
+|------|------|
+| is_awarded + sort_no 정렬 | **채택** — 스키마 변경 없이 즉시 적용 가능 |
+| 대기업 우선 | 미채택 — client_tier 같은 새 컬럼 필요, 현재 스키마 없음 |
+| award_type별 가중치 (GDWEB=1, i-AWARD=2) | 선택지로 언급하되, 단순화를 위해 is_awarded 이진 분류로 충분 |
+
+**핵심 인사이트**: 카테고리 필터 모드는 이미 `categoryScatterPositions`(원점 가까운 순)로 배치 →
+"전체" 모드도 동일하게 전환하면 **SQL 상위 index가 곧 화면 중앙**이 된다.
+→ SQL ORDER BY만 잘 짜면 추가 로직 없이 해결.
+
+---
+
+## 변경 사항
+
+### 1. SQL — `api/works.php:283`
+
+```php
+// Before
+ORDER BY `sort_no` DESC, `id` DESC
+
+// After
+ORDER BY (`is_awarded` = 'Y') DESC, `sort_no` DESC, `id` DESC
+```
+
+- is_awarded='Y' 항목이 sort_no 순으로 먼저, 이후 미수상 항목이 sort_no 순으로
+- `is_awarded`는 SELECT 목록에 없어도 ORDER BY에 사용 가능 (MySQL 표준)
+- 카테고리 필터 모드에서도 동일 쿼리 사용 → 필터 후에도 수상작이 중앙 우선
+
+### 2. TypeScript — `WorksSceneManager.ts:570-571`
+
+```typescript
+// Before
+const scatterPositions =
+  category === null ? this.scatterPositions : this.categoryScatterPositions;
+
+// After
+const scatterPositions = this.categoryScatterPositions;
+```
+
+- "전체" 모드도 중앙 기준 좌표 배열 사용
+- 카테고리 모드는 동작 그대로 (이미 categoryScatterPositions 사용 중)
+
+### 3. TypeScript — `WorksSceneManager.ts:770` (초기 메시 생성)
+
+```typescript
+// Before
+const cardResources = this.meshRuntime.create(
+  scene,
+  this.projects,
+  this.scatterPositions,
+  this.config,
+);
+
+// After
+const cardResources = this.meshRuntime.create(
+  scene,
+  this.projects,
+  this.categoryScatterPositions,
+  this.config,
+);
+```
+
+- 초기 배치와 target 배치를 일치시켜 페이지 로드 시 카드 이동 글리치 방지
+- `_rebuildScatterPositions()` + `applyCategory()` 직후에 호출되므로 좌표 일관성 유지
+
+---
+
+## 파일 목록
+
+| 파일 | 변경 줄 | 내용 |
+|------|---------|------|
+| `api/works.php` | 283 | ORDER BY is_awarded 추가 |
+| `resource/ts/pages/works/render/WorksSceneManager.ts` | 570-571 | 전체 모드 좌표 배열 변경 |
+| `resource/ts/pages/works/render/WorksSceneManager.ts` | 770 | 초기 메시 좌표 배열 변경 |
+
+---
+
+## 검증
+
+1. dev server(`http://localhost:8888/works`) 열기
+2. 전체 모드: 화면 정중앙 카드가 is_awarded='Y' + 높은 sort_no인지 확인
+3. 카테고리 필터 전환: 필터 적용 시 해당 카테고리 내 상위 sort_no가 중앙에 오는지 확인
+4. 필터 → 전체 전환 애니메이션 이상 없는지 확인
+5. TypeScript: `chop node_modules/.bin/tsc --noEmit`

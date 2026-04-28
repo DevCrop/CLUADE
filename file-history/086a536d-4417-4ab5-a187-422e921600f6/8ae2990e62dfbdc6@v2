@@ -1,0 +1,22 @@
+# Archive plan files older than 60 days into D:\.claude\plans\archive\.
+# Move only — never delete. Idempotent.
+
+$ErrorActionPreference = 'SilentlyContinue'
+$plansDir = 'D:\.claude\plans'
+$archiveDir = Join-Path $plansDir 'archive'
+$cutoff = (Get-Date).AddDays(-60)
+
+if (-not (Test-Path $archiveDir)) {
+    New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
+}
+
+Get-ChildItem -Path $plansDir -Filter '*.md' -File |
+    Where-Object { $_.LastWriteTime -lt $cutoff } |
+    ForEach-Object {
+        $dest = Join-Path $archiveDir $_.Name
+        if (-not (Test-Path $dest)) {
+            Move-Item -Path $_.FullName -Destination $dest -Force
+        }
+    }
+
+exit 0

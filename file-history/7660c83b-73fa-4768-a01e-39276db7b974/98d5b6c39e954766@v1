@@ -1,0 +1,85 @@
+export const CLOUD_TEXTURES = {
+  perlinTextureUrl: "/resource/images/texture/clouds/uniform9_img.png",
+  noiseTextureUrl: "/resource/images/texture/clouds/uniform10_img.png",
+} as const;
+
+export const BACKGROUND_APP_DOM = {
+  rendererFallbackBackground:
+    "linear-gradient(180deg, #050813 0%, #0b1834 52%, #17284a 100%)",
+  portfolioHeadSelector:
+    '.no-main-portfolio[data-scene="worksDetail"] .no-main-portfolio__head',
+  portfolioGallerySelector:
+    '.no-main-portfolio-gallery[data-scene="worksFinal"]',
+  worksOverlaySelector: ".no-overlay",
+} as const;
+
+export const WORKS_DETAIL_HEAD_TRANSITION = {
+  revealStart: 0.12,
+  revealStagger: 0.12,
+  hideStart: 0.92,
+  hideStagger: 0.08,
+  hideSettleDuration: 1.05,
+} as const;
+
+export const CONTACT_HEAD_TRANSITION = {
+  revealStart: 0.18,
+  revealStagger: 0.14,
+  hideStart: 0.78,
+  hideStagger: 0.1,
+  hideSettleDuration: 1.12,
+} as const;
+
+export const BACKGROUND_CLOUD_PLANE_OPTIONS = {
+  width: 5,
+  height: 5,
+  segments: 1,
+  curveDepth: 0,
+  curvePower: 1,
+} as const;
+
+export const TRANSITION_VEIL_PLANE = {
+  width: 840,
+  height: 620,
+  segments: 1,
+  curveDepth: 0,
+  curvePower: 1,
+  distance: 16,
+} as const;
+
+export const TRANSITION_VEIL_SHADER = {
+  textures: CLOUD_TEXTURES,
+  opacity: 0.96,
+  noiseStrength: 1,
+  revealSoftness: 0.24,
+  size: { x: 2.4, y: 1.8 },
+} as const;
+
+export const CLOUD_SHADER_BASE = {
+  textures: CLOUD_TEXTURES,
+  ratio: 2,
+  size: { x: 1, y: 1 },
+  chapter: 0,
+  transition: 0,
+} as const;
+
+export const SCENE_TRANSITION_VEIL_SEQUENCE = {
+  cover: {
+    from: 1,
+    to: 0,
+    duration: 1.26,
+    ease: "easeInOutCubic",
+  },
+  hold: {
+    from: 0,
+    to: 0,
+    duration: 0.88,
+    ease: "easeInOutCubic",
+  },
+  reveal: {
+    from: 0,
+    to: 1,
+    duration: 1.92,
+    ease: "easeInOutCubic",
+  },
+  inactiveProgress: 1,
+} as const;

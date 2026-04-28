@@ -1,0 +1,202 @@
+﻿<?php
+
+include_once "../../../inc/lib/base.class.php";
+require_once "../../Model/BoardModel.php";
+
+try {
+    $no = isset($_REQUEST['no']) ? (int) $_REQUEST['no'] : 0;
+    $data = BoardModel::findById($no);
+    if ($data === null) {
+        throw new Exception('정보를 찾을 수 없습니다.');
+    }
+
+    $boardNo = (int) $data['board_no'];
+    $boardInfo = getBoardInfoByNo($boardNo);
+    $comments = BoardModel::getBoardCommentList($NO_SITE_UNIQUE_KEY, $no);
+
+    include_once "../../inc/admin.title.php";
+    include_once "../../inc/admin.css.php";
+    include_once "../../inc/admin.js.php";
+} catch (Exception $e) {
+    header('Location: ./board.list.php');
+    exit;
+}
+?>
+</head>
+
+<body data-page="board">
+    <div class="no-wrap">
+        <?php include_once "../../inc/admin.header.php"; ?>
+
+        <main class="no-app no-container">
+            <?php include_once "../../inc/admin.drawer.php"; ?>
+
+            <form id="frm" name="frm" method="post" enctype="multipart/form-data">
+                <input type="hidden" id="mode" name="mode" value="">
+                <input type="hidden" id="no" name="no" value="<?= htmlspecialchars((string) $data['no'], ENT_QUOTES, 'UTF-8') ?>">
+                <input type="hidden" id="board_no" name="board_no" value="<?= htmlspecialchars((string) $boardNo, ENT_QUOTES, 'UTF-8') ?>">
+
+                <section class="no-content">
+                    <div class="no-toolbar">
+                        <div class="no-toolbar-container no-flex-stack">
+                            <div class="no-page-indicator">
+                                <h1 class="no-page-title">댓글 관리</h1>
+                                <div class="no-breadcrumb-container">
+                                    <ul class="no-breadcrumb-list">
+                                        <li class="no-breadcrumb-item"><span>게시글 관리</span></li>
+                                        <li class="no-breadcrumb-item"><span>댓글 관리</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="no-toolbar-container">
+                        <div class="no-card">
+                            <div class="no-card-header no-card-header--detail">
+                                <h2 class="no-card-title">댓글 관리</h2>
+                            </div>
+                            <div class="no-card-body no-admin-column no-admin-column--detail">
+                                <div class="no-admin-block">
+                                    <h3 class="no-admin-title"><label for="board">게시판</label></h3>
+                                    <div class="no-admin-content">
+                                        <input type="text" name="board" id="board" class="no-input--detail" value="<?= htmlspecialchars((string) ($boardInfo[0]['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="no-admin-block">
+                                    <h3 class="no-admin-title"><label for="title">제목</label></h3>
+                                    <div class="no-admin-content">
+                                        <input type="text" name="title" id="title" class="no-input--detail" value="<?= htmlspecialchars((string) $data['title'], ENT_QUOTES, 'UTF-8') ?>" placeholder="제목" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="no-admin-block">
+                                    <h3 class="no-admin-title"><label for="write_name">작성자</label></h3>
+                                    <div class="no-admin-content">
+                                        <input type="text" name="write_name" id="write_name" class="no-input--detail" value="<?= htmlspecialchars((string) $data['write_name'], ENT_QUOTES, 'UTF-8') ?>" placeholder="작성자" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="no-admin-block">
+                                    <h3 class="no-admin-title"><label for="contents">내용</label></h3>
+                                    <div class="no-admin-content">
+                                        <div style="border: 1px solid var(--border-color); border-radius: 0.4rem; padding: 0.6rem 1.2rem; max-width: 100%; width: 100%; height: 15rem; overflow-y: auto">
+                                            <?= htmlspecialchars_decode((string) $data['contents']) ?>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="no-admin-block">
+                                    <h3 class="no-admin-title"><label for="comment">댓글</label></h3>
+                                    <div class="no-admin-content file">
+                                        <div class="admin-flex">
+                                            <textarea style="height: 15rem; overflow-y: auto" name="comment" id="comment" class="no-input--detail" placeholder="댓글 내용을 입력해 주세요."></textarea>
+                                            <?php if (!$role->isReadOnly()): ?>
+                                            <div style="margin-top:2rem">
+                                                <button type="button" class="no-btn no-btn--main" onclick="doRegSave();">등록</button>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="no-admin-block">
+                                    <h3 class="no-admin-title"><strong>등록된 댓글</strong></h3>
+                                    <div class="no-admin-content">
+                                        <ul class="no-cmt-list">
+                                            <?php foreach ($comments as $comment): ?>
+                                            <li class="no-cmt-item">
+                                                <div class="no-cmt-item__info">
+                                                    <span><?= htmlspecialchars((string) $comment['write_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                    <span><?= (new DateTime((string) $comment['regdate']))->format('Y-m-d') ?></span>
+                                                </div>
+                                                <div class="no-cmt-item__content"><?= htmlspecialchars_decode((string) $comment['contents']) ?></div>
+                                                <?php if (!$role->isReadOnly()): ?>
+                                                <div class="no-cmt-item-btn">
+                                                    <button type="button" class="no-btn no-btn--sm no-btn--delete-outline" onclick="doCommentDelete(<?= (int) $comment['no'] ?>, <?= $no ?>);">삭제</button>
+                                                </div>
+                                                <?php endif; ?>
+                                            </li>
+                                            <?php endforeach; ?>
+                                            <?php if ($comments === []): ?>
+                                            <li class="no-cmt-item">등록된 댓글이 없습니다.</li>
+                                            <?php endif; ?>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="no-items-center center">
+                                    <a href="./board.list.php" class="no-btn no-btn--big no-btn--normal">목록</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </form>
+        </main>
+
+        <script type="text/javascript" src="./js/board.comment.process.js?c=<?= $STATIC_ADMIN_JS_MODIFY_DATE ?>"></script>
+        <?php include_once "../../inc/admin.footer.php"; ?>
+    </div>
+
+    <style>
+    #board_no-button {
+        display: none;
+    }
+
+    .no-cmt-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .no-cmt-item {
+        border-bottom: 1px solid var(--border-color);
+        border-radius: 0.6rem;
+        padding: 2.4rem 1.6rem;
+    }
+
+    .no-cmt-item:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .no-cmt-item:first-child {
+        padding-top: 0;
+    }
+
+    .no-cmt-item__info {
+        display: flex;
+        align-items: center;
+        gap: 1.6rem;
+        color: var(--muted);
+        font-size: 1.4rem;
+    }
+
+    .no-cmt-item__info span:nth-child(1) {
+        position: relative;
+    }
+
+    .no-cmt-item__info span:nth-child(1)::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: -0.9rem;
+        width: 0.1rem;
+        height: 1.2rem;
+        background: var(--border-color);
+        transform: translateY(-50%);
+    }
+
+    .no-cmt-item__content {
+        margin-top: 1.2rem;
+        line-height: 1.7;
+    }
+
+    .no-cmt-item-btn {
+        margin-top: 1.6rem;
+    }
+    </style>
+</body>
+
+</html>

@@ -1,0 +1,178 @@
+# Works 페이지 개선 플랜
+
+## Context
+
+Works 페이지에 6가지 개선 사항을 추가한다. DB에 `video` 컬럼이 이미 존재하고 API 응답에 `thumbnailVideo: string | null`가 이미 포함돼 있어 데이터 인프라는 준비돼 있다. 현재 `_createMedia()`는 이미지 OR 비디오 중 하나만 렌더링하는 방식이므로 hover 전환을 위한 이중 DOM 구조로 바꿔야 한다.
+
+---
+
+## 1. Hover-to-Video (Grid + Scatter)
+
+### Grid — `WorksGridFeedRuntime` ([WorksPageRuntime.ts:562](resource/ts/pages/works/runtime/WorksPageRuntime.ts))
+
+**현재 구조**: `_createMedia()` → `thumbnailImage` 있으면 `<img>`, 없으면 `<video>`  
+**목표**: `<img>`를 항상 렌더링하고, `thumbnailVideo`가 있으면 숨겨진 `<video>`를 figure에 함께 추가. hover 시 교차 전환.
+
+변경 포인트:
+- `_createMedia()` → 항상 `<img>` 반환 (image-first)
+- 새 메서드 `_attachVideoHover(li, item, figure)`:
+  - `<video>` 생성, `preload="none"`, `muted`, `loop`, `playsinline`, CSS `opacity:0` + `position:absolute inset:0`
+  - `pointerenter` → `video.src` 지정(없으면 지연 할당) → `video.play()` → CSS 클래스 `is-video-active` 전환
+  - `pointerleave` → `video.pause()` → 클래스 제거
+  - cleanup fn을 `_videoHoverCleanups: Array<() => void>` 배열에 저장
+- `dispose()` 에서 `_videoHoverCleanups` 전부 실행
+
+SCSS (`_works-canvas.scss` 또는 `_sub.scss`):
+```scss
+.no-sub-works__gallery-item__img {
+  position: relative;
+  img, video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.35s ease; }
+  video { opacity: 0; pointer-events: none; }
+  &.is-video-active img { opacity: 0; }
+  &.is-video-active video { opacity: 1; }
+}
+```
+
+### Scatter — `WorksSceneManager` ([WorksSceneManager.ts](resource/ts/pages/works/render/WorksSceneManager.ts))
+
+**목표**: `hovered` 메쉬에 `proj.thumbnailVideo`가 있으면 비디오 프레임을 CanvasTexture에 실시간 드로잉.
+
+새 내부 클래스 `WorksHoverVideoRuntime`:
+- 단일 `<video>` 엘리먼트 보유 (한 번에 하나만 호버)
+- `activate(mesh, videoUrl, texture, proj, size)`: src 세팅, `video.play()`, active 메쉬/텍스처 저장
+- `deactivate()`: `video.pause()`, static 이미지로 텍스처 복원 (`WorkCard.updateTextureImage`)
+- `drawFrame()`: `WorkCard.updateTextureVideoFrame(texture, proj, size, video)` 호출
+
+`WorkCard`에 새 static 메서드 추가:
+```ts
+static updateTextureVideoFrame(texture, proj, size, video: HTMLVideoElement): void
+// drawCardToContext에 video 프레임을 image 자리에 drawImage
+```
+
+`WorksSceneManager.update()` 루프 안에서:
+```ts
+if (this._hoverVideo.isActive()) this._hoverVideo.drawFrame();
+```
+
+`onPointerMove`에서 `hovered` 변경 시:
+```ts
+if (newHovered !== old) {
+  old && this._hoverVideo.deactivate();
+  if (newHovered?.userData.proj.thumbnailVideo) {
+    this._hoverVideo.activate(newHovered, ...);
+  }
+}
+```
+
+---
+
+## 2. Grid - 모바일에서 no-panel 숨기기
+
+`Panel` 컴포넌트가 grid 뷰에서 `_showPanel()` 호출로 표시됨. 모바일에서 불필요.
+
+**방법**: SCSS에서 breakpoint 처리 (TS 변경 불필요):
+```scss
+@include mobile {
+  .no-panel { display: none !important; }
+}
+```
+또는 Panel이 추가하는 실제 클래스명 확인 후 적용. `Panel.ts` 파일 읽어서 정확한 선택자 확인 필요.
+
+---
+
+## 3. Grid - 모바일 무한스크롤 미작동
+
+`WorksGridFeedRuntime._handleScroll`는 `window.scroll` 이벤트를 listen하고 `_isThresholdReached(list)`로 판단.
+
+**의심 원인**: 모바일에서 Lenis smooth scroll이 실제 `window.scrollY`를 업데이트하지 않거나, `getBoundingClientRect()`가 예상과 다르게 동작할 가능성.
+
+**검토 포인트**:
+- Lenis가 활성화된 경우 native scroll event가 발생 안 할 수 있음 → Lenis의 `on('scroll', ...)` API로 교체 필요 여부 확인
+- `ResponsiveRuntime`이나 `ScrollLock`에서 Lenis 참조 패턴 확인
+
+**수정 방향**:
+- `bind()` 에서 Lenis scroll 콜백도 등록 (Lenis instance를 AppManager 등에서 주입받거나 전역 접근)
+- 또는 `IntersectionObserver`로 sentinel 엘리먼트 감시 방식으로 교체 (더 견고)
+
+---
+
+## 4. Grid - 필터 모달
+
+**현재**: Grid에 filter 없음. Scatter의 filter panel은 `data-works-filter-panel` in DOM. Grid는 URL param으로 처리.
+
+**목표**: 모바일/grid에서 필터 버튼 → 풀스크린 모달 → 카테고리 선택 → 그리드 AJAX reload (Suspense overlay 포함).
+
+구현:
+- PHP view (`views/pages/works/index.php`): grid 섹션에 필터 버튼 추가 (기존 scatter filter wrap 재활용 or 별도)
+- `WorksGridFeedRuntime`에 `_bindFilterModal()` 추가:
+  - 버튼 클릭 → 모달 open (CSS + `aria-hidden`)
+  - 카테고리 선택 → `this._state.category` 업데이트 → `this.init()` 재호출
+  - init 시작~완료 동안 Suspense overlay (`data-loading` attr → CSS로 blur/spinner)
+- 모달 HTML은 JS에서 동적 생성 or PHP에서 hidden으로 포함
+- SCSS: `_works-filter-modal.scss` or 기존 `_sub.scss` 확장
+
+카테고리 목록: PHP에서 `data-categories` JSON으로 root element에 임베드하거나 별도 API 호출.
+
+---
+
+## 5. Scatter - Plane 크기 반응형
+
+**현재**: `WORK_CANVAS_CONFIG.cardWidth: 10`, `cardHeight: 6.9` 고정 (works.scene.ts:119-120)  
+`WORK_PROJECT_VISUALS`의 `w`/`h` 값도 고정 (4.4×6.2, 6.8×4.4).
+
+**수정**: `WorksSceneManager`에서 초기화 및 resize 시 viewport를 기준으로 카드 크기 스케일 계산.
+
+```ts
+// WorksSceneManager.ts
+private _resolveCardScale(viewport: WorksViewportSnapshot): number {
+  // 기준: 1440px wide = scale 1.0
+  const base = 1440;
+  return Math.min(1.0, viewport.width / base);
+}
+```
+
+`createMesh` 시 `size.w * scale`, `size.h * scale` 적용.  
+Resize 이벤트(`onResize`)에서 카드 스케일 재계산 → 각 mesh의 geometry 교체 or scale 적용.  
+**주의**: geometry 재생성은 비용이 크므로 `mesh.scale.set(s, s, 1)` 로 uniform scale 적용이 현실적.
+
+---
+
+## 6. Scatter - 모바일 드래그 응답성
+
+**현재**: `WORK_LAYOUT.velDecay: 0.92`, `camLerp: 0.055` (works.scene.ts:127-133)
+
+**문제**: 모바일에서 터치 드래그 속도/거리가 데스크탑 마우스보다 작아 느리게 느껴짐.
+
+**수정**: `WorksSceneManager`의 pointer/touch 이벤트 핸들러에서 `isMobile` 분기:
+- 터치 포인터 감지 시 velocity 배율 증가 (e.g. ×1.5)
+- 또는 `velDecay`를 모바일에서 0.88로 낮춰 더 빠르게 감속 (더 민첩하게)
+- `camLerp`를 모바일에서 0.09로 올려 카메라가 더 빠르게 따라오도록
+
+`ResponsiveRuntime.getDefault().getSnapshot().isMobile` (또는 유사 API) 로 분기.
+
+---
+
+## 수정 대상 파일
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| [WorksPageRuntime.ts](resource/ts/pages/works/runtime/WorksPageRuntime.ts) | Grid hover-to-video, 필터 모달, 무한스크롤 수정 |
+| [WorksSceneManager.ts](resource/ts/pages/works/render/WorksSceneManager.ts) | Scatter hover-to-video, 카드 반응형 크기, 모바일 속도 |
+| [WorkCard.ts](resource/ts/ui/WorkCard.ts) | `updateTextureVideoFrame()` 추가 |
+| [works.scene.ts](resource/ts/pages/works/scene/works.scene.ts) | cardWidth/cardHeight 상수 (필요 시) |
+| [work.types.ts](resource/ts/types/work.types.ts) | 새 타입 추가 시 |
+| [views/pages/works/index.php](views/pages/works/index.php) | 필터 버튼, categories data 임베드 |
+| SCSS (pages/_sub.scss 또는 _works-canvas.scss) | hover 전환, 모달, 모바일 panel hide |
+
+---
+
+## Verification
+
+1. **Grid hover-to-video**: works 그리드에서 video가 있는 항목에 마우스 올리면 영상 재생, 나가면 이미지 복귀 확인
+2. **Scatter hover-to-video**: scatter에서 카드 호버 시 비디오 프레임이 CanvasTexture에 렌더링되는 것 확인
+3. **모바일 panel**: 모바일 뷰포트에서 grid 뷰 시 panel이 숨겨지는지 확인
+4. **무한스크롤**: 모바일 실기기 또는 devtools 모바일 시뮬레이션에서 스크롤 하단 도달 시 항목 추가 확인
+5. **필터 모달**: grid 뷰에서 필터 버튼 클릭 → 모달 오픈 → 카테고리 선택 → 로딩 표시 → 그리드 갱신 확인
+6. **카드 크기**: 모바일에서 scatter 카드 크기가 화면에 맞게 축소되는지 확인
+7. **모바일 드래그**: 모바일 터치 드래그 시 카드가 더 민첩하게 반응하는지 확인
+8. TypeScript: `chop node_modules/.bin/tsc --noEmit`

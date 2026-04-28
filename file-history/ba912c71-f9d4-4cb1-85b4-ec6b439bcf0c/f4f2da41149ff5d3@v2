@@ -1,0 +1,98 @@
+# Plan: About Proof 이미지 표시 + 카드 크기 확대 + 갤러리 스크롤 속도 감소
+
+## Context
+
+About 페이지 proof 섹션(`no-sub-about-proof`)에서 팔레트 색상만 보이는 문제 수정.
+현재 `selectProofItems()`가 `isAwarded` 또는 `thumbnailVideo` 조건을 요구하는데 DB에 해당 항목이 없으면 팔레트 폴백으로 떨어짐.
+이미지 URL도 `fileAttach1 || thumbnailImage` 순서라 thumb_image 우선이 아님.
+갤러리 캔버스(`about-gallery-canvas`)는 스크롤 속도 상수가 너무 높아 PLANE이 과하게 움직임.
+
+## 변경 파일
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| [resource/ts/pages/about/render/AboutProofRenderer.ts](resource/ts/pages/about/render/AboutProofRenderer.ts) | 1) selectProofItems 확장 2) _loadItemMedia 이미지 소스 변경 3) CARD_HEIGHT 확대 |
+| [resource/ts/pages/about/render/InfiniteGalleryRenderer.ts](resource/ts/pages/about/render/InfiniteGalleryRenderer.ts) | SCROLL_SPEED 상수 감소 |
+
+---
+
+## 변경 상세
+
+### 1. `AboutProofRenderer.ts` — `selectProofItems` 확장 (line 68–81)
+
+현재 로직은 awarded+video → awarded+image → non-awarded+video만 포함.
+`thumbnailImage`가 있는 일반 항목을 마지막 순위로 추가해 thumb_image가 있으면 모두 포함.
+
+```typescript
+// Before
+function selectProofItems(items: WorkApiItem[], max: number): WorkApiItem[] {
+  const awardedVideo = items.filter((i) => i.isAwarded && i.thumbnailVideo);
+  const awardedImage = items.filter((i) => i.isAwarded && !i.thumbnailVideo);
+  const daegiyeopVideo = items.filter((i) => !i.isAwarded && i.thumbnailVideo);
+
+  const result: WorkApiItem[] = [...awardedVideo];
+  if (result.length < MIN_PROOF_ITEMS) result.push(...awardedImage);
+  if (result.length < MIN_PROOF_ITEMS) result.push(...daegiyeopVideo);
+  return result.slice(0, max);
+}
+
+// After
+function selectProofItems(items: WorkApiItem[], max: number): WorkApiItem[] {
+  const awardedVideo  = items.filter((i) => i.isAwarded && i.thumbnailVideo);
+  const awardedImage  = items.filter((i) => i.isAwarded && !i.thumbnailVideo && i.thumbnailImage);
+  const otherVideo    = items.filter((i) => !i.isAwarded && i.thumbnailVideo);
+  const otherImage    = items.filter((i) => !i.isAwarded && !i.thumbnailVideo && i.thumbnailImage);
+
+  const result: WorkApiItem[] = [...awardedVideo];
+  if (result.length < max) result.push(...awardedImage);
+  if (result.length < max) result.push(...otherVideo);
+  if (result.length < max) result.push(...otherImage);
+  return result.slice(0, max);
+}
+```
+
+### 2. `AboutProofRenderer.ts` — `_loadItemMedia` 이미지 소스 변경 (line 233)
+
+`fileAttach1 || thumbnailImage` → `thumbnailImage` 단독 사용 (THUMB_IMAGE 우선).
+
+```typescript
+// Before
+const imageUrl = item.fileAttach1 || item.thumbnailImage;
+
+// After
+const imageUrl = item.thumbnailImage;
+```
+
+### 3. `AboutProofRenderer.ts` — 카드 크기 확대 (line 10)
+
+`CARD_HEIGHT` 1.8 → 2.6 (약 44% 확대). 가로는 16:9 비율 자동 연동.
+
+```typescript
+// Before
+const CARD_HEIGHT = 1.8;
+
+// After
+const CARD_HEIGHT = 2.6;
+```
+
+### 4. `InfiniteGalleryRenderer.ts` — 갤러리 스크롤 속도 감소 (line 17)
+
+`SCROLL_SPEED` 2.5 → 0.6 (약 75% 감소). 휠/터치/키보드 모두 이 상수를 공유.
+
+```typescript
+// Before
+const SCROLL_SPEED = 2.5;
+
+// After
+const SCROLL_SPEED = 0.6;
+```
+
+---
+
+## 검증
+
+1. `rtk tsc --noEmit` — 타입 에러 없음 확인
+2. 브라우저 `http://localhost:8888/about` 접속
+   - **Proof 섹션**: 팔레트 색 대신 NB_WORKS thumb_image 텍스처 표시 확인
+   - **카드 크기**: 이전보다 크게 표시 확인
+   - **갤러리 섹션**: 스크롤 시 PLANE 이동 속도 크게 줄었는지 확인

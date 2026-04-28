@@ -1,0 +1,109 @@
+import type {
+  DomConfig,
+  DomIntroKeys,
+  DomMainFlowKeys,
+  DomUiKeys,
+} from "../types/dom.types.js";
+
+// Masking text reveal — attribute-based state machine.
+// State lives on `data-reveal` (masking-text) and `data-mask` (mask-target wrapper),
+// never on classes, so content-layer class usage cannot accidentally drive animation.
+export const MASKING = {
+  enabled: true,
+  selector: ".masking-text",
+  lineClass: "line",
+  wrapTargetClass: "mask-target",
+  revealAttr: "data-reveal",
+  maskAttr: "data-mask",
+  revealDatasetKey: "reveal",
+  maskDatasetKey: "mask",
+  revealState: {
+    inview: "inview",
+    down: "down",
+    hidden: "hidden",
+  },
+  maskState: {
+    ready: "ready",
+  },
+} as const;
+
+// Block-level generic hidden state — NOT part of masking-text reveal.
+// Used by BlockReveal, AppManager, ContactWizard for visibility toggles on
+// non-masking elements. Kept class-based because the same token is shared by
+// generic UI (works-canvas grid/canvas, intro overlay) and migrating it would
+// ripple across unrelated features.
+export const BLOCK_HIDDEN_CLASS = "is-hidden";
+
+export const STATE_CLASSES = {
+  open: "is-open",
+  barbaLeaving: "is-barba-leaving",
+  animatingIn: "is-animating-in",
+} as const;
+
+export const INIT_DOM_CLASSES = {
+  boxHidden: "is-dom-init-box-hidden",
+  blockBase: "is-block-reveal",
+  blockUp: "is-block-reveal-up",
+} as const;
+
+const intro: DomIntroKeys = {
+  section: "#intro",
+  title: "#intro-card",
+  desc: "#intro-card",
+  time: "#intro-card",
+  btn: "#intro-card",
+};
+
+const ui: DomUiKeys = {
+  scrollDown: ".no-scroll-down",
+  hudPanelInner: ".no-hud-panel__inner",
+  sceneContent: {
+    pin: "#main",
+    scroll: "#main",
+    canvasEnd: "#main",
+  },
+};
+
+const mainFlow: DomMainFlowKeys = {
+  introSection: ".no-main-intro",
+  introText: ".no-main-intro__txt",
+  introRevealGroups: ".no-main-intro__txt--top, .no-main-intro__txt--bottom",
+  introRevealText:
+    ".no-main-intro .no-main-intro__title .mask-target, .no-main-intro .no-main-intro__txt--top > .mask-target",
+  introTrigger: '[data-intro-action="after-intro"]',
+  introActionSection: ".no-main-intro-action",
+  introActionContent: ".no-main-intro-action__content",
+  introActionText: ".no-main-intro-action__content .mask-target",
+  introActionCountdown: ".no-main-intro-action__countdown",
+  introActionCountdownValue: ".no-main-intro-action__countdown-value",
+  introActionSkip: ".no-main-intro-action__skip",
+  contactText: ".no-main-contact .no-main-contact__head .mask-target",
+};
+
+const drawer = {
+  selector: ".no-drawer",
+  innerSelector: ".no-drawer__inner",
+  revealGroups: [
+    ".no-drawer__gnb",
+    ".no-drawer__gnb-sub",
+    ".no-drawer__address",
+  ],
+  gnbLinkSelector: ".no-drawer__gnb-link[href]",
+  gnbSubLinkSelector: ".no-drawer__gnb-sub-link[href]",
+} as const;
+
+export const DOM_CONFIG: DomConfig = {
+  keys: {
+    header: "#main-header",
+    intro,
+    ui,
+    mainFlow,
+  },
+  drawer: { ...drawer, revealGroups: [...drawer.revealGroups] },
+  maskingExcludeSelectors: [
+    drawer.selector,
+    ".no-main-who",
+    ".no-main-contact",
+    '.no-main-portfolio[data-scene="worksDetail"]',
+  ],
+};

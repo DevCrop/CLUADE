@@ -1,0 +1,93 @@
+---
+name: TypeScript 아키텍처 딥맵
+description: resource/ts/ 전체 디렉토리 책임, AppManager/PageRuntime/PageTheatreBinder 경계, runtime/manager 분류, 페이지 초기화 흐름
+type: project
+originSessionId: 940f3c69-ab68-40c4-809f-8acca066cc76
+---
+NINEONELABS의 `resource/ts/` 전체 구조와 핵심 진입점·책임 경계.
+
+## 최상위 디렉토리
+
+| Dir | 책임 |
+|---|---|
+| `app.ts` | 단일 진입점. `AppManager.init()` + bfcache(`pageshow`/`pagehide`) 라이프사이클 |
+| `app/` | 부트 직전 환경/객체 셋업 (`EnvSetup`, `ObjectSetup`, `ResizeSetup`) |
+| `manager/` | 전역 싱글턴 매니저 (App/Background/Intro/Observe/Qa/Shader) |
+| `runtime/` | 재사용 가능한 init/dispose 단위. 페이지 비종속 |
+| `core/` | Three.js 엔진·씬·로더 (Engine, AnimationLoop, ModelLoader, PostProcessor, AppBootstrap, **PageTheatreBinder**, ObjectFactoryRegistry) |
+| `controller/` | Page/Background/Shader/Timeline 컨트롤러 — 1프레임 동기화 |
+| `pages/<page>/scene/` | 페이지별 Three.js 씬 정의 |
+| `pages/<page>/theatre/` | 페이지별 Theatre.js 시트·브리지·런타임 |
+| `objects/{env,main,shared,sub,rocket}/` | 재사용 Three.js Object3D 클래스 |
+| `lib/theatre/` | Theatre.js 래퍼 (Studio, Project, Sheet, Sequence, Playback, StateStorage) |
+| `lib/lenis/` | LenisRuntime — 전역 스무스 스크롤 |
+| `ui/` | DOM UI 위젯 (Header, Drawer, Dropdown, Panel, IntroOverlay, IntroCanvas, GaugeCanvas, HudPanel, ContactWizard, WorkModal, WorkCard, UI) |
+| `components/` | 재사용 동작/효과 (Button, Marquee, CharBtn, CustomCursor, Suspense, Toast 등) |
+| `animation/` | Animation, SceneShake, TextReveal, BlockReveal |
+| `builder/` | TimelineBuilder |
+| `config/` | 정적 상수 (object, base, env, ground, scene-light, timeline, transition, intro, dom, component, background) |
+| `utils/` | Helpers, Logger, Debounce, Guards, Aria, FrameScheduler, Device, PerformanceProfile, ResponsiveValue, ScrollLock, disposeObject3D, LinearSpline, Physic, domUtil |
+| `validation/` | ContactFormValidation |
+| `api/` | getWork — 백엔드 fetch |
+| `types/*.types.ts` | 모든 공유 타입 (페이지·런타임·엔진·도메인·컴포넌트·인트로·gsap·shader 등) |
+
+## 책임 경계 (절대 룰)
+
+- **AppManager** (`manager/AppManager.ts`, 싱글턴 정적 init/disposeBootstrap): 앱 전체 부트스트랩 오너. Engine·EnvSetup·AppBootstrap·IntroController/Manager·IntroOverlay·Scene/Intro/App/Orbit Runtime들을 조립. DOM↔scene 동기화는 내부 `AppManagerDomRuntime`. Theatre는 `PageTheatreBinder`로 위임.
+- **PageRuntime** (`runtime/PageRuntime.ts`): **DOM/UI 페이지 라이프사이클만**. `runPage(root)` → globalUiRuntime(Header/Drawer/Dropdown/WorkModal/CustomCursor/MagneticCorner/TextReveal/BlockReveal/ContactWizard/Suspense/Marquee/CharBtn/ImagePreview/PinnedReveal/QaManager) + featureCardCanvasRuntime + subpageStarfieldRuntime → PageController. **3D 엔진 안 다룸.**
+- **PageTheatreBinder** (`core/PageTheatreBinder.ts`): 페이지 ID(`pageMain|pageAbout|pageContact`) → Theatre 어댑터 동적 import. 통일 인터페이스: `applyBootStateIfNeeded / startPreviewIfNeeded / startIntroIfNeeded / startAfterIntroIfNeeded / startIntroActionPhase{One,Two}IfNeeded / stopPreview / getSceneSyncPort`.
+
+**룰 요약**: 3D/Theatre = AppManager + PageTheatreBinder, DOM/UI = PageRuntime. 페이지 폴더는 자기 페이지 코드만, 공통 흐름은 `runtime/`.
+
+## 페이지 초기화 흐름
+
+`app.ts deferStart()` → `AppManager.init()` → AppManagerDomRuntime → Engine + EnvSetup + AppBootstrap → 페이지 ID 식별 → PageTheatreBinder 어댑터 로드 → AppStartupRuntime.run() → IntroFlowRuntime/IntroHandoffRuntime → ScrollSceneRuntime 마운트 → AppOrbitRuntime 루프. DOM은 별도로 `PageRuntime.runPage(root)`로 PageController 부착.
+
+## manager/ 목록
+
+| 파일 | 책임 |
+|---|---|
+| `AppManager.ts` | 앱 전체 부트/디스포즈 오너 |
+| `BackgroundManager.ts` | 메인 배경 object 생성·전환·디스포즈 |
+| `IntroManager.ts` | 인트로 시퀀스 상태/단계 머신 |
+| `ObserveManager.ts` | IntersectionObserver 풀 |
+| `QaManager.ts` | QA 인터랙션 (PageRuntime이 init) |
+| `ShaderManager.ts` | 셰이더 핸들/유니폼 |
+
+**주의**: `ResponsiveRuntime`은 `runtime/`에 있음 (manager 아님).
+
+## runtime/ 분류
+
+| 파일 | 역할 |
+|---|---|
+| `PageRuntime.ts` | DOM/UI 페이지 라이프사이클 |
+| `PageBootRuntime.ts` | 페이지별 부트 시퀀스 |
+| `AppEngineRuntime.ts` | Engine 라이프사이클 래퍼 |
+| `AppStartupRuntime.ts` | 시작 시 1회 부트 액션 |
+| `AppOrbitRuntime.ts` | 메인 렌더 루프 |
+| `IntroFlowRuntime.ts` / `IntroHandoffRuntime.ts` / `IntroLoadingRuntime.ts` | 인트로 단계·핸드오프·로딩 |
+| `ScenePolicyRuntime.ts` | 씬 활성화/페이즈 정책 |
+| `SceneTransitionRuntime.ts` | 씬 전환 (TransitionVeil 협력) |
+| `SceneSheetEffectRuntime.ts` | Theatre Sheet 후처리 효과 |
+| `ScrollSceneRuntime.ts` | 스크롤 ↔ 씬 진행도 매핑 |
+| `ResponsiveRuntime.ts` | DPR/뷰포트/디바이스 스냅샷 + clampedPixelRatio |
+| `ObjectConfigRuntime.ts` | 오브젝트 config 적용 |
+| `BackgroundMaterialRuntime.ts` | 배경 머티리얼 동기화 |
+| `CameraTargetRuntime.ts` | 카메라 타겟 보간 |
+| `TimelineRuntime.ts` | GSAP 타임라인 풀 + clear |
+| `PinnedRevealRuntime.ts` | 핀드 스크롤 reveal |
+| `SubpageStarfieldRuntime.ts` | contact/careers/inside 공통 별 배경 |
+
+**"runtime" 정의**: 상태 보유 + init/dispose 짝. 정책/생명주기 단위.
+
+## pages/ 구현 페이지
+
+- `main/` — `scene/main.scene.ts`, `theatre/{MainTheatreRuntime,Bridge,Config,AutoplayRuntime,SceneRig,SceneState}`
+- `about/` — `scene/about.scene.ts`, `theatre/{AboutTheatreRuntime,Bridge,Config,AutoplayRuntime,SceneRig,SceneState}`
+- `contact/` — `scene/contact.scene.ts`, `theatre/{ContactTheatreRuntime,Bridge,Config,SceneRig}`
+- `works/` — `scene/works.scene.ts`(설정), `runtime/{WorksPageRuntime,WorksIntroRuntime}`, `render/WorksSceneManager`, `theatre/{WorksTheatreRuntime,Bridge,Config}`
+
+`careers/inside/work-detail` 등은 페이지 폴더 없이 `SubpageStarfieldRuntime` + 표준 `PageRuntime` 흐름만.
+
+**Why:** 책임 경계가 모호하면 AppManager/PageRuntime/PageTheatreBinder에서 코드 중복이 발생함.
+**How to apply:** 새 코드 추가 시 위 분류표를 보고 정확한 디렉토리 선택. 신규 페이지는 `/new-route` skill + `pages/<page>/{scene,theatre,runtime}` 컨벤션 준수.

@@ -1,0 +1,72 @@
+$base = "D:\.claude"
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+$logFile = "$base\cleanup.log"
+
+# --- SessionEnd payload 수신 (end_reason 등 활용 가능) ---
+$hookData = $null
+try {
+    $rawInput = [Console]::In.ReadToEnd()
+    if ($rawInput) { $hookData = $rawInput | ConvertFrom-Json }
+} catch {}
+
+# --- Project Registry 읽기 ---
+$registryPath = "$base\active-projects.json"
+$registry = if (Test-Path $registryPath) {
+    Get-Content $registryPath -Raw | ConvertFrom-Json
+} else { $null }
+$pinned = if ($registry -and $registry.pinned) { $registry.pinned } else { @() }
+
+# --- plans/: 2일 이상 된 파일 삭제 ---
+$plansDeleted = 0
+Get-ChildItem "$base\plans" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-2) } |
+    ForEach-Object { Remove-Item $_.FullName -Force; $plansDeleted++ }
+
+# --- shell-snapshots/: 7일 이상 된 파일 삭제 ---
+$ssDeleted = 0
+Get-ChildItem "$base\shell-snapshots" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-7) } |
+    ForEach-Object { Remove-Item $_.FullName -Force; $ssDeleted++ }
+
+# --- file-history/: 14일 이상 된 UUID 디렉토리 삭제 ---
+$fhDeleted = 0
+Get-ChildItem "$base\file-history" -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-14) } |
+    ForEach-Object { Remove-Item $_.FullName -Recurse -Force; $fhDeleted++ }
+
+# --- projects/: Registry + recency 기반 보호 (OCP/DIP 준수) ---
+$projDeleted = 0
+Get-ChildItem "$base\projects" -Directory -ErrorAction SilentlyContinue |
+    Where-Object {
+        $name = $_.Name
+        $isPinned = $pinned | Where-Object { $name -like "*$_*" }
+        $isRecent = $_.LastWriteTime -gt (Get-Date).AddDays(-14)
+        -not $isPinned -and -not $isRecent -and
+        $_.LastWriteTime -lt (Get-Date).AddDays(-30)
+    } |
+    ForEach-Object { Remove-Item $_.FullName -Recurse -Force; $projDeleted++ }
+
+# --- session-env/: 빈 서브디렉토리 제거 ---
+$seDeleted = 0
+Get-ChildItem "$base\session-env" -Directory -ErrorAction SilentlyContinue |
+    Where-Object { (Get-ChildItem $_.FullName -Force).Count -eq 0 } |
+    ForEach-Object { Remove-Item $_.FullName -Force; $seDeleted++ }
+
+# --- MEMORY.md 참조 무결성 체크 (모든 프로젝트 순회) ---
+Get-ChildItem "$base\projects" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+    $memoryDir = Join-Path $_.FullName "memory"
+    $memIndex = Get-Content "$memoryDir\MEMORY.md" -ErrorAction SilentlyContinue
+    if ($memIndex) {
+        $memIndex | Select-String '\[.*\]\(([^)]+\.md)\)' | ForEach-Object {
+            $ref = $_.Matches[0].Groups[1].Value
+            if ($ref -notlike 'http*' -and -not (Test-Path "$memoryDir\$ref")) {
+                "[$timestamp] WARN: MEMORY.md ($($memoryDir)) references missing file: $ref" | Add-Content $logFile
+            }
+        }
+    }
+}
+
+# --- 감사 로그 기록 ---
+$endReason = if ($hookData -and $hookData.end_reason) { $hookData.end_reason } else { "unknown" }
+"[$timestamp] end:$endReason plans:$plansDeleted shell-snapshots:$ssDeleted file-history:$fhDeleted projects:$projDeleted session-env:$seDeleted" |
+    Add-Content $logFile

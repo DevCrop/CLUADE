@@ -1,0 +1,107 @@
+---
+name: PHP MVC 딥맵
+description: routes/render/views/admin/api/migration 구조, src/ 네임스페이스, inc/lib 책임, nb_ 테이블 목록
+type: project
+originSessionId: 940f3c69-ab68-40c4-809f-8acca066cc76
+---
+NINEONELABS의 PHP 사이드 (커스텀 MVC, PHP 7.4) 전체 구조.
+
+## 최상위
+
+| 폴더/파일 | 역할 |
+|---|---|
+| `index.php` | 진입점 — `inc/lib/base.class.php` 부트 → `$app->handleRequest()` |
+| `.htaccess` | 실제 파일/디렉토리 외 모두 `index.php`로 rewrite |
+| `routes/web.php` | 모든 공개 라우트 (closure 기반) |
+| `views/` | `layouts/`, `pages/`, `components/`, `errors/` |
+| `api/` | **단일 파일** `works.php` (모든 REST 엔드포인트 + 헬퍼 한 곳) |
+| `src/` | PSR-4 (Core/Database/Http/Routing/View/Menu/Mail) + 수동 require (Admin/Bootstrap) |
+| `inc/` | 레거시 부트스트랩/라이브러리 (`core/`, `lib/`) |
+| `config/` | 함수형 헬퍼 (helpers, functions, setup, hreflang, project, utils, configuration, inside_board) |
+| `admin/` | 자체 진입점 + Controller/Model/lib/pages 구조 (closure MVC와 별개) |
+| `database/` | SQL 덤프 + `database/migrations/*.sql` (수동 적용 백업) |
+| `src/Database/migrations/` | 실제 마이그레이터가 실행하는 PHP 마이그레이션 |
+| `scripts/` | 1회성 CLI: `migrate-works-to-webp.php` (신 전략 마이그레이션, 2026-04-25), `convert-large-works-jpg.php` (16MP 초과 잔여분 리사이즈+변환), `backfill-webp.php` (구 sibling 전략, 신규 작업엔 금지) |
+
+## render() 함수
+
+- 정의: `config/helpers.php:30`
+- 시그니처: `render(string $template, array $data = [], ?string $viewsPath = null): string`
+- 동작: `view()` → `ViewEngine` → `->render()`. `'pages.works.view'` → `views/pages/works/view.php`
+- 헬퍼 패밀리: `view()`, `extend()`, `section()`, `end_section()`, `yield_section()`, `include_view()`
+- 엔진: `src/View/ViewEngine.php`, 파사드: `src/View/View.php`
+
+## inc/lib/
+
+| 파일 | 역할 |
+|---|---|
+| `base.class.php` | **메인 부트스트랩** — autoload, ENV, 세션, admin 경로/업로드 경로/세션 컨텍스트, 라이선스, 메뉴 init |
+| `db.php` | 레거시 DB 연결/헬퍼 |
+| `func.php` | 공용 함수. `imageUpload()` 가 변환 가능 확장자(jpg/png/gif)를 webp 로 변환 후 **원본 삭제**, DB 에 .webp 파일명 저장 (2026-04-25 신 전략). `imageDelete()` 는 신/구 양쪽 정리 |
+| `var.php` | 전역 변수 |
+| `site.info.php` | `nb_siteinfo` 로드 |
+| `license.php` | 라이선스 검증 |
+| `PasswordHashClass.php` | 비밀번호 해시 |
+| `StringHelper.php` | 문자열 유틸 |
+| `SummerNote.php` | 에디터 헬퍼 |
+| `board.class.php` | 게시판 (admin 영역) |
+| `menu/*` | 활성 메뉴 (init/config/function) |
+
+## src/ 네임스페이스
+
+- `Core\` — `Application` (싱글턴, `handleRequest()` 라우팅 디스패치), `Config`, `ImageProcessor` (WEBP, 2560px, q82, GD; `convertToWebp(): ?string` = 신규 업로드 high-level API, `makeWebpSibling(): bool` = 마이그레이션 2-phase 전용 primitive, `deleteWebpSibling(): bool` = legacy 행 청소; `MEMORY_LIMIT=1024M` 일시 상향, `MAX_CONVERTIBLE_PIXELS=16M` 픽셀 한계)
+- `Database\` — `DB` (PDO 래퍼), `Migrator`, CLI `migrate.php`, `make-migration.php`, `migrations/*.php`
+- `Http\` — `Request`, `Response`
+- `Routing\` — `Router` (메서드별 routes, named 맵, group stack), `Route`
+- `View\` — `View`, `ViewEngine` (layout/section/include 지원)
+- `Menu\` — `Menu`, `MenuItem`
+- `Mail\` — `Mailer` (PHPMailer 래퍼)
+- `Admin\` (PSR-4 미등록 — 수동 require) — `Auth/` (Authenticator, SessionManager, RoleRegistry, LoginAttemptStore), `Menu\AdminMenuRegistry`
+- `Bootstrap\` — `AdminDirectoryResolver`, `ErrorHandler`, `LicenseValidator`, `SessionContext`, `UploadPathRegistry`
+
+## views/ 컨벤션
+
+- `layouts/main.php` (단일 chrome)
+- `pages/<area>/<page>.php` — dot 표기 호출 (`pages.works.view`)
+- `components/` — 재사용 fragment (`button/`, `hud/` 서브폴더 허용)
+- `errors/` — `404.php`, `default.php`
+- **`partials/` 없음** — 모두 `components/`로 통일
+
+## Admin 영역
+
+- 진입: `admin/index.php` (로그인 폼) — 부트스트랩 직접 require
+- 라우팅: closure 라우터 **사용 안 함**, **물리 경로 PHP 파일 = URL** (`/admin/pages/works/edit.php`)
+- 인증 가드: 페이지 상단 `require_once .../admin/lib/auth/admin.check.php` (`AdminSessionManager::requireLoginRedirect()`)
+- 구조: `Controller/`, `Model/` (예: `WorkController/Model`), `pages/<area>/{index,new,edit}.php`, `pages/<area>/ajax/*.php`, `lib/` (Validator, AdminListSort, AdminJsonResponse, PageContext, Role, WorksAdminHelpers), `inc/` (head/header/drawer/footer fragment), `config/menu.config.php`
+- CSS/JS: `admin/resource/` (공개 SCSS 파이프라인과 분리)
+
+## API
+
+- `api/works.php`만 존재. Works 관련 모든 엔드포인트 + `get_work_detail()` 등 헬퍼를 한 파일에. `routes/web.php`의 `$loadWorksApi` closure가 lazy require.
+
+## 마이그레이션 시스템
+
+**두 트랙 공존:**
+1. **PHP 마이그레이터 (메인)**: `src/Database/Migrator.php`, CLI `php src/Database/migrate.php`. 추적 테이블 `nb_migrations`. 파일: `src/Database/migrations/YYYYMMDD_HHMMSS_<name>.php` (각 파일 `up()`/`down()` + `$db->exec(...)`)
+2. **SQL 보조**: `database/migrations/*.sql` (수동 적용용 스니펫/백업)
+
+- Makefile 없음 (`.claude/rules/php.md`의 `make m`는 표기일 뿐)
+- 실제: `php src/Database/migrate.php` 또는 `/migration` skill
+- DB 덤프: `database/<날짜>.sql`
+
+## nb_ 테이블 목록
+
+`init_database_schema.php` + 후속 마이그레이션 기준:
+`nb_roles`, `nb_branches`, `nb_admin`, `nb_siteinfo`, `nb_branch_seos`, `nb_popups`, `nb_clients`, `nb_faqs`, `nb_board_manage`, `nb_board`, `nb_board_category`, `nb_board_comment`, `nb_board_lev_manage`, `nb_request`, `nb_site_tags`, `nb_works`, `nb_works_sort_no_undo`, `nb_migrations`, `nb_test`
+
+**드롭됨**: `nb_privacy_policy`, `nb_banners`, `nb_category` (`database/migrations/20260405~06_drop_*.sql`)
+
+## 추가 메모
+
+- 이미지 출력은 반드시 `render_uploaded_image()` (`config/functions.php`) 경유. 첫 인자는 raw URL — 이중 escape 주의. 항상 plain `<img>` 출력 (저장 파일이 이미 webp 이므로 `<picture>` 분기 없음).
+- 라우트 그룹 패턴: `$router->group(['prefix'=>'/works'], fn($r) => ...)`
+- `Application::handleRequest()`에 로케일 prefix 감지 로직 존재하나 현재 비활성
+- composer PSR-4: Core/Database/Http/Routing/View/Menu/Mail. Admin/Bootstrap는 `inc/lib/base.class.php`에서 수동 require
+
+**Why:** 두 라우팅 트랙 (closure + physical-path admin), 두 마이그레이션 트랙 (PHP + SQL), 두 src 로딩 (PSR-4 + manual)이 공존해서 어디 무엇이 있는지 빠른 참조 필요.
+**How to apply:** 새 공개 페이지 = closure routes. 새 admin 페이지 = `admin/pages/<area>/`. 새 API = `api/works.php` 패턴 따라 단일 파일 또는 lazy require closure. DB 변경 = `/migration` skill.

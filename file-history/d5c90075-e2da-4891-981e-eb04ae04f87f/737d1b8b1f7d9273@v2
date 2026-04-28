@@ -1,0 +1,354 @@
+<?php
+
+use Database\DB;
+use Http\Request;
+use Http\Response;
+
+/** @var \Routing\Router $router */
+$router = app()->router();
+$rootPath = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__);
+
+require_once $rootPath . '/config/inside_board.php';
+
+$loadWorksApi = static function () use ($rootPath): void {
+    require_once $rootPath . '/api/works.php';
+};
+
+$resolveWorksView = static function (Request $req): string {
+    $viewRaw = strtolower(trim((string) $req->query('view', 'scatter')));
+    return in_array($viewRaw, ['scatter', 'grid'], true) ? $viewRaw : 'scatter';
+};
+
+$resolvePositiveInt = static function ($value, int $default, int $min = 1, ?int $max = null): int {
+    $validated = filter_var($value, FILTER_VALIDATE_INT);
+    if ($validated === false) {
+        return $default;
+    }
+
+    $normalized = max($min, (int) $validated);
+    if ($max === null) {
+        return $normalized;
+    }
+
+    return min($max, $normalized);
+};
+
+$renderWorksDetailPage = static function (
+    string $viewName,
+    string $no,
+    string $pageType,
+    string $pageNamespace
+) use ($loadWorksApi) {
+    $loadWorksApi();
+
+    return render($viewName, [
+        'no' => $no,
+        'work' => get_work_detail($no),
+        'pageType' => $pageType,
+        'pageNamespace' => $pageNamespace,
+    ]);
+};
+
+/* =========================
+ * 공용/홈/정책
+ * ========================= */
+$router->get('/', function () use ($loadWorksApi) {
+    $loadWorksApi();
+
+    $homeWorksResponse = get_works_list(0, 10);
+
+    return render('pages.index', [
+        'pageType' => 'main',
+        'homeWorks' => $homeWorksResponse['items'],
+    ]);
+})->name('home');
+
+/* =======================================================
+ * ABOUT
+ * ======================================================= */
+$router->get('/about', function () use ($loadWorksApi) {
+    $loadWorksApi();
+
+    return render('pages.about.index', [
+        'pageType' => 'about',
+        'awardRows' => get_works_award_page_rows(),
+    ]);
+})->name('about.index');
+
+/* =======================================================
+ * WORKS
+ * ======================================================= */
+$router->group(['prefix' => '/works'], function ($r) use (
+    $loadWorksApi,
+    $resolveWorksView,
+    $resolvePositiveInt,
+    $renderWorksDetailPage
+) {
+    $r->get('', function (Request $req) use ($loadWorksApi, $resolveWorksView, $resolvePositiveInt) {
+        $loadWorksApi();
+
+        $view = $resolveWorksView($req);
+        $category = resolve_works_category($req->query('category'));
+        $perPage = 12;
+        $page = $resolvePositiveInt($req->query('page', 1), 1);
+
+        return render('pages.works.index', [
+            'pageType' => 'works',
+            'pageNamespace' => 'works-index',
+            'worksState' => [
+                'view' => $view,
+                'category' => $category,
+                'page' => $page,
+                'limit' => $perPage,
+            ],
+            'worksCategories' => get_works_categories(),
+        ]);
+    })->name('works.index');
+    $r->get('/list', function (Request $req) use ($loadWorksApi, $resolvePositiveInt) {
+        $loadWorksApi();
+
+        $offsetRaw = $req->query('offset', 0);
+        $limitRaw = $req->query('limit', 8);
+        $category = resolve_works_category($req->query('category'));
+        $offsetValidated = filter_var($offsetRaw, FILTER_VALIDATE_INT);
+        $limitValidated = filter_var($limitRaw, FILTER_VALIDATE_INT);
+        if ($offsetValidated === false || $limitValidated === false) {
+            return (new Response())->json([
+                'error' => 'Invalid pagination parameters',
+                'code' => 'INVALID_QUERY',
+            ], 400);
+        }
+
+        $offset = max(0, (int) $offsetValidated);
+        $limit = $resolvePositiveInt($limitValidated, 8, 1, 24);
+        $data = get_works_list($offset, $limit, $category);
+
+        return (new Response())->json([
+            'items' => $data['items'],
+            'nextOffset' => $data['nextOffset'],
+            'hasMore' => $data['hasMore'],
+        ], 200);
+    })->name('works.list');
+    $r->get('/view/{no}', function (Request $req, Response $res, string $no) use ($renderWorksDetailPage) {
+        return $renderWorksDetailPage('pages.works.view', $no, 'works-view', 'works-view');
+    })->name('works.view');
+    $r->get('/modal/{no}', function (Request $req, Response $res, string $no) use ($renderWorksDetailPage) {
+        return $renderWorksDetailPage('pages.works.modal', $no, 'works-modal', 'works-modal');
+    })->name('works.modal');
+    $r->get('/modal-component/{no}', function (Request $req, Response $res, string $no) use ($loadWorksApi) {
+        $loadWorksApi();
+
+        $work = get_work_detail($no);
+        if ($work === null) {
+            return response(
+                '<div class="no-work-modal__empty">Work data not found.</div>',
+                404,
+                ['Content-Type' => 'text/html; charset=UTF-8']
+            );
+        }
+
+        return response(
+            include_view('components.work-modal', ['work' => $work]),
+            200,
+            ['Content-Type' => 'text/html; charset=UTF-8']
+        );
+    })->name('works.modal.component');
+});
+
+/* =======================================================
+ * CAREERS
+ * ======================================================= */
+$router->group(['prefix' => '/careers'], function ($r) {
+    $r->get('', fn() => render('pages.careers.index', ['pageType' => 'careers']))->name('careers.index');
+    $r->get('/view/{no}', function (Request $req, Response $res, string $no) {
+        return render('pages.careers.view', ['no' => $no, 'pageType' => 'careers']);
+    })->name('careers.view');
+});
+
+/* =======================================================
+ * INSIDE
+ * ======================================================= */
+$insideListHandler = static function (
+        Request $req,
+        int $boardNo,
+        string $viewName,
+        string $listRouteName
+    ) use ($resolvePositiveInt): string {
+        $page = $resolvePositiveInt($req->query('page', 1), 1);
+        $categoryRaw = $req->query('category');
+        $categoryNo = null;
+        if ($categoryRaw !== null && $categoryRaw !== '') {
+            $cv = filter_var($categoryRaw, FILTER_VALIDATE_INT);
+            if ($cv !== false && (int) $cv > 0) {
+                $categoryNo = (int) $cv;
+            }
+        }
+        $q = trim((string) $req->query('q', ''));
+        $list = inside_board_list(
+            $boardNo,
+            $page,
+            $categoryNo,
+            $q !== '' ? $q : null
+        );
+
+        $listUrl = route($listRouteName, [], false);
+        $mergeQuery = static function (array $extra) use ($q): array {
+            $p = $extra;
+            if ($q !== '') {
+                $p['q'] = $q;
+            }
+
+            return array_filter(
+                $p,
+                static fn ($v) => $v !== null && $v !== ''
+            );
+        };
+
+        $categoryItems = [];
+        $manage = inside_board_manage($boardNo);
+        $catEnabled = ($manage['category_yn'] ?? 'N') === 'Y';
+        $allQuery = $mergeQuery([]);
+        $categoryItems[] = [
+            'label' => 'ALL',
+            'href' => $listUrl . ($allQuery !== [] ? '?' . http_build_query($allQuery) : ''),
+            'active' => $categoryNo === null,
+        ];
+        if ($catEnabled) {
+            foreach (inside_board_categories($boardNo) as $row) {
+                $cn = (int) ($row['no'] ?? 0);
+                if ($cn < 1) {
+                    continue;
+                }
+                $cq = $mergeQuery(['category' => $cn]);
+                $categoryItems[] = [
+                    'label' => (string) ($row['name'] ?? ''),
+                    'href' => $listUrl . '?' . http_build_query($cq),
+                    'active' => $categoryNo === $cn,
+                ];
+            }
+        }
+
+        $paginationQuery = $mergeQuery([]);
+
+        return render($viewName, [
+            'pageType' => 'inside',
+            'boardNo' => $boardNo,
+            'posts' => $list['rows'],
+            'paginationTotal' => $list['totalPages'],
+            'paginationCurrent' => $list['page'],
+            'paginationQueryParams' => $paginationQuery,
+            'categoryItems' => $categoryItems,
+            'searchQuery' => $q,
+            'listRouteName' => $listRouteName,
+            'activeCategoryNo' => $categoryNo,
+        ]);
+};
+
+$insideViewHandler = static function (string $no, int $boardNo, string $viewName, string $listRouteName, string $viewRouteName) {
+        $postNo = filter_var($no, FILTER_VALIDATE_INT);
+        if ($postNo === false || $postNo < 1) {
+            return response(render('errors.404', ['pageType' => 'legal']), 404);
+        }
+
+        $post = inside_board_find((int) $postNo, $boardNo);
+        if ($post === null) {
+            return response(render('errors.404', ['pageType' => 'legal']), 404);
+        }
+
+        $neighbors = inside_board_neighbors((int) $postNo, $boardNo);
+        $listUrl = route($listRouteName, [], false);
+
+        $prevUrl = null;
+        $prevTitle = '';
+        if ($neighbors['prev'] !== null) {
+            $prevUrl = route($viewRouteName, ['no' => (string) ($neighbors['prev']['no'] ?? '')], false);
+            $prevTitle = (string) ($neighbors['prev']['title'] ?? '');
+        }
+
+        $nextUrl = null;
+        $nextTitle = '';
+        if ($neighbors['next'] !== null) {
+            $nextUrl = route($viewRouteName, ['no' => (string) ($neighbors['next']['no'] ?? '')], false);
+            $nextTitle = (string) ($neighbors['next']['title'] ?? '');
+        }
+
+        return render($viewName, [
+            'pageType' => 'inside',
+            'boardNo' => $boardNo,
+            'post' => $post,
+            'listUrl' => $listUrl,
+            'prevUrl' => $prevUrl,
+            'prevTitle' => $prevTitle,
+            'nextUrl' => $nextUrl,
+            'nextTitle' => $nextTitle,
+        ]);
+};
+
+$router->group(['prefix' => '/inside'], function ($r) use ($loadWorksApi, $insideListHandler, $insideViewHandler) {
+    $r->get('', function () use ($insideListHandler) {
+        $req = app()->request();
+
+        return $insideListHandler($req, INSIDE_BOARD_INSIGHT, 'pages.inside.insight', 'inside.insight');
+    })->name('inside.index');
+    $r->get('/news', function () use ($insideListHandler) {
+        $req = app()->request();
+
+        return $insideListHandler($req, INSIDE_BOARD_NEWS, 'pages.inside.news', 'inside.news');
+    })->name('inside.news');
+    $r->get('/news/view/{no}', function (Request $req, Response $res, string $no) use ($insideViewHandler) {
+        return $insideViewHandler($no, INSIDE_BOARD_NEWS, 'pages.inside.news-view', 'inside.news', 'inside.news.view');
+    })->name('inside.news.view');
+    $r->get('/insight', function () use ($insideListHandler) {
+        $req = app()->request();
+
+        return $insideListHandler($req, INSIDE_BOARD_INSIGHT, 'pages.inside.insight', 'inside.insight');
+    })->name('inside.insight');
+    $r->get('/insight/view/{no}', function (Request $req, Response $res, string $no) use ($insideViewHandler) {
+        return $insideViewHandler($no, INSIDE_BOARD_INSIGHT, 'pages.inside.insight-view', 'inside.insight', 'inside.insight.view');
+    })->name('inside.insight.view');
+    $r->get('/award', function () use ($loadWorksApi) {
+        $loadWorksApi();
+
+        return render('pages.inside.award', [
+            'pageType' => 'inside',
+            'awardRows' => get_works_award_page_rows(),
+        ]);
+    })->name('inside.award');
+    $r->get('/detail', fn() => render('pages.inside.detail', ['pageType' => 'inside']))->name('inside.detail');
+    $r->get('/detail/{id}', function (Request $req, Response $res, string $id) {
+        return render('pages.inside.detail', ['pageType' => 'inside', 'id' => $id]);
+    })->name('inside.detail.view');
+});
+
+/* =======================================================
+ * CONTACT
+ * ======================================================= */
+$router->get('/contact', function () {
+    $g = $GLOBALS;
+
+    return render('pages.contact.index', [
+        'pageType' => 'contact',
+        'contact_request_project_options' => $g['contact_request_project_options'] ?? [],
+        'contact_request_service_options' => $g['contact_request_service_options'] ?? [],
+        'contact_request_budget_options' => $g['contact_request_budget_options'] ?? [],
+        'contact_request_period_options' => $g['contact_request_period_options'] ?? [],
+    ]);
+})->name('contact.index');
+
+$router->post('/contact', function (Request $req) use ($rootPath) {
+    global $NO_SITE_UNIQUE_KEY;
+
+    $response = new Response();
+    require_once $rootPath . '/module/request.php';
+    $out = contact_request_process_submit($req, (string) ($NO_SITE_UNIQUE_KEY ?? 'NEWNO'), $rootPath);
+
+    return $response->json($out['body'], $out['http']);
+})->name('contact.submit');
+
+/* =======================================================
+ * Legal (개인정보처리방침, 이용약관)
+ * ======================================================= */
+$router->group(['prefix' => '/legal'], function ($r) {
+    $r->get('/privacy', fn() => render('pages.legal.privacy', ['pageType' => 'legal']))->name('legal.privacy');
+    $r->get('/terms', fn() => render('pages.legal.terms', ['pageType' => 'legal']))->name('legal.terms');
+});

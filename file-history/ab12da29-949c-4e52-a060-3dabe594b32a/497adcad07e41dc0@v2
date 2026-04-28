@@ -1,0 +1,51 @@
+import { pageAbout, pageContact } from "../core/setup.js";
+import type { GsapGlobal } from "../types/gsap.types.js";
+import type { IntroManagerDependencies } from "../types/intro.types.js";
+import type { AboutPageConfig } from "../types/about.types.js";
+import type { ContactPageConfig } from "../types/contact.types.js";
+import type { MainPageConfig } from "../types/main.types.js";
+import type { AppPageConfig } from "../types/runtime.types.js";
+
+export class IntroManager {
+  private readonly _dependencies: IntroManagerDependencies;
+
+  constructor(dependencies: IntroManagerDependencies) {
+    this._dependencies = dependencies;
+  }
+
+  async run(
+    pageConfig: AppPageConfig,
+    objectSetupPromise: Promise<void>,
+    gsap: GsapGlobal | null,
+  ): Promise<void> {
+    if (pageConfig.pageId === pageContact) {
+      await this._dependencies.controller.runContactIntro(
+        pageConfig as ContactPageConfig,
+        objectSetupPromise,
+        gsap,
+      );
+      return;
+    }
+
+    if (!this._dependencies.controller.hasIntro(pageConfig, gsap)) {
+      await this._dependencies.runAfterLoad(pageConfig, objectSetupPromise);
+      await this._dependencies.startPagePreviewIfNeeded();
+      return;
+    }
+
+    if (pageConfig.pageId === pageAbout) {
+      await this._dependencies.controller.runAboutIntro(
+        pageConfig as AboutPageConfig,
+        objectSetupPromise,
+        gsap!,
+      );
+      return;
+    }
+
+    await this._dependencies.controller.runMainIntro(
+      pageConfig as MainPageConfig,
+      objectSetupPromise,
+      gsap!,
+    );
+  }
+}

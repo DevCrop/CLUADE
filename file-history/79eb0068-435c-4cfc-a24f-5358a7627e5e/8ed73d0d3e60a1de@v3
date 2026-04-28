@@ -1,0 +1,360 @@
+import * as THREE from "three";
+import { EnvSetup } from "../../app/EnvSetup.js";
+import { SceneObject } from "../../core/SceneObject.js";
+import type {
+  GravityBallsObjectOptions,
+  GravityBallsTweenProps,
+} from "../../types/object.types.js";
+import { Helpers } from "../../utils/Helpers.js";
+
+interface BallInfo {
+  color: string;
+  radius: number;
+  radiusStart: number;
+  radiusDeincrement: number;
+  startX: number;
+  startY: number;
+  startZ: number;
+  isXNegative: number;
+  isZNegative: number;
+  vx: number;
+  vxMult: number;
+  vy: number;
+  vyMult: number;
+  vz: number;
+  vzMult: number;
+  ID: number;
+  bounced: boolean;
+  startGravity: number;
+  gravity: number;
+  sphere: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
+}
+
+export class GravityBalls extends SceneObject<GravityBallsTweenProps> {
+  private static readonly COLORS: ReadonlyArray<string> = [
+    "#bada55",
+    "#bada55",
+    "#bada55",
+    "bada55",
+  ];
+  private static readonly RADIUS = 3;
+  private static readonly DOTS_PER_INTERVAL = 5;
+  private static readonly SPAWN_INTERVAL_SEC = 0.015;
+  private static readonly FLOOR_LEVEL = -100;
+  private static readonly FLOOR_DIMENSIONS = 1500;
+  /** Original gravity-balls coordinate system (~1500 unit floor) shrunk to fit rocket scale. */
+  private static readonly INNER_SCALE_DEFAULT = 0.05;
+  /** `?debug=1` 모드에서 점·플로어가 인터랙션·인트로에 가려지지 않게 키우는 배수. */
+  private static readonly INNER_SCALE_DEBUG = 0.2;
+  private static readonly DEBUG_RENDER_ORDER = 9999;
+  private static readonly DEBUG_FLOOR_COLOR = "#ff00ff";
+
+  private readonly _isDebug = EnvSetup.hasQueryFlag("debug", "1");
+
+  private _options: Partial<GravityBallsObjectOptions> = {};
+  private _built = false;
+  private _innerGroup: THREE.Group | null = null;
+  private _floor: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial> | null =
+    null;
+  /** Floor의 부모 (scene root에 attach되어 외부 transform 변경에 영향받지 않음). */
+  private _floorParent: THREE.Object3D | null = null;
+  private _spheresInfo = new Map<number, BallInfo>();
+  private _sphereIndex = 0;
+  private _canvasMouse = new THREE.Vector3(0, 0, 0);
+  private _spawnAccumulator = 0;
+  private _innerScale = GravityBalls.INNER_SCALE_DEFAULT;
+  private _trackedEmitterObject: THREE.Object3D | null = null;
+  private _effectiveFloorLevel = GravityBalls.FLOOR_LEVEL;
+
+  setOptions(props: Partial<GravityBallsObjectOptions> | undefined): this {
+    if (props != null) this._options = { ...this._options, ...props };
+    return this;
+  }
+
+  override getAnimationTarget(): THREE.Object3D | null {
+    return this.getTimelineRoot();
+  }
+
+  override getTweenApplyMode(): "mergeAndSync" {
+    return "mergeAndSync";
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options as Record<string, unknown>;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    root.visible = visible;
+    if (!visible) this._clearAllSpheres();
+  }
+
+  override runObject(): void {
+    const ctx = this._context;
+    if (!ctx?.scene) return;
+
+    const root = this.ensureTimelineRoot("gravityBallsRoot");
+    if (!root) return;
+
+    const attachTo = this._options.attachTo;
+    const offset = this._options.offset ?? { x: 0, y: 0, z: 0 };
+    const p = this._options.position ?? { x: 0, y: 0, z: 0 };
+    const r = this._options.rotation ?? { x: 0, y: 0, z: 0 };
+    const s = this._options.scale ?? { x: 1, y: 1, z: 1 };
+
+    if (attachTo && typeof ctx.getObject === "function") {
+      const target = ctx.getObject(attachTo);
+      if (target instanceof THREE.Object3D) {
+        target.add(root);
+        root.position.set(offset.x ?? 0, offset.y ?? 0, offset.z ?? 0);
+      } else {
+        root.position.set(p.x ?? 0, p.y ?? 0, p.z ?? 0);
+      }
+    } else {
+      root.position.set(p.x ?? 0, p.y ?? 0, p.z ?? 0);
+    }
+
+    Helpers.applyRotationDeg(root, r);
+    root.scale.set(s.x ?? 1, s.y ?? 1, s.z ?? 1);
+
+    this._innerScale = this._isDebug
+      ? GravityBalls.INNER_SCALE_DEBUG
+      : GravityBalls.INNER_SCALE_DEFAULT;
+
+    const inner = new THREE.Group();
+    inner.name = "gravityBallsInner";
+    inner.scale.setScalar(this._innerScale);
+    root.add(inner);
+    this._innerGroup = inner;
+
+    if (this._options.trackEmitter && typeof ctx.getObject === "function") {
+      const emitter = ctx.getObject(this._options.trackEmitter);
+      if (emitter instanceof THREE.Object3D) {
+        this._trackedEmitterObject = emitter;
+      }
+    }
+
+    this._buildFloor();
+    this._built = true;
+  }
+
+  private static readonly _tmpV3A = new THREE.Vector3();
+  private static readonly _tmpV3B = new THREE.Vector3();
+
+  override runUpdate(deltaTime: number): void {
+    if (!this._built) return;
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    if (this._isDebug && !root.visible) root.visible = true;
+    if (!root.visible) return;
+
+    if (this._trackedEmitterObject) {
+      root.getWorldPosition(GravityBalls._tmpV3A);
+      this._trackedEmitterObject.getWorldPosition(GravityBalls._tmpV3B);
+      this._canvasMouse.set(
+        (GravityBalls._tmpV3B.x - GravityBalls._tmpV3A.x) / this._innerScale,
+        (GravityBalls._tmpV3B.y - GravityBalls._tmpV3A.y) / this._innerScale,
+        (GravityBalls._tmpV3B.z - GravityBalls._tmpV3A.z) / this._innerScale,
+      );
+    }
+
+    this._spawnAccumulator += deltaTime;
+    while (this._spawnAccumulator >= GravityBalls.SPAWN_INTERVAL_SEC) {
+      for (let i = 0; i < GravityBalls.DOTS_PER_INTERVAL; i += 1) {
+        this._initDot();
+      }
+      this._spawnAccumulator -= GravityBalls.SPAWN_INTERVAL_SEC;
+    }
+
+    for (const info of Array.from(this._spheresInfo.values())) {
+      this._drawDot(info);
+    }
+  }
+
+  override dispose(): void {
+    this._clearAllSpheres();
+    if (this._floor) {
+      this._floor.geometry.dispose();
+      this._floor.material.dispose();
+      // Floor는 scene root에 re-parent되어 있으므로 _floorParent에서 직접 제거
+      (this._floorParent ?? this._floor.parent)?.remove(this._floor);
+      this._floor = null;
+      this._floorParent = null;
+    }
+    if (this._innerGroup) {
+      this._innerGroup.parent?.remove(this._innerGroup);
+      this._innerGroup = null;
+    }
+    this._built = false;
+    super.dispose();
+  }
+
+  private _buildFloor(): void {
+    const inner = this._innerGroup;
+    const ctx = this._context;
+    if (!inner || !ctx?.scene) return;
+    const geometry = new THREE.BoxGeometry(
+      GravityBalls.FLOOR_DIMENSIONS,
+      3,
+      GravityBalls.FLOOR_DIMENSIONS,
+    );
+    const material = new THREE.MeshLambertMaterial({
+      color: this._isDebug ? GravityBalls.DEBUG_FLOOR_COLOR : "#000000",
+      wireframe: this._isDebug,
+    });
+    material.depthWrite = false;
+    material.transparent = true;
+    material.opacity = this._isDebug ? 0.6 : 0.2;
+    const floor = new THREE.Mesh(geometry, material);
+    floor.position.y = GravityBalls.FLOOR_LEVEL - GravityBalls.RADIUS / 2;
+    floor.position.z = 0;
+    if (this._isDebug) floor.renderOrder = GravityBalls.DEBUG_RENDER_ORDER;
+    inner.add(floor);
+
+    const floorWorldY = this._options.floorWorldY;
+    if (floorWorldY != null) {
+      const root = this.getTimelineRoot()!;
+      root.getWorldPosition(GravityBalls._tmpV3A);
+      this._effectiveFloorLevel =
+        (floorWorldY - GravityBalls._tmpV3A.y) / this._innerScale;
+      // floor를 inner space 좌표로 재배치 (scene.attach 없이 inner group 안에 유지)
+      floor.position.y = this._effectiveFloorLevel - GravityBalls.RADIUS / 2;
+    }
+
+    this._floor = floor;
+  }
+
+  private _initDot(): void {
+    const inner = this._innerGroup;
+    if (!inner) return;
+    const radius = GravityBalls.RADIUS;
+    const colorIdx = this._random(0, 4);
+    const color = GravityBalls.COLORS[colorIdx] ?? "#bada55";
+    const radiusStart = radius;
+    const radiusDeincrement = radius * -0.002;
+    const startX = this._canvasMouse.x;
+    let startY = this._canvasMouse.y;
+    const startZ = this._canvasMouse.z;
+    if (startY < this._effectiveFloorLevel - radiusStart / 2) {
+      startY = this._effectiveFloorLevel - radiusStart / 2;
+    }
+    const isXNegative = this._random(1, 2);
+    const isZNegative = this._random(1, 2);
+    const vx =
+      isXNegative === 1
+        ? this._random(0, 50) * -0.15
+        : this._random(0, 50) * 0.15;
+    const vxMult = this._random(10, 20) * 0.15;
+    const vy = this._random(-10, 20);
+    const vyMult = this._random(4, 6) * -0.1;
+    const vz =
+      isZNegative === 1
+        ? this._random(-25, 25) * -0.4
+        : this._random(-25, 25) * 0.4;
+    const vzMult = this._random(10, 20) * 0.1;
+    this._sphereIndex += 1;
+    const ID = this._sphereIndex;
+    const startGravity = 10;
+    const geometry = new THREE.CircleGeometry(radius, 20);
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      side: THREE.DoubleSide,
+    });
+    if (this._isDebug) {
+      material.depthTest = false;
+      material.depthWrite = false;
+      material.transparent = true;
+    }
+    const sphere = new THREE.Mesh(geometry, material);
+    if (this._isDebug) sphere.renderOrder = GravityBalls.DEBUG_RENDER_ORDER;
+    inner.add(sphere);
+
+    this._spheresInfo.set(ID, {
+      color,
+      radius,
+      radiusStart,
+      radiusDeincrement,
+      startX,
+      startY,
+      startZ,
+      isXNegative,
+      isZNegative,
+      vx,
+      vxMult,
+      vy,
+      vyMult,
+      vz,
+      vzMult,
+      ID,
+      bounced: false,
+      startGravity,
+      gravity: startGravity,
+      sphere,
+    });
+  }
+
+  private _drawDot(info: BallInfo): void {
+    info.sphere.scale.x += info.radiusDeincrement;
+    info.sphere.scale.y += info.radiusDeincrement;
+    info.sphere.scale.z += info.radiusDeincrement;
+    info.startX += info.vx * 0.6;
+    info.startY -= info.vy * 0.5;
+    info.startZ -= info.vz * 0.6;
+    info.sphere.position.x = info.startX;
+    info.sphere.position.y = info.startY;
+    info.sphere.position.z = info.startZ;
+
+    if (
+      info.sphere.position.y <
+      this._effectiveFloorLevel - info.radiusStart / 2
+    ) {
+      if (!info.bounced) {
+        info.vx *= info.vxMult;
+        info.vz *= info.vzMult;
+      } else {
+        info.vx *= 0.95;
+        info.vz *= 0.95;
+      }
+      const half = GravityBalls.FLOOR_DIMENSIONS / 2;
+      const outsideFloor =
+        info.sphere.position.x > half ||
+        info.sphere.position.x < -half ||
+        info.sphere.position.z > half ||
+        info.sphere.position.z < -half;
+      if (!outsideFloor) {
+        info.vy *= info.vyMult;
+        info.sphere.position.y =
+          this._effectiveFloorLevel + info.radiusStart * info.sphere.scale.x;
+      } else {
+        info.gravity = info.startGravity / 4;
+        info.startY -= info.vy * 0.01;
+        info.sphere.position.y =
+          info.startY + (20 - info.radiusStart * info.sphere.scale.x);
+      }
+      info.bounced = true;
+    }
+
+    info.vy += info.gravity;
+
+    if (info.sphere.scale.y <= 0.1) {
+      this._spheresInfo.delete(info.ID);
+      info.sphere.parent?.remove(info.sphere);
+      info.sphere.geometry.dispose();
+      info.sphere.material.dispose();
+    }
+  }
+
+  private _clearAllSpheres(): void {
+    for (const info of this._spheresInfo.values()) {
+      info.sphere.parent?.remove(info.sphere);
+      info.sphere.geometry.dispose();
+      info.sphere.material.dispose();
+    }
+    this._spheresInfo.clear();
+  }
+
+  private _random(min: number, max: number): number {
+    return Math.floor(Math.random() * max) + min;
+  }
+}

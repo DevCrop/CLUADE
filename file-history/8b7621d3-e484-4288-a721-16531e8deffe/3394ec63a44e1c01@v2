@@ -1,0 +1,89 @@
+---
+paths:
+  - "**/*.php"
+---
+
+# PHP Rules
+
+- Framework: custom MVC (PHP 7.4) -- no Laravel/Symfony conventions
+- Namespaces: `Core\`, `Database\`, `Http\`, `Routing\`, `View\`, `Menu\`
+- Classes: PascalCase / Methods & variables: camelCase / Constants: UPPER_SNAKE_CASE
+- DB tables use `nb_` prefix (e.g. `nb_siteinfo`, `nb_admin`)
+- DB schema changes must go through migration files (`make m`); never alter tables directly
+
+## Patterns
+
+```php
+// Routing
+$router->get('/', function () {
+    return render('pages.index');
+})->name('home');
+
+// View rendering
+render('pages.index');                        // views/pages/index.php
+render('pages.works.view', ['no' => $no]);    // views/pages/works/view.php
+```
+
+## Image Upload & WEBP Optimization
+
+All admin image uploads flow through `imageUpload()` in `inc/lib/func.php`.
+**Strategy: original-replacement (not sibling).** Convertible images are converted to `.webp` and the original is deleted; the DB stores the `.webp` filename directly.
+
+```php
+// Standard upload call -- WEBP replaces the original on success
+$result = imageUpload($UPLOAD_DIR_CLIENTS, $_FILES['thumb_image']);
+$saved = $result['saved'];
+// jpg/png/gif input -> "6830abc.webp" (original removed, DB stores this)
+// svg/ico input    -> "6830abc.svg"  (untouched)
+// On conversion failure -> original filename retained (safe fallback)
+
+// If you add a NEW upload path that bypasses imageUpload(), use the high-level API:
+move_uploaded_file($tmp, "$dir/$filename");
+$filename = \Core\ImageProcessor::convertToWebp("$dir/$filename") ?? $filename;
+// On success $filename = "<basename>.webp" (original deleted). On failure/skip the original name is kept.
+
+// Deletion
+imageDelete("$UPLOAD_DIR_CLIENTS/$saved");
+// Removes the file at $saved + any leftover sibling (`.webp` next to `.png`, etc.) for legacy rows
+```
+
+Two API levels in `Core\ImageProcessor`:
+- **`convertToWebp($abs): ?string`** -- high-level. Convert + verify + unlink original + return new basename. Use this single call for any new upload path.
+- **`makeWebpSibling($abs): bool`** -- low-level primitive. Conversion only; the caller owns original-deletion. *Reserved for migration scripts using the 2-phase pattern (convert -> DB UPDATE -> unlink original).* Do not call directly from new upload paths.
+- **`deleteWebpSibling($abs): bool`** -- legacy cleanup for the (.png + .webp) sibling pattern. Rarely called under the current strategy.
+
+Rules:
+- Do not add image resize/convert logic outside `Core\ImageProcessor`.
+- All three methods are silent on failure -- never throw from them.
+- Convertible: `jpg`, `jpeg`, `png`, `gif` (`ImageProcessor::CONVERTIBLE`). Skipped untouched: `svg`, `ico`.
+- Max width: 2560px (auto-resize). Quality: 82.
+- During conversion `ImageProcessor` temporarily raises `memory_limit` to `1024M` (`MEMORY_LIMIT` const) and restores it in `finally` -- large GD bitmaps OOM at the default 128M.
+- Images exceeding `MAX_CONVERTIBLE_PIXELS` (16 MP) are skipped upfront by the migration script -- `convertToWebp` itself does not size-check (`makeWebpSibling`'s spatie/image silently fails).
+
+## Image Rendering
+
+All uploaded-image output must go through `render_uploaded_image()` in `config/functions.php`. Do not use bare `<img>` tags for upload paths.
+
+```php
+// Hero (above-the-fold -- LCP)
+<?= render_uploaded_image((string) ($work['thumbnailImage'] ?? ''), $title, '', 'eager') ?>
+
+// Grid / list (below-the-fold)
+<?= render_uploaded_image((string) ($work['thumbnailImage'] ?? ''), $workLabel, '', 'lazy') ?>
+```
+
+Rules:
+- The first argument is the **raw, unescaped** URL. The helper escapes internally.
+- Passing an already-escaped value like `$thumbnailImage = e(...)` causes double escaping -- pull from the raw source array.
+- Output is always a plain `<img>`. No `<picture>` / `<source webp>` fork -- files are stored as `.webp` at upload time so client-side branching is unnecessary.
+- `class` applies to the `<img>` element. Wrap externally at the call site if a wrapper is needed.
+
+## Image Backfill Scripts (CLI, `scripts/`)
+
+| Script | Purpose |
+|---|---|
+| `migrate-works-to-webp.php` | One-shot migration to the new strategy (original-replacement) -- convert `nb_works` jpg/png/gif to webp, update DB columns, delete originals. Skips images > 16 MP. Flags: `--dry-run`, `--id=<n>`, `--limit=<n>`. |
+| `convert-large-works-jpg.php` | Resizes leftover rows that `migrate-works-to-webp.php` skipped (16 MP cap) below the webp 16383px limit, then converts. |
+| `backfill-webp.php` | Legacy sibling-strategy backfill -- do not use for new upload paths. |
+
+Always update the DB column **before** deleting the original to prevent data loss. New migration scripts should follow the `migrate-works-to-webp.php` pattern.

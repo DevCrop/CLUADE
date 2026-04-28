@@ -1,0 +1,304 @@
+# Plan: GravityBalls 리팩토링 — 바닥 충돌·Theatre Props·SmokeFloor 분리
+
+## Context
+
+원본 JS의 바닥 충돌(bounce→spread) 로직이 현재 TS 포팅 과정에서 유실됨.
+추가로 `_rnd` 공식 버그, `SMOKE_SPREAD` 원점 기준 오작동, Theatre props 미연동 문제가 존재.
+사용자 요구: (1) 텍스처 유지 (2) Theatre props 추가 (3) 바닥 충돌 복원 (4) SmokeFloor 별도 오브젝트 분리.
+
+---
+
+## 수정 파일 목록 (총 9개)
+
+| # | 파일 | 작업 |
+|---|------|------|
+| 1 | `resource/ts/core/setup.ts` | `smokeFloor` 상수 추가 |
+| 2 | `resource/ts/types/object.types.ts` | 인터페이스·TweenProps·TWEEKABLE_KEYS 업데이트 |
+| 3 | `resource/ts/config/object.config.ts` | smokeFloor 설정 추가, gravityBalls 설정 보완 |
+| 4 | `resource/ts/objects/main/SmokeFloor.ts` | **신규** — 바닥 런타임 포트 SceneObject |
+| 5 | `resource/ts/objects/main/GravityBalls.ts` | 전체 리팩토링 |
+| 6 | `resource/ts/app/ObjectSetup.ts` | SmokeFloor 등록 |
+| 7 | `resource/ts/pages/main/scene/main.scene.ts` | smokeFloor 오브젝트 활성화 |
+| 8 | `resource/ts/pages/main/theatre/MainSceneState.ts` | gravityBalls Theatre 상태 추가 |
+| 9 | `resource/ts/pages/main/theatre/MainSceneRig.ts` | `_applyGravityBalls` / `_readGravityBalls` 추가 |
+
+---
+
+## 1. setup.ts — 상수 추가
+
+```ts
+export const smokeFloor = "smokeFloor";
+```
+
+---
+
+## 2. object.types.ts — 타입 변경
+
+### 2-a. SmokeFloor 인터페이스 (신규)
+
+```ts
+export interface SmokeFloorObjectOptions extends BaseObjectOptions {
+  floorLevel?: number;       // 바닥 Y 좌표
+  floorDimensions?: number;  // 바닥 XZ 반경
+}
+
+// GravityBalls가 의존하는 인터페이스 (DIP)
+export interface SmokeFloorRuntime {
+  getFloorY(): number;
+  getFloorDimensions(): number;
+}
+```
+
+### 2-b. GravityBallsObjectOptions 추가 필드
+
+```ts
+export interface GravityBallsObjectOptions extends BaseObjectOptions {
+  // 기존 유지...
+  proximityRange?: number;    // 로켓이 이 거리 이내로 접근하면 중력 부스트 시작
+  maxGravityBoost?: number;   // 최대 중력 배수 (floor 바로 위에서)
+  vxMult?: number;            // 첫 번째 바운스 XZ 확산 배수
+  vzMult?: number;
+  vyMult?: number;            // 첫 번째 바운스 Y 반사 계수 (음수)
+}
+```
+
+### 2-c. TweenProps 업데이트
+
+```ts
+export type GravityBallsTweenProps = ObjectTweenProps<
+  Pick<GravityBallsObjectOptions, "dotsPerInterval" | "physicsScale" | "maxGravityBoost">
+>;
+```
+
+### 2-d. TWEEKABLE_KEYS_BY_ID
+
+```ts
+gravityBalls: ["position", "rotation", "scale", "visible", "dotsPerInterval", "physicsScale", "maxGravityBoost"],
+```
+
+---
+
+## 3. object.config.ts — 설정값
+
+### smokeFloor 추가
+
+```ts
+[smokeFloor]: {
+  visible: false,         // 충돌 평면만 — 시각적 없음
+  floorLevel: -2.5,
+  floorDimensions: 25,
+},
+```
+
+### gravityBalls 보완
+
+```ts
+[gravityBalls]: {
+  // 기존 유지...
+  proximityRange: 4.0,    // 4 유닛 이내 → 중력 부스트 시작
+  maxGravityBoost: 3.0,   // 최대 3배 중력
+  vxMult: 2.5,            // 바운스 시 XZ 확산 (원본: random(10,20)*0.15 ≈ 2.25)
+  vzMult: 1.5,
+  vyMult: -0.5,           // 반사 계수 (원본: random(4,6)*-0.1 ≈ -0.5)
+},
+```
+
+---
+
+## 4. SmokeFloor.ts — 신규 SceneObject
+
+```
+resource/ts/objects/main/SmokeFloor.ts
+```
+
+- `extends SceneObject<Record<string, never>>`
+- `implements SmokeFloorRuntime`
+- `runObject()`: `ctx.registerObject("smokeFloor.runtime", this)`
+- `getFloorY()`: `this._opts.floorLevel ?? -2.5`
+- `getFloorDimensions()`: `this._opts.floorDimensions ?? 25`
+- `runUpdate()`: no-op
+- `dispose()`: `ctx.unregisterObject("smokeFloor.runtime")`
+- `applyVisibility()`: no-op (비시각 오브젝트)
+
+---
+
+## 5. GravityBalls.ts — 리팩토링 상세
+
+### 5-a. SphereInfo 확장
+
+```ts
+interface SphereInfo {
+  // 기존 유지...
+  bounced: boolean;    // 첫 바운스 완료 여부
+  vxMult: number;      // 첫 바운스 확산 배수
+  vzMult: number;
+  vyMult: number;      // Y 반사 계수
+  initScale: number;   // 초기 스케일 (바닥 충돌 오프셋 계산용)
+  spawnX: number;      // SMOKE_SPREAD 기준점 (원점 버그 수정)
+  spawnY: number;
+}
+```
+
+### 5-b. `_rnd` 공식 수정 (버그 수정)
+
+```ts
+// 전: Math.floor(Math.random() * max) + min  → [min, min+max)
+// 후:
+private _rnd(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+```
+
+### 5-c. SMOKE_SPREAD 수정 (원점 버그 수정)
+
+```ts
+// 전: b.startX *= SMOKE_SPREAD  (원점 기준 확산 — 위치에 따라 편차)
+// 후: 스폰 지점 기준 상대 오프셋만 확산
+const dx = b.startX - b.spawnX;
+const dy = b.startY - b.spawnY;
+b.startX = b.spawnX + dx * SMOKE_SPREAD;
+b.startY = b.spawnY + dy * SMOKE_SPREAD;
+```
+
+### 5-d. 근접 중력 계산 (`_tick` 내)
+
+```ts
+// rocket Y가 floorY + proximityRange 이내 → gravityScale 증가
+private _getFloorRuntime(): SmokeFloorRuntime | null {
+  const candidate = this._context?.getObject("smokeFloor.runtime");
+  return (candidate && typeof (candidate as SmokeFloorRuntime).getFloorY === "function")
+    ? candidate as SmokeFloorRuntime
+    : null;
+}
+
+private _computeGravityScale(rocketY: number, floorY: number, o: ResolvedOpts): number {
+  const dist = Math.max(0, rocketY - floorY);
+  const t = 1 - Math.min(1, dist / o.proximityRange);   // 0=멀리, 1=floor 바로 위
+  return 1 + t * o.maxGravityBoost;
+}
+```
+
+스폰 시 `gravity: DEFAULTS.gravityBase * s * gravityScale` 적용 → 로켓이 가까울수록 스폰 파티클이 강한 중력 보유.
+
+### 5-e. 바닥 충돌 + bounce spread (`_step`)
+
+원본 `drawDot()` 로직을 이식:
+
+```ts
+// floorY, floorDim을 _step 인자로 전달
+private _step(b: SphereInfo, floorY: number, floorDim: number): boolean {
+  // 기존 scale shrink, position update, gravity, rotation ...
+
+  const bounceY = floorY + b.initScale * sp.scale.x;
+  if (sp.position.y < bounceY) {
+    sp.position.y = bounceY;
+    b.startY = bounceY;
+
+    const inBounds =
+      Math.abs(sp.position.x) < floorDim / 2 &&
+      Math.abs(sp.position.z) < floorDim / 2;
+
+    if (!b.bounced) {
+      b.vx *= b.vxMult;          // 강한 확산
+      b.vz *= b.vzMult;
+      if (inBounds) b.vy *= b.vyMult;  // 반사 (음수로 전환)
+      b.bounced = true;
+    } else {
+      b.vx *= 0.92;              // 마찰로 점감
+      b.vz *= 0.92;
+      if (inBounds) b.vy *= b.vyMult;
+    }
+  }
+
+  // 기존 fade + dispose 로직...
+}
+```
+
+### 5-f. Generic 업데이트
+
+```ts
+export class GravityBalls extends SceneObject<GravityBallsTweenProps> {
+```
+
+---
+
+## 6. ObjectSetup.ts — SmokeFloor 등록
+
+JetEngine과 동일한 `createSetOptionsSpec` 패턴으로:
+
+```ts
+[smokeFloor]: createSetOptionsSpec(smokeFloor, () => new SmokeFloor()),
+```
+
+---
+
+## 7. main.scene.ts — 오브젝트 활성화
+
+```ts
+export const objects = {
+  // 기존...
+  [smokeFloor]: true,
+};
+```
+
+---
+
+## 8. MainSceneState.ts — gravityBalls 상태 추가
+
+JetEngine 패턴 참조:
+
+```ts
+gravityBalls: {
+  visible: boolean;
+  dotsPerInterval: number;
+  physicsScale: number;
+  maxGravityBoost: number;
+}
+
+// DEFAULT_MAIN_SCENE_STATE에 기본값 추가
+gravityBalls: {
+  visible: true,
+  dotsPerInterval: 3,
+  physicsScale: 0.006,
+  maxGravityBoost: 3.0,
+},
+```
+
+---
+
+## 9. MainSceneRig.ts — apply/read 추가
+
+JetEngine 패턴 그대로:
+
+```ts
+private _applyGravityBalls(engine: Engine, state: MainGravityBallsState): void {
+  const gb = engine.getSceneObjectById(gravityBalls) as SceneObject<GravityBallsTweenProps> | null;
+  if (!gb || typeof gb.setTimelineVars !== "function") return;
+  gb.setTimelineVars(state, "to");
+}
+
+private _readGravityBalls(engine: Engine): MainGravityBallsState {
+  const defaults = DEFAULT_MAIN_SCENE_STATE.gravityBalls;
+  const object = engine.getSceneObjectById(gravityBalls) as
+    | { getRuntimeOptions?: () => Record<string, unknown> } | null;
+  const runtime = object?.getRuntimeOptions?.() ?? {};
+  return {
+    visible: (runtime.visible as boolean) ?? defaults.visible,
+    dotsPerInterval: this._toFinite(runtime.dotsPerInterval, defaults.dotsPerInterval),
+    physicsScale: this._toFinite(runtime.physicsScale, defaults.physicsScale),
+    maxGravityBoost: this._toFinite(runtime.maxGravityBoost, defaults.maxGravityBoost),
+  };
+}
+```
+
+---
+
+## 검증
+
+1. `rtk tsc --noEmit` — 타입 오류 없음
+2. `rtk npm run test` — 기존 테스트 그린
+3. 브라우저 `http://localhost:8888` main 페이지 확인:
+   - 로켓 하단 smoke 스프라이트 정상 생성
+   - 파티클이 `floorLevel`(-2.5) 에 닿으면 XZ로 퍼지며 바운스
+   - Theatre Studio에서 `dotsPerInterval` / `physicsScale` / `maxGravityBoost` sliders 동작
+   - 로켓을 바닥 근처로 이동(Theatre 애니메이션) → 스폰 파티클 중력 강도 증가 확인

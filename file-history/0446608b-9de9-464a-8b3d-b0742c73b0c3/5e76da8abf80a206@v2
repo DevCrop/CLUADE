@@ -1,0 +1,158 @@
+# 홈페이지 카피 개선 전략 플랜
+
+## Context
+
+현재 홈페이지는 우주 여정 컨셉이 구조적으로는 잘 잡혀 있으나,
+실제 방문자가 읽었을 때 "웹 에이전시인지", "왜 이 팀인지", "무엇을 받을 수 있는지"가
+느껴지지 않는다. 추상성 과잉 + 후킹 부재 + 여정 단어 남용이 핵심 문제.
+
+---
+
+## 진단: 섹션별 문제 분류
+
+### Keep (이미 강한 것)
+- `story` 섹션 영문: `"DEFAULT IS SAFE. UNCHARTED IS WHERE BRANDS BEGIN."` → 태도가 있고 브랜드 고유
+- `why` 섹션 스킬 레이블: `THREE.JS / INTERACTIVE WEB` 형식 → 간결하고 증명됨
+- `portfolio` 섹션: `"FROM PLAN TO SCREEN / WORK BECOMES REAL"` → 구체적이고 깔끔
+
+### Fix (방향은 맞는데 실행이 약한 것)
+- `hero` 한국어 바디: 방향 맞지만 "웹으로 만듭니다"가 너무 뭉툭
+- `services` 서비스 설명: 구조는 좋으나 일부 항목이 generic
+- `contact` CTA: "길은 열려 있습니다"가 너무 수동적
+
+### Replace (어느 에이전시나 쓸 수 있어서 교체 필요)
+- `intro` 영문: `"WE DESIGN YOUR JOURNEY"` / `"YOUR STORY BEGINS HERE"` → 천편일률적
+- `introAction` 영문: `"START BESIDE YOU."` → 주어 없는 불완전 문장, 어색
+- `who` 영문: `"FORWARD, TOGETHER."` → 가장 generic. 올림픽·스포츠브랜드에서도 쓸 수 있음
+- `partners` 한국어: `"다음 장면에 도착했습니다"` → 의미 불분명
+
+---
+
+## 핵심 원인 3가지
+
+### 1. "여정" 단어 남용
+현재 `여정`이 7개 섹션에 반복 등장. 브랜드 언어가 아니라 무의미한 반복어가 됨.
+→ 전략: `여정`은 `hero`, `contact` 2개 섹션에만 명시적으로 사용. 나머지는 다른 단어군으로 교체.
+
+### 2. 후킹이 없는 인트로
+현재 `intro`는 "WE DESIGN YOUR JOURNEY" — 주어가 WE, 동사가 DESIGN. 에이전시 관점에서 시작함.
+방문자가 느껴야 할 긴장감이나 질문이 없다.
+→ 전략: 방문자의 문제/상황을 먼저 던지는 구조로 전환.
+예시 방향: `"브랜드에게는 딱 한 번의 첫 인상이 있습니다."` (한국어로 시작) 또는
+영문으로 `"YOUR BRAND HAS ONE FIRST SCREEN."` — 방문자 중심으로 재조립.
+
+### 3. 섹션 고유 주장이 없음
+모든 섹션이 비슷한 수준의 추상도에서 끝남.
+브랜딩 원칙: 각 섹션에 **NINEONELABS만 할 수 있는 구체적인 클레임** 1개 필요.
+테스트: "Nike가 이 문장을 쓸 수 있나? 다른 웹에이전시가 이 문장을 쓸 수 있나?" → Yes면 교체.
+
+---
+
+## 섹션별 개선 방향
+
+### 01 · `no-main-intro` (Intro)
+| 현재 | 문제 | 개선 방향 |
+|---|---|---|
+| `WE DESIGN YOUR JOURNEY` | 에이전시 관점, generic | 방문자의 상황을 먼저 제시 |
+| `YOUR STORY BEGINS HERE` | 너무 많이 쓰이는 문구 | 구체적 긴장감으로 교체 |
+
+방향: 방문자가 "나 얘기네"라고 느끼는 첫 문장.
+한국어 예시 방향: `브랜드는 만들고 나서도 계속 증명해야 합니다.`
+영문 예시 방향: `"BRANDS DON'T LAUNCH. THEY PROVE."` 또는 `"YOUR BRAND HAS ONE FIRST SCREEN."`
+
+### 02 · `no-main-intro-action` (IntroAction)
+| 현재 | 문제 | 개선 방향 |
+|---|---|---|
+| `START BESIDE YOU.` | 주어 없음, 문법적으로 불완전 | `WE START BESIDE YOU.` 또는 재구성 |
+| 두 비트가 대비 없음 | 긴장감이 없다 | Before(방향 없음) → After(구조 잡힘) 대비 구조 |
+
+방향: 2개의 비트가 서로 대비를 이루어야 함.
+예: `"DIRECTION FIRST."` (처음 미팅/정렬) → `"STRUCTURE NEXT."` (설계 착수)
+
+### 03 · `no-main-hero` (Hero)
+| 현재 | 문제 | 개선 방향 |
+|---|---|---|
+| 한국어: `우리는 그 여정을 웹으로 만듭니다.` | "웹으로 만듭니다"가 너무 뭉툭 | 구체적 웹 경험을 언급 |
+
+방향: `JOIN THE JOURNEY`는 유지. 한국어 서브라인을 교체.
+예시 방향: `브랜드가 처음 세상에 말을 거는 방법, 우리는 그걸 웹으로 설계합니다.`
+
+### 04 · `no-main-story` (Story) — 가장 강한 섹션, 소폭 조정
+현재 영문 헤드라인들이 이미 강함. 한국어 바디 `"그래서 우리는 익숙한 답을 고르기보다..."` 도 괜찮음.
+조정 포인트: `"A NEW BRAND NEEDS AN UNCHARTED WEB."` — `UNCHARTED`가 추상적.
+선택: 그대로 두거나 `"A NEW BRAND NEEDS ITS OWN WEB."` 으로 더 명확하게.
+
+### 05 · `no-main-who` (Who)
+| 현재 | 문제 | 개선 방향 |
+|---|---|---|
+| `FORWARD, TOGETHER.` | 가장 generic한 헤드라인 | 역할 분리를 명시하는 문장 |
+
+방향: 클라이언트 = 주인공, NINEONELABS = 설계자 구도를 영문 헤드라인에서 바로 드러냄.
+예시 방향: `"YOUR BRIEF. OUR BUILD."` 또는 `"THE DIRECTION IS YOURS. THE STRUCTURE IS OURS."`
+한국어 바디: `여정` 대신 구체적인 행동어로 교체.
+
+### 06 · `no-main-why` (WhyUs) — 섹션 헤드라인 누락
+**현재 문제**: 섹션에 헤드라인이 아예 없다. 스킬 레이블이 갑자기 시작됨.
+→ 스킬 레이블 위에 1줄 프레이밍 헤드라인 추가 필요.
+예시 방향: `"THESE ARE THE TOOLS WE SHIP WITH."` 또는 한국어: `"설계에 쓰이는 실제 기술입니다."`
+
+### 07 · `no-main-services` (Services) — 양호, 소폭 조정
+서비스 설명들 대체로 좋음. 
+체크 포인트: `App Build` 설명 `"사용자가 다시 돌아올 수 있는 앱 구조"` → `"반복 사용이 되는 앱 구조"` 로 명확화.
+
+### 11 · `no-main-clients` (Partners)
+| 현재 | 문제 | 개선 방향 |
+|---|---|---|
+| `다음 장면에 도착했습니다` | "장면"이 무엇인지 불명확 | 구체적 결과 언어로 교체 |
+
+방향: `더 분명한 웹과 브랜드 구조로 다음 단계에 도달했습니다.`
+
+### 12 · `no-main-contact` (Contact)
+| 현재 | 문제 | 개선 방향 |
+|---|---|---|
+| `새로운 여정을 위한 길은 열려 있습니다` | 수동적, 시적이지만 행동 유도 약함 | 직접적 행동 유도 |
+| `첫 방향을 함께 하세요` | 어색한 문법 | `첫 방향을 함께 잡겠습니다` 또는 재구성 |
+
+방향: `YOUR JOURNEY STARTS HERE.` 유지. 한국어는 더 직접적으로.
+예시: `브랜드의 첫 화면이 필요하다면, 지금 연락하세요.` — 군더더기 없음.
+
+---
+
+## 작업 접근 방법
+
+### 단계 1 — `여정` 사용 지도 작성 (30분)
+모든 섹션에서 `여정` 등장 위치 표시. 2개 섹션 (`hero`, `contact`)만 남기고 나머지는 대체 단어 결정.
+
+### 단계 2 — Replace 항목 우선 처리 (intro, introAction, who)
+가장 약한 섹션 3개를 먼저 교체. 브랜드 어휘 규칙 준수.
+각 섹션: 영문 헤드라인 1줄 → 한국어 바디 2줄 이내.
+
+### 단계 3 — Fix 항목 조정 (hero KR, contact KR, partners KR)
+기존 문장 유지하면서 핵심 단어만 교체.
+
+### 단계 4 — why 섹션 헤드라인 추가
+1줄 추가로 섹션 진입 포인트 생성.
+
+### 단계 5 — 전체 통독 테스트
+"낯선 사람 테스트": 처음 보는 사람이 스크롤했을 때
+1. 무슨 회사인지 (웹 에이전시)
+2. 왜 이 팀인지 (Three.js 인터랙티브, 브랜드 설계)
+3. 무엇을 받는지 (WEB · APP · BRANDING · UI/UX · MAINTENANCE)
+이 3가지가 20초 안에 느껴지면 통과.
+
+---
+
+## 수정 대상 파일
+
+- `views/pages/index.php` — 모든 카피 수정
+- `brand/vocabulary.md` — 필요시 `여정` 사용 규칙 업데이트
+- `brand/copy-templates.md` — 섹션 예시 업데이트
+
+---
+
+## 검증 방법
+
+1. PHP lint: `docker compose exec web php -l views/pages/index.php`
+2. 브라우저 `http://localhost:8888` 에서 전체 스크롤 통독
+3. 영문 문법 체크: 주어·동사 완전성 확인 (START BESIDE YOU 류 재발 방지)
+4. `여정` 검색: `chop grep "여정" views/pages/index.php` — 2회 이하인지 확인

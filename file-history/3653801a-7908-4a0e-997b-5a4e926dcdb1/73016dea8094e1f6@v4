@@ -1,0 +1,120 @@
+# Plan: 시니어 AI 아키텍처 최적화
+
+## Context
+현재 구조는 기능적으로 동작하지만, 시니어 아키텍처 관점에서 3가지 문제가 있음:
+1. **컨텍스트 중복** — CLAUDE.md 본문이 RTK 커맨드 표 + `@RTK.md` 임포트 = RTK가 두 번 로드됨
+2. **자동화 공백** — cleanup.ps1이 plans/shell-snapshots만 정리. file-history(20MB) · 스탈 project 폴더는 아직 수동
+3. **발견성 갭** — BEST_PRACTICES.md(TS 아키텍처 핵심 문서)가 MEMORY.md 인덱스에 없음
+
+---
+
+## 변경 1: CLAUDE.md 중복 제거 (컨텍스트 효율)
+
+**파일:** `C:\Users\edn_y\.claude\CLAUDE.md`
+
+현재 구조:
+- 본문 = RTK 커맨드 표 전체 (~50줄) + 황금 규칙
+- 마지막 줄 = `@RTK.md` (RTK 메타 커맨드 추가)
+
+문제: RTK가 사실상 두 번 설명됨. CLAUDE.md 본문 ≈ RTK.md 확장판.
+
+개선: CLAUDE.md 본문은 **글로벌 행동 규칙 최소화** + `@RTK.md` 단독 임포트.
+RTK.md가 커맨드 표·메타 커맨드·설치 검증을 모두 담는 단일 출처.
+
+**CLAUDE.md 새 구조 (5줄):**
+```markdown
+# Global AI Rules
+
+**RTK 필수**: 출력이 몇 줄을 초과할 Bash 명령은 `rtk` 프리픽스. WSL Remote = hook 자동 재작성. native Windows = 명시 prefix.
+
+@RTK.md
+```
+
+**RTK.md에 커맨드 표 통합:** 현재 CLAUDE.md에 있는 커맨드 카테고리 표를 RTK.md로 이동.
+
+---
+
+## 변경 2: cleanup.ps1 확장 (자동화 범위 확대)
+
+**파일:** `C:\Users\edn_y\.claude\cleanup.ps1`
+
+추가할 4가지:
+
+### 2-A. file-history/ 14일 이상 항목 삭제
+현재 20MB 방치. Stop 훅에서 주기적으로 정리.
+```powershell
+# file-history/: 14일 이상 된 UUID 디렉토리 삭제
+Get-ChildItem "$base\file-history" -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-14) } |
+    Remove-Item -Recurse -Force
+```
+
+### 2-B. 스탈 project 폴더 자동 감지 + 삭제
+30일 이상 미수정 project 폴더 자동 삭제 (active 프로젝트 보호).
+```powershell
+# projects/: 30일 이상 미수정 폴더 삭제 (renew_nineonelabs 제외)
+Get-ChildItem "$base\projects" -Directory -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.Name -notlike "*renew*nineonelabs*" -and
+        $_.LastWriteTime -lt (Get-Date).AddDays(-30)
+    } |
+    Remove-Item -Recurse -Force
+```
+
+### 2-C. cleanup.log 감사 로그
+삭제 내역 기록. 디버깅·검증용.
+```powershell
+# 삭제된 파일 수를 cleanup.log에 기록
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+"[$timestamp] plans: $plansDeleted files, shell-snapshots: $ssDeleted files" |
+    Add-Content "$base\cleanup.log"
+```
+
+### 2-D. MEMORY.md 파일 참조 무결성 체크
+MEMORY.md에 링크된 파일이 실제로 존재하는지 검증. 없으면 로그 경고.
+```powershell
+# MEMORY.md 참조 파일 존재 확인
+$memoryDir = "$base\projects\c--Users-edn-y-renew-nineonelabs\memory"
+$memIndex = Get-Content "$memoryDir\MEMORY.md" -ErrorAction SilentlyContinue
+$memIndex | Select-String '\[.*\]\((.*\.md)\)' | ForEach-Object {
+    $ref = $_.Matches[0].Groups[1].Value
+    if (-not (Test-Path "$memoryDir\$ref")) {
+        "[$timestamp] WARN: MEMORY.md references missing file: $ref" |
+            Add-Content "$base\cleanup.log"
+    }
+}
+```
+
+---
+
+## 변경 3: MEMORY.md에 BEST_PRACTICES.md 등록
+
+**파일:** `C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\MEMORY.md`
+
+추가할 한 줄:
+```
+- [TS Architecture (BEST_PRACTICES)](../../../renew_nineonelabs/.claude/BEST_PRACTICES.md) — WebGL lifecycle·Three.js hot-path·disposal checklist·Theatre rules
+```
+
+단, MEMORY.md는 `~/.claude/projects/.../memory/`에 있고 BEST_PRACTICES.md는 프로젝트 로컬에 있어 상대경로가 복잡함.
+→ **대안:** memory 파일로 요약 포인터 생성: `project_ts_bestpractices_pointer.md`에 경로만 기록.
+
+---
+
+## 변경 파일 목록
+
+| 파일 | 작업 |
+|------|------|
+| `C:\Users\edn_y\.claude\CLAUDE.md` | 본문을 5줄로 축약, RTK 커맨드 표 제거 |
+| `C:\Users\edn_y\.claude\RTK.md` | CLAUDE.md에서 커맨드 표 이동 통합 |
+| `C:\Users\edn_y\.claude\cleanup.ps1` | 4개 항목 추가 (file-history·stale projects·log·health check) |
+| `memory\MEMORY.md` | BEST_PRACTICES.md 포인터 항목 추가 |
+
+---
+
+## 검증
+
+1. `cat C:\Users\edn_y\.claude\CLAUDE.md` — 5줄 이하인지 확인
+2. `cat C:\Users\edn_y\.claude\RTK.md` — 커맨드 표 포함되었는지 확인
+3. 편집 후 `C:\Users\edn_y\.claude\cleanup.ps1` 수동 실행 → `cleanup.log` 생성 확인
+4. MEMORY.md 링크가 정상 파일을 가리키는지 확인

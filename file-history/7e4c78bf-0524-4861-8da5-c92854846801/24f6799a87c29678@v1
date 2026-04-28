@@ -1,0 +1,525 @@
+import { QA_MANAGER } from "../config/component.config.js";
+import { INIT_DOM_CLASSES } from "../config/dom.config.js";
+import type {
+  QaCheckResult,
+  QaManagerInitOptions,
+  QaReport,
+} from "../types/component.types.js";
+import type { WindowWithLenis } from "../types/app.types.js";
+import { Debounce } from "../utils/Debounce.js";
+import { Logger } from "../utils/Logger.js";
+import { ScrollLock } from "../utils/ScrollLock.js";
+
+type QaEventTarget = Document | HTMLElement;
+
+export class QaManager {
+  private static readonly _CLASS = "QaManager";
+
+  private _root: ParentNode | null = null;
+  private _pageRoot: HTMLElement | null = null;
+  private _wizard: HTMLElement | null = null;
+  private _eventTarget: QaEventTarget | null = null;
+  private _observer: MutationObserver | null = null;
+  private _debounce = new Debounce(QA_MANAGER.debounceMs);
+  private _lastReportKey = "";
+  private readonly _onInteraction = (): void => {
+    this._debounce.runDebounce(() => this.run());
+  };
+  private readonly _onViewportChange = (): void => {
+    this._debounce.runDebounce(() => this.run());
+  };
+
+  init(options: QaManagerInitOptions = {}): void {
+    this.dispose();
+    this._root = options.root ?? document;
+    this._pageRoot = this._resolvePageRoot();
+    this._wizard = this._resolveWizard();
+    this._eventTarget = this._resolveEventTarget();
+
+    this._bindEvents();
+    this._observeDom();
+    this.run();
+  }
+
+  run(): QaReport {
+    const results = [
+      this._checkPageRoot(),
+      this._checkLenisRuntime(),
+      this._checkScrollLockState(),
+      this._checkCanvasHost(),
+      this._checkSceneShellState(),
+      ...this._collectWizardChecks(),
+    ];
+    const failedResults = results.filter((result) => !result.valid);
+    const report: QaReport = {
+      valid: failedResults.length === 0,
+      results,
+    };
+    const reportKey = JSON.stringify(results);
+    if (reportKey === this._lastReportKey) return report;
+    this._lastReportKey = reportKey;
+
+    if (failedResults.length === 0) {
+      Logger.info(
+        QaManager._CLASS,
+        "run",
+        "Runtime QA passed.",
+        results,
+      );
+      return report;
+    }
+
+    Logger.warn(
+      QaManager._CLASS,
+      "run",
+      "Runtime QA detected issues.",
+      failedResults,
+    );
+    return report;
+  }
+
+  dispose(): void {
+    this._observer?.disconnect();
+    this._observer = null;
+    this._unbindEvents();
+    this._debounce.dispose();
+    this._debounce = new Debounce(QA_MANAGER.debounceMs);
+    this._root = null;
+    this._pageRoot = null;
+    this._wizard = null;
+    this._eventTarget = null;
+    this._lastReportKey = "";
+  }
+
+  private _bindEvents(): void {
+    if (!this._eventTarget) return;
+    this._eventTarget.addEventListener("click", this._onInteraction);
+    this._eventTarget.addEventListener("change", this._onInteraction);
+    this._eventTarget.addEventListener("input", this._onInteraction);
+    window.addEventListener("scroll", this._onViewportChange, { passive: true });
+    window.addEventListener("resize", this._onViewportChange);
+  }
+
+  private _unbindEvents(): void {
+    if (this._eventTarget) {
+      this._eventTarget.removeEventListener("click", this._onInteraction);
+      this._eventTarget.removeEventListener("change", this._onInteraction);
+      this._eventTarget.removeEventListener("input", this._onInteraction);
+    }
+    window.removeEventListener("scroll", this._onViewportChange);
+    window.removeEventListener("resize", this._onViewportChange);
+  }
+
+  private _observeDom(): void {
+    const observationRoot = this._resolveObservationRoot();
+    if (!observationRoot) return;
+
+    this._observer = new MutationObserver(() => {
+      this._pageRoot = this._resolvePageRoot();
+      this._wizard = this._resolveWizard();
+      this._debounce.runDebounce(() => this.run());
+    });
+    this._observer.observe(observationRoot, {
+      ...QA_MANAGER.mutationObserver,
+      attributeFilter: [...QA_MANAGER.mutationObserver.attributeFilter],
+    });
+  }
+
+  private _collectWizardChecks(): QaCheckResult[] {
+    const wizard = this._wizard;
+    if (!wizard) {
+      return [
+        {
+          key: "contact-wizard",
+          valid: true,
+          details: "contact wizard not present on this page",
+        },
+      ];
+    }
+
+    return [
+      this._checkStepCount(wizard),
+      this._checkActiveStep(wizard),
+      this._checkCurrentCounter(wizard),
+      this._checkOverviewCount(wizard),
+      this._checkOverviewCurrent(wizard),
+      this._checkPrimaryAction(wizard),
+      this._checkPreviousAction(wizard),
+      this._checkProjectOtherField(wizard),
+      this._checkDetailsFields(wizard),
+    ];
+  }
+
+  private _checkPageRoot(): QaCheckResult {
+    const pageRoots = this._resolvePageRoots();
+    const pageId = this._pageRoot?.dataset.page ?? "";
+    return {
+      key: "page-root",
+      valid: pageRoots.length === 1 && pageId !== "",
+      details: `count=${pageRoots.length}, page=${pageId || "none"}`,
+    };
+  }
+
+  private _checkLenisRuntime(): QaCheckResult {
+    const win = window as WindowWithLenis;
+    const lenis = win.__appLenis ?? win.lenis ?? null;
+    const hasRaf = typeof lenis?.raf === "function";
+    const animatedScroll = lenis?.animatedScroll;
+    const actualScroll = lenis?.actualScroll;
+    const validAnimated =
+      animatedScroll === undefined || Number.isFinite(animatedScroll);
+    const validActual = actualScroll === undefined || Number.isFinite(actualScroll);
+    return {
+      key: "lenis-runtime",
+      valid: lenis != null && hasRaf && validAnimated && validActual,
+      details: `exists=${String(lenis != null)}, hasRaf=${String(hasRaf)}, animated=${String(animatedScroll ?? "n/a")}, actual=${String(actualScroll ?? "n/a")}`,
+    };
+  }
+
+  private _checkScrollLockState(): QaCheckResult {
+    const htmlLocked = document.documentElement.classList.contains(
+      QA_MANAGER.scrollLockClass,
+    );
+    const bodyLocked = document.body.classList.contains(
+      QA_MANAGER.scrollLockClass,
+    );
+    const htmlOverflowHidden = document.documentElement.style.overflow === "hidden";
+    const bodyOverflowHidden = document.body.style.overflow === "hidden";
+    const expectedLocked = ScrollLock.isLocked;
+    const valid = expectedLocked
+      ? htmlLocked && bodyLocked && htmlOverflowHidden && bodyOverflowHidden
+      : !htmlLocked && !bodyLocked;
+
+    return {
+      key: "scroll-lock",
+      valid,
+      details: `expected=${String(expectedLocked)}, htmlLocked=${String(htmlLocked)}, bodyLocked=${String(bodyLocked)}, htmlOverflowHidden=${String(htmlOverflowHidden)}, bodyOverflowHidden=${String(bodyOverflowHidden)}`,
+    };
+  }
+
+  private _checkCanvasHost(): QaCheckResult {
+    const pageId = this._pageRoot?.dataset.page ?? "";
+    const needsDefaultCanvas = pageId === "main" || pageId === "about";
+    if (!needsDefaultCanvas) {
+      return {
+        key: "canvas-host",
+        valid: true,
+        details: `page=${pageId || "none"}, default canvas not required`,
+      };
+    }
+
+    const canvas = this._queryInRoot<HTMLCanvasElement>(QA_MANAGER.canvasHostSelector);
+    return {
+      key: "canvas-host",
+      valid: canvas != null,
+      details: `page=${pageId}, canvasPresent=${String(canvas != null)}`,
+    };
+  }
+
+  private _checkSceneShellState(): QaCheckResult {
+    const sceneShells = Array.from(
+      this._queryAllInRoot<HTMLElement>(QA_MANAGER.sceneShellSelector),
+    );
+    if (sceneShells.length === 0) {
+      return {
+        key: "scene-shell",
+        valid: true,
+        details: "scene shell not present on this page",
+      };
+    }
+
+    const configuredShells = sceneShells.filter(
+      (shell) => shell.style.getPropertyValue("--scene-shell-span").trim() !== "",
+    );
+    if (configuredShells.length === 0) {
+      return {
+        key: "scene-shell",
+        valid: true,
+        details: `total=${sceneShells.length}, configured=0`,
+      };
+    }
+
+    const invalidShell = configuredShells.find((shell) => {
+      const rawValue = shell.style.getPropertyValue("--scene-shell-span").trim();
+      const numericValue = Number.parseFloat(rawValue);
+      return !rawValue.endsWith("vh") || !Number.isFinite(numericValue) || numericValue <= 0;
+    });
+    return {
+      key: "scene-shell",
+      valid: invalidShell == null,
+      details:
+        invalidShell == null
+          ? `total=${sceneShells.length}, configured=${configuredShells.length}`
+          : `invalidScene=${invalidShell.dataset.scene ?? "unknown"}, value=${invalidShell.style.getPropertyValue("--scene-shell-span").trim()}`,
+    };
+  }
+
+  private _checkStepCount(wizard: HTMLElement): QaCheckResult {
+    const steps = wizard.querySelectorAll(QA_MANAGER.stepSelector).length;
+    const counter = wizard.querySelector<HTMLElement>(
+      QA_MANAGER.currentCounterSelector,
+    );
+    const total = wizard.querySelector<HTMLElement>(
+      QA_MANAGER.totalCounterSelector,
+    );
+    const totalValue = Number(total?.textContent?.trim() ?? "0");
+    return {
+      key: "contact-step-count",
+      valid: steps > 0 && steps === totalValue,
+      details: `steps=${steps}, total=${totalValue}, current=${counter?.textContent?.trim() ?? ""}`,
+    };
+  }
+
+  private _checkActiveStep(wizard: HTMLElement): QaCheckResult {
+    const activeSteps = wizard.querySelectorAll(
+      QA_MANAGER.activeStepSelector,
+    ).length;
+    return {
+      key: "contact-active-step",
+      valid: activeSteps === 1,
+      details: `activeSteps=${activeSteps}`,
+    };
+  }
+
+  private _checkCurrentCounter(wizard: HTMLElement): QaCheckResult {
+    const currentCounter = wizard.querySelector<HTMLElement>(
+      QA_MANAGER.currentCounterSelector,
+    );
+    const currentValue = Number(currentCounter?.textContent?.trim() ?? "0");
+    const expectedValue = this._resolveCurrentStepIndex(wizard) + 1;
+    return {
+      key: "contact-current-counter",
+      valid: currentValue === expectedValue,
+      details: `current=${currentValue}, expected=${expectedValue}`,
+    };
+  }
+
+  private _checkOverviewCount(wizard: HTMLElement): QaCheckResult {
+    const steps = wizard.querySelectorAll(QA_MANAGER.stepSelector).length;
+    const items = wizard.querySelectorAll(QA_MANAGER.overviewItemSelector).length;
+    return {
+      key: "contact-overview-count",
+      valid: steps === items,
+      details: `steps=${steps}, overviewItems=${items}`,
+    };
+  }
+
+  private _checkOverviewCurrent(wizard: HTMLElement): QaCheckResult {
+    const overviewItems = Array.from(
+      wizard.querySelectorAll<HTMLElement>(QA_MANAGER.overviewItemSelector),
+    );
+    const currentItems = overviewItems.filter((item) =>
+      item.classList.contains("is-current"),
+    );
+    const currentIndex =
+      currentItems.length === 1
+        ? overviewItems.indexOf(currentItems[0])
+        : -1;
+    const expectedIndex = this._resolveCurrentStepIndex(wizard);
+    return {
+      key: "contact-overview-current",
+      valid: currentItems.length === 1 && currentIndex === expectedIndex,
+      details: `currentOverviewItems=${currentItems.length}, currentIndex=${currentIndex}, expectedIndex=${expectedIndex}`,
+    };
+  }
+
+  private _checkPrimaryAction(wizard: HTMLElement): QaCheckResult {
+    const button = wizard.querySelector<HTMLButtonElement>(
+      QA_MANAGER.primaryActionSelector,
+    );
+    if (!button) {
+      return {
+        key: "contact-primary-action",
+        valid: false,
+        details: "primary action button is missing",
+      };
+    }
+
+    const isLastStep =
+      this._resolveCurrentStepIndex(wizard) ===
+      wizard.querySelectorAll(QA_MANAGER.stepSelector).length - 1;
+    const expectedType = isLastStep ? "submit" : "button";
+    const expectedLabel = isLastStep ? "Submit" : "Next";
+    const actualLabel =
+      button.querySelector<HTMLElement>(".no-corner-btn__text")?.textContent?.trim() ??
+      "";
+    const hasNextMarker = button.hasAttribute("data-wizard-next");
+    return {
+      key: "contact-primary-action",
+      valid:
+        button.type === expectedType &&
+        actualLabel === expectedLabel &&
+        hasNextMarker !== isLastStep,
+      details: `type=${button.type}, label=${actualLabel}, expectedType=${expectedType}, expectedLabel=${expectedLabel}, hasNextMarker=${String(hasNextMarker)}`,
+    };
+  }
+
+  private _checkPreviousAction(wizard: HTMLElement): QaCheckResult {
+    const button = wizard.querySelector<HTMLButtonElement>(
+      QA_MANAGER.previousActionSelector,
+    );
+    if (!button) {
+      return {
+        key: "contact-previous-action",
+        valid: false,
+        details: "previous action button is missing",
+      };
+    }
+
+    const target =
+      button.closest<HTMLElement>(QA_MANAGER.previousActionWrapperSelector) ??
+      button;
+    const isFirstStep = this._resolveCurrentStepIndex(wizard) === 0;
+    const ariaHidden = target.getAttribute("aria-hidden");
+    const ariaDisabled = button.getAttribute("aria-disabled");
+    const display = window.getComputedStyle(target).display;
+    const isAnimatingDown = target.classList.contains("is-block-reveal-down");
+    const isRevealed = target.classList.contains(INIT_DOM_CLASSES.blockUp);
+    const isHiddenState =
+      target.hidden &&
+      display === "none" &&
+      target.classList.contains(INIT_DOM_CLASSES.boxHidden);
+    const isTransitioningToHidden =
+      !target.hidden && display !== "none" && isAnimatingDown;
+    const isFirstStepValid = isFirstStep
+      ? isHiddenState || isTransitioningToHidden
+      : !target.hidden && display !== "none" && isRevealed;
+
+    return {
+      key: "contact-previous-action",
+      valid:
+        isFirstStepValid &&
+        button.disabled === isFirstStep &&
+        ariaHidden === String(isFirstStep) &&
+        ariaDisabled === String(isFirstStep),
+      details: `hidden=${String(target.hidden)}, disabled=${String(button.disabled)}, ariaHidden=${ariaHidden}, ariaDisabled=${ariaDisabled}, display=${display}, blockUp=${String(isRevealed)}, blockDown=${String(isAnimatingDown)}, boxHidden=${String(target.classList.contains(INIT_DOM_CLASSES.boxHidden))}, expectedFirstStep=${String(isFirstStep)}`,
+    };
+  }
+
+  private _checkProjectOtherField(wizard: HTMLElement): QaCheckResult {
+    const toggle = wizard.querySelector<HTMLInputElement>(
+      QA_MANAGER.projectOtherToggleSelector,
+    );
+    const panel = wizard.querySelector<HTMLElement>(
+      QA_MANAGER.projectOtherPanelSelector,
+    );
+    const input = wizard.querySelector<HTMLInputElement>(
+      QA_MANAGER.projectOtherInputSelector,
+    );
+    if (!toggle || !panel || !input) {
+      return {
+        key: "contact-project-other",
+        valid: false,
+        details: "project other field structure is incomplete",
+      };
+    }
+
+    const isActive = toggle.checked;
+    return {
+      key: "contact-project-other",
+      valid:
+        panel.classList.contains("is-active") === isActive &&
+        panel.getAttribute("aria-hidden") === String(!isActive) &&
+        input.disabled !== isActive,
+      details: `checked=${String(isActive)}, panelActive=${String(panel.classList.contains("is-active"))}, panelAriaHidden=${panel.getAttribute("aria-hidden")}, inputDisabled=${String(input.disabled)}`,
+    };
+  }
+
+  private _checkDetailsFields(wizard: HTMLElement): QaCheckResult {
+    const detailsStep = this._resolveStepByIndex(
+      wizard,
+      QA_MANAGER.detailsStepIndex,
+    );
+    if (!detailsStep) {
+      return {
+        key: "contact-details-fields",
+        valid: false,
+        details: "details step is missing",
+      };
+    }
+
+    const privacy = detailsStep.querySelector<HTMLInputElement>(
+      QA_MANAGER.privacyFieldSelector,
+    );
+    const attachment = detailsStep.querySelector<HTMLInputElement>(
+      QA_MANAGER.attachmentFieldSelector,
+    );
+    return {
+      key: "contact-details-fields",
+      valid: privacy != null && attachment != null,
+      details: `privacy=${String(privacy != null)}, attachment=${String(attachment != null)}`,
+    };
+  }
+
+  private _resolvePageRoots(): HTMLElement[] {
+    const root = this._root;
+    if (root instanceof HTMLElement && root.matches(QA_MANAGER.pageRootSelector)) {
+      return [root];
+    }
+    return Array.from(
+      root?.querySelectorAll<HTMLElement>(QA_MANAGER.pageRootSelector) ??
+        document.querySelectorAll<HTMLElement>(QA_MANAGER.pageRootSelector),
+    );
+  }
+
+  private _resolvePageRoot(): HTMLElement | null {
+    return this._resolvePageRoots()[0] ?? null;
+  }
+
+  private _resolveWizard(): HTMLElement | null {
+    return this._queryInRoot<HTMLElement>(QA_MANAGER.contactWizardSelector);
+  }
+
+  private _resolveEventTarget(): QaEventTarget | null {
+    if (this._pageRoot) return this._pageRoot;
+    if (this._root instanceof Document) return this._root;
+    if (this._root instanceof HTMLElement) return this._root;
+    return document;
+  }
+
+  private _resolveObservationRoot(): Node | null {
+    if (this._pageRoot) return this._pageRoot;
+    if (this._root instanceof Document) return this._root.body;
+    if (this._root instanceof HTMLElement) return this._root;
+    return document.body;
+  }
+
+  private _queryInRoot<TElement extends Element>(selector: string): TElement | null {
+    if (this._pageRoot) {
+      return this._pageRoot.querySelector<TElement>(selector);
+    }
+    if (this._root instanceof HTMLElement || this._root instanceof Document) {
+      return this._root.querySelector<TElement>(selector);
+    }
+    return document.querySelector<TElement>(selector);
+  }
+
+  private _queryAllInRoot<TElement extends Element>(selector: string): TElement[] {
+    if (this._pageRoot) {
+      return Array.from(this._pageRoot.querySelectorAll<TElement>(selector));
+    }
+    if (this._root instanceof HTMLElement || this._root instanceof Document) {
+      return Array.from(this._root.querySelectorAll<TElement>(selector));
+    }
+    return Array.from(document.querySelectorAll<TElement>(selector));
+  }
+
+  private _resolveCurrentStepIndex(wizard: HTMLElement): number {
+    const activeStep = wizard.querySelector<HTMLElement>(
+      QA_MANAGER.activeStepSelector,
+    );
+    if (!activeStep) return 0;
+
+    const index = Number(activeStep.dataset.wizardStep ?? "0");
+    return Number.isNaN(index) ? 0 : index;
+  }
+
+  private _resolveStepByIndex(
+    wizard: HTMLElement,
+    stepIndex: number,
+  ): HTMLElement | null {
+    return wizard.querySelector<HTMLElement>(
+      `[data-wizard-step="${stepIndex}"]`,
+    );
+  }
+}

@@ -1,0 +1,215 @@
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-25-        'scroll_top' => 'Back to top',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-26-    ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-27-    'footer' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:28:        'privacy_policy' => 'Privacy Policy',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:29:        'marketing_terms' => 'Marketing Terms',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-30-        'cookie_settings' => 'Cookie settings',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-31-        'family_site_heading' => 'Family Site',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-32-        /** External group sites — [['label' => 'Name', 'url' => 'https://...'], ...]; empty hides the block */
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-217-                ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-218-                [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-219-                    'title' => 'B2B Feels Like a<br>Black Box',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:220:                    'problem' => "Brands don't know who to contact, what terms buyers demand, or which certifications block deals.",
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-221-                    'solution' => 'We capture real market signals via <br> Outreach +feedback matrix + meetings.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-222-                ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-223-                [
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-244-            'what_cards' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-245-                [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-246-                    'front_title' => 'The <strong>“Export-Ready,<br>Not Sell-Ready” Brand</strong>',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:247:                    'front_desc' => "You have a product and brand assets, but you're not legally/operationally ready to sell in a new market.",
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-248-                    'back_desc' => 'We take you to <strong>Sale-Ready</strong> in 60 days (compliance docs, labeling, SOP, listings).',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-249-                    'featured' => false,
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-250-                ],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-262-                ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-263-                [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-264-                    'front_title' => 'The Brand Seeking B2B Signals<br>(No Revenue Promise,<br>Real Feedback)',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:265:                    'front_desc' => 'You want to validate deal terms before going all-in: MOQ, pricing, lead time, certifications, channel fit.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-266-                    'back_desc' => 'We run B2B Demand Gen (non-guaranteed) to capture buyer requirements<br>+ meeting notes.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-267-                    'featured' => false,
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-268-                ],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-296-                'intro' => "Operating models aligned to each stage of overseas expansion<br>—from early demand validation to controlled, repeatable growth.",
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-297-            ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-298-            'pricing_highlights' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:299:                ['title' => 'Regulatory Shielding', 'desc' => 'End-to-end regulatory readiness including legal, labeling, and product registration to ensure sale-ready execution.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-300-                ['title' => 'Demand Acceleration', 'desc' => 'Structured B2C and B2B demand generation designed to validate traction and amplify growth.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-301-                ['title' => 'Turnkey Growth Operations', 'desc' => 'From content and ads to reorder and channel control, we operate the growth engine while brands focus on product.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-302-            ],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-304-                [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-305-                    'kicker' => '60-Day Market Readiness Sprint',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-306-                    'name' => 'Export Ready',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:307:                    'summary' => 'Build a legally compliant, sale-ready overseas setup in<br>60 days - while validating SKU demand and early B2B signals.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-308-                    'price' => '$3,500',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-309-                    'unit' => '/ Enablement Fee',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-310-                    'ideal_for' => 'Brands entering overseas markets for the first time <br> and requiring a complete sale-ready foundation.',
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-355-            ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-356-            'faq_items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-357-                ['q' => 'What data do I need to share?', 'a' => 'Inventory availability and lead-time commitments. We need reliable supply to execute sprints without stockout risk.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:358:                ['q' => 'What are your payment terms?', 'a' => 'Enablement and setup fees are due upfront. Retainers are invoiced monthly in advance. PO minimums follow standard net-30 or prepaid terms based on package tier and order size.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-359-                ['q' => 'Do you require exclusivity?', 'a' => 'No blanket exclusivity by default. Scope and channel rules are defined per agreement so you retain flexibility where it matters.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-360-                ['q' => 'What\'s your SLA for lead time and accuracy?', 'a' => 'Targets are set by package and lane; we document cutoffs, handling windows, and exception paths in your SOP so expectations stay clear.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-361-                ['q' => 'Can I customize SKU selection?', 'a' => 'Yes. We shortlist and test against regulatory and demand signals, and you approve the final lineup before launch.'],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-422-                        'desc_items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-423-                            'Landed cost modeling (duty/tax/shipping scenarios)',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-424-                            'Retail margin feasibility + pricing architecture',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:425:                            'Payment/terms and A&P contribution alignment (as applicable)',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-426-                        ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-427-                    ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-428-                    [
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-534-                    'aria' => 'Channel partners FAQ',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-535-                    'items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-536-                        ['q' => 'What data do I need to share?', 'a' => 'Inventory availability and lead-time commitments. We need reliable supply to execute sprints without stockout risk.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:537:                        ['q' => 'What are your payment terms?', 'a' => 'Enablement and setup fees are due upfront. Retainers are invoiced monthly in advance. PO minimums follow standard net-30 or prepaid terms based on package tier and order size.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-538-                        ['q' => 'Do you require exclusivity?', 'a' => 'No blanket exclusivity by default. Scope and channel rules are defined per agreement so you retain flexibility where it matters.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-539-                        ['q' => 'What\'s your SLA for lead time and accuracy?', 'a' => 'Targets are set by package and lane; we document cutoffs, handling windows, and exception paths in your SOP so expectations stay clear.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-540-                        ['q' => 'Can I customize SKU selection?', 'a' => 'Yes. We shortlist and test against regulatory and demand signals, and you approve the final lineup before launch.'],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-597-            ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-598-            'highlights' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-599-                'brand' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:600:                    ['title' => 'Regulatory Shielding', 'desc' => 'End-to-end regulatory readiness including legal, labeling, and product registration to ensure sale-ready execution.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-601-                    ['title' => 'Demand Acceleration', 'desc' => 'Structured B2C and B2B demand generation designed to validate traction and amplify growth.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-602-                    ['title' => 'Turnkey Growth Operations', 'desc' => 'From content and ads to reorder and channel control, we operate the growth engine while brands focus on product.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-603-                ],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-729-                            ['heading' => 'We Provide', 'list_class' => '--bullet', 'items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-730-                                'Tailored brand sourcing and product curation based on channel characteristics.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-731-                                'Localized content packages reflecting regional trends and linguistic nuances.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:732:                                'Regulatory compliance guides to mitigate legal risks like false advertising.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-733-                                'Transparent and fair revenue-sharing models (performance-based).',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-734-                                'All-in-one operational manuals (logistics, customs, CS standards, etc.).',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-735-                                'Comprehensive post-campaign reports based on detailed data analysis.',
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-737-                            ['heading' => 'Retailer Provides', 'list_class' => '--bullet', 'items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-738-                                'Active content posting and promotion leveraging channel influence.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-739-                                'Adherence to provided brand guidelines and campaign schedules.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:740:                                'Compliance with EverCura\'s regulatory SOPs to prevent local legal issues.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-741-                            ]],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-742-                            ['heading' => 'Target KPI', 'card_group_class' => 'no-sub-pricing-card__group no-sub-pricing-card__group--kpi-flat', 'list_class' => '--bullet', 'items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-743-                                'High conversion rates through audience-focused sourcing with zero inventory risk.',
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-755-                    'aria' => 'Brand pricing FAQ',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-756-                    'items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-757-                        ['q' => 'What data do I need to share?', 'a' => 'Inventory availability and lead-time commitments. We need reliable supply to execute sprints without stockout risk.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:758:                        ['q' => 'What are your payment terms?', 'a' => 'Enablement and setup fees are due upfront. Retainers are invoiced monthly in advance. PO minimums follow standard net-30 or prepaid terms based on package tier and order size.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-759-                        ['q' => 'Do you require exclusivity?', 'a' => 'No. Our packages are non-exclusive unless you decide to with negotiated territory protection. We prioritize performance over lock-in.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-760-                        ['q' => 'What\'s your SLA for lead time and accuracy?', 'a' => '7-day lead time to major SEA markets, 99.95% fulfillment accuracy with FEFO + lot tracking. Customs clearance handled with zero regulatory holds in the last 18 months.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-761-                        ['q' => 'Can I customize SKU selection?', 'a' => 'Yes. We provide curated recommendations based on demand signals and margin potential, but you have final approval on all SKU decisions before PO commitment.'],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-766-                    'aria' => 'Retailer pricing FAQ',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-767-                    'items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-768-                        ['q' => 'What data do I need to share?', 'a' => 'SKU-level sell-through quantities (weekly or bi-weekly). We don\'t need revenue — just unit depletion rates to calculate reorder timing.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:769:                        ['q' => 'What are your payment terms?', 'a' => 'Enablement and setup fees are due upfront. Retainers are invoiced monthly in advance. PO minimums follow standard net-30 or prepaid terms based on package tier and order size.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-770-                        ['q' => 'Do you require exclusivity?', 'a' => 'No. Our packages are non-exclusive unless you decide to with negotiated territory protection. We prioritize performance over lock-in.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-771-                        ['q' => 'What\'s your SLA for lead time and accuracy?', 'a' => '7-day lead time to major SEA markets, 99.95% fulfillment accuracy with FEFO + lot tracking. Customs clearance handled with zero regulatory holds in the last 18 months.'],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-772-                        ['q' => 'Can I customize SKU selection?', 'a' => 'Yes. We provide curated recommendations based on demand signals and margin potential, but you have final approval on all SKU decisions before PO commitment.'],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-784-                'cta_href' => '#EverCura-lead-form',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-785-            ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-786-        ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:787:        'legal' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-788-            'nav' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-789-                'aria' => 'Legal pages',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:790:                'privacy' => 'Privacy Policy',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-791-                'marketing' => 'Marketing Terms',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-792-                'cookies' => 'Cookie Settings',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-793-            ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:794:            'privacy' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-795-                'sub_visual' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-796-                    'title' => 'Privacy Policy',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-797-                    'headline' => 'Privacy Policy',
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-799-                ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-800-                'updated_label' => 'Last updated',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-801-                'updated_at' => '2026.03.31',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:802:                'intro' => 'This draft privacy policy explains the categories of personal data we may collect, why we use it, how long we retain it, and what choices users have. It is intended as a working website policy and should be reviewed with legal counsel before final publication.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-803-                'summary_title' => 'At a Glance',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-804-                'summary_items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-805-                    'We collect only the information needed to respond to inquiries, operate the website, and improve service quality.',
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-818-                        'title' => '2. Why We Use Personal Information',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-819-                        'body' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-820-                            'We use personal information to answer inquiries, schedule meetings, deliver requested materials, maintain customer or partner communications, and manage business development activities.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:821:                            'We may also use limited data for website analytics, lead attribution, service improvement, security monitoring, legal compliance, and internal recordkeeping.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-822-                        ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-823-                    ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-824-                    [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-825-                        'title' => '3. Retention and Sharing',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-826-                        'body' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:827:                            'Personal information is retained only for as long as reasonably necessary for the stated purpose, contractual obligations, legal compliance, dispute resolution, or legitimate business recordkeeping.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-828-                            'We may share data with trusted service providers that support hosting, analytics, CRM, communications, or fulfillment operations, but only to the extent necessary to perform those services under appropriate confidentiality and security expectations.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-829-                        ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-830-                    ],
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-837-                    ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-838-                ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-839-                'contact_title' => 'Contact and Review',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:840:                'contact_body' => 'If you have questions about this policy or your personal information, please contact EverCura through the inquiry channel listed on the website. This page is a draft and should be finalized with company-specific legal contact information, retention schedules, and processor disclosures.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-841-            ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-842-            'marketing' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-843-                'sub_visual' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-844-                    'title' => 'Marketing Terms',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-845-                    'headline' => 'Marketing Terms',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:846:                    'description' => 'The general terms that apply when users consent to receive EverCura marketing communications, updates, and promotional materials.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-847-                ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-848-                'updated_label' => 'Last updated',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-849-                'updated_at' => '2026.03.31',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:850:                'intro' => 'These draft marketing terms describe what a user agrees to when opting in to receive promotional communications from EverCura. They are intended as a practical website-facing summary and should be aligned with final legal and CRM rules before launch.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-851-                'summary_title' => 'At a Glance',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-852-                'summary_items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-853-                    'Marketing consent is optional and is separate from essential service communications.',
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-873-                        'title' => '3. Withdrawal and Preferences',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-874-                        'body' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-875-                            'Users may opt out of marketing communications at any time through unsubscribe links, reply instructions, account settings where available, or direct contact with EverCura.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:876:                            'Withdrawal of marketing consent does not prevent EverCura from sending non-promotional communications that are necessary to respond to a request, complete a transaction, or comply with legal obligations.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-877-                        ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-878-                    ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-879-                    [
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-895-                ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-896-                'updated_label' => 'Last updated',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-897-                'updated_at' => '2026.03.31',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php:898:                'intro' => 'This draft cookie page explains the main cookie categories used on the website and the choices users may have regarding analytics and marketing technologies. It is written as a policy summary and does not yet implement a live consent manager.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-899-                'summary_title' => 'At a Glance',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-900-                'summary_items' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\en.php-901-                    'Essential cookies support core site functions such as security, session continuity, and form handling.',
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-22-        'scroll_top' => '맨 위로',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-23-    ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-24-    'footer' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php:25:        'privacy_policy' => '개인정보처리방침',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php:26:        'marketing_terms' => '마케팅 이용약관',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-27-        'cookie_settings' => 'Cookie settings',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-28-        'family_site_heading' => 'Family Site',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-29-        /** 외부 패밀리 사이트 — [['label' => '표시명', 'url' => 'https://...'], ...] 비어 있으면 푸터에서 블록 미표시 */
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-226-                ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-227-                [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-228-                    'title' => '불투명한 B2B 시장',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php:229:                    // [BR 제거] EN: "Brands don't know who to contact, what terms buyers demand, or which certifications block deals." — EN에는 BR 없음
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-230-                    'problem' => '바이어 접점, 요구 조건, 필수 인증 등 B2B 시장 정보는 여전히 불투명합니다.',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-231-                    // [BR 추가] EN 기준: 'We capture real market signals via <br> Outreach +feedback matrix + meetings.'
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-232-                    'solution' => '수요 가시화: 아웃리치와 피드백 매트릭스를 통한<br>실질적인 B2B 수요 데이터 확보',
+--
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-845-            'primary_cta' => '홈으로 이동',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-846-            'secondary_cta' => '요금 보기',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-847-        ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php:848:        'legal' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-849-            'nav' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-850-                'aria' => '법률 페이지',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php:851:                'privacy' => '개인정보처리방침',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-852-                'marketing' => '마케팅 약관',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-853-                'cookies' => '쿠키 설정',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-854-            ],
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php:855:            'privacy' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-856-                'sub_visual' => [
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-857-                    'title' => '개인정보처리방침',
+D:\최신프로젝트\에버큐라\퍼블\260413\lang\ko.php-858-                    'headline' => '개인정보처리방침',

@@ -1,0 +1,40 @@
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+---
+
+# Frontend Rules
+
+- Bundler: Vite / Language: TypeScript (ES6+)
+- 3D: Three.js. Main scenes use `core/Engine.ts`; works scatter is the standalone secondary renderer in `pages/works/render/WorksSceneManager.ts`.
+- **Do NOT run `npm run build`, `npm run watch`, or `npm install`**
+  - Reason: Vite dev server at `http://localhost:8888` auto-bundles on every file save
+  - Only `npm install <package>` is allowed when adding a new dependency
+  - Do not include these commands in verification steps, PR notes, or agent plans
+
+## TypeScript
+
+- All shared types/interfaces/enums live in `resource/ts/types/*.types.ts`; avoid inline exported types and `any`.
+- Shared constants, colors, sizes, URLs, selectors, and timings live in `resource/ts/config/*.config.ts` or page scene config files.
+- Page theatre: `resource/ts/pages/<page>/theatre/`
+- Page scene/config composition: `resource/ts/pages/<page>/scene/`
+- Page-only lifecycle/runtime: `resource/ts/pages/<page>/runtime/`
+- Standalone page renderer exception: `resource/ts/pages/<page>/render/` (currently works scatter)
+- Shared engine/runtime code stays out of page folders.
+
+## Three.js
+
+- `dispose()` required for every geometry, material, texture, render target, and standalone renderer.
+- Main WebGL renderer ownership belongs to `Engine`; standalone secondary renderers must call `renderer.dispose()` and `renderer.forceContextLoss()`.
+- No object creation inside render loops or RAF hot paths.
+- `addEventListener` must have matching `removeEventListener`.
+- No monkey-patching Three.js API.
+
+## Context Efficiency
+
+- 검증: 항상 `rtk tsc --noEmit`, `rtk grep`, `rtk git diff`. raw tsc/git 금지.
+- 파일 읽기: Read tool 사용. bash cat/head 금지.
+- 대형 파일 (>500줄): `$scene-explorer` subagent 위임.
+- 독립적 파일 2개+: 병렬 tool call 처리.
+- 전체 토큰 룰: AGENTS.md § Token Optimization 참조.

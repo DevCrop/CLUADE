@@ -1,0 +1,117 @@
+import { INIT_DOM_CLASSES, MASKING } from "../config/dom.config.js";
+import type {
+  RevealObserveOptions,
+  TextRevealInitOptions,
+  TextRevealOptions,
+} from "../types/component.types.js";
+import { Animation } from "./Animation.js";
+import { ObserveManager } from "../manager/ObserveManager.js";
+
+export class BlockReveal extends Animation {
+  private static _observeFrameId: number | null = null;
+  private static readonly _observeManager = new ObserveManager();
+
+  static reveal(
+    target: string | Element | Element[],
+    options: TextRevealOptions = {},
+  ): void {
+    const revealClass = options.revealClass ?? INIT_DOM_CLASSES.blockUp;
+    const elements = BlockReveal.resolveElements(target).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
+    elements.forEach((element) => {
+      element.classList.remove(MASKING.hiddenClass, INIT_DOM_CLASSES.boxHidden);
+      element.classList.add(INIT_DOM_CLASSES.blockBase);
+      if (!element.classList.contains(revealClass)) {
+        element.classList.add(revealClass);
+      }
+    });
+  }
+
+  static hide(
+    target: string | Element | Element[],
+    options: TextRevealOptions = {},
+  ): void {
+    const revealClass = options.revealClass ?? INIT_DOM_CLASSES.blockUp;
+    const elements = BlockReveal.resolveElements(target).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
+    elements.forEach((element) => {
+      element.classList.add(INIT_DOM_CLASSES.blockBase);
+      element.classList.remove(revealClass);
+      element.classList.add(MASKING.hiddenClass, INIT_DOM_CLASSES.boxHidden);
+    });
+  }
+
+  static prepare(
+    target: string | Element | Element[],
+    options: TextRevealOptions = {},
+  ): Element[] {
+    const revealClass = options.revealClass ?? INIT_DOM_CLASSES.blockUp;
+    const elements = BlockReveal.resolveElements(target).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
+    if (elements.length === 0) return [];
+    elements.forEach((element) => {
+      element.classList.remove(revealClass);
+      element.classList.add(
+        INIT_DOM_CLASSES.blockBase,
+        INIT_DOM_CLASSES.boxHidden,
+      );
+    });
+    return elements;
+  }
+
+  static observe(
+    target: string | Element | Element[],
+    options: RevealObserveOptions = {},
+  ): void {
+    if (typeof document === "undefined") return;
+    const revealClass = options.inviewClass ?? INIT_DOM_CLASSES.blockUp;
+    const targets = BlockReveal.resolveElements(target).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
+    if (targets.length === 0) return;
+    const onEnter =
+      options.onEnter ??
+      ((element: Element) =>
+        BlockReveal.reveal(element, { revealClass }));
+    BlockReveal._observeFrameId = window.requestAnimationFrame(() => {
+      BlockReveal._observeFrameId = window.requestAnimationFrame(() => {
+        BlockReveal._observeFrameId = null;
+        BlockReveal._observeManager.observe(
+          targets,
+          {
+            onEnter,
+            onLeave: options.onLeave,
+          },
+          options,
+        );
+      });
+    });
+  }
+
+  static init(options: TextRevealInitOptions = {}): void {
+    if (typeof document === "undefined") return;
+    BlockReveal.dispose();
+    const root = options.root ?? document;
+    const selector =
+      options.selector ?? `.${INIT_DOM_CLASSES.blockBase}`;
+    const targets = Array.from(root.querySelectorAll<HTMLElement>(selector));
+    if (targets.length === 0) return;
+    const uniqueTargets = [...new Set(targets)];
+    BlockReveal.prepare(uniqueTargets);
+    BlockReveal.observe(uniqueTargets, {
+      ...options,
+      inviewClass: INIT_DOM_CLASSES.blockUp,
+    });
+  }
+
+  static dispose(): void {
+    if (typeof document !== "undefined" && BlockReveal._observeFrameId != null) {
+      window.cancelAnimationFrame(BlockReveal._observeFrameId);
+      BlockReveal._observeFrameId = null;
+    }
+    BlockReveal._observeManager.dispose();
+  }
+}

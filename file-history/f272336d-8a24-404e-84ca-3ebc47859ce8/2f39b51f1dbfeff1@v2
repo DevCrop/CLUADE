@@ -1,0 +1,32 @@
+<?php
+
+if (!isset($NO_SITE_UNIQUE_KEY)) {
+    $NO_SITE_UNIQUE_KEY = "EVERCURA";
+}
+
+/** @var \Routing\Router $router */
+$router = app()->router();
+
+/* =========================
+ * Home (히어로는 정적 이미지: views/pages/index.php 의 빈 $banners 폴백)
+ * ========================= */
+$router->get('/', fn() => render('pages.index'))->name('home');
+
+/* =========================
+ * GNB (bootstrap/menu.php 와 동일)
+ * ========================= */
+$router->get('/brands', fn() => render('pages.brands'))->name('brands');
+$router->get('/channel-partners', fn() => render('pages.channel-partners'))->name('channel-partners');
+$router->get('/pricing', fn() => render('pages.pricing'))->name('pricing');
+$router->get('/request-a-meeting', fn() => render('pages.request-meeting'))->name('request-meeting');
+$router->get('/request-a-meeting/complete', fn() => render('pages.request-meeting-complete'))->name('request-meeting-complete');
+
+/* =========================
+ * Legal (푸터)
+ * ========================= */
+$router->group(['prefix' => '/legal'], function ($r) {
+    $r->get('/privacy', fn() => render('pages.legal.privacy'))->name('legal.privacy');
+    $r->get('/marketing', fn() => render('pages.legal.marketing'))->name('legal.marketing');
+    $r->get('/cookies', fn() => render('pages.legal.cookies'))->name('legal.cookies');
+    $r->get('/marketing-policy', fn() => render('pages.legal.marketing-policy'))->name('legal.marketing-policy');
+});

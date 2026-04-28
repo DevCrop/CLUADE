@@ -1,0 +1,297 @@
+# Plan: no-main-why 섹션 리디자인 — 스킬 리스트 + 비디오 호버 프리뷰
+
+## Context
+기존 `no-main-why` 섹션은 타이틀/설명 텍스트 + 카드 캐러셀 구조였다.
+이를 회사 강점(THREE.JS / GSAP / WEBFLOW / 3D MODELING / SEO MANAGE)을 대형 텍스트로 나열하고,
+마우스 오버 시 왼쪽에 관련 영상이 나타나는 레이아웃으로 교체한다.
+배경은 투명 유지 (Three.js 씬이 뒤에서 동작 중).
+
+## 변경 파일 목록
+
+| 파일 | 작업 |
+|---|---|
+| `views/pages/index.php` | why 섹션 HTML 교체 |
+| `resource/scss/pages/_main.scss` | 기존 `no-main-why` 스타일 교체 |
+| `resource/ts/components/WhySkillPreview.ts` | 신규 컴포넌트 (ImagePreview 패턴) |
+| `resource/ts/config/component.config.ts` | `WHY_SKILL_PREVIEW` config 추가 |
+| `resource/ts/types/component.types.ts` | `WhySkillPreviewOptions` 타입 추가 |
+| `resource/ts/runtime/PageRuntime.ts` | 컴포넌트 등록 |
+| `resource/ts/pages/main/scene/main.scene.ts` | selector 업데이트 |
+
+---
+
+## Step 1 — HTML (views/pages/index.php)
+
+기존 `no-main-why__body` + `no-main-why__visual` 전체 제거.
+`mainWhyCards` PHP 변수 참조도 함께 제거.
+
+아래 구조로 교체:
+
+```html
+<section class="no-main-why" data-scene="whyus" aria-hidden="false">
+  <div class="no-main-why__wrap">
+    <div class="no-container-2xl">
+      <div class="no-main-why__inner">
+
+        <!-- 스킬 리스트 -->
+        <ul class="no-main-why__skill-list" data-why-skill-list>
+          <li class="no-main-why__skill-item" data-why-skill-item
+              data-skill-video="/resource/video/skill_threejs.mp4">
+            <span class="no-main-why__skill-num f-body-2 --regular --fm-en">01</span>
+            <span class="no-main-why__skill-label f-display-1 --bold --fm-en-title">THREE.JS</span>
+            <span class="no-main-why__skill-tag f-body-2 --regular">3D RENDERING</span>
+          </li>
+          <li class="no-main-why__skill-item" data-why-skill-item
+              data-skill-video="/resource/video/skill_gsap.mp4">
+            <span class="no-main-why__skill-num f-body-2 --regular --fm-en">02</span>
+            <span class="no-main-why__skill-label f-display-1 --bold --fm-en-title">GSAP</span>
+            <span class="no-main-why__skill-tag f-body-2 --regular">ANIMATION</span>
+          </li>
+          <li class="no-main-why__skill-item" data-why-skill-item
+              data-skill-video="/resource/video/skill_webflow.mp4">
+            <span class="no-main-why__skill-num f-body-2 --regular --fm-en">03</span>
+            <span class="no-main-why__skill-label f-display-1 --bold --fm-en-title">WEBFLOW</span>
+            <span class="no-main-why__skill-tag f-body-2 --regular">INTEGRATION</span>
+          </li>
+          <li class="no-main-why__skill-item" data-why-skill-item
+              data-skill-video="/resource/video/skill_3d.mp4">
+            <span class="no-main-why__skill-num f-body-2 --regular --fm-en">04</span>
+            <span class="no-main-why__skill-label f-display-1 --bold --fm-en-title">3D MODELING</span>
+            <span class="no-main-why__skill-tag f-body-2 --regular">MOTION</span>
+          </li>
+          <li class="no-main-why__skill-item" data-why-skill-item
+              data-skill-video="/resource/video/skill_seo.mp4">
+            <span class="no-main-why__skill-num f-body-2 --regular --fm-en">05</span>
+            <span class="no-main-why__skill-label f-display-1 --bold --fm-en-title">SEO MANAGE</span>
+            <span class="no-main-why__skill-tag f-body-2 --regular">GROWTH</span>
+          </li>
+        </ul>
+
+        <!-- 비디오 프리뷰 (hover 시 표시) -->
+        <div class="no-main-why__preview" data-why-skill-preview aria-hidden="true">
+          <video class="no-main-why__preview-video" muted playsinline loop
+                 data-why-skill-video></video>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+```
+
+---
+
+## Step 2 — SCSS (resource/scss/pages/_main.scss)
+
+기존 `no-main-why` 블록 전체 교체. 제거 대상:
+`__body`, `__visual`, `__stage`, `__showcase`, `__ring`, `__card`, `__card-media`, `__card-image`
+
+신규 스타일:
+
+```scss
+.no-main-why {
+  width: 100%;
+  background: transparent;
+
+  &__wrap {
+    min-height: var(--scene-shell-span);
+    position: relative;
+  }
+
+  &__inner {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+
+    &.is-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+
+  // 스킬 리스트
+  &__skill-list {
+    list-style: none;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  &__skill-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gutter-lg);
+    padding: fluid(14, 22) 0;
+    border-bottom: 1px solid var(--clr-border-strong);
+    cursor: default;
+    position: relative;
+    transition: opacity var(--transition-base);
+
+    &:first-child { border-top: 1px solid var(--clr-border-strong); }
+
+    // 비활성 아이템 dimming
+    .no-main-why__skill-list:has(.no-main-why__skill-item:hover) &:not(:hover) {
+      opacity: 0.28;
+    }
+  }
+
+  &__skill-num {
+    color: var(--clr-text-tertiary);
+    min-width: fluid(24, 32);
+  }
+
+  &__skill-label {
+    flex: 1;
+    line-height: 1;
+  }
+
+  &__skill-tag {
+    color: var(--clr-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  // 비디오 프리뷰 패널 (왼쪽 고정)
+  &__preview {
+    position: fixed;
+    top: 50%;
+    left: fluid(24, 48);
+    transform: translateY(-50%) scale(0.92);
+    width: fluid(180, 260);
+    aspect-ratio: 9 / 16;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 0.3s ease,
+      visibility 0.3s ease,
+      transform 0.3s ease;
+    z-index: 10;
+
+    &.is-visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(-50%) scale(1);
+    }
+
+    &.is-closing {
+      opacity: 0;
+      transform: translateY(-50%) scale(0.92);
+    }
+  }
+
+  &__preview-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+```
+
+---
+
+## Step 3 — 신규 컴포넌트 (resource/ts/components/WhySkillPreview.ts)
+
+`ImagePreview` 패턴을 그대로 따름. 차이점:
+- 이미지 대신 `<video>` 교체 + `play()`/`pause()` 제어
+- 커서 팔로우 없음 (고정 위치, SCSS로 처리)
+- `data-skill-video` 속성으로 영상 src 교체
+
+```typescript
+// ImagePreview 패턴 동일하게:
+// static init() → hoverCapable 체크 → new WhySkillPreview().init()
+// mount() → 아이템 bind
+// _bindItem() → mouseenter/mouseleave
+// _onEnter() → video.src 교체, video.play(), 패널 show
+// _onLeave() → video.pause(), 패널 hide (schedule)
+// dispose() → 이벤트 제거, video.pause(), src 초기화
+```
+
+---
+
+## Step 4 — Config (resource/ts/config/component.config.ts)
+
+```typescript
+export const WHY_SKILL_PREVIEW = {
+  listSelector: "[data-why-skill-list]",
+  itemSelector: "[data-why-skill-item]",
+  previewSelector: "[data-why-skill-preview]",
+  videoSelector: "[data-why-skill-video]",
+  videoDataAttr: "data-skill-video",
+  boundFlag: "whySkillPreviewBound",
+  closeDelayMs: 120,
+  closeAnimationMs: 300,
+  visibleClass: "is-visible",
+  closingClass: "is-closing",
+} as const;
+```
+
+---
+
+## Step 5 — Types (resource/ts/types/component.types.ts)
+
+```typescript
+export interface WhySkillPreviewOptions {
+  listSelector?: string;
+  itemSelector?: string;
+  previewSelector?: string;
+}
+```
+
+---
+
+## Step 6 — PageRuntime 등록 (resource/ts/runtime/PageRuntime.ts)
+
+`ImagePreview.init()` 등록 패턴과 동일하게, selector 존재 여부 확인 후 조건부 init:
+
+```typescript
+if (document.querySelector("[data-why-skill-list]") !== null) {
+  WhySkillPreview.init();
+}
+```
+`dispose()` 에도 추가.
+
+---
+
+## Step 7 — main.scene.ts 셀렉터 업데이트
+
+```typescript
+// 변경
+const WHY_BODY_SELECTOR = ".no-main-why__skill-list"; // 기존: __body
+// 제거
+// WHY_VISUAL_SELECTOR — visual 요소 없어짐
+// WHY_TEXT_SELECTOR — 개별 아이템이 대신
+
+// syncWhyScene: visual 관련 코드 제거
+// disposeWhyScene: visual 관련 코드 제거
+// 리스트 전체에 opacity/transform 애니메이션만 남김
+```
+
+stagger 텍스트 reveal은 scroll 진입 시 `__skill-item` 각각에 `mask-target` 클래스를 붙이거나,
+리스트 전체를 단순 opacity로만 처리 (stagger 없이 단순화).
+
+---
+
+## 주의사항
+
+- 영상 파일 경로(`/resource/video/skill_*.mp4`)는 실제 파일로 교체 필요
+- `hoverCapable` false (터치 기기)이면 `WhySkillPreview.init()` skip — 이미 패턴에 내장
+- `__preview`는 `position: fixed`라 스크롤 씬 내 sticky 구조와 충돌 없음
+- 기존 `mainWhyCards` PHP 변수는 제거 (main 컨트롤러에서도 정리 필요 시 확인)
+
+## Verification
+
+1. 브라우저 `http://localhost:8888` 접속
+2. 메인 스크롤 → why 섹션 진입 시 스킬 리스트 페이드인 확인
+3. 각 아이템 hover → 좌측 비디오 패널 나타나는지 확인
+4. 아이템 간 이동 → 영상 교체되는지 확인
+5. hover out → 패널 사라지는지 확인
+6. `chop node_modules/.bin/tsc --noEmit` 타입 에러 없는지 확인

@@ -1,0 +1,44 @@
+export const camera = "camera";
+export const cameraTarget = "cameraTarget";
+
+export const THREE_LAYER_DEFAULT = 0;
+export const THREE_LAYER_EARTH = 1;
+export const THREE_LAYER_ROCKET = 2;
+export const THREE_LAYER_MARQUEE = 3;
+
+export const rocket = "rocket";
+export const jetEngine = "jetEngine";
+export const mainBackground = "mainBackground";
+export const aboutBackground = "aboutBackground";
+export const cloud = "cloud";
+export const cloud2 = "cloud2";
+export const cloud3 = "cloud3";
+export const cloud4 = "cloud4";
+export const cloud5 = "cloud5";
+export const cloud6 = "cloud6";
+export const ground = "ground";
+export const sceneLights = "sceneLights";
+export const aboutLights = "aboutLights";
+export const earth = "earth";
+export const astronaut = "astronaut";
+export const sceneTransitionVeil = "sceneTransitionVeil";
+
+export const windowObj = "window";
+export const planet = "planet";
+export const terrian = "terrian";
+
+export const hero = "hero";
+export const who = "who";
+export const advantage = "advantage";
+
+export const drawer = "drawer";
+export const gauge = "gauge";
+export const normalOverlay = "normalOverlay";
+export const pageMain = "main";
+export const pageAbout = "about";
+export const pageWorks = "works";
+export const pageAward = "award";
+export const pageWorksView = "works-view";
+export const pageWorksModal = "works-modal";
+export const pageContact = "contact";
+export const pageLegal = "legal";

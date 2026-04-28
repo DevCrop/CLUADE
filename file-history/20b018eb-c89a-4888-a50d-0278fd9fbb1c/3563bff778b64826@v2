@@ -1,0 +1,123 @@
+# Token Optimization — Document Deduplication & Cleanup
+
+## Context
+
+Rule files (frontend.md, php.md, scss.md) and BEST_PRACTICES.md each have a "Context Efficiency" section that is a **word-for-word duplicate** of AGENTS.md § Token Optimization. Because these rule files are auto-loaded by Claude Code on every matching file edit, the duplicate content burns tokens on every session. Additionally, two memory files are obsolete. Brand docs are already well-routed but can be organizationally cleaned up.
+
+---
+
+## Changes
+
+### 1. `.claude/rules/frontend.md` — Delete lines 36–40
+
+```
+## Context Efficiency
+
+- 검증: 항상 `rtk tsc --noEmit`, `rtk grep`, `rtk git diff`. raw tsc/git 금지.
+- 파일 읽기: Read tool 사용. bash cat/head 금지.
+- 대형 파일 (>500줄): `$scene-explorer` subagent 위임.
+- 독립적 파일 2개+: 병렬 tool call 처리.
+- 전체 토큰 룰: AGENTS.md § Token Optimization 참조.
+```
+
+Remove the entire "## Context Efficiency" section (lines 35–40). AGENTS.md already covers all of this and is imported by CLAUDE.md at session start.
+
+---
+
+### 2. `.claude/rules/php.md` — Delete lines 92–99
+
+```
+## Context Efficiency
+
+- `rtk docker compose exec web php -l <file>` — raw php -l 금지.
+- `rtk grep` — routes/inc/views 다중 파일 검색 시 필수.
+- `rtk git diff` — 편집 후 diff 확인.
+- 파일 읽기: Read tool. bash cat/head/tail 금지.
+- inc/ · views/ · routes/ 동시 탐색: `$php-explorer` subagent 위임.
+- 전체 토큰 룰: AGENTS.md § Token Optimization 참조.
+```
+
+Remove entire "## Context Efficiency" section (lines 91–99). Same reason.
+
+---
+
+### 3. `.claude/rules/scss.md` — Delete lines 39–44
+
+```
+## Context Efficiency
+
+- 토큰 사용 현황 검색: `rtk grep` 사용. raw grep 금지.
+- 파일 읽기: Read tool. bash cat 금지.
+- 5개+ 파티얼 동시 확인 필요 시: Explore subagent 위임.
+- 전체 토큰 룰: AGENTS.md § Token Optimization 참조.
+```
+
+Remove entire "## Context Efficiency" section (lines 39–44). Same reason.
+
+---
+
+### 4. `.claude/BEST_PRACTICES.md` — Delete Section 0 (lines 7–25)
+
+```
+## 0. Working Efficiently in This Codebase
+...
+**컨텍스트 초과**: `/compact <focus>` 로 압축 후 계속. 인라인 새 작업 시작 금지.
+```
+
+Remove lines 7–25 ("## 0. Working Efficiently in This Codebase"). This section repeats RTK, Read tool priority, large-file delegation, parallel calls, brand file routing — all of which already live in AGENTS.md. BEST_PRACTICES.md is loaded on every session via CLAUDE.md; the duplicate burns ~50 tokens each time.
+
+Renumber the remaining sections: current §1 → §1 stays (it's already labeled 1), no other renumbering needed since §0 is a prefix section.
+
+---
+
+### 5. Delete memory file: `project_works_improvements.md`
+
+Path: `C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\project_works_improvements.md`
+
+All eight features documented here (hover-to-video, infinite scroll, filter modal, scatter responsive, API extension, etc.) are marked **구현 완료** as of 2026-04-24. Implementation details live in the code itself. No future utility as a memory entry.
+
+---
+
+### 6. Delete memory file: `reference_spatie_image.md`
+
+Path: `C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\reference_spatie_image.md`
+
+The file's own frontmatter states it is "타 프로젝트에서 동일하게 재사용 가능한 독립 가이드" — explicitly cross-project reference, not this project's memory. The actual implementation (`src/Core/ImageProcessor.php`) is already in the repo and readable. Remove from project memory.
+
+---
+
+### 7. Update `MEMORY.md` index
+
+Remove two lines from the index corresponding to the deleted files:
+- `- [Works Page Improvements](project_works_improvements.md) — ...`
+- `- [Spatie Image 설치 가이드](reference_spatie_image.md) — ...`
+
+Path: `C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\MEMORY.md`
+
+---
+
+## Brand Docs Note
+
+`brand/` files are **not auto-loaded** — they're gated by BRAND.md's routing table ("Read Only What You Need"). The current structure is already token-efficient. No structural changes needed. Low-frequency files (`process.md`, `positioning.md`, `proof-system.md`, `client-archetypes.md`) are only loaded for specific tasks, as the routing table correctly documents.
+
+---
+
+## Impact Summary
+
+| File | Trigger | Tokens removed |
+|---|---|---|
+| `frontend.md` Context Efficiency | Every `.ts`/`.tsx` edit | ~15 |
+| `php.md` Context Efficiency | Every `.php` edit | ~20 |
+| `scss.md` Context Efficiency | Every `.scss` edit | ~15 |
+| `BEST_PRACTICES.md` §0 | Every session | ~50 |
+| 2× deleted memory files | Session start / memory load | ~variable |
+
+---
+
+## Verification
+
+After edits:
+- Open a `.ts` file and trigger auto-load → confirm no duplicate "Context Efficiency" section appears
+- Open a `.php` file → same check
+- Check MEMORY.md to confirm the two removed entries are gone
+- `rtk tsc --noEmit` to confirm no TypeScript regressions from file edits

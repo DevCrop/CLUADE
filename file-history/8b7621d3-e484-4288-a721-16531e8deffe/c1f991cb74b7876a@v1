@@ -1,0 +1,38 @@
+# Global AI Rules
+
+**RTK 필수**: 출력이 몇 줄을 초과할 Bash 명령은 `rtk` 프리픽스. WSL Remote = hook 자동 재작성. native Windows = 명시 prefix.
+
+@RTK.md
+
+## Response Style
+
+- **언어**: 한국어 우선. 코드 식별자, 경로, 명령어, 오류 메시지는 영어 그대로 유지.
+- **간결함**: 결과·결정만 직설적으로. 사고 과정 나열 금지.
+
+## Auto Memory
+
+자동 메모리 시스템은 `D:\.claude\projects\<project>\memory\MEMORY.md` 인덱스 + 토픽별 `.md` 파일 구조로 운영. 인덱스는 200줄 / 25KB 한도, 토픽 파일 분리 권장. 사용자 프로필·피드백·프로젝트 컨텍스트·외부 시스템 참조 4종류.
+
+## 신규 프로젝트 셋업
+
+`D:\.claude\templates\project-init.md` 참조. CLAUDE.md / AGENTS.md / `.claude/rules/` / agents / settings.json 표준 구조 가이드.
+
+## 자주 쓰는 스킬
+
+`/loop` (인터벌 반복) · `/schedule` (크론) · `/review` (PR 리뷰) · `/security-review` · `/migration` · `/new-route` · `/sandbox`.
+
+## 활성 글로벌 훅 (D:\.claude\settings.json)
+
+- **SessionStart**: `hooks/session-start.ps1` — docs 변경 감지(24h), plan 아카이브(60일), AUTOMATION.md 자동 갱신
+- **SessionEnd**: `cleanup.ps1` — `plans/`(2일) · `shell-snapshots/`(7일) · `file-history/`(14일) · `projects/`(30일·pinned 제외) · `session-env/`(빈) 자동 정리 + MEMORY.md 무결성 체크
+
+## RTK 자동 재작성 모드
+
+| 환경 | 방식 | 비고 |
+|---|---|---|
+| WSL Remote (권장) | hook 자동 재작성 | VSCode `><` → Connect to WSL 후 `rtk init -g --auto-patch` 1회 실행 |
+| Windows native (현재) | 명시 prefix 필수 | `rtk <command>` 직접 입력. hook 기반 자동화는 RTK 공식 미지원 |
+
+## 권한 모드 주의
+
+`permissions.defaultMode = "bypassPermissions"` + `skipDangerousModePermissionPrompt = true` 활성. **Docker / 격리 환경에서만 안전**. 호스트 머신 직접 작업 시 `permissions.deny` 차단 규칙(rm -rf, force push, hard reset, .credentials)에 의존하므로 신규 deny 추가 시 settings.json 동기화 필요.

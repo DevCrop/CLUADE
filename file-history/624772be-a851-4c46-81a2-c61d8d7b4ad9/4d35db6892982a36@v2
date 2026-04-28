@@ -1,0 +1,24 @@
+---
+name: NINEONELABS 개발 워크플로우
+description: 검증 커맨드, 금지 커맨드, 스킬 사용법, 에이전트 위임 패턴
+type: project
+originSessionId: 624772be-a851-4c46-81a2-c61d8d7b4ad9
+---
+**검증 커맨드:**
+- TypeScript: `chop node_modules/.bin/tsc --noEmit`
+- PHP 린트: `docker compose exec web php -l <file>`
+- DB 마이그레이션 상태: `chop make migrate-status`
+
+**절대 금지 커맨드:** `npm run build`, `npm run watch` (dev 서버가 자동 반영)
+
+**스킬 사용:**
+- DB 스키마 변경 → `/migration <설명>`
+- 새 공개 페이지 추가 → `/new-route <설명>`
+
+**에이전트 위임:**
+- Three.js 씬 구조 파악 → `scene-explorer` 에이전트 사용
+- PHP 라우팅/뷰/스키마 파악 → `php-explorer` 에이전트 사용
+
+**Why:** 맥락창 오염 방지. 탐색 작업은 서브에이전트에 위임해 메인 컨텍스트 보호.
+
+**How to apply:** 파일을 많이 읽어야 하는 조사 작업에서 "use [agent] to investigate" 패턴 사용.

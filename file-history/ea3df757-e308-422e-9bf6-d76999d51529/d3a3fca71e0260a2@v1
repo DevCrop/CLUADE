@@ -1,0 +1,136 @@
+@use "../abstract" as *;
+
+// =============================================================================
+// Masking text line reveal.
+// The wrapper clips overflow and the line handles movement, opacity, and blur.
+// Multi-line content is split by TS into sibling .masking-text blocks and
+// staggered below via adjacent sibling selectors.
+// =============================================================================
+
+@mixin text-reveal-line-hidden {
+  transform: translate3d(0, var(--text-reveal-offset-y), 0);
+  opacity: 0;
+  filter: blur(var(--text-reveal-blur));
+}
+
+@mixin text-reveal-line-visible {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  filter: blur(0);
+}
+
+@mixin text-reveal-line-down {
+  transform: translate3d(0, var(--text-reveal-down-offset-y), 0);
+  opacity: 0;
+  filter: blur(var(--text-reveal-down-blur));
+}
+
+.mask-target {
+  opacity: 0;
+  visibility: hidden;
+
+  &.is-mask-ready {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.is-text-reveal-disabled {
+  .mask-target {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .masking-text {
+    opacity: 0;
+    visibility: hidden;
+
+    .masking-text__line,
+    .line {
+      @include text-reveal-line-hidden();
+      transition: none;
+    }
+  }
+}
+
+.masking-text {
+  display: block;
+  overflow: hidden;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--transition-base),
+    visibility var(--transition-base);
+
+  .masking-text__line,
+  .line {
+    display: block;
+    position: relative;
+    text-align: start;
+    @include text-reveal-line-hidden();
+    transition:
+      transform var(--transition-slow),
+      opacity var(--transition-slow),
+      filter var(--transition-slow);
+    will-change: transform, opacity, filter;
+  }
+
+  &:not(.is-hidden).is-inview .masking-text__line,
+  &:not(.is-hidden).is-inview .line,
+  &:not(.is-hidden).is-visible .masking-text__line,
+  &:not(.is-hidden).is-visible .line {
+    @include text-reveal-line-visible();
+  }
+
+  &.is-down {
+    opacity: 1;
+    visibility: visible;
+
+    .masking-text__line,
+    .line {
+      @include text-reveal-line-down();
+      transition-duration: var(--duration-slower);
+      transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  &.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+
+    .masking-text__line,
+    .line {
+      @include text-reveal-line-hidden();
+    }
+  }
+}
+
+// Multi-line stagger.
+
+.masking-text + .masking-text {
+  .masking-text__line,
+  .line {
+    transition-delay: var(--duration-stagger);
+  }
+}
+
+.masking-text + .masking-text + .masking-text {
+  .masking-text__line,
+  .line {
+    transition-delay: calc(var(--duration-stagger) * 2);
+  }
+}
+
+.masking-text + .masking-text + .masking-text + .masking-text {
+  .masking-text__line,
+  .line {
+    transition-delay: calc(var(--duration-stagger) * 3);
+  }
+}
+
+.masking-text + .masking-text + .masking-text + .masking-text + .masking-text {
+  .masking-text__line,
+  .line {
+    transition-delay: calc(var(--duration-stagger) * 4);
+  }
+}

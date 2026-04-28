@@ -1,0 +1,52 @@
+---
+name: Works Page Architecture & Improvements (branch 260414)
+description: Works 페이지 scatter/grid 구조, hover-to-video 패턴, 모바일 개선 사항 — 재작업 시 참고
+type: project
+originSessionId: df60f345-e2e5-48d7-af57-48d7186df840
+---
+Works 페이지는 scatter(Three.js WebGL) / grid(DOM) 두 가지 뷰 모드를 가진다. branch `260414`에서 아래 개선이 완료됐다.
+
+## 구현된 기능
+
+### 1. Hover-to-Video
+- **DB**: `nb_works.video` 컬럼(JSON) → API `thumbnailVideo: string | null`로 이미 존재
+- **Grid**: `_createMedia()`는 항상 `<img>` 우선 렌더. `thumbnailImage + thumbnailVideo` 둘 다 있으면 `_attachVideoHover(li, videoUrl, figure)` 호출 → `pointerenter` 시 lazy src 할당 후 play, `pointerleave` 시 pause. CSS `.is-video-active` 토글로 crossfade (0.35s)
+- **Scatter**: `WorksHoverVideoRuntime` 클래스(`WorksSceneManager.ts` 내부)가 단일 `<video>` element 보유. `update()` 루프에서 `hovered !== _prevHovered` 감지 → activate/deactivate. 활성 상태에서 매 프레임 `WorkCard.updateTextureVideoFrame()` 호출해 CanvasTexture에 비디오 프레임 드로잉
+
+### 2. 모바일 Panel 숨기기
+- `WorksPageRuntime._showPanel()` 내에서 `ResponsiveRuntime.getDefault().getSnapshot().isMobile` 체크 → `true`면 panel 표시 안 함
+
+### 3. 무한스크롤 모바일 수정
+- `window.scroll` 이벤트 → `IntersectionObserver` sentinel 방식으로 교체
+- `_attachSentinel()`: gridList 다음에 1px div 삽입, observe. `hasMore`일 때만 유지. `_clearList()` / `dispose()` 시 `_detachSentinel()`
+
+### 4. Grid 필터 모달 (모바일)
+- `@include mq(sm)`: `__filter` 사이드바 숨김, `__gallery-mobile-filter` 표시
+- PHP view에 `.js-grid-filter-trigger` 버튼 추가
+- `WorksGridFeedRuntime._bindFilterModal()`: 기존 scatter filter panel DOM의 `[data-works-filter-option]`에서 카테고리 목록 읽어 bottom sheet 모달 생성
+- 카테고리 선택 → `changeCategory(category)` → 그리드 AJAX 재로드 + `.is-active` 동기화
+- `data-loading` attr로 suspense 상태 표현 (CSS 확장 가능)
+
+### 5. Scatter 카드 크기 반응형
+- `_cardScale = Math.min(1, viewport.width / 1440)` — 1440px 기준 uniform scale
+- `update()` 루프에서 `steadyScale * _cardScale` 적용
+- `onResize`에서 재계산
+
+### 6. Scatter 모바일 드래그 응답성
+- `onPointerDown`에서 `_isTouchPointer = event.pointerType === 'touch'` 저장
+- `WorksCameraMotionRuntime.updateDrag(viewport, halfView, pointer, velMultiplier)` 파라미터 추가
+- 터치일 때 `velMultiplier = 2.0` 전달 → throw 감도 2배
+
+## 핵심 파일 위치
+
+| 목적 | 파일 |
+|------|------|
+| Grid runtime | `resource/ts/pages/works/runtime/WorksPageRuntime.ts` |
+| Scatter scene manager | `resource/ts/pages/works/render/WorksSceneManager.ts` |
+| WorkCard 텍스처 유틸 | `resource/ts/ui/WorkCard.ts` |
+| Works SCSS | `resource/scss/pages/_sub.scss` |
+| PHP view | `views/pages/works/index.php` |
+| 타입 | `resource/ts/types/work.types.ts` |
+
+**Why:** 모바일 UX, 영상 hover 인터랙션, 반응형 scatter 요청으로 추가됨.
+**How to apply:** Works 관련 추가 작업 시 위 파일과 패턴 참고. `WorksHoverVideoRuntime`은 싱글 video element로 hover를 관리하므로 멀티-호버 필요 시 Map으로 확장.

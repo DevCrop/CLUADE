@@ -1,0 +1,83 @@
+import { EnvSetup } from "../../../app/EnvSetup.js";
+import type {
+  ContactDomState,
+  ContactTheatrePlaybackRange,
+  ContactTheatreSheetId,
+} from "../../../types/contact.types.js";
+
+export const CONTACT_THEATRE_PROJECT_ID = "contact-orbit-recorder-config-v1";
+export const CONTACT_THEATRE_OBJECT_ID = "orbitCamera";
+export const CONTACT_THEATRE_QUERY_KEY = "theatre";
+export const CONTACT_THEATRE_QUERY_ENABLED = "1";
+export const CONTACT_INTRO_AUTOPLAY_SHEET_ID = "contact";
+export const CONTACT_INTRO_AUTOPLAY_DURATION_MS = 5400;
+export const CONTACT_OUTTRO_AUTOPLAY_SHEET_ID = "outtro";
+export const CONTACT_OUTTRO_AUTOPLAY_DURATION_MS = 4000;
+export const CONTACT_THEATRE_AUTOPLAY_EASE = "power4.inOut";
+export const CONTACT_THEATRE_DOM_STATE_ATTRIBUTE = "data-contact-dom-state";
+export const CONTACT_THEATRE_DOM_STATE_PENDING: ContactDomState = "pending";
+export const CONTACT_THEATRE_DOM_STATE_READY: ContactDomState = "ready";
+export const CONTACT_THEATRE_DOM_STATE_LEAVING: ContactDomState = "leaving";
+export const CONTACT_THEATRE_DOM_STATE_SUCCESS: ContactDomState = "success";
+export const CONTACT_THEATRE_CONTENT_SELECTOR = ".main-content";
+export const CONTACT_THEATRE_FORM_SHELL_SELECTOR = "[data-contact-form-shell]";
+export const CONTACT_THEATRE_SUCCESS_SELECTOR = "[data-contact-success]";
+export const CONTACT_THEATRE_SUCCESS_MESSAGE_SELECTOR =
+  "[data-contact-success-message]";
+export const CONTACT_THEATRE_SUCCESS_FLOW_REQUEST_EVENT =
+  "contact:success-flow-request";
+export const CONTACT_THEATRE_SUCCESS_DEFAULT_MESSAGE =
+  "담당자가 내용을 확인한 뒤 빠르게 연락드리겠습니다.";
+export const CONTACT_THEATRE_DOM_EXIT_DELAY_MS = 760;
+export const CONTACT_THEATRE_SAVE_FILE_STORAGE_KEY =
+  "contact-theatre-project-savefile-v1";
+export const CONTACT_THEATRE_FILE_SEED_STORAGE_KEY =
+  "contact-theatre-project-savefile-v1.seeded-from-file";
+export const CONTACT_THEATRE_STUDIO_CLEAR_STORAGE_KEY =
+  "contact-theatre-project-savefile-v1.cleared-studio-persistence";
+export const CONTACT_THEATRE_STORAGE_OPTIONS = {
+  storageKey: CONTACT_THEATRE_SAVE_FILE_STORAGE_KEY,
+  obsoleteStorageKeys: [],
+  fileSeedStorageKey: CONTACT_THEATRE_FILE_SEED_STORAGE_KEY,
+  studioClearStorageKey: CONTACT_THEATRE_STUDIO_CLEAR_STORAGE_KEY,
+} as const;
+
+export const CONTACT_THEATRE_SHEET_IDS = [
+  "contact",
+  "outtro",
+] as const satisfies readonly ContactTheatreSheetId[];
+
+export const CONTACT_THEATRE_PLAYBACK_RANGES: Readonly<
+  Partial<Record<ContactTheatreSheetId, ContactTheatrePlaybackRange>>
+> = {};
+
+export function sanitizeContactTheatreState(
+  state: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (!state) return null;
+  const sheetsByIdValue = state.sheetsById;
+  if (
+    sheetsByIdValue == null ||
+    typeof sheetsByIdValue !== "object" ||
+    Array.isArray(sheetsByIdValue)
+  ) {
+    return state;
+  }
+  const sheetsById = sheetsByIdValue as Record<string, unknown>;
+  const nextSheetsById: Record<string, unknown> = {};
+  CONTACT_THEATRE_SHEET_IDS.forEach((sheetId) => {
+    if (!Object.prototype.hasOwnProperty.call(sheetsById, sheetId)) return;
+    nextSheetsById[sheetId] = sheetsById[sheetId];
+  });
+  return {
+    ...state,
+    sheetsById: nextSheetsById,
+  };
+}
+
+export function resolveContactAuthorMode(): boolean {
+  return EnvSetup.hasQueryFlag(
+    CONTACT_THEATRE_QUERY_KEY,
+    CONTACT_THEATRE_QUERY_ENABLED,
+  );
+}

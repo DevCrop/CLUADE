@@ -1,0 +1,97 @@
+<?php
+$posts = $posts ?? [];
+
+// TEST FALLBACK — 게시물 없을 때 더미 데이터, 실제 배포 전 제거
+if (count($posts) === 0) {
+    $posts = [
+        ['no' => '1', 'title' => '2025 대한민국 웹어워드 수상', 'regdate' => '2025-06-01 09:00:00', 'is_notice' => 'Y', 'category_no' => null, 'category_name' => ''],
+        ['no' => '2', 'title' => 'NINEONELABS, 상반기 신규 프로젝트 다수 수주', 'regdate' => '2025-05-15 10:30:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => ''],
+        ['no' => '3', 'title' => '글로벌 IT 기업과 UI/UX 협업 프로젝트 완료', 'regdate' => '2025-04-08 14:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => ''],
+        ['no' => '4', 'title' => '나인원랩스, 새로운 브랜딩 서비스 라인업 공개', 'regdate' => '2025-03-20 11:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => ''],
+        ['no' => '5', 'title' => '2025 상반기 채용 공고 — 프론트엔드 · 디자이너', 'regdate' => '2025-02-10 09:00:00', 'is_notice' => 'Y', 'category_no' => null, 'category_name' => ''],
+        ['no' => '6', 'title' => '모바일 앱 리뉴얼 프로젝트 케이스 스터디 발행', 'regdate' => '2025-01-22 16:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => ''],
+    ];
+}
+
+$paginationTotal = (int) ($paginationTotal ?? 1);
+$paginationCurrent = (int) ($paginationCurrent ?? 1);
+$paginationQueryParams = is_array($paginationQueryParams ?? null) ? $paginationQueryParams : [];
+$categoryItems = $categoryItems ?? [];
+$searchQuery = (string) ($searchQuery ?? '');
+$listRouteName = (string) ($listRouteName ?? 'inside.news');
+$listUrl = route($listRouteName, [], false);
+$activeCategoryNo = $activeCategoryNo ?? null;
+
+section('content') ?>
+
+<?= include_view('components.sub-visual', [
+    'title' => 'NEWS',
+    'lines' => [
+        '나인원랩스의 최근 소식과 업데이트를 확인하세요.',
+    ],
+]) ?>
+
+<section class="no-sub-news">
+    <div class="no-container-2xl">
+        <div class="no-sub-news__inner">
+            <div class="no-filter-bar">
+                <?= include_view('components.category', [
+                    'items' => $categoryItems,
+                ]) ?>
+                <form class="no-filter-bar__search" method="get" action="<?= e($listUrl) ?>" role="search">
+                    <?php if ($activeCategoryNo !== null && (int) $activeCategoryNo > 0) : ?>
+                    <input type="hidden" name="category" value="<?= (int) $activeCategoryNo ?>">
+                    <?php endif; ?>
+                    <?= include_view('components.search-bar', [
+                        'id' => 'search-bar-news',
+                        'name' => 'q',
+                        'placeholder' => '검색어를 입력해주세요.',
+                        'show_label' => false,
+                        'value' => $searchQuery,
+                        'with_submit' => true,
+                    ]) ?>
+                </form>
+            </div>
+            <div class="--cnt">
+                <ul class="no-sub-news-list">
+                    <?php foreach ($posts as $row) :
+                        $viewUrl = route('inside.news.view', ['no' => (string) ($row['no'] ?? '')], false);
+                        $badge = inside_board_notice_label($row);
+                        $dateDisp = inside_board_format_date($row['regdate'] ?? null);
+                        $dateAttr = inside_board_datetime_attr($row['regdate'] ?? null);
+                        $title = (string) ($row['title'] ?? '');
+                        ?>
+                    <li class="no-sub-news-list-item">
+                        <a href="<?= e($viewUrl) ?>" class="no-sub-news-list-item__link">
+                            <div class="no-sub-news-list-item__body">
+                                <div class="--badge"><?= e($badge) ?></div>
+                                <h3 class="f-heading-3 --medium"><?= e($title) ?></h3>
+                                <?php if ($dateAttr !== '') : ?>
+                                <time class="--time" datetime="<?= e($dateAttr) ?>"><?= e($dateDisp) ?></time>
+                                <?php endif; ?>
+                            </div>
+                        </a>
+                    </li>
+                    <?php endforeach; ?>
+                    <?php if (count($posts) === 0) : ?>
+                    <li class="no-sub-news-list-item no-sub-news-list-item--empty">
+                        <p class="f-body-3">등록된 글이 없습니다.</p>
+                    </li>
+                    <?php endif; ?>
+                </ul>
+                <div class="no-view-more">
+                    <?= include_view('components.pagination', [
+                        'total' => max(1, $paginationTotal),
+                        'current' => max(1, min($paginationTotal, $paginationCurrent)),
+                        'queryParams' => $paginationQueryParams,
+                    ]) ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

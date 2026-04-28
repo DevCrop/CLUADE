@@ -1,0 +1,31 @@
+# SessionStart trigger: 24h gate, then spawn worker detached.
+# Returns in <100ms so it never blocks Claude Code session start.
+
+$ErrorActionPreference = 'SilentlyContinue'
+
+$script:ClaudeRoot = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $env:USERPROFILE '.claude' }
+
+$cacheDir = Join-Path $script:ClaudeRoot '.docs-cache'
+$stampFile = Join-Path $cacheDir 'last-check.txt'
+$worker = Join-Path $PSScriptRoot 'check-updates-worker.ps1'
+
+if (-not (Test-Path $cacheDir)) {
+    New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+}
+
+if (Test-Path $stampFile) {
+    try {
+        $last = [DateTime]::Parse((Get-Content $stampFile -Raw).Trim())
+        if ((Get-Date).Subtract($last).TotalHours -lt 24) { exit 0 }
+    } catch { }
+}
+
+if (-not (Test-Path $worker)) { exit 0 }
+
+Set-Content -Path $stampFile -Value (Get-Date).ToString('o') -Encoding UTF8
+
+Start-Process powershell.exe `
+    -ArgumentList '-NonInteractive', '-WindowStyle', 'Hidden', '-File', $worker `
+    -WindowStyle Hidden | Out-Null
+
+exit 0

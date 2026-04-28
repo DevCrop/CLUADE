@@ -1,0 +1,234 @@
+# Claude AI Harness Architecture — Anthropic-Native Design
+
+> **Revision note**: previous version framed this as SOLID+DDD with bounded contexts.
+> After researching Anthropic's official guidance (Building Effective Agents, Agent Skills,
+> Hooks docs, Best Practices), DDD is **not** the Anthropic-recommended pattern.
+> The implementation steps (rtk-prerewrite.js + hook registration + doc cleanup) remain
+> functionally identical — only the framing is updated to match official guidance.
+
+---
+
+## Context
+
+**Problem**: 5 cross-cutting concerns (token optimization, behavioral rules, session context,
+scope control, self-verification) are scattered across overlapping files (RTK.md, AGENTS.md,
+CLAUDE.md, memory). Result: 222 documented `rtk read` violations, rule drift, discipline-based
+enforcement that fails under session pressure. User goal: "rtk로 모든 명령어 최적화" (all
+commands optimized) with structural interaction between the 5 concerns.
+
+**Why this revision**: After comparing the SOLID+DDD design against Anthropic's official
+architecture documents, DDD bounded contexts are heavier than warranted. Anthropic's
+official stance is **"start simple, measure, only add complexity when demonstrably necessary"**.
+
+**Outcome**: Anthropic-native architecture using their officially recommended patterns.
+
+---
+
+## Anthropic Official Architecture Mapping
+
+| Concern | Anthropic Pattern | This System |
+|---|---|---|
+| Token optimization | **Hooks for "zero exceptions"** (Best Practices) | PreToolUse hook = `rtk-prerewrite.js` |
+| Behavioral rules | **CLAUDE.md = advisory context** + **deny list = enforced** | AGENTS.md (advisory) + settings.json deny (structural) |
+| Session context | **Memory architecture** (CLAUDE.md + auto-memory ≤200 lines) | MEMORY.md index + topic files |
+| Scope control | **"Don't add complexity unless measured"** (FOMO gate) | ARCHITECTURE.md §Change Management |
+| Self-verification | **"Single highest-leverage practice"** (Best Practices) | rtk gain + rtk discover + drift queue |
+| Rule organization | **Path-scoped rules** (`.claude/rules/*.md` + `paths:` frontmatter) | `.claude/rules/{frontend,php,scss}.md` (already exists) |
+| Progressive loading | **3-level Progressive Disclosure** (Skills architecture) | Always-loaded → path-scoped → on-demand skills |
+
+**Sources**:
+- https://www.anthropic.com/research/building-effective-agents
+- https://docs.anthropic.com/en/docs/claude-code/hooks
+- https://docs.anthropic.com/en/docs/claude-code/memory
+- https://docs.anthropic.com/en/docs/claude-code/best-practices
+- https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview
+
+---
+
+## Architecture (Anthropic-Native, 3 Layers + Verification Loop)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  LAYER 1: ALWAYS-LOADED CONTEXT (≤200 lines, every session)     │
+│                                                                 │
+│  CLAUDE.md / AGENTS.md  — advisory rules (Anthropic-officially  │
+│                          "context, not enforced configuration")  │
+│  MEMORY.md index        — persistent learnings                  │
+│                                                                 │
+│  Rule of thumb: only items ALL sessions need belong here        │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│  LAYER 2: PATH-SCOPED / ON-DEMAND (loaded when relevant)        │
+│                                                                 │
+│  .claude/rules/<topic>.md  — load by `paths:` frontmatter       │
+│    (frontend.md, php.md, scss.md — already exists)              │
+│  memory/<topic>.md          — loaded by MEMORY.md reference      │
+│  Skills (/<skill-name>)     — invoked, not auto-loaded          │
+│                                                                 │
+│  Rule of thumb: domain-specific knowledge that costs context    │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│  LAYER 3: HOOK-ENFORCED DETERMINISM ("zero exceptions" actions) │
+│                                                                 │
+│  PreToolUse[Bash]  — RTK auto-rewrite (rtk-prerewrite.js)       │
+│                      Anthropic: "use hooks when zero exceptions  │
+│                      are required"                              │
+│  PostToolUse       — file-type checks (tsc/vitest/php-l)        │
+│  PreCompact/Post   — memory snapshot integrity                  │
+│  SessionEnd/Stop   — token report + rtk discover audit          │
+│  permissions.deny  — structural blocks (rm -rf, force push)     │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ executes
+                  [ COMMAND EXECUTION ]
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│  VERIFICATION LOOP (Anthropic: "single highest-leverage")       │
+│                                                                 │
+│  rtk gain          — quantitative coverage (was RTK applied?)   │
+│  rtk discover      — qualitative gaps (which commands missed?)  │
+│  drift-queue.md    — file edit drift signals                    │
+│  reports/*.md      — append-only audit trail                    │
+│                                                                 │
+│  Feedback → if gap detected → update Layer 3 hook (NOT docs)    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## What Changed From The DDD Version
+
+| Old framing (DDD) | New framing (Anthropic-native) | Why |
+|---|---|---|
+| "Bounded contexts" with aggregate roots | 3 progressive disclosure layers | Anthropic doesn't recommend DDD; Progressive Disclosure IS official |
+| "Domain events flowing between aggregates" | Hooks fire at lifecycle events | Hook docs use "lifecycle cadences" not "domain events" |
+| "Audit Domain" (4th of 5 equal domains) | Verification Loop (architecturally primary) | Anthropic: verification is "single highest-leverage practice" |
+| "Anti-corruption layer" terminology | Plain "hook is the only place that knows about rtk" | Anthropic guidance prefers plain language |
+| Heavy enterprise vocabulary | Simple, composable framing | Anthropic: "successful implementations use simple, composable patterns" |
+| What stays | SOLID principles, 5-concern separation | Anthropic explicitly endorses SOLID |
+
+---
+
+## Implementation Status
+
+### ✅ Already Completed (Layer 3 + Reference Cleanup)
+
+| Step | File | Status |
+|---|---|---|
+| A | `%USERPROFILE%\.claude\hooks\rtk-prerewrite.js` | ✅ Created |
+| B | `%USERPROFILE%\.claude\settings.json` PreToolUse hook | ✅ Added |
+| C | `%USERPROFILE%\.claude\hooks\token-report.ps1` (rtk discover) | ✅ Updated |
+| D | `%USERPROFILE%\.claude\RTK.md` (Matrix + L33 + Hook Status) | ✅ Updated |
+
+### ⏳ Remaining Steps (Layer 1 + Layer 2 cleanup)
+
+#### Step E — `AGENTS.md` Self-Check Simplify
+
+**File**: `d:\최신프로젝트\나인원랩스\퍼블\260427\AGENTS.md` lines 84–95
+
+Anthropic guidance: CLAUDE.md/AGENTS.md = advisory context (≤200 lines target). Token rule
+moves out of advisory and into Layer 3 (hook). Self-Check shrinks to the 3 items that
+actually require human judgment.
+
+```diff
+-1. **RTK prefix?** — Output > ~3 lines expected? Must start with `rtk `.
+-   - Exempt: `rtk gain`, `rtk discover`, `rtk session` (already direct RTK).
+-   - Exempt: trivial single-line commands (`pwd`, `whoami`, `echo $?`).
+-...
+-After call: if expected RTK savings (per `%USERPROFILE%\.claude\RTK.md` table) didn't
+-materialize, the prefix was likely missed. Self-correct on the next call.
++1. **RTK prefix?** — PreToolUse hook handles this automatically.
++   - Bypass: `RTK_DISABLED=1 <cmd>` when exact output is required.
++   - Verify post-session via `rtk discover` (Anthropic verification-loop pattern).
+```
+
+The remaining 3 Self-Check items (destructive / external content / drive policy) stay —
+each requires semantic judgment that hooks cannot deterministically enforce.
+
+#### Step F — Project `CLAUDE.md` Line 9 Update
+
+**File**: `d:\최신프로젝트\나인원랩스\퍼블\260427\CLAUDE.md` line 9
+
+```diff
+-- RTK auto-rewrite hook is **not supported on Windows native** — `%USERPROFILE%\.claude\settings.json`
+-  does not register one, and discipline-based `rtk` prefixing is the only mechanism
+-  (see AGENTS.md "RTK" + "Self-Check"). Project-level output filters live in `.rtk/filters.toml`
+-  (trusted) and apply only when commands are invoked via `rtk`.
++- RTK auto-rewrite is **active** via PreToolUse hook in global `settings.json`
++  (`hooks/rtk-prerewrite.js`) — all Bash commands auto-prefixed (Anthropic
++  "zero exceptions" hook pattern). Bypass: `RTK_DISABLED=1 <cmd>`.
++  Project output filters in `.rtk/filters.toml` apply post-execution.
+```
+
+#### Step G — `feedback_rtk.md` Slim to Pointer
+
+**File**: `%USERPROFILE%\.claude\projects\d------------------260427\memory\feedback_rtk.md`
+
+Anthropic memory guidance: "MEMORY.md keeps a concise index, moves detailed notes into
+separate topic files." Memory entries are pointers, not duplicated rules.
+
+Replace body (keep frontmatter):
+```markdown
+RTK Token Domain hook (`hooks/rtk-prerewrite.js`) auto-prefixes all Bash commands.
+Bypass per-command: `RTK_DISABLED=1 <cmd>`. Reference: `%USERPROFILE%\.claude\RTK.md`.
+Verify compliance via `rtk discover` (verification loop, Anthropic Best Practices §verification).
+```
+
+---
+
+## Verification (Anthropic-style: provide testable criteria)
+
+```bash
+# Layer 3: hook fires for general command
+echo '{"tool_name":"Bash","tool_input":{"command":"git status"}}' \
+  | node "%USERPROFILE%/.claude/hooks/rtk-prerewrite.js"
+# Expected: {"modified_input":{"command":"rtk git status"}}
+
+# Layer 3: already-prefixed passes through
+echo '{"tool_name":"Bash","tool_input":{"command":"rtk tsc --noEmit"}}' \
+  | node "%USERPROFILE%/.claude/hooks/rtk-prerewrite.js"
+# Expected: (empty stdout)
+
+# Layer 3: chain rewrites each segment
+echo '{"tool_name":"Bash","tool_input":{"command":"git add . && git commit -m \"x\""}}' \
+  | node "%USERPROFILE%/.claude/hooks/rtk-prerewrite.js"
+# Expected: {"modified_input":{"command":"rtk git add . && rtk git commit -m \"x\""}}
+
+# Layer 3: pipe NOT split (continuation, not standalone command)
+echo '{"tool_name":"Bash","tool_input":{"command":"git log | head -10"}}' \
+  | node "%USERPROFILE%/.claude/hooks/rtk-prerewrite.js"
+# Expected: {"modified_input":{"command":"rtk git log | head -10"}}
+
+# Layer 3: exempt builtins pass through
+echo '{"tool_name":"Bash","tool_input":{"command":"echo hello"}}' \
+  | node "%USERPROFILE%/.claude/hooks/rtk-prerewrite.js"
+# Expected: (empty stdout)
+
+# End-to-end verification (Anthropic-native verification loop):
+# After 1 session under the new hook:
+#   rtk gain         → counter should reflect 100% auto-prefix coverage
+#   rtk discover     → should approach zero (no missed opportunities)
+#   reports/token-usage.md → should show rtk discover block appended per session
+```
+
+---
+
+## Critical Files Summary
+
+| File | Layer | Status |
+|---|---|---|
+| `hooks/rtk-prerewrite.js` | 3 (hook) | ✅ Created |
+| `settings.json` (PreToolUse) | 3 (hook registration) | ✅ Done |
+| `hooks/token-report.ps1` | Verification loop | ✅ Updated (rtk discover appended) |
+| `RTK.md` | Reference (Layer 1 background) | ✅ Updated (Matrix + L33 + Hook Status) |
+| `AGENTS.md` Self-Check | 1 (advisory) | ⏳ Pending |
+| `CLAUDE.md` (project) line 9 | 1 (advisory) | ⏳ Pending |
+| `memory/feedback_rtk.md` | 2 (path-scoped/topic) | ⏳ Pending |
+
+## Execution Order (Remaining)
+
+1. AGENTS.md — simplify Self-Check §1 (Step E)
+2. CLAUDE.md (project) — flip L9 "not supported" → "active" (Step F)
+3. feedback_rtk.md — slim to pointer (Step G)
+4. New session — verify hook activates and `rtk gain` shows full coverage

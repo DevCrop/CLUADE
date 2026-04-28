@@ -1,0 +1,108 @@
+# Claude Code Best Practices Checklist
+
+Claude Code를 쓸 때 토큰 낭비 여부 및 최적 설정 확인용 체크리스트.
+
+---
+
+## 1. CLAUDE.md
+
+- [ ] 50줄 이하인가?
+- [ ] Claude가 코드를 읽어서 알 수 있는 내용은 없는가? (파일 구조, 네이밍 컨벤션 등)
+- [ ] 파일타입별 규칙은 `.claude/rules/`로 분리되어 있는가?
+- [ ] "하지 말 것" 금지 패턴이 명시되어 있는가?
+- [ ] Verification 커맨드가 있는가? (tsc, lint, test 등)
+
+## 2. Rules (`.claude/rules/`)
+
+- [ ] 파일 확장자별로 분리되어 있는가? (`php.md`, `frontend.md`, `scss.md`)
+- [ ] 각 rules 파일 상단에 `paths:` frontmatter가 있는가?
+- [ ] 규칙이 코드에서 추론 불가한 것들만 담고 있는가?
+
+## 3. Hooks (`.claude/settings.json`)
+
+- [ ] `.ts` 파일 편집 후 자동 tsc 실행되는가?
+- [ ] Hook이 실제로 동작하는지 `.ts` 파일 수정으로 검증했는가?
+- [ ] 자주 쓰는 안전한 커맨드는 `allowedTools`에 등록되어 있는가?
+
+## 4. Skills (`.claude/skills/`)
+
+- [ ] 반복 워크플로우가 skill로 등록되어 있는가?
+- [ ] `/migration`, `/new-route` 등 프로젝트 고유 워크플로우가 있는가?
+
+## 5. Subagents (`.claude/agents/`)
+
+- [ ] 파일을 많이 읽는 탐색 작업용 agent가 있는가?
+- [ ] Three.js 씬 탐색은 `scene-explorer` agent로 위임하고 있는가?
+- [ ] PHP 구조 파악은 `php-explorer` agent로 위임하고 있는가?
+
+## 6. 세션 운영 습관
+
+- [ ] 관련 없는 작업 사이에 `/clear`를 쓰고 있는가?
+- [ ] 같은 실수를 2번 이상 수정하면 `/clear` 후 새 프롬프트로 재시작하는가?
+- [ ] 탐색 작업은 "subagent 써서 조사해줘"로 메인 컨텍스트 보호하는가?
+- [ ] 긴 세션은 `--continue` / `--resume`으로 재개하는가?
+
+## 7. 토큰 낭비 패턴 (발생 시 즉시 수정)
+
+- [ ] docs/ 폴더에 코드로 추론 가능한 문서가 생기지 않았는가?
+- [ ] CLAUDE.md가 50줄을 초과하기 시작하지 않았는가?
+- [ ] Claude가 Bash 툴 실행 시 `chop` prefix를 쓰고 있는가? (`chop gain`으로 확인)
+- [ ] `chop gain` 수치가 늘고 있는가? 0이면 chop이 실제로 안 쓰이는 것
+
+---
+
+## 현재 프로젝트 세팅 현황
+
+| 항목 | 상태 |
+| --- | --- |
+| CLAUDE.md 간결 | ✅ |
+| CLAUDE.md skill 호출 예시 | ✅ |
+| Rules on-demand | ✅ php / frontend / scss |
+| Hooks (tsc) | ✅ Node.js stdin 방식 |
+| Hook 동작 검증 | ✅ Edit 도구로 .ts 파일 수정해 발화 확인 |
+| allowedTools | ✅ chop / git / tsc / docker / npm test |
+| Skills | ✅ migration / new-route |
+| Subagents | ✅ scene-explorer / php-explorer |
+| docs/ 제거 + README 정리 | ✅ |
+| CHOP 적용 | ✅ |
+| MEMORY.md | ✅ project_architecture / project_workflow / feedback_chop |
+| 테스트 프레임워크 | ✅ vitest (19 tests) |
+| --dangerously-skip-permissions | ✅ `~/.bashrc` alias 적용 |
+| npm build/watch/install 금지 | ✅ CLAUDE.md / AGENTS.md / frontend.md |
+
+## 권한 설정 — `--dangerously-skip-permissions`
+
+Claude Code가 매번 권한을 물어보지 않게 하려면:
+
+```bash
+# ~/.bashrc 에 이미 적용됨 (터미널 재시작 시 자동 적용)
+alias claude='claude --dangerously-skip-permissions'
+
+# 현재 세션에 즉시 적용하려면:
+source ~/.bashrc
+```
+
+> **주의:** 이 플래그는 파일 쓰기, Bash 실행 등 모든 도구 사용을 자동 승인함.  
+> 신뢰하는 프로젝트에서만 사용. 낯선 코드베이스에서는 기본 권한 모드 권장.
+
+## npm 빌드 커맨드 금지 사유
+
+`npm run build`, `npm run watch`, `npm install` 은 **일반 개발 중 실행 금지**.
+
+- **이유:** 파일 저장 시 Vite dev 서버(`http://localhost:8888`)가 자동으로 번들을 재생성함
+- 실행해도 이득 없고 컨텍스트/시간만 낭비
+- **예외:** `npm install <package>` — 새 패키지를 추가할 때만 허용
+- 이 제약은 CLAUDE.md, AGENTS.md, .claude/rules/frontend.md 세 곳 모두에 반영됨
+
+## tsc 훅 동작 원리
+
+`.ts` 파일을 Edit/Write 도구로 수정하면 PostToolUse 훅이 자동 발화:
+
+```bash
+# 훅이 실행하는 커맨드
+chop node_modules/.bin/tsc --noEmit
+```
+
+- 훅 설정: `.claude/settings.json` → `PostToolUse` → matcher: `Edit|Write`
+- tsc 오류 발생 시 훅이 `exit(1)`을 반환해 Claude에게 즉시 알림
+- **검증 방법:** `.ts` 파일을 Edit 도구로 수정 → 훅 출력에서 tsc 결과 확인

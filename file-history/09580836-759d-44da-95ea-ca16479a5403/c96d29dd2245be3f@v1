@@ -1,0 +1,49 @@
+---
+paths:
+  - "**/*.php"
+---
+
+# PHP Rules
+
+- Framework: custom MVC (PHP 7.4) — no Laravel/Symfony conventions
+- Namespaces: `Core\`, `Database\`, `Http\`, `Routing\`, `View\`, `Menu\`
+- Classes: PascalCase / Methods & variables: camelCase / Constants: UPPER_SNAKE_CASE
+- DB tables use `nb_` prefix (e.g. `nb_siteinfo`, `nb_admin`)
+- DB schema changes must go through migration files (`make m`), never alter tables directly
+
+## Patterns
+
+```php
+// Routing
+$router->get('/', function () {
+    return render('pages.index');
+})->name('home');
+
+// View rendering
+render('pages.index');                        // views/pages/index.php
+render('pages.works.view', ['no' => $no]);    // views/pages/works/view.php
+```
+
+## Image Upload & WEBP Optimization
+
+All Admin image uploads flow through `imageUpload()` in `inc/lib/func.php`.
+After saving, it automatically calls `\Core\ImageProcessor::makeWebpSibling()`.
+
+```php
+// Standard upload call — WEBP sibling is created automatically
+$result = imageUpload($UPLOAD_DIR_CLIENTS, $_FILES['thumb_image']);
+$saved = $result['saved'];   // e.g. "6830abc.png" — DB stores this, foo.webp created alongside
+
+// If you add a NEW upload path that bypasses imageUpload(), call manually:
+move_uploaded_file($tmp, "$dir/$filename");
+\Core\ImageProcessor::makeWebpSibling("$dir/$filename");
+
+// Deletion — imageDelete() handles sibling cleanup automatically
+imageDelete("$UPLOAD_DIR_CLIENTS/$saved");  // removes .png + .webp
+```
+
+Rules:
+- Do not add image resize/convert logic outside `Core\ImageProcessor`.
+- `makeWebpSibling()` is silent on failure — never throw from it.
+- Convertible: `jpg`, `jpeg`, `png`, `gif`. Skipped: `svg`, `ico`.
+- Max width: 2560px (auto-resize). Quality: 82.

@@ -1,0 +1,71 @@
+// =============================================================================
+// Entry point — CSS Cascade Layers ordering.
+// Layer priority (low → high): reset < tokens < base < layout < components <
+//   pages < utilities < state.
+// TS-driven dynamic state (data-reveal, data-mask, data-active …) lives in the
+// highest layer and therefore always wins without specificity battles.
+// =============================================================================
+
+@use "sass:meta";
+
+@layer reset, tokens, base, layout, components, pages, utilities, state;
+
+@layer reset {
+  @include meta.load-css("base/reset");
+}
+
+@layer tokens {
+  @include meta.load-css("base/root");
+}
+
+@layer base {
+  @include meta.load-css("base/fonts");
+  @include meta.load-css("base/init");
+}
+
+@layer layout {
+  @include meta.load-css("layouts/header");
+  @include meta.load-css("layouts/drawer");
+  @include meta.load-css("layouts/footer");
+}
+
+@layer components {
+  @include meta.load-css("components/backdrop");
+  @include meta.load-css("components/masking-text");
+  @include meta.load-css("components/corner-bracket");
+  @include meta.load-css("components/button");
+  @include meta.load-css("components/dropdown");
+  @include meta.load-css("components/intro");
+  @include meta.load-css("components/form");
+  @include meta.load-css("components/marquee");
+  @include meta.load-css("components/search-bar");
+  @include meta.load-css("components/modal");
+  @include meta.load-css("components/pagination");
+  @include meta.load-css("components/prevnext");
+  @include meta.load-css("components/table");
+  @include meta.load-css("components/hud-panel");
+  @include meta.load-css("components/panel");
+  @include meta.load-css("components/hud");
+  @include meta.load-css("components/meta");
+  @include meta.load-css("components/category");
+  @include meta.load-css("components/toast");
+  @include meta.load-css("components/loading");
+  @include meta.load-css("components/loop-filter-rect");
+  @include meta.load-css("components/custom-cursor");
+  @include meta.load-css("components/space-card");
+}
+
+@layer pages {
+  @include meta.load-css("pages/main");
+  @include meta.load-css("pages/sub");
+  @include meta.load-css("pages/works-canvas");
+}
+
+@layer utilities {
+  @include meta.load-css("base/utils");
+}
+
+// state: populated by state partials added in Axis 2/3 of the refactor.
+// Placeholder — empty layer keeps the ordering stable even if no rules yet.
+@layer state {
+}

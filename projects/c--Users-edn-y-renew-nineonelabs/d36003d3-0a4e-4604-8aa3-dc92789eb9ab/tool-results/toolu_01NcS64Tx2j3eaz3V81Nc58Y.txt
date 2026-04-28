@@ -1,0 +1,252 @@
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-4-  TheatreScrubPort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-5-  TheatreSequencePort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-6-} from "./theatre.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:7:import type { PageConfig } from "./core.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-8-import type { MainJetEngineState, MainRocketState } from "./main.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-9-import type { BackgroundLookOptions } from "./object-visual.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-10-import type {
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-54-  gravityBalls: AboutTransformState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-55-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-56-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:57:export type AboutPageConfig = PageConfig<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-58-  "about",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:59:  AboutSceneSectionKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-60-  AboutTheatreSheetId
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-61->;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-62-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:63:export type AboutInitialState = NonNullable<AboutPageConfig["initialState"]> & {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-64-  aboutLights: AboutLightState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-65-  terrian: AboutTransformState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-66-};
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-96-  | "client"
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-97-  | "contact";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-98-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:99:export type AboutSceneSectionKey =
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-100-  | "heroIntro"
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-101-  | "heroSlogan"
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts-102-  | "missionVision"
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\work.types.ts-255-  window: SceneFromState["window"];
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\work.types.ts-256-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\work.types.ts-257-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\work.types.ts:258:export type WorksPageConfig = import("./core.types.js").PageConfig<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\work.types.ts-259-  "works",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\work.types.ts-260-  WorksSceneSectionKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\work.types.ts-261-  WorksTheatreSheetId
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-1-import type { Engine } from "../core/Engine.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts:2:import type { PageConfig } from "./core.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-3-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-4-  AboutLightState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-5-  AboutLightsPort as AboutLightsObjectPort,
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-51-export type ContactTheatreSheetId = "contact" | "outtro";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-52-export type ContactSceneSectionKey = "contact";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-53-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts:54:export type ContactPageConfig = PageConfig<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-55-  "contact",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-56-  ContactSceneSectionKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-57-  ContactTheatreSheetId
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-58->;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-59-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts:60:export type ContactInitialState = NonNullable<ContactPageConfig["initialState"]> & {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-61-  aboutLights: AboutLightState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-62-  earth: ContactTransformState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts-63-};
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-9-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-10-  BackgroundTweenProps,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-11-  ObjectOptionsByKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts:12:  PageConfigObjectOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-13-  SceneLightsTweenProps,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-14-  SceneSettings,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-15-  Vector3Optional,
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-19-  PageSceneRuntimePolicy,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-20-  SceneBackgroundPolicy,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-21-  SceneProgressOptionsMap,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts:22:  SceneSelectorMap,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-23-} from "./runtime.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-24-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-25-export interface TimelineControllerLike {
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-265-  state: "up";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-266-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-267-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts:268:export interface PageConfig<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-269-  TPageId extends string = string,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-270-  TSceneKey extends string = string,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-271-  TSheetId extends string = string,
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-273-  pageId: TPageId;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-274-  scenes: Record<TSceneKey, SceneConfig>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-275-  objects: Record<string, boolean>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts:276:  objectOptions?: PageConfigObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-277-  three?: PageThreeConfig;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-278-  initialState?: SceneFromState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-279-  introOverlay?: IntroConfig | null;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-285-  stateAnchors?: PageStateAnchors;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-286-  sceneBoundaryContracts?: SceneBoundaryContract[];
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-287-  orbitControls?: OrbitControlsConfig;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts:288:  scrollSceneSelectors?: SceneSelectorMap<TSceneKey>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-289-  scrollSceneOptions?: SceneProgressOptionsMap<TSceneKey>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-290-  sceneRuntimePolicies?: PageSceneRuntimePolicy<TSceneKey, TSheetId>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\core.types.ts-291-  backgroundPolicies?: readonly SceneBackgroundPolicy<TSceneKey, TSheetId>[];
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-724-  aboutLights: AboutLightsObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-725-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-726-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:727:export type PageConfigObjectOptions = Partial<ObjectOptionsByKey>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-728-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-729-export type ObjectId = keyof ObjectOptionsByKey;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts-730-export type ObjectTimelineVars = Record<string, unknown>;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-21-} from "./object-runtime.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-22-import type { IntroConfig } from "./core.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-23-import type { GsapGlobal } from "./gsap.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:24:import type { AboutPageConfig } from "./about.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:25:import type { ContactPageConfig } from "./contact.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:26:import type { MainPageConfig } from "./main.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-27-import type { Engine } from "../core/Engine.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-28-import type { SceneSheetEffectRuntime } from "../runtime/SceneSheetEffectRuntime.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-29-import type { BackgroundController } from "../controller/BackgroundController.js";
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-32-import type { ObjectSetup } from "../app/ObjectSetup.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-33-import type { UiSetup } from "../app/UiSetup.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-34-import type { ResizeSetup } from "../app/ResizeSetup.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:35:import type { PageConfig } from "./core.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-36-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-37-export interface ISetup<TArgs extends unknown[] = [], TReturn = void> {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-38-  init(...args: TArgs): TReturn;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-39-  dispose(): void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-40-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-41-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:42:export type ManagedPageConfig =
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:43:  | MainPageConfig
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:44:  | AboutPageConfig
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:45:  | ContactPageConfig;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-46-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:47:export type AppPageConfig =
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:48:  | MainPageConfig
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:49:  | AboutPageConfig
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:50:  | ContactPageConfig;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-51-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-52-export type ScrollDirection = "up" | "down" | "idle";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-53-
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-199-  y: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-200-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-201-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:202:export type SceneSelectorMap<TSceneKey extends string> = Readonly<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-203-  Record<TSceneKey, string>
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-204->;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-205-
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-611-}
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-612-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-613-export interface AppEngineRuntimeInitOptions {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:614:  pageConfig: PageConfig;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-615-  root?: ParentNode | null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-616-  canvasElement?: HTMLCanvasElement | null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-617-}
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-619-export interface AppStartupRuntimeOptions {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-620-  engine: Engine;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-621-  engineContext: AppEngineRuntimeContext;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:622:  pageConfig: PageConfig;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-623-  objectSetupPromise: Promise<void>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-624-  onBootStateApply?: () => Promise<void>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts-625-  pageBootRuntime: {
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-4-import type { IntroHandoffRuntime } from "../runtime/IntroHandoffRuntime.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-5-import type { SceneTransitionRuntime } from "../runtime/SceneTransitionRuntime.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-6-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:7:  AboutPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:8:  AboutSceneSectionKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-9-  AboutUiPhase,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-10-} from "./about.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-11-import type { ContactDomState } from "./contact.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-12-import type { GsapGlobal } from "./gsap.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-13-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:14:  MainPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-15-  MainSceneSectionKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-16-  MainTheatreSheetId,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-17-} from "./main.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-18-import type { TransitionVeilRuntimePort } from "./object-runtime.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:19:import type { AppPageConfig } from "./runtime.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-20-
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-21-export interface IntroCanvasColorStop {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-22-  progress: number;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-104-  setHeroHandoffVisible(visible: boolean): void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-105-  setAboutUiPhase(phase: AboutUiPhase): void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-106-  setAboutScenePlanesVisible(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:107:    pageConfig: AboutPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-108-    visible: boolean,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-109-  ): void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-110-  revealAboutScenePlanes(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:111:    pageConfig: AboutPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-112-    gsap: GsapGlobal | null,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-113-  ): Promise<void>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:114:  waitForAboutHeroIntroClick(pageConfig: AboutPageConfig): Promise<void>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-115-  scrollToAboutSceneProgress(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:116:    pageConfig: AboutPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:117:    sceneKey: AboutSceneSectionKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-118-    progress?: number,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-119-  ): void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-120-}
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-131-    objectId?: string,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-132-  ) => TransitionVeilRuntimePort | null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-133-  runAfterLoad: (
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:134:    pageConfig: AppPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-135-    objectSetupPromise: Promise<void>,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-136-    options?: IntroAfterLoadOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-137-  ) => Promise<void>;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-143-  startMainIntroActionPhaseOne: (engine: Engine) => Promise<void>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-144-  startMainIntroActionPhaseTwo: (engine: Engine) => Promise<void>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-145-  syncMainSceneState: (
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:146:    pageConfig: MainPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-147-    sceneKey: MainSceneSectionKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-148-    progress: number,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-149-  ) => Promise<void>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-150-  syncAboutSceneState: (
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:151:    pageConfig: AboutPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:152:    sceneKey: AboutSceneSectionKey,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-153-    progress: number,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-154-  ) => Promise<void>;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-155-  syncMainIntroBackground: (
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:156:    pageConfig: MainPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-157-    sheetId: MainTheatreSheetId,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-158-    progress: number,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-159-  ) => void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:160:  startMainScrollSyncAfterIntro: (pageConfig: MainPageConfig) => void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:161:  startAboutScrollSyncAfterIntro: (pageConfig: AboutPageConfig) => void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-162-  onMainIntroDomRevealComplete: () => void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-163-  onMainIntroTransitionStateChange: (active: boolean) => void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-164-}
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-166-export interface IntroManagerDependencies {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-167-  controller: IntroController;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-168-  runAfterLoad: (
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts:169:    pageConfig: AppPageConfig,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-170-    objectSetupPromise: Promise<void>,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-171-    options?: IntroAfterLoadOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\intro.types.ts-172-  ) => Promise<void>;
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts-6-  TheatreSequencePort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts-7-} from "./theatre.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts-8-import type { Engine } from "../core/Engine.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:9:import type { PageConfig } from "./core.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts-10-import type {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts-11-  SceneLightsPort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts-12-  SceneLightsStateSnapshot,
+--
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts-148-  | "client"
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts-149-  | "contact";
+
+[Showing results with pagination = limit: 250]

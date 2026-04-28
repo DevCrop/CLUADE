@@ -1,0 +1,143 @@
+---
+name: SCSS 아키텍처 딥맵
+description: resource/scss/ 구조, fluid/mq 함수, 브레이크포인트, root 토큰, 컴포넌트 목록, 레이어 우선순위
+type: project
+originSessionId: 940f3c69-ab68-40c4-809f-8acca066cc76
+---
+NINEONELABS의 SCSS 시스템 — `resource/scss/` 전체.
+
+## 디렉토리 & 레이어 우선순위
+
+엔트리: `resource/scss/style.scss` — `@layer` + `meta.load-css()`. 순서:
+**reset < base < layout < components < pages < utilities < state**
+
+| Dir | 주요 파일 | 역할 |
+|---|---|---|
+| `abstract/` | `index, _variables, _colors, _functions, _mixins, _headings` | 헬퍼 함수, 믹스인, 색상/타이포 맵 |
+| `base/` | `index, _fonts, _init, _reset, _root, _utils` | 글로벌 reset, :root 토큰, author 모드 셀렉터 |
+| `components/` | 23개 + `hud/` 서브 | UI 컴포넌트별 스타일 |
+| `layouts/` | `_header, _drawer, _footer` | 전역 레이아웃 |
+| `pages/` | `_main, _sub, _works-canvas` | 페이지 고유 |
+| `state/` | `_reveal-state` | TS-driven `[data-mask]`, `[data-reveal]`, `is-*` |
+
+## abstract/ 핵심 헬퍼
+
+**_functions.scss:**
+- `fluid($y1, $y2, $x1: 375, $x2: 1920)` → `clamp(min, vw + base, max)` 반환
+- `minus-fluid(...)` → 음수 버전
+- `pxToRem($px)` → `$px * 0.1rem` (35 → 3.5rem)
+
+**_mixins.scss:**
+- `mq($key-or-size, $direction: "max")` → media query
+- `mq-min()`, `mq-max()` 방향 래퍼
+- `@mixin font($name)` → `@include font("ds-heading-1")` (`$fluid-typography` 자동 참조)
+- `set-fluid($map)`, `section-fluid-by-map($map)`, `fs-fluid-by-map($map)`, `fs-static-by-map($map)`
+- 패턴 헬퍼: `flex-center()`, `pos-full()`, `pos-center()`, `img-cover()`, `line-clamp()`, `blind()`
+
+**_variables.scss:**
+- `$font-familys` — Pretendard, ClashDisplay-Variable, Orbitron, Geist Mono
+- `$containers` — xs(375), sm(544), md(768), lg(1024), xl(1440), 2xl(1640), 3xl(1920)
+- `$gutters` — 3xs~4xl. `var(--gutter-md)` 등으로 사용
+- `$sections` — section padding fluid 맵 (xl, lg, md, sm, footer)
+- `$fluid-customs` — 커스텀 fluid 맵
+
+**_headings.scss:**
+- `$fluid-displays` (x, 0, 1_5, 1, 2) — min 42~48 / max 80~136
+- `$fluid-headings` (1~5) — min 16~24 / max 24~48
+- `$fluid-bodys` (1~5) — min 10~15 / max 12~20
+- `$fluid-typography` — 위 셋 통합 (font() 진입점)
+
+**_colors.scss:**
+- `$theme-colors-light` / `$theme-colors-dark` — primitives + tokens (text, border, background)
+- `theme-colors-flat()` 평탄화
+
+## 브레이크포인트 (mq key → px)
+
+```
+xs: 375  /  sm: 544  /  md: 768  /  lg: 1024
+xl: 1440 / 2xl: 1640 / 3xl: 1920
+```
+`mq($key)` → `(max-width: ...px)` / `mq-min($key)` → `(min-width: ...px)`
+
+## base/_root.scss — 핵심 :root 토큰 (~200개)
+
+| 카테고리 | 토큰 예시 |
+|---|---|
+| Typography | `--base-font-size`, `--base-line-height`, `--base-letter-spacing` (fluid) |
+| Layout | `--header-height`, `--hud-unit`, `--gutter-3xs`~`--gutter-4xl`, `--gutter-container` |
+| Z-index | `--z-index-bg` (-1) ~ `--z-index-custom-cursor` (2147483647) |
+| Form | `--input-height`, `--form-file-action-size`, `--form-control-transition`, `--form-choice-*` |
+| Duration | `--duration-instant` (0.1s) ~ `--duration-slower` (1s), `--duration-stagger` (0.08s) |
+| Easing | `--ease-default`, `--ease-spring`, `--ease-bounce` |
+| Motion | `--block-reveal-offset-y` (18px), `--text-reveal-offset-y` (4px) |
+| Shadow | `--shadow-floating-card` |
+| Scrollbar | `--scrollbar-width` (fluid) |
+| Shiny CTA | `--shiny-cta-bg`, `--shiny-cta-fg`, `--shiny-cta-highlight` |
+| Color | `--clr-text-*`, `--clr-border-*`, `--clr-background-*` (color 맵 flat) |
+
+**다른 base 파일:**
+- `_reset.scss` — `*` margin/padding 0 + box-sizing border-box, html `font-size: 62.5%`, body word-break: keep-all
+- `_init.scss` — 전역 0값 처리 (중복 제거 금지)
+- `_utils.scss` — `html[data-*-mode="author"]` (Theatre Studio author 모드)
+- `_fonts.scss` — @import 글꼴
+
+## components/ 목록
+
+| 파일 | 주요 클래스 |
+|---|---|
+| `_button.scss` | `.no-btn`, `.no-btn-char`, `.shiny-cta`, `.no-magnetic-corner-btn`, `.no-wizard` |
+| `_form.scss` | `.no-form-*`, `.no-form-reveal` |
+| `_modal.scss` | `.no-modal` |
+| `_panel.scss` | `.no-panel` |
+| `_dropdown.scss` | `.no-dropdown` |
+| `_search-bar.scss` | `.no-search-bar` |
+| `_intro.scss` | `.intro` |
+| `_loading.scss` | `.no-loading` |
+| `_marquee.scss` | `.marquee` |
+| `_masking-text.scss` | `.masking-text`, `.mask-target` |
+| `_pagination.scss` | `.no-pagination` |
+| `_table.scss` | `.no-table` |
+| `_toast.scss` | `.toast` |
+| `_hud-panel.scss` | `.hud-panel` |
+| `_meta.scss` | `.meta` |
+| `_category.scss` | `.category` |
+| `_corner-bracket.scss` | (deprecated — `.no-corner-bracket` 실 요소 사용) |
+| `_custom-cursor.scss` | `.custom-cursor` |
+| `_space-card.scss` | `.space-card` |
+| `_backdrop.scss` | `.backdrop` |
+| `_detail-view.scss` | `.detail-view` |
+| `_detail-prevnext.scss` | `.detail-prevnext` |
+| `_prevnext.scss` | `.prevnext` |
+| `_loop-filter-rect.scss` | `.loop-filter-rect` |
+| `hud/_gauge.scss` | `.gauge` |
+
+## layouts/
+
+| 파일 | 클래스 | z-index |
+|---|---|---|
+| `_header.scss` | `.no-header` | 280 |
+| `_drawer.scss` | `.no-drawer` | 270 |
+| `_footer.scss` | `.footer` | — |
+
+## pages/ & state/
+
+- `pages/_main.scss` — 메인 (`.canvas-container`, `.main-content`)
+- `pages/_sub.scss` — 서브 (작품 상세 등)
+- `pages/_works-canvas.scss` — Works 캔버스 전용
+- `state/_reveal-state.scss` — `[data-mask="ready"]`, `[data-reveal=inview|down|hidden]`
+
+## 사용 규칙 요약
+
+| 룰 | 비고 |
+|---|---|
+| `@use "../abstract" as *;` | 컴포넌트/페이지/레이아웃 외부 파일 필수 |
+| `var(--token, fallback)` 금지 | 토큰 이름만 사용 |
+| `fluid(min, max)` 직접 호출 | 컴포넌트/페이지 안 |
+| `#{fluid(...)}` interpolation | abstract/base 안에서만 |
+| `@include font("...")` | 타이포그래피 적용 |
+| `mq($key)` | 반응형 |
+| `.is-*` / `[data-*]` | TS-driven 상태 |
+| 0값 중복 제거 금지 | _init.scss에 이미 있음 |
+
+**Why:** 토큰·fluid·mq 시스템이 강하게 표준화되어 있어서 임의 값을 쓰면 디자인 시스템 일관성이 깨짐.
+**How to apply:** 새 SCSS 추가 시 (1) 적합한 디렉토리 선택 → (2) abstract/base 토큰 먼저 검색 → (3) 없으면 abstract에 추가하고 컴포넌트에서 사용. 신규 토큰은 단일 컴포넌트면 만들지 말고 fluid()/var(--token) 직접 사용.

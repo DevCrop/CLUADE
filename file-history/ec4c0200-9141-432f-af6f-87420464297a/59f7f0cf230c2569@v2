@@ -1,0 +1,58 @@
+# Lightweight memory integrity check on SessionStart.
+# Scans D:\.claude\projects\<proj>\memory\ for broken MEMORY.md links and empty topic bodies.
+# Writes a one-line-per-issue (or single OK line) summary to D:\.claude\session-env\memory-lint.txt.
+
+$ErrorActionPreference = 'SilentlyContinue'
+$base       = 'D:\.claude'
+$envDir     = Join-Path $base 'session-env'
+$reportFile = Join-Path $envDir 'memory-lint.txt'
+$timestamp  = Get-Date -Format 'yyyy-MM-ddTHH:mm:sszzz'
+
+if (-not (Test-Path $envDir)) { New-Item -ItemType Directory -Force -Path $envDir | Out-Null }
+
+$issues = @()
+$projectDirs = @(Get-ChildItem (Join-Path $base 'projects') -Directory -ErrorAction SilentlyContinue)
+foreach ($proj in $projectDirs) {
+    $memDir = Join-Path $proj.FullName 'memory'
+    if (-not (Test-Path $memDir)) { continue }
+
+    # MEMORY.md: every [text](file.md) link must resolve
+    $memIndex = Join-Path $memDir 'MEMORY.md'
+    if (Test-Path $memIndex) {
+        $idx = Get-Content $memIndex -Raw -Encoding UTF8
+        if ($idx) {
+            $linkMatches = [regex]::Matches($idx, '\[([^\]]+)\]\(([^)]+\.md)\)')
+            foreach ($m in $linkMatches) {
+                $ref = $m.Groups[2].Value
+                if ($ref -like 'http*') { continue }
+                $abs = Join-Path $memDir $ref
+                if (-not (Test-Path $abs)) {
+                    $issues += "[$timestamp] missing-file: $($proj.Name) MEMORY.md -> $ref"
+                }
+            }
+        }
+    }
+
+    # Topic files: body must be non-empty after frontmatter strip
+    Get-ChildItem $memDir -Filter '*.md' -File -ErrorAction SilentlyContinue | ForEach-Object {
+        if ($_.Name -ieq 'MEMORY.md') { return }
+        $body = Get-Content $_.FullName -Raw -Encoding UTF8
+        if (-not $body) {
+            $issues += "[$timestamp] empty-file: $($proj.Name) memory/$($_.Name)"
+            return
+        }
+        $stripped = [regex]::Replace($body, '(?s)^---\s*\r?\n.*?\r?\n---\s*\r?\n', '').Trim()
+        if (-not $stripped) {
+            $issues += "[$timestamp] empty-body: $($proj.Name) memory/$($_.Name)"
+        }
+    }
+}
+
+if ($issues.Count -eq 0) {
+    "[$timestamp] memory-lint OK ($($projectDirs.Count) projects scanned)" |
+        Set-Content -Path $reportFile -Encoding UTF8 -NoNewline
+} else {
+    ($issues -join "`n") | Set-Content -Path $reportFile -Encoding UTF8 -NoNewline
+}
+
+exit 0

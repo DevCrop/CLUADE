@@ -1,0 +1,239 @@
+# Plan: About Proof Section — Orbiting Image Cards
+
+## Context
+
+about 페이지의 `.no-sub-about-proof` 섹션을 비우고, 이미지 카드들이 Y축을 중심으로 천천히 공전하는 Three.js 씬으로 교체한다. 파티클(별) 없이 이미지 카드 링만 구현한다.
+
+이미지 소스: `fetchWorksList` API (포트폴리오 썸네일), 최대 24장.
+
+---
+
+## Architecture
+
+### Why standalone renderer
+- 기존 about 글로벌 캔버스는 Theatre.js 카메라가 제어 중 (rocket/earth/astronaut)
+- proof 섹션은 독립 캔버스가 필요 (`WorksSceneManager`와 동일한 패턴)
+- `BEST_PRACTICES.md`: secondary renderer는 `pages/<page>/render/`
+
+### Init chain
+`app.ts` → `AppBootstrap` → `PageRuntime` → `PageController` → `PAGE_STRATEGIES[pageAbout]`
+
+현재: `ManagedPageStrategy(aboutConfig)` → `AppManager`  
+변경: `LazyRuntimePageStrategy` → `AboutPageRuntime` → AppManager + AboutProofRenderer
+
+---
+
+## Files
+
+### New
+| File | Purpose |
+|------|---------|
+| `resource/ts/pages/about/render/AboutProofRenderer.ts` | 독립 Three.js 렌더러 — 이미지 카드 링 |
+| `resource/ts/pages/about/runtime/AboutPageRuntime.ts` | about 페이지 진입: AppManager + 렌더러 |
+
+### Modified
+| File | Change |
+|------|--------|
+| `resource/ts/controller/PageController.ts` | `[pageAbout]` → `LazyRuntimePageStrategy` |
+| `views/pages/about/index.php` | proof 섹션 내용 비움 → canvas 추가 |
+| `resource/scss/pages/_sub.scss` | 카드 스타일 제거 → 캔버스 크기 스타일 |
+
+---
+
+## Implementation Steps
+
+### Step 1 — View
+
+`views/pages/about/index.php` (lines ~229–263)의 proof 섹션 body를 교체:
+
+```php
+// AFTER
+<section class="no-sub-about-section no-sub-about-proof" data-scene="proof" aria-hidden="true">
+  <div class="no-sub-about-proof__canvas-wrap">
+    <canvas id="about-proof-canvas"></canvas>
+  </div>
+</section>
+```
+
+`data-scene="proof"` 유지 (scroll/aria 기존 동작 보존).
+
+---
+
+### Step 2 — SCSS
+
+`resource/scss/pages/_sub.scss`에서 `.no-sub-about-proof__grid`, `__card`, `__body`, `__txt` 블록 제거 후:
+
+```scss
+.no-sub-about-proof {
+  position: relative;
+}
+
+.no-sub-about-proof__canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+```
+
+---
+
+### Step 3 — `AboutProofRenderer.ts`
+
+`resource/ts/pages/about/render/AboutProofRenderer.ts`
+
+**핵심 로직:**
+
+```typescript
+// 이미지 카드 배치 (링 형태, 적도면)
+const IMAGE_SIZE = 1.5;
+const SPHERE_RADIUS = 9;
+const ROTATION_SPEED_Y = 0.0005;
+
+// 카메라: position(-10, 1.5, 10), FOV 50, lookAt(0,0,0)
+// 회전: rAF 루프에서 group.rotation.y += ROTATION_SPEED_Y
+// 이미지 로딩: THREE.TextureLoader (각 plane에 map 적용, DoubleSide)
+```
+
+**이미지 배치:**
+```typescript
+for (let i = 0; i < imageCount; i++) {
+  const angle = (i / imageCount) * Math.PI * 2;
+  const x = SPHERE_RADIUS * Math.cos(angle);
+  const z = SPHERE_RADIUS * Math.sin(angle);
+  // plane이 중심을 향해 face하도록 lookAt 방향 계산
+}
+```
+
+**Three.js 규칙 준수 (frontend.md):**
+- 모든 geometry / material / texture → `dispose()`
+- `renderer.dispose()` + `renderer.forceContextLoss()` on dispose
+- rAF 루프 내 object 생성 금지 — 메시는 `init()`에서만 생성
+- `addEventListener` ↔ `removeEventListener` 대칭
+
+**IntersectionObserver:** 캔버스가 뷰포트 밖이면 rAF 정지 (GPU 절약)  
+**ResizeObserver:** 컨테이너 리사이즈 시 renderer size + camera aspect 갱신
+
+**이미지 소스:**
+- `fetchWorksList(0, 24, null)` 호출 → `thumbnailImage` 있는 items 최대 24장
+- 이미지 없으면 컬러 MeshBasicMaterial로 폴백
+
+```typescript
+export class AboutProofRenderer {
+  private _renderer: THREE.WebGLRenderer | null = null;
+  private _scene: THREE.Scene | null = null;
+  private _camera: THREE.PerspectiveCamera | null = null;
+  private _group: THREE.Group | null = null;
+  private _meshes: THREE.Mesh[] = [];
+  private _geometries: THREE.BufferGeometry[] = [];
+  private _materials: THREE.Material[] = [];
+  private _textures: THREE.Texture[] = [];
+  private _rafId: number | null = null;
+  private _resizeObserver: ResizeObserver | null = null;
+  private _intersectionObserver: IntersectionObserver | null = null;
+  private _visible = false;
+  private _disposed = false;
+
+  async init(canvas: HTMLCanvasElement): Promise<void> { ... }
+  dispose(): void { ... }
+}
+```
+
+---
+
+### Step 4 — `AboutPageRuntime.ts`
+
+`resource/ts/pages/about/runtime/AboutPageRuntime.ts`
+
+```typescript
+import { AppManager } from "../../../manager/AppManager.js";
+import { aboutConfig } from "../scene/about.scene.js";
+import { EnvSetup } from "../../../app/EnvSetup.js";
+import type { IPageRuntime } from "../../../types/engine.types.js";
+import { AboutProofRenderer } from "../render/AboutProofRenderer.js";
+
+const PROOF_CANVAS_ID = "about-proof-canvas";
+
+export class AboutPageRuntime implements IPageRuntime {
+  private _appManager: AppManager | null = null;
+  private _proofRenderer: AboutProofRenderer | null = null;
+
+  async init(root?: ParentNode | null): Promise<void> {
+    // 1. 기존 AppManager (global about 씬: rocket/earth 등)
+    const three = aboutConfig.three;
+    if (three) {
+      const env = EnvSetup.shouldInit({ canvasId: three.canvasId, root, allowedPageTypes: new Set(["about"]) });
+      if (env.shouldInit) {
+        this._appManager?.dispose();
+        this._appManager = new AppManager();
+        await this._appManager.run(aboutConfig, root);
+      }
+    }
+
+    // 2. Proof 섹션 이미지 카드 렌더러
+    const canvas = (root ?? document).querySelector<HTMLCanvasElement>(`#${PROOF_CANVAS_ID}`);
+    if (canvas instanceof HTMLCanvasElement) {
+      this._proofRenderer?.dispose();
+      this._proofRenderer = new AboutProofRenderer();
+      await this._proofRenderer.init(canvas);
+    }
+  }
+
+  dispose(): void {
+    this._appManager?.dispose();
+    this._appManager = null;
+    this._proofRenderer?.dispose();
+    this._proofRenderer = null;
+  }
+}
+```
+
+---
+
+### Step 5 — `PageController.ts`
+
+`resource/ts/controller/PageController.ts` line ~165:
+
+```typescript
+// BEFORE
+[pageAbout]: () => new ManagedPageStrategy(aboutConfig),
+
+// AFTER
+[pageAbout]: () =>
+  new LazyRuntimePageStrategy("AboutPageStrategy.init", async () => {
+    const { AboutPageRuntime } = await import(
+      "../pages/about/runtime/AboutPageRuntime.js"
+    );
+    return new AboutPageRuntime();
+  }),
+```
+
+`aboutConfig` 직접 import는 `PageController`에서 제거 (이제 `AboutPageRuntime` 내부에서 사용).
+
+---
+
+## Key Files
+
+| Path | Role |
+|------|------|
+| `resource/ts/controller/PageController.ts:165` | Strategy 교체 |
+| `resource/ts/pages/about/render/AboutProofRenderer.ts` | New — 이미지 카드 링 렌더러 |
+| `resource/ts/pages/about/runtime/AboutPageRuntime.ts` | New — about 페이지 통합 런타임 |
+| `views/pages/about/index.php:229–263` | proof 섹션 HTML 교체 |
+| `resource/scss/pages/_sub.scss` | proof 섹션 스타일 |
+| `resource/ts/api/getWork.ts` | `fetchWorksList` 재사용 |
+
+---
+
+## Verification
+
+1. `rtk tsc --noEmit` → 에러 없음
+2. `http://localhost:8888/about` → proof 섹션 스크롤 시 이미지 카드 링이 천천히 돌아감
+3. 기존 about 섹션(heroIntro, heroSlogan, who, missionVision 등) 정상 동작 확인
+4. 콘솔 WebGL 에러 없음
+5. 창 리사이즈 → 렌더러 반응형 동작

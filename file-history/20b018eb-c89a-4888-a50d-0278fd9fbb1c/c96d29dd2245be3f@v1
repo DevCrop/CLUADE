@@ -1,0 +1,99 @@
+---
+paths:
+  - "**/*.php"
+---
+
+# PHP Rules
+
+- Framework: custom MVC (PHP 7.4) — no Laravel/Symfony conventions
+- Namespaces: `Core\`, `Database\`, `Http\`, `Routing\`, `View\`, `Menu\`
+- Classes: PascalCase / Methods & variables: camelCase / Constants: UPPER_SNAKE_CASE
+- DB tables use `nb_` prefix (e.g. `nb_siteinfo`, `nb_admin`)
+- DB schema changes must go through migration files (`make m`), never alter tables directly
+
+## Patterns
+
+```php
+// Routing
+$router->get('/', function () {
+    return render('pages.index');
+})->name('home');
+
+// View rendering
+render('pages.index');                        // views/pages/index.php
+render('pages.works.view', ['no' => $no]);    // views/pages/works/view.php
+```
+
+## Image Upload & WEBP Optimization
+
+All Admin image uploads flow through `imageUpload()` in `inc/lib/func.php`.
+**Strategy: original-replacement (not sibling).** Convertible images are converted to `.webp` and the original is deleted; the DB stores the `.webp` filename directly.
+
+```php
+// Standard upload call — WEBP replaces the original on success
+$result = imageUpload($UPLOAD_DIR_CLIENTS, $_FILES['thumb_image']);
+$saved = $result['saved'];
+// jpg/png/gif input → "6830abc.webp" (original removed, DB stores this)
+// svg/ico input    → "6830abc.svg"  (untouched)
+// 변환 실패 시     → 원본 파일명 그대로 (안전 fallback)
+
+// If you add a NEW upload path that bypasses imageUpload(), use the high-level API:
+move_uploaded_file($tmp, "$dir/$filename");
+$filename = \Core\ImageProcessor::convertToWebp("$dir/$filename") ?? $filename;
+// → 성공 시 $filename = "<basename>.webp" (원본 삭제됨). 실패/스킵 시 원본 파일명 유지.
+
+// Deletion
+imageDelete("$UPLOAD_DIR_CLIENTS/$saved");
+// Removes the file at $saved + any leftover sibling (`.webp` next to `.png`, etc.) for legacy rows
+```
+
+Two API levels in `Core\ImageProcessor`:
+- **`convertToWebp($abs): ?string`** — high-level. 변환 + 검증 + 원본 unlink + 새 basename 반환. 신규 업로드 경로는 이것 한 줄.
+- **`makeWebpSibling($abs): bool`** — low-level primitive. 변환만, 원본 삭제는 호출자 책임. *마이그레이션 스크립트의 2-phase 패턴 (변환 → DB UPDATE → 원본 unlink) 전용.* 신규 업로드 경로에서 직접 호출 금지.
+- **`deleteWebpSibling($abs): bool`** — legacy 행 (.png + .webp 짝) 청소용. 신 전략에서는 거의 호출되지 않음.
+
+Rules:
+- Do not add image resize/convert logic outside `Core\ImageProcessor`.
+- All three methods are silent on failure — never throw from them.
+- Convertible: `jpg`, `jpeg`, `png`, `gif` (`ImageProcessor::CONVERTIBLE`). Skipped untouched: `svg`, `ico`.
+- Max width: 2560px (auto-resize). Quality: 82.
+- During conversion `ImageProcessor` temporarily raises `memory_limit` to `1024M` (`MEMORY_LIMIT` const) and restores it in `finally` — large GD bitmaps OOM at the default 128M.
+- `MAX_CONVERTIBLE_PIXELS` (16 MP) 한계를 넘는 이미지는 마이그레이션 스크립트가 사전에 skip — `convertToWebp` 자체는 size 검사 안 함 (`makeWebpSibling` 의 spatie/image 가 silent fail).
+
+## Image Rendering
+
+모든 업로드 이미지 출력은 `render_uploaded_image()` (`config/functions.php`) 경유 필수.
+업로드 경로에 `<img>` 단독 태그 직접 사용 금지.
+
+```php
+// 히어로 (above-the-fold — LCP)
+<?= render_uploaded_image((string) ($work['thumbnailImage'] ?? ''), $title, '', 'eager') ?>
+
+// 그리드/목록 (below-the-fold)
+<?= render_uploaded_image((string) ($work['thumbnailImage'] ?? ''), $workLabel, '', 'lazy') ?>
+```
+
+Rules:
+- 첫 번째 인자는 **raw 미이스케이프** URL. 헬퍼가 내부에서 escape 처리.
+- `$thumbnailImage = e(...)` 로 이미 escape된 변수를 넘기면 이중 escape 발생 — raw 소스 배열에서 꺼낼 것.
+- 출력은 항상 plain `<img>`. `<picture>`/`<source webp>` 분기는 없음 — 업로드 시점에 이미 `.webp` 로 저장되므로 클라이언트 분기 불필요.
+- `class` 는 `<img>` 요소에 적용. 외부 wrapper 가 필요하면 호출 측에서 감싸기.
+
+## Image Backfill Scripts (CLI, `scripts/`)
+
+| 스크립트 | 용도 |
+|---|---|
+| `migrate-works-to-webp.php` | 신 전략(원본 대체) 1회성 마이그레이션 — `nb_works` 의 jpg/png/gif → webp + DB 컬럼 업데이트 + 원본 삭제. 16MP 초과는 skip. `--dry-run`, `--id=<n>`, `--limit=<n>` |
+| `convert-large-works-jpg.php` | `migrate-works-to-webp.php` 가 16MP 초과로 skip 한 잔여 행을 webp 한계(16383px) 이하로 리사이즈 후 변환 |
+| `backfill-webp.php` | 구 전략(sibling) 잔여 backfill — 신규 업로드 경로에는 사용 금지 |
+
+DB 업데이트가 성공한 뒤에만 원본을 삭제 — 데이터 손실 방지. 새 마이그레이션은 `migrate-works-to-webp.php` 패턴 따라 작성.
+
+## Context Efficiency
+
+- `rtk docker compose exec web php -l <file>` — raw php -l 금지.
+- `rtk grep` — routes/inc/views 다중 파일 검색 시 필수.
+- `rtk git diff` — 편집 후 diff 확인.
+- 파일 읽기: Read tool. bash cat/head/tail 금지.
+- inc/ · views/ · routes/ 동시 탐색: `$php-explorer` subagent 위임.
+- 전체 토큰 룰: AGENTS.md § Token Optimization 참조.

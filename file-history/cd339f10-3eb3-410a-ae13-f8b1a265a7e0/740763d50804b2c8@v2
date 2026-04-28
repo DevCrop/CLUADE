@@ -1,0 +1,442 @@
+<?php
+$aboutServices = [
+    [
+        'num' => '01',
+        'title' => 'WEB BUILD',
+        'desc' => '사람들이 느끼고 오래 기억하는 웹. <br> 브랜드만의 독창적인 인터랙션으로 특별한 경험을 설계합니다.',
+    ],
+    [
+        'num' => '02',
+        'title' => 'APP BUILD',
+        'desc' => '브랜드는 화면 밖에서도 계속됩니다. <br> 사용자가 편하게 쓰는 흐름을 중심으로, 손 안에서 완성되는 앱을 만듭니다.',
+    ],
+    [
+        'num' => '03',
+        'title' => 'BRANDING',
+        'desc' => '브랜드를 한 문장으로 설명할 수 있어야 합니다. <br> 핵심을 명확히 정리하고, 어디서나 같은 인상이 남는 정체성을 만듭니다.',
+    ],
+    [
+        'num' => '04',
+        'title' => 'UI · UX',
+        'desc' => '목적에 맞는 구조와 동선으로, <br> 사용자가 편하고 자연스럽게 다음 행동으로 이어지게 설계합니다.',
+    ],
+    [
+        'num' => '05',
+        'title' => 'MAINTENANCE',
+        'desc' => '서비스는 안정적으로 운영될 때 빛납니다. <br> 구조를 정리하고, 문제가 생기기 전에 먼저 대응합니다.',
+    ],
+];
+
+$aboutWhoCards = [
+    ['image' => '/resource/images/main/main_why_img_1.jpg'],
+    ['image' => '/resource/images/main/main_why_img_2.jpg'],
+    ['image' => '/resource/images/main/main_why_img_3.jpg'],
+    ['image' => '/resource/images/main/main_why_img_4.jpg'],
+    ['image' => '/resource/images/main/main_why_img_5.jpg'],
+    ['image' => '/resource/images/main/main_why_img_6.jpg'],
+];
+
+$aboutMission = [
+    [
+        'index' => '01',
+        'title' => 'UNCHARTED',
+        'description' => '정해진 답이 없는 지점에서 시작합니다. 기대된 결과가 아닌, 브랜드만의 경로를 만듭니다.',
+    ],
+    [
+        'index' => '02',
+        'title' => 'PROOF',
+        'description' => '완성도는 디테일로 쌓입니다. 목표에 도달하는 결과로 증명합니다.',
+    ],
+    [
+        'index' => '03',
+        'title' => 'LAUNCH',
+        'description' => '브랜드의 개성을 실제 화면에 담습니다. 평범한 기본값을 넘어서는 웹 경험을 출시합니다.',
+    ],
+];
+
+$awardRows = isset($awardRows) && is_array($awardRows) ? $awardRows : [];
+?>
+<?php section('content'); ?>
+<div class="scroll-container">
+    <div class="canvas-container" aria-hidden="true">
+        <canvas id="canvas"></canvas>
+        <div class="no-overlay" aria-hidden="true"></div>
+    </div>
+
+    <div class="main-content">
+        <div id="main" class="no-sub-about">
+            <div class="no-sub-about-contents">
+                <section class="no-sub-about-section no-sub-about-hero-intro" data-scene="heroIntro"
+                    aria-hidden="false">
+                    <div class="no-container">
+                        <div class="no-sub-about-section__inner no-sub-about-hero-intro__inner">
+                            <div class="no-sub-about-section__txt no-sub-about-hero-intro__txt">
+                                <div class="no-sub-about-hero-intro__top is-block-reveal">
+                                    <div class="no-sub-about-hero-intro__title">
+                                        <p class="f-display-x --fm-en mask-target">
+                                            WE ARE
+                                        </p>
+                                        <h2 class="f-display-x --fm-en --medium mask-target">EXPLORERS</h2>
+                                    </div>
+                                </div>
+                                <div class="no-sub-about-hero-intro__bottom">
+                                    <div class="no-sub-about-hero-intro__desc is-block-reveal">
+                                        <h5 class="f-heading-2 --fm-ui mask-target">DIGITAL WEB AGENCY</h5>
+                                        <p class="f-body-2 --regular mask-target">
+                                            브랜드가 나아갈 좌표를 정의합니다. <br>
+                                            사용자가 자연스럽게 움직이는 흐름을 설계하고, <br>
+                                            웹·앱·브랜드 시스템으로 여정을 완성합니다. <br>
+                                            그것이 나인원랩스입니다.
+                                        </p>
+                                    </div>
+                                    <div class="no-sub-about-hero-intro__info is-block-reveal">
+                                        <?= include_view('components.button', [
+                                            'variant' => 'corner',
+                                            'tag' => 'div',
+                                            'text' => 'Start Here',
+                                            'iconName' => 'arrow-down',
+                                            'class' => 'no-sub-about-hero-intro__scroll',
+                                            'withWrapper' => false,
+                                        ]) ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="no-sub-about-section no-sub-about-hero-slogan" data-scene="heroSlogan"
+                    aria-hidden="true">
+                    <div class="no-container">
+                        <div class="no-sub-about-section__inner no-sub-about-hero-slogan__inner">
+                            <div class="no-sub-about-section__txt no-sub-about-hero-slogan__txt">
+                                <div class="no-sub-about-hero-slogan__top is-block-reveal">
+                                    <div class="no-sub-about-hero-slogan__title">
+                                        <h2 class="f-display-x --fm-en"
+                                            aria-label="We lead your design, development, branding, and UI/UX journey.">
+                                            <span class="no-sub-about-hero-slogan__line mask-target">
+                                                <span class="weak">
+                                                    WE
+                                                </span>
+                                                <span class="weak">
+                                                    LEAD
+                                                </span>
+                                                <span class="weak">
+                                                    YOUR
+                                                </span>
+                                                <span class="no-sub-about-hero-slogan__keyword-shell"
+                                                    aria-hidden="true">
+                                                    <span class="no-sub-about-hero-slogan__bracket">(</span>
+                                                    <span class="no-sub-about-hero-slogan__keyword-viewport">
+                                                        <span class="no-sub-about-hero-slogan__keyword-track">
+                                                            <span
+                                                                class="no-sub-about-hero-slogan__keyword">DESIGN</span>
+                                                            <span
+                                                                class="no-sub-about-hero-slogan__keyword">DEVELOPMENT</span>
+                                                            <span
+                                                                class="no-sub-about-hero-slogan__keyword">BRANDING</span>
+                                                            <span class="no-sub-about-hero-slogan__keyword">UI/UX</span>
+                                                        </span>
+                                                    </span>
+                                                    <span class="no-sub-about-hero-slogan__bracket">)</span>
+                                                </span>
+                                            </span>
+                                            <span class="no-sub-about-hero-slogan__line mask-target">
+                                                JOURNEY
+                                            </span>
+                                        </h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="no-sub-about-section no-sub-about-who" data-scene="who" aria-hidden="true">
+                    <div class="no-container">
+                        <div class="no-sub-about-section__inner no-sub-about-who__inner">
+                            <div class="no-sub-about-who__contents">
+                                <div class="no-sub-about-who__stage">
+                                    <div class="no-sub-about-who__visual">
+                                        <h2 class="no-sub-about-who__sr-title">YOUR BRAND LEADS. WE BUILD THE ROUTE.</h2>
+                                        <span class="no-sub-about-who__ring" aria-hidden="true"></span>
+                                        <div class="f-display-x --fm-en no-sub-about-who__title-layer no-sub-about-who__title-layer--back"
+                                            aria-hidden="true">
+                                            <span class="no-sub-about-who__title-line">
+                                                <span class="no-sub-about-who__title-part">WE</span>
+                                                <span class="no-sub-about-who__title-part">BUILD</span>
+                                            </span>
+                                            <span class="no-sub-about-who__title-line">
+                                                <span class="no-sub-about-who__title-part">THE</span>
+                                            </span>
+                                            <span class="no-sub-about-who__title-line">
+                                                <span class="no-sub-about-who__title-part">ROUTE</span>
+                                            </span>
+                                        </div>
+                                        <ul class="no-sub-about-who__card-list" aria-hidden="true">
+                                            <?php foreach ($aboutWhoCards as $service): ?>
+                                            <li class="no-sub-about-who__card" data-about-who-card>
+                                                <figure class="no-sub-about-who__card-media">
+                                                    <img src="<?= base_path($service['image']) ?>" alt="">
+                                                </figure>
+                                            </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                        <div class="f-display-x --fm-en no-sub-about-who__title-layer no-sub-about-who__title-layer--front"
+                                            aria-hidden="true">
+                                            <span class="no-sub-about-who__title-line">
+                                                <span
+                                                    class="no-sub-about-who__title-part no-sub-about-who__title-part--ghost">WE</span>
+                                                <span class="no-sub-about-who__title-part">BUILD</span>
+                                            </span>
+                                            <span class="no-sub-about-who__title-line">
+                                                <span class="no-sub-about-who__title-part">THE</span>
+                                            </span>
+                                            <span class="no-sub-about-who__title-line">
+                                                <span
+                                                    class="no-sub-about-who__title-part no-sub-about-who__title-part--ghost">ROUTE</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="no-sub-about-journey-surface">
+                    <section class="no-sub-about-section no-sub-about-mission-vision" data-scene="missionVision"
+                        aria-hidden="true">
+                        <div class="no-container">
+                            <div class="no-sub-about-section__inner no-sub-about-mission-vision__inner">
+                                <div class="no-sub-about-vision is-block-reveal-up">
+                                    <p class="no-sub-about-vision__headline f-display-1 --fm-en mask-target">
+                                        OUR VISION IS TO TURN BOLD BRANDS INTO LIVING DIGITAL JOURNEYS.
+                                    </p>
+                                    <p class="no-sub-about-vision__description f-body-2 --regular mask-target">
+                                        브랜드의 방향성과 감도를 선명하게 설계하고,
+                                        사용자의 흐름을 세심하게 연결합니다.
+                                        오래 기억되는 여정으로 브랜드의 다음 움직임을 함께 만들어갑니다.
+                                    </p>
+                                </div>
+                                <div class="no-sub-about-mission">
+                                    <div class="no-sub-about-section__txt no-sub-about-mission__txt">
+                                        <div class="no-sub-about-mission__title is-block-reveal-up">
+                                            <h2 class="f-display-1 --fm-en mask-target">
+                                                <p>MISSION</p>
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <div class="no-sub-about-mission__contents">
+                                        <ul class="no-sub-about-mission__wrap">
+                                            <?php foreach ($aboutMission as $mission): ?>
+                                            <li class="no-sub-about-mission__card no-corner-btn no-corner-btn--panel is-block-reveal-up">
+                                                <?= include_view('components.button.corner-markup', [
+                                                    'class' => 'no-corner-btn__corner no-corner-bracket--shine',
+                                                ]) ?>
+                                                <div class="no-sub-about-mission__card--wrap">
+                                                    <span
+                                                        class="no-sub-about-mission__index f-heading-4 --fm-ui mask-target"><?= e($mission['index']) ?></span>
+                                                    <h3 class="f-heading-1 mask-target">
+                                                        <?= e($mission['title']) ?>
+                                                    </h3>
+                                                    <p class="f-body-2 --regular mask-target"><?= e($mission['description']) ?></p>
+                                                </div>
+                                            </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="no-sub-about-section no-sub-about-services" data-scene="services"
+                        aria-hidden="true">
+                        <div class="no-sub-about-services__body">
+                            <div class="no-container">
+                                <div class="no-sub-about-services__txt">
+                                    <div class="no-sub-about-services__title is-block-reveal-up">
+                                        <h2 class="--fm-en-title f-heading-4 mask-target">SERVICES</h2>
+                                    </div>
+                                    <div class="no-sub-about-services__desc is-block-reveal-up">
+                                        <p class="f-display-1 --medium --fm-en-title mask-target">
+                                            EVERY BUILD YOUR BRAND NEEDS,
+                                            HANDLED BY ONE <b>CREW.</b>
+                                            FROM DIRECTION TO LAUNCH.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="no-container">
+                                <div class="--cnt">
+                                    <ul class="no-sub-about-services__list">
+                                        <?php foreach ($aboutServices as $index => $service): ?>
+                                        <li class="no-sub-about-services__item">
+                                            <div class="no-services__num" aria-hidden="true">
+                                                <span class="no-loop-filter-rect"
+                                                    style="--loop-filter-delay-base: <?= number_format($index * 0.14, 2, '.', '') ?>s;">
+                                                    <span></span>
+                                                    <span></span>
+                                                    <span></span>
+                                                    <span></span>
+                                                </span>
+                                            </div>
+                                            <h3
+                                                class="no-sub-about-services__item-title f-display-1 --fm-en-title mask-target">
+                                                <?= e($service['title']) ?>
+                                            </h3>
+                                            <p class="f-body-2 --regular mask-target">
+                                                <?= $service['desc'] ?>
+                                            </p>
+                                        </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="no-sub-about-section no-sub-about-awards no-sub-award" data-scene="awards"
+                        aria-hidden="true">
+                        <div class="no-container">
+                            <div class="no-sub-about-section__inner no-sub-about-awards__inner">
+                                <div class="no-sub-about-section__txt no-sub-about-awards__txt">
+                                    <div class="no-sub-about-awards__title is-block-reveal-up">
+                                        <h2 class="f-display-1 --fm-en mask-target">AWARDS</h2>
+                                    </div>
+                                </div>
+                                <div class="no-sub-about-awards__contents">
+                                    <ul class="no-sub-award-list" data-award-preview-list>
+                                        <?php if (count($awardRows) > 0) : ?>
+                                        <?php foreach ($awardRows as $row) : ?>
+                                        <?php
+                                            $href = base_path($row['detailPath'] ?? '/works');
+                                            $previewSrc = $row['previewImage'] ?? '';
+                                            $iconPath = $row['awardIcon'] ?? null;
+                                            $iconSrc = is_string($iconPath) && $iconPath !== '' ? base_path($iconPath) : '';
+                                        ?>
+                                        <li class="no-sub-award-item">
+                                            <a
+                                                href="<?= e($href) ?>"
+                                                class="no-sub-award-item__link"
+                                                data-award-preview-item
+                                                data-preview-image="<?= e($previewSrc) ?>">
+                                                <div class="no-sub-award-item__year"><?= e((string) ($row['year'] ?? '')) ?></div>
+                                                <div class="no-sub-award-item__project"><?= e((string) ($row['title'] ?? '')) ?></div>
+                                                <div class="no-sub-award-item__award">
+                                                    <?php if ($iconSrc !== '') : ?>
+                                                    <img src="<?= e($iconSrc) ?>" alt="<?= e((string) ($row['awardLabel'] ?? '')) ?>" loading="lazy">
+                                                    <?php else : ?>
+                                                    <span class="no-sub-award-item__award-label"><?= e((string) ($row['awardLabel'] ?? '')) ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="no-sub-award-item__prize"><?= e((string) ($row['prize'] ?? '') !== '' ? (string) $row['prize'] : '—') ?></div>
+                                            </a>
+                                        </li>
+                                        <?php endforeach; ?>
+                                        <?php else : ?>
+                                        <li class="no-sub-award-item no-sub-award-item--empty" aria-hidden="true">
+                                            <div class="no-sub-award-item__empty">등록된 수상 작업이 없습니다.</div>
+                                        </li>
+                                        <?php endif; ?>
+                                    </ul>
+                                    <div class="no-award-hover-preview no-sub-about-awards__preview"
+                                        data-award-hover-preview aria-hidden="true">
+                                        <img src="" alt="">
+                                    </div>
+                                    <div class="no-view-more no-sub-about-awards__more">
+                                        <?= include_view('components.button', [
+                                            'variant' => 'corner',
+                                            'tag' => 'a',
+                                            'text' => 'View More',
+                                            'href' => base_path('/works?view=grid'),
+                                            'class' => 'no-view-more__btn',
+                                            'iconName' => 'plus',
+                                            'iconPosition' => 'before',
+                                            'icon_action' => 'rotate',
+                                        ]) ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="no-sub-about-section no-sub-about-client" data-scene="client" aria-hidden="true">
+                    <div class="no-container">
+                        <div class="no-sub-about-section__inner no-sub-about-client__inner">
+                            <div class="no-sub-about-client__contents">
+                                <div class="no-sub-about-client__head-wrap">
+                                    <div class="no-sub-about-client__head is-block-reveal-up">
+                                        <h2 class="f-display-1 --fm-en mask-target">
+                                            PARTNERS
+                                        </h2>
+                                    </div>
+                                </div>
+                                <div class="no-sub-about-client__list">
+                                    <ul class="no-sub-about-client__items">
+                                        <?php for ($i = 1; $i < 23; $i++): ?>
+                                        <li class="no-sub-about-client__item">
+                                            <a href="#">
+                                                <img src="<?= base_path('/resource/images/logo/client_logo_'.$i.'.svg') ?>"
+                                                    alt="">
+                                            </a>
+                                        </li>
+                                        <?php endfor; ?>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="no-main-contact scene-shell" data-scene="contact" aria-hidden="true">
+                    <div class="no-main-contact__stage">
+                        <div class="no-container">
+                            <div class="no-main-contact__panel">
+                                <div class="no-main-contact__head" data-active="false">
+                                    <h2 class="f-display-0 --fm-en-title mask-target">
+                                        YOUR JOURNEY <br> STARTS HERE.
+                                    </h2>
+                                    <p class="f-body-1 mask-target">
+                                        브랜드의 첫 발사를 함께할 준비가 됐습니다.<br>
+                                        지금, 나인원랩스와 궤도를 그립니다.
+                                    </p>
+                                </div>
+                                <div class="no-main-contact__actions">
+                                    <?= include_view('components.button', [
+                                        'variant' => 'corner',
+                                        'tag' => 'a',
+                                        'href' => '/contact',
+                                        'text' => 'Contact',
+                                        'iconSvg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M571.3 331.3C577.5 325.1 577.5 314.9 571.3 308.7L395.3 132.7C389.1 126.5 378.9 126.5 372.7 132.7C366.5 138.9 366.5 149.1 372.7 155.3L521.4 304L80 304C71.2 304 64 311.2 64 320C64 328.8 71.2 336 80 336L521.4 336L372.7 484.7C366.5 490.9 366.5 501.1 372.7 507.3C378.9 513.5 389.1 513.5 395.3 507.3L571.3 331.3z" fill="currentColor"/></svg>',
+                                        'iconPosition' => 'after',
+                                        'class' => 'no-main-contact__action no-corner-btn--highlight',
+                                    ]) ?>
+                                    <?= include_view('components.button', [
+                                        'variant' => 'corner',
+                                        'tag' => 'a',
+                                        'href' => '/works',
+                                        'text' => 'Works',
+                                        'iconSvg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M571.3 331.3C577.5 325.1 577.5 314.9 571.3 308.7L395.3 132.7C389.1 126.5 378.9 126.5 372.7 132.7C366.5 138.9 366.5 149.1 372.7 155.3L521.4 304L80 304C71.2 304 64 311.2 64 320C64 328.8 71.2 336 80 336L521.4 336L372.7 484.7C366.5 490.9 366.5 501.1 372.7 507.3C378.9 513.5 389.1 513.5 395.3 507.3L571.3 331.3z" fill="currentColor"/></svg>',
+                                        'iconPosition' => 'after',
+                                        'class' => 'no-main-contact__action',
+                                    ]) ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <?= include_view('components.footer', [
+                    'class' => 'no-footer no-main-contact__footer',
+                    'dataScene' => 'footer',
+                    'ariaHidden' => 'true',
+                ]) ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?= include_view('components.hud-panel') ?>
+
+<?php end_section(); ?>

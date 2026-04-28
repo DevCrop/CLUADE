@@ -1,0 +1,8 @@
+@use "../abstract" as *;
+
+// 정적 rect 불릿 유틸리티 — 애니메이션 없는 listing용
+// HTML에 직접 적용: <li class="no-tag-rect">텍스트</li>
+// SCSS에서 재사용: @include tag-rect()
+.no-tag-rect {
+  @include tag-rect();
+}

@@ -1,0 +1,118 @@
+# Repo-specific Codex execution rules for renew_nineonelabs.
+
+prefix_rule(
+    pattern = ["rtk"],
+    decision = "allow",
+    justification = "Allow project-standard rtk-prefixed commands (token-optimized output).",
+    match = [
+        "rtk git status",
+        "rtk git diff",
+        "rtk tsc --noEmit",
+        "rtk docker compose ps",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["status", "log", "diff", "branch", "stash"]],
+    decision = "allow",
+    justification = "Allow common read-oriented git inspection commands.",
+    match = [
+        "git status",
+        "git log --oneline -10",
+        "git diff",
+        "git branch",
+    ],
+)
+
+prefix_rule(
+    pattern = ["rg"],
+    decision = "allow",
+    justification = "Allow fast repository search.",
+    match = [
+        "rg --files",
+        "rg --line-number AppManager resource/ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["node_modules/.bin/tsc", "--noEmit"],
+    decision = "allow",
+    justification = "Allow the standard TypeScript verification command.",
+    match = [
+        "node_modules/.bin/tsc --noEmit",
+    ],
+)
+
+prefix_rule(
+    pattern = ["docker", "compose", ["ps", "logs"]],
+    decision = "allow",
+    justification = "Allow non-destructive Docker inspection commands for the local stack.",
+    match = [
+        "docker compose ps",
+        "docker compose logs web",
+    ],
+)
+
+prefix_rule(
+    pattern = ["docker", "compose", "exec", "web", "php", "-l"],
+    decision = "allow",
+    justification = "Allow PHP lint verification inside the web container.",
+    match = [
+        "docker compose exec web php -l src/Bootstrap/LicenseValidator.php",
+    ],
+)
+
+prefix_rule(
+    pattern = [["npm", "pnpm", "yarn"], ["install", "add"]],
+    decision = "prompt",
+    justification = "Dependency installation changes the workspace and should be confirmed.",
+    match = [
+        "npm install",
+        "npm add vite",
+    ],
+)
+
+prefix_rule(
+    pattern = ["composer", "require"],
+    decision = "prompt",
+    justification = "PHP dependency changes should be confirmed before execution.",
+    match = [
+        "composer require monolog/monolog",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "Do not discard workspace changes with git reset --hard.",
+    match = [
+        "git reset --hard",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "checkout", "--"],
+    decision = "forbidden",
+    justification = "Do not revert files with git checkout --. Apply targeted edits instead.",
+    match = [
+        "git checkout -- CLAUDE.md",
+    ],
+)
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "Do not run recursive force deletion from Codex in this repository.",
+    match = [
+        "rm -rf .codex",
+    ],
+)
+
+prefix_rule(
+    pattern = ["Remove-Item", "-Recurse", "-Force"],
+    decision = "forbidden",
+    justification = "Do not run recursive force deletion from Codex in this repository.",
+    match = [
+        "Remove-Item -Recurse -Force .codex",
+    ],
+)

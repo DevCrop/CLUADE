@@ -1,0 +1,215 @@
+import { Component } from "../components/Component.js";
+import { WHY_SKILL_PREVIEW } from "../config/component.config.js";
+import type {
+  WhySkillBinding,
+  WhySkillPreviewOptions,
+} from "../types/component.types.js";
+import { ResponsiveRuntime } from "../runtime/ResponsiveRuntime.js";
+
+export class WhySkillPreview extends Component {
+  private readonly list: HTMLElement;
+  private readonly preview: HTMLElement;
+  private readonly video: HTMLVideoElement;
+  private readonly itemSelector: string;
+  private readonly videoDataAttr: string;
+  private readonly bindings: WhySkillBinding[] = [];
+  private hideTimer: number | null = null;
+  private switchTimer: number | null = null;
+  private isSwitching = false;
+  private pendingItem: HTMLElement | null = null;
+  private pendingSrc: string | null = null;
+  private currentItem: HTMLElement | null = null;
+
+  constructor(
+    list: HTMLElement,
+    preview: HTMLElement,
+    video: HTMLVideoElement,
+    itemSelector: string,
+    videoDataAttr: string,
+  ) {
+    super();
+    this.list = list;
+    this.preview = preview;
+    this.video = video;
+    this.itemSelector = itemSelector;
+    this.videoDataAttr = videoDataAttr;
+  }
+
+  static init(options: WhySkillPreviewOptions = {}): void {
+    const responsive = ResponsiveRuntime.getDefault().getSnapshot();
+    if (!responsive.flags.hoverCapable) return;
+
+    const listSelector = options.listSelector ?? WHY_SKILL_PREVIEW.listSelector;
+    const itemSelector = options.itemSelector ?? WHY_SKILL_PREVIEW.itemSelector;
+    const previewSelector =
+      options.previewSelector ?? WHY_SKILL_PREVIEW.previewSelector;
+
+    const list = document.querySelector<HTMLElement>(listSelector);
+    const preview = document.querySelector<HTMLElement>(previewSelector);
+    const video = preview?.querySelector<HTMLVideoElement>(
+      WHY_SKILL_PREVIEW.videoSelector,
+    );
+    if (!list || !preview || !video) return;
+
+    const instance = new WhySkillPreview(
+      list,
+      preview,
+      video,
+      itemSelector,
+      WHY_SKILL_PREVIEW.videoDataAttr,
+    );
+    instance.init();
+  }
+
+  protected mount(): void {
+    const items = Array.from(
+      this.list.querySelectorAll<HTMLElement>(this.itemSelector),
+    );
+    if (items.length === 0) return;
+    items.forEach((item) => this._bindItem(item));
+  }
+
+  protected applyVisibility(visible: boolean): void {
+    this.preview.setAttribute("aria-hidden", visible ? "false" : "true");
+    this.preview.classList.toggle(WHY_SKILL_PREVIEW.visibleClass, visible);
+  }
+
+  getVisibleState(): boolean {
+    return this.preview.classList.contains(WHY_SKILL_PREVIEW.visibleClass);
+  }
+
+  override dispose(): void {
+    this._clearHideTimer();
+    this._clearSwitchTimer();
+    this._pauseVideo();
+    this.bindings.forEach((binding) => {
+      binding.item.removeEventListener("mouseenter", binding.onEnter);
+      binding.item.removeEventListener("mouseleave", binding.onLeave);
+      delete binding.item.dataset[WHY_SKILL_PREVIEW.boundFlag];
+    });
+    this.bindings.length = 0;
+    super.dispose();
+  }
+
+  private _bindItem(item: HTMLElement): void {
+    if (item.dataset[WHY_SKILL_PREVIEW.boundFlag] === "true") return;
+    const binding: WhySkillBinding = {
+      item,
+      onEnter: () => this._onEnter(item),
+      onLeave: () => this._scheduleHide(),
+    };
+    item.dataset[WHY_SKILL_PREVIEW.boundFlag] = "true";
+    item.addEventListener("mouseenter", binding.onEnter);
+    item.addEventListener("mouseleave", binding.onLeave);
+    this.bindings.push(binding);
+  }
+
+  private _onEnter(item: HTMLElement): void {
+    this._clearHideTimer();
+    this.preview.classList.remove(WHY_SKILL_PREVIEW.closingClass);
+
+    const videoSrc = item.getAttribute(this.videoDataAttr);
+    if (!videoSrc) return;
+
+    const isSameItem = this.currentItem === item;
+    if (isSameItem) return;
+
+    if (this.getVisibleState()) {
+      // 이미 다른 스킬이 열려있음 — cinematic switch
+      if (this.isSwitching) {
+        this.pendingItem = item;
+        this.pendingSrc = videoSrc;
+        return;
+      }
+      this._startSwitch(item, videoSrc);
+    } else {
+      this._pauseVideo();
+      this.video.src = videoSrc;
+      this.video.load();
+      this.currentItem = item;
+      this._updatePosition(item);
+      this._show();
+      this.video.play().catch(() => {/* autoplay policy — silent */});
+    }
+  }
+
+  private _updatePosition(item: HTMLElement): void {
+    const rect = item.getBoundingClientRect();
+    const centerY = rect.top + rect.height / 2;
+    this.preview.style.top = `${centerY}px`;
+  }
+
+  private _startSwitch(item: HTMLElement, videoSrc: string): void {
+    this.isSwitching = true;
+    this.preview.classList.add(WHY_SKILL_PREVIEW.switchingClass);
+
+    this.switchTimer = window.setTimeout(() => {
+      this._pauseVideo();
+      this.video.src = videoSrc;
+      this.video.load();
+      this.currentItem = item;
+      this._updatePosition(item);
+
+      this.preview.classList.remove(WHY_SKILL_PREVIEW.switchingClass);
+      this.video.play().catch(() => {/* autoplay policy — silent */});
+
+      this.isSwitching = false;
+      this.switchTimer = null;
+
+      if (this.pendingItem !== null && this.pendingSrc !== null) {
+        const nextItem = this.pendingItem;
+        const nextSrc = this.pendingSrc;
+        this.pendingItem = null;
+        this.pendingSrc = null;
+        if (nextItem !== this.currentItem) {
+          this._startSwitch(nextItem, nextSrc);
+        }
+      }
+    }, WHY_SKILL_PREVIEW.switchAnimMs);
+  }
+
+  private _scheduleHide(): void {
+    this._clearHideTimer();
+    this.hideTimer = window.setTimeout(() => {
+      this._startClosing();
+      window.setTimeout(() => {
+        this.preview.classList.remove(WHY_SKILL_PREVIEW.closingClass);
+      }, WHY_SKILL_PREVIEW.closeAnimationMs);
+      this.currentItem = null;
+      this.hideTimer = null;
+    }, WHY_SKILL_PREVIEW.closeDelayMs);
+  }
+
+  private _startClosing(): void {
+    this._pauseVideo();
+    this._hide();
+    this.preview.classList.add(WHY_SKILL_PREVIEW.closingClass);
+  }
+
+  private _show(): void {
+    this.setVisibleOn();
+  }
+
+  private _hide(): void {
+    this.setVisibleOff();
+  }
+
+  private _pauseVideo(): void {
+    if (!this.video.paused) this.video.pause();
+  }
+
+  private _clearHideTimer(): void {
+    if (this.hideTimer === null) return;
+    window.clearTimeout(this.hideTimer);
+    this.hideTimer = null;
+  }
+
+  private _clearSwitchTimer(): void {
+    if (this.switchTimer === null) return;
+    window.clearTimeout(this.switchTimer);
+    this.switchTimer = null;
+    this.isSwitching = false;
+    this.pendingItem = null;
+    this.pendingSrc = null;
+  }
+}

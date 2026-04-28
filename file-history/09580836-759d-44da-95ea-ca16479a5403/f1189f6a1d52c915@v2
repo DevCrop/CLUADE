@@ -1,0 +1,237 @@
+# Plan: WebP `<picture>` 헬퍼 추가 (B안)
+
+## Context
+
+업로드 시 `.webp` 사이드킥 파일이 `ImageProcessor::makeWebpSibling()`으로 자동 생성되지만, 뷰에서는 모두 `<img src="xxx.jpg">` 만 출력해 브라우저가 webp를 전혀 사용하지 않는다. 원본 파일과 DB 레코드는 그대로 유지(A안 기각)하고, `render_uploaded_image()` 헬퍼 하나를 만들어 `<picture><source srcset="xxx.webp"><img src="xxx.jpg"></picture>` 를 출력하도록 모든 뷰를 수정한다.
+
+---
+
+## Step 1 — `render_uploaded_image()` 헬퍼 추가
+
+**파일:** `config/functions.php` — `require_once __DIR__ . '/hreflang.php';` (line 159) **바로 앞에** 삽입.
+
+```php
+if (!function_exists('render_uploaded_image')) {
+    function render_uploaded_image(
+        string $src,
+        string $alt,
+        string $class = '',
+        string $loading = ''
+    ): string {
+        if ($src === '') {
+            return '';
+        }
+
+        $eSrc     = htmlspecialchars($src,     ENT_QUOTES, 'UTF-8', false);
+        $eAlt     = htmlspecialchars($alt,     ENT_QUOTES, 'UTF-8', false);
+        $classAttr   = $class   !== '' ? ' class="'   . htmlspecialchars($class,   ENT_QUOTES, 'UTF-8', false) . '"' : '';
+        $loadingAttr = $loading !== '' ? ' loading="' . htmlspecialchars($loading, ENT_QUOTES, 'UTF-8', false) . '"' : '';
+
+        $ext = strtolower((string) pathinfo($src, PATHINFO_EXTENSION));
+        if ($ext === 'svg' || $ext === 'ico') {
+            return '<img src="' . $eSrc . '" alt="' . $eAlt . '"' . $classAttr . $loadingAttr . '>';
+        }
+
+        $webpSrc = htmlspecialchars(
+            (string) preg_replace('/\.[^.]+$/', '.webp', $src),
+            ENT_QUOTES, 'UTF-8', false
+        );
+
+        return '<picture>'
+            . '<source srcset="' . $webpSrc . '" type="image/webp">'
+            . '<img src="' . $eSrc . '" alt="' . $eAlt . '"' . $classAttr . $loadingAttr . '>'
+            . '</picture>';
+    }
+}
+```
+
+**설계 근거:**
+- 디스크 I/O 없음 — `.webp`가 없으면 브라우저가 `<img src>` 로 자동 폴백
+- `preg_replace('/\.[^.]+$/', '.webp', ...)` — `ImageProcessor.php:29` 의 동일 표현식과 일치
+- `SVG`/`ICO` 는 변환 대상 아니므로 plain `<img>` 출력
+
+---
+
+## Step 2 — 뷰 7곳 수정
+
+> **주의:** `views/pages/works/view.php:59`와 `views/components/work-modal.php:19`에서 `$thumbnailImage = e(...)` 로 이미 escape된 변수를 쓰므로, 해당 위치에서는 raw 소스인 `(string) ($work['thumbnailImage'] ?? '')` 를 전달해야 이중 escape를 방지한다.
+
+### 2-1. `views/pages/index.php:459` — 포트폴리오 그리드
+
+```php
+// Before
+<img src="<?= e((string) ($work['thumbnailImage'] ?? '')) ?>"
+    alt="<?= e($workLabel) ?>">
+
+// After
+<?= render_uploaded_image(
+    (string) ($work['thumbnailImage'] ?? ''),
+    (string) ($workLabel ?? ''),
+    '',
+    'lazy'
+) ?>
+```
+
+### 2-2. `views/pages/works/view.php:124` — 히어로 이미지
+
+```php
+// Before
+<img src="<?= $thumbnailImage ?>" alt="<?= $title ?>">
+
+// After
+<?= render_uploaded_image(
+    (string) ($work['thumbnailImage'] ?? ''),
+    $title,
+    '',
+    'eager'
+) ?>
+```
+
+*히어로는 LCP 요소이므로 `loading="eager"`*
+
+### 2-3. `views/pages/works/view.php:144` — 상세 이미지 루프
+
+```php
+// Before
+<img src="<?= e((string) $detailImage) ?>" alt="<?= $title ?>">
+
+// After
+<?= render_uploaded_image((string) $detailImage, $title, '', 'lazy') ?>
+```
+
+### 2-4. `views/components/work-modal.php:103` — 모달 히어로
+
+```php
+// Before
+<img src="<?= $thumbnailImage ?>" alt="<?= $title ?>">
+
+// After
+<?= render_uploaded_image(
+    (string) ($work['thumbnailImage'] ?? ''),
+    $title,
+    '',
+    'eager'
+) ?>
+```
+
+### 2-5. `views/components/work-modal.php:121` — 모달 상세 이미지 루프
+
+```php
+// Before
+<img src="<?= e((string) $detailImage) ?>" alt="<?= $title ?>">
+
+// After
+<?= render_uploaded_image((string) $detailImage, $title, '', 'lazy') ?>
+```
+
+### 2-6. `views/pages/inside/insight.php:58` — Insight 목록 썸네일
+
+```php
+// Before
+<img src="<?= e($thumb) ?>" alt="<?= e($title !== '' ? $title : '썸네일') ?>">
+
+// After
+<?= render_uploaded_image($thumb, $title !== '' ? $title : '썸네일', '', 'lazy') ?>
+```
+
+### 2-7. `views/pages/inside/insight-view.php:42` — Insight 상세 썸네일
+
+```php
+// Before
+<img src="<?= e($thumb) ?>" alt="<?= e($title !== '' ? $title : '') ?>">
+
+// After
+<?= render_uploaded_image($thumb, $title !== '' ? $title : '', '', 'lazy') ?>
+```
+
+---
+
+## Step 3 — 기존 파일 백필 스크립트
+
+**파일:** `scripts/backfill-webp.php` (신규 생성)
+
+- `uploads/` 하위를 재귀 순회해 jpg/jpeg/png/gif 마다 `ImageProcessor::makeWebpSibling()` 호출
+- `.webp`가 이미 있으면 skip (멱등)
+- `--dry-run` 옵션으로 사전 확인 가능
+- 실패 개수 > 0이면 exit code 1
+
+```
+php scripts/backfill-webp.php --dry-run   # 먼저 확인
+php scripts/backfill-webp.php             # 실제 실행
+```
+
+스크립트 내용:
+```php
+<?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only.'); }
+
+$isDryRun = in_array('--dry-run', $argv ?? [], true);
+
+// project root 탐색
+$dir = __DIR__;
+while ($dir !== dirname($dir)) {
+    if (is_file($dir . '/vendor/autoload.php')) { $projectRoot = $dir; break; }
+    $dir = dirname($dir);
+}
+if (!isset($projectRoot)) { fwrite(STDERR, 'ERROR: project root not found' . PHP_EOL); exit(1); }
+
+require_once $projectRoot . '/vendor/autoload.php';
+use Core\ImageProcessor;
+
+$uploadsDir = $projectRoot . '/uploads';
+if (!is_dir($uploadsDir)) { fwrite(STDERR, 'ERROR: uploads/ not found' . PHP_EOL); exit(1); }
+
+$convertible = ['jpg','jpeg','png','gif'];
+$created = $skipped = $failed = $total = 0;
+
+$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($uploadsDir, FilesystemIterator::SKIP_DOTS));
+foreach ($it as $f) {
+    if (!$f->isFile()) continue;
+    $ext = strtolower($f->getExtension());
+    if (!in_array($ext, $convertible, true)) continue;
+    $abs  = str_replace('\\', '/', $f->getRealPath());
+    $webp = (string) preg_replace('/\.[^.]+$/', '.webp', $abs);
+    $total++;
+    if (is_file($webp)) { echo "[skip]    $abs\n"; $skipped++; continue; }
+    if ($isDryRun) { echo "[dry-run] would create: $webp\n"; $created++; continue; }
+    if (ImageProcessor::makeWebpSibling($abs)) { echo "[created] $webp\n"; $created++; }
+    else { fwrite(STDERR, "[FAILED]  $abs\n"); $failed++; }
+}
+
+echo "\n--- Summary ---\n";
+echo "Total convertible : $total\nCreated : $created\nSkipped : $skipped\nFailed  : $failed\n";
+exit($failed > 0 ? 1 : 0);
+```
+
+---
+
+## Step 4 — `.claude/rules/php.md` 업데이트
+
+`## Image Upload & WEBP Optimization` 섹션 아래 다음 추가:
+
+```markdown
+## Image Rendering
+
+모든 업로드 이미지 출력은 `render_uploaded_image()` (config/functions.php) 경유 필수.
+`<img>` 단독 태그를 업로드 경로에 직접 쓰지 말 것.
+
+\`\`\`php
+// 히어로 (above-the-fold)
+<?= render_uploaded_image($work['thumbnailImage'], $title, '', 'eager') ?>
+// 그리드/목록 (below-the-fold)
+<?= render_uploaded_image($work['thumbnailImage'], $workLabel, '', 'lazy') ?>
+\`\`\`
+
+- 첫 번째 인자는 **raw 미이스케이프** URL. 헬퍼가 내부에서 escape 처리.
+- SVG/ICO는 `<picture>` 없이 plain `<img>` 출력.
+- `class`는 `<img>`에 적용됨.
+```
+
+---
+
+## Verification
+
+1. `render_uploaded_image()` 추가 후 `chop node_modules/.bin/tsc --noEmit` 실행 (PHP는 타입체크 불필요, 린트로 대체)
+2. docker 내부에서 `php scripts/backfill-webp.php` 실행 → Summary 에 Failed=0 확인
+3. 브라우저 DevTools Network 탭 → `.webp` 요청 확인 (포트폴리오 그리드, works 상세, 모달, insight 목록)
+4. 없는 webp URL 직접 접근 시 브라우저가 `<img src>` jpg로 폴백하는지 확인

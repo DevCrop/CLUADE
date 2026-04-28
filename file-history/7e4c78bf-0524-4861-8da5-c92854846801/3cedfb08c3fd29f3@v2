@@ -1,0 +1,476 @@
+import type {
+  ScrollSceneActivationMode,
+  ScrollSceneElementEntry,
+  ScrollSceneProgressOptions,
+  ScrollSceneProgressState,
+} from "../types/runtime.types.js";
+import { ResponsiveRuntime } from "./ResponsiveRuntime.js";
+import { Helpers } from "../utils/Helpers.js";
+
+const CLASS = "ScrollSceneRuntime";
+const DEBUG_PROGRESS_BUCKETS = 20;
+const debugTargetLogKeyByScene = new Map<string, string>();
+const debugDisplayLogKeyByScene = new Map<string, string>();
+
+function isDebugSceneKey(sceneKey: string | null): boolean {
+  return sceneKey === "contact" || sceneKey === "footer";
+}
+
+function resolveDebugProgressBucket(progress: number): number {
+  return Math.max(
+    0,
+    Math.min(
+      DEBUG_PROGRESS_BUCKETS,
+      Math.round(Helpers.clamp01(progress) * DEBUG_PROGRESS_BUCKETS),
+    ),
+  );
+}
+
+function shouldLogDebugSceneProgress(
+  map: Map<string, string>,
+  sceneKey: string,
+  phase: string,
+  progress: number,
+): boolean {
+  const bucket = resolveDebugProgressBucket(progress);
+  const nextKey = `${phase}:${bucket}`;
+  const previousKey = map.get(sceneKey) ?? null;
+  if (previousKey === nextKey) return false;
+  map.set(sceneKey, nextKey);
+  return true;
+}
+
+class ScrollSceneActivationRuntime {
+  private readonly _getViewportHeight: () => number;
+
+  constructor(getViewportHeight: () => number) {
+    this._getViewportHeight = getViewportHeight;
+  }
+
+  resolveActiveSceneKey<TSceneKey extends string>(
+    sceneElements: ReadonlyMap<TSceneKey, ScrollSceneElementEntry>,
+    optionsByScene?: Readonly<
+      Partial<Record<TSceneKey, ScrollSceneProgressOptions>>
+    >,
+  ): TSceneKey | null {
+    const topAnchoredSceneKey = this._resolveTopAnchoredSceneKey(
+      sceneElements,
+      optionsByScene,
+    );
+    if (topAnchoredSceneKey) {
+      return topAnchoredSceneKey;
+    }
+    return this._resolveViewportCenteredSceneKey(sceneElements, optionsByScene);
+  }
+
+  private _resolveTopAnchoredSceneKey<TSceneKey extends string>(
+    sceneElements: ReadonlyMap<TSceneKey, ScrollSceneElementEntry>,
+    optionsByScene?: Readonly<
+      Partial<Record<TSceneKey, ScrollSceneProgressOptions>>
+    >,
+  ): TSceneKey | null {
+    let fallbackSceneKey: TSceneKey | null = null;
+    let fallbackDistance = Number.POSITIVE_INFINITY;
+    let activeSceneKey: TSceneKey | null = null;
+    let activeTop = Number.NEGATIVE_INFINITY;
+
+    sceneElements.forEach((entry, sceneKey) => {
+      const options = optionsByScene?.[sceneKey];
+      if (this._resolveActivationMode(options) !== "sectionTop") {
+        return;
+      }
+
+      const rect = entry.element.getBoundingClientRect();
+      const anchorOffset = this._resolveActivationOffset(options);
+      const distanceToAnchor = rect.top - anchorOffset;
+
+      if (distanceToAnchor <= 0 && rect.top >= activeTop) {
+        activeTop = rect.top;
+        activeSceneKey = sceneKey;
+        return;
+      }
+
+      if (distanceToAnchor < fallbackDistance) {
+        fallbackDistance = distanceToAnchor;
+        fallbackSceneKey = sceneKey;
+      }
+    });
+
+    if (activeSceneKey) {
+      return activeSceneKey;
+    }
+    return fallbackSceneKey;
+  }
+
+  private _resolveViewportCenteredSceneKey<TSceneKey extends string>(
+    sceneElements: ReadonlyMap<TSceneKey, ScrollSceneElementEntry>,
+    optionsByScene?: Readonly<
+      Partial<Record<TSceneKey, ScrollSceneProgressOptions>>
+    >,
+  ): TSceneKey | null {
+    const viewportHeight = this._getViewportHeight();
+    const viewportCenter = viewportHeight / 2;
+    let activeSceneKey: TSceneKey | null = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    sceneElements.forEach((entry, sceneKey) => {
+      const options = optionsByScene?.[sceneKey];
+      if (this._resolveActivationMode(options) === "sectionTop") {
+        return;
+      }
+
+      const rect = entry.element.getBoundingClientRect();
+      const intersectsViewport = rect.bottom > 0 && rect.top < viewportHeight;
+      const distanceToCenter = Math.abs(
+        rect.top + rect.height / 2 - viewportCenter,
+      );
+      const visibilityPenalty = intersectsViewport ? 0 : viewportHeight * 4;
+      const score = visibilityPenalty + distanceToCenter;
+      if (score >= bestScore) {
+        return;
+      }
+
+      bestScore = score;
+      activeSceneKey = sceneKey;
+    });
+
+    if (activeSceneKey) {
+      return activeSceneKey;
+    }
+    return this._resolveNearestSceneKey(sceneElements);
+  }
+
+  private _resolveNearestSceneKey<TSceneKey extends string>(
+    sceneElements: ReadonlyMap<TSceneKey, ScrollSceneElementEntry>,
+  ): TSceneKey | null {
+    let firstSceneKey: TSceneKey | null = null;
+    sceneElements.forEach((_entry, sceneKey) => {
+      if (firstSceneKey) {
+        return;
+      }
+      firstSceneKey = sceneKey;
+    });
+    return firstSceneKey;
+  }
+
+  private _resolveActivationMode(
+    options?: ScrollSceneProgressOptions,
+  ): ScrollSceneActivationMode {
+    return options?.activationMode ?? "viewportCenter";
+  }
+
+  private _resolveActivationOffset(
+    options?: ScrollSceneProgressOptions,
+  ): number {
+    const viewportHeight = this._getViewportHeight();
+    const ratio = Helpers.clamp01(options?.activationOffsetRatio ?? 0);
+    return viewportHeight * ratio;
+  }
+}
+
+class ScrollSceneProgressRuntime {
+  private readonly _getViewportHeight: () => number;
+
+  constructor(getViewportHeight: () => number) {
+    this._getViewportHeight = getViewportHeight;
+  }
+
+  resolveSectionProgress(
+    element: HTMLElement,
+    options?: ScrollSceneProgressOptions,
+  ): number {
+    const rawProgress = this._resolveRawSectionProgress(element, options);
+    const clampedRaw = Helpers.clamp01(rawProgress);
+    const startRatio = this._clampRatio(options?.progressStart ?? 0.04);
+    const endRatio = this._clampRatio(options?.progressEnd ?? 0.96);
+    const span = Math.max(endRatio - startRatio, 0.01);
+    const normalized = Math.max(
+      0,
+      Math.min(1, (clampedRaw - startRatio) / span),
+    );
+    const power = this._resolveProgressPower(options);
+    return Math.pow(normalized, power);
+  }
+
+  private _resolveRawSectionProgress(
+    element: HTMLElement,
+    options?: ScrollSceneProgressOptions,
+  ): number {
+    if (options?.progressMode === "top") {
+      return this._resolveTopAnchoredProgress(element);
+    }
+    return this._resolveViewportProgress(element);
+  }
+
+  private _resolveViewportProgress(element: HTMLElement): number {
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = this._getViewportHeight();
+    const start = viewportHeight;
+    const end = -Math.max(rect.height - viewportHeight, 0);
+    const travel = Math.max(start - end, 1);
+    return (start - rect.top) / travel;
+  }
+
+  private _resolveTopAnchoredProgress(element: HTMLElement): number {
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = this._getViewportHeight();
+    const travel =
+      rect.height <= viewportHeight
+        ? Math.max(rect.height, 1)
+        : Math.max(rect.height - viewportHeight, 1);
+    return -rect.top / travel;
+  }
+
+  private _resolveProgressPower(options?: ScrollSceneProgressOptions): number {
+    const value = options?.progressPower ?? 1.12;
+    if (!Number.isFinite(value)) {
+      return 1.12;
+    }
+    return Math.max(value, 0.1);
+  }
+
+  private _clampRatio(value: number): number {
+    return Helpers.clamp01(value);
+  }
+}
+
+export class ScrollSceneRuntime {
+  private _root: ParentNode | null = null;
+  private _cleanup: (() => void) | null = null;
+  private _shellCleanupList: Array<() => void> = [];
+  private _frameId = 0;
+  private _isDirty = false;
+  private _activeSceneKey: string | null = null;
+  private readonly _progressState = new Map<string, ScrollSceneProgressState>();
+  private readonly _activationRuntime = new ScrollSceneActivationRuntime(
+    this._getViewportHeight.bind(this),
+  );
+  private readonly _progressRuntime = new ScrollSceneProgressRuntime(
+    this._getViewportHeight.bind(this),
+  );
+
+  setRoot(root?: ParentNode | null): void {
+    this._root = root ?? null;
+  }
+
+  start<TSceneKey extends string>(
+    selectorByScene: Readonly<Partial<Record<TSceneKey, string>>>,
+    applyProgress: (sceneKey: TSceneKey, progress: number) => void,
+    optionsByScene?: Readonly<
+      Partial<Record<TSceneKey, ScrollSceneProgressOptions>>
+    >,
+    runtimeOptions?: {
+      skipInitialSync?: boolean;
+    },
+  ): void {
+    this.dispose();
+    const sceneElements = this._resolveSceneElements(selectorByScene);
+    this._setupSceneShells(sceneElements, optionsByScene);
+
+    const updateTarget = (): void => {
+      const activeSceneKey = this._activationRuntime.resolveActiveSceneKey(
+        sceneElements,
+        optionsByScene,
+      );
+      if (!activeSceneKey) return;
+      const element = sceneElements.get(activeSceneKey)?.element;
+      if (!element) return;
+      const nextTarget = this._progressRuntime.resolveSectionProgress(
+        element,
+        optionsByScene?.[activeSceneKey],
+      );
+      const now = this._getNow();
+      const didSceneChange = this._activeSceneKey !== activeSceneKey;
+      const state = this._resolveProgressState(activeSceneKey, now, nextTarget);
+      state.target = nextTarget;
+      if (didSceneChange) {
+        state.display = nextTarget;
+      }
+      state.updatedAt = now;
+      if (
+        isDebugSceneKey(activeSceneKey) &&
+        (didSceneChange ||
+          shouldLogDebugSceneProgress(
+            debugTargetLogKeyByScene,
+            activeSceneKey,
+            "target",
+            nextTarget,
+          ))
+      ) {
+        const rect = element.getBoundingClientRect();
+      }
+      this._activeSceneKey = activeSceneKey;
+    };
+
+    const animateProgress = (): void => {
+      this._frameId = 0;
+      const activeSceneKey = this._activeSceneKey as TSceneKey | null;
+      if (!activeSceneKey) return;
+
+      const state = this._progressState.get(activeSceneKey);
+      if (!state) return;
+
+      const options = optionsByScene?.[activeSceneKey];
+      const now = this._getNow();
+      const deltaMs = Math.max(now - state.updatedAt, 16.67);
+      state.updatedAt = now;
+
+      const lagMs = this._resolveProgressLag(options);
+      const alpha = 1 - Math.exp(-deltaMs / lagMs);
+      state.display += (state.target - state.display) * alpha;
+      if (Math.abs(state.target - state.display) < 0.001) {
+        state.display = state.target;
+      }
+
+      applyProgress(activeSceneKey, state.display);
+      if (
+        isDebugSceneKey(activeSceneKey) &&
+        shouldLogDebugSceneProgress(
+          debugDisplayLogKeyByScene,
+          activeSceneKey,
+          "display",
+          state.display,
+        )
+      ) {
+      }
+
+      if (this._isDirty || Math.abs(state.target - state.display) >= 0.001) {
+        this._requestFrame(animateProgress);
+      }
+      this._isDirty = false;
+    };
+
+    const requestSync = (): void => {
+      updateTarget();
+      this._isDirty = true;
+      this._requestFrame(animateProgress);
+    };
+
+    const onScroll = (): void => requestSync();
+    const onResize = (): void => requestSync();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+    if (runtimeOptions?.skipInitialSync !== true) {
+      requestSync();
+    }
+
+    this._cleanup = () => {
+      this._cancelFrame();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+    };
+  }
+
+  dispose(): void {
+    this._cleanup?.();
+    this._cleanup = null;
+    this._shellCleanupList.forEach((cleanup) => cleanup());
+    this._shellCleanupList = [];
+    this._cancelFrame();
+    this._progressState.clear();
+    this._activeSceneKey = null;
+    this._isDirty = false;
+  }
+
+  private _setupSceneShells<TSceneKey extends string>(
+    sceneElements: ReadonlyMap<TSceneKey, ScrollSceneElementEntry>,
+    optionsByScene?: Readonly<
+      Partial<Record<TSceneKey, ScrollSceneProgressOptions>>
+    >,
+  ): void {
+    sceneElements.forEach(({ element }, sceneKey) => {
+      const scrollSpanVh = optionsByScene?.[sceneKey]?.scrollSpanVh;
+      if (
+        typeof scrollSpanVh !== "number" ||
+        !Number.isFinite(scrollSpanVh) ||
+        scrollSpanVh <= 0
+      ) {
+        return;
+      }
+      this._shellCleanupList.push(
+        this._applySceneShell(element, Math.round(scrollSpanVh)),
+      );
+    });
+  }
+
+  private _resolveSceneElements<TSceneKey extends string>(
+    selectorByScene: Readonly<Partial<Record<TSceneKey, string>>>,
+  ): Map<TSceneKey, ScrollSceneElementEntry> {
+    const sceneElements = new Map<TSceneKey, ScrollSceneElementEntry>();
+    const entries = Object.entries(selectorByScene) as Array<
+      [TSceneKey, string | undefined]
+    >;
+    entries.forEach(([sceneKey, selector]) => {
+      if (typeof selector !== "string") return;
+      const element = (this._root ?? document).querySelector<HTMLElement>(selector);
+      if (!element) return;
+      sceneElements.set(sceneKey as TSceneKey, {
+        element,
+      });
+    });
+    return sceneElements;
+  }
+
+  private _applySceneShell(
+    element: HTMLElement,
+    scrollSpanVh: number,
+  ): () => void {
+    const shellClass = "scene-shell";
+
+    element.classList.add(shellClass);
+    element.style.setProperty("--scene-shell-span", `${scrollSpanVh}vh`);
+
+    return () => {
+      element.classList.remove(shellClass);
+      element.style.removeProperty("--scene-shell-span");
+    };
+  }
+
+  private _resolveProgressState<TSceneKey extends string>(
+    sceneKey: TSceneKey,
+    now: number,
+    initialProgress = 0,
+  ): ScrollSceneProgressState {
+    const existing = this._progressState.get(sceneKey);
+    if (existing) return existing;
+    const clampedInitialProgress = Helpers.clamp01(initialProgress);
+    const next = {
+      target: clampedInitialProgress,
+      display: clampedInitialProgress,
+      updatedAt: now,
+    };
+    this._progressState.set(sceneKey, next);
+    return next;
+  }
+
+  private _resolveProgressLag(options?: ScrollSceneProgressOptions): number {
+    const value = options?.progressLagMs ?? 260;
+    if (!Number.isFinite(value)) return 260;
+    return Math.max(value, 16);
+  }
+
+  private _requestFrame(callback: () => void): void {
+    if (this._frameId !== 0) return;
+    this._frameId = window.requestAnimationFrame(callback);
+  }
+
+  private _cancelFrame(): void {
+    if (this._frameId === 0) return;
+    window.cancelAnimationFrame(this._frameId);
+    this._frameId = 0;
+  }
+
+  private _getNow(): number {
+    if (typeof performance !== "undefined" && typeof performance.now === "function") {
+      return performance.now();
+    }
+    return Date.now();
+  }
+
+  private _getViewportHeight(): number {
+    return Math.max(
+      ResponsiveRuntime.getDefault().getSnapshot().viewportHeight || 0,
+      1,
+    );
+  }
+}

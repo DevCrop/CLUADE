@@ -1,0 +1,80 @@
+<?php
+section('content');
+
+$awardRows = isset($awardRows) && is_array($awardRows) ? $awardRows : [];
+?>
+
+<?= include_view('components.sub-visual', [
+        'title' => 'AWARDS',
+        'lines' => [
+            '더 나은 웹을 만들어온 여정 속 이정표를 확인하세요.',
+        ],
+    ]) ?>
+
+<section class="no-sub-award">
+    <div class="no-container-2xl">
+        <div class="no-sub-award__inner">
+            <div class="no-sub-award__head">
+                <p>YEAR</p>
+                <p>PROJECT</p>
+                <p>AWARD</p>
+                <p>PRIZE</p>
+            </div>
+            <ul class="no-sub-award-list" data-award-preview-list>
+                <?php if (count($awardRows) > 0) : ?>
+                <?php foreach ($awardRows as $row) : ?>
+                <?php
+                    $href = base_path($row['detailPath'] ?? '/works');
+                    $previewSrc = $row['previewImage'] ?? '';
+                    $iconPath = $row['awardIcon'] ?? null;
+                    $iconSrc = is_string($iconPath) && $iconPath !== '' ? base_path($iconPath) : '';
+                ?>
+                <li class="no-sub-award-item">
+                    <a
+                        href="<?= e($href) ?>"
+                        class="no-sub-award-item__link"
+                        data-award-preview-item
+                        data-preview-image="<?= e($previewSrc) ?>">
+                        <div class="no-sub-award-item__year"><?= e((string) ($row['year'] ?? '')) ?></div>
+                        <div class="no-sub-award-item__project"><?= e((string) ($row['title'] ?? '')) ?></div>
+                        <div class="no-sub-award-item__award">
+                            <?php if ($iconSrc !== '') : ?>
+                            <img src="<?= e($iconSrc) ?>" alt="<?= e((string) ($row['awardLabel'] ?? '')) ?>" loading="lazy">
+                            <?php else : ?>
+                            <span class="no-sub-award-item__award-label"><?= e((string) ($row['awardLabel'] ?? '')) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="no-sub-award-item__prize"><?= e((string) ($row['prize'] ?? '') !== '' ? (string) $row['prize'] : '—') ?></div>
+                    </a>
+                </li>
+                <?php endforeach; ?>
+                <?php else : ?>
+                <li class="no-sub-award-item no-sub-award-item--empty" aria-hidden="true">
+                    <div class="no-sub-award-item__empty">등록된 수상 작업이 없습니다.</div>
+                </li>
+                <?php endif; ?>
+            </ul>
+            <div class="no-award-hover-preview" data-award-hover-preview aria-hidden="true">
+                <img src="" alt="">
+            </div>
+            <div class="no-view-more">
+                <?= include_view('components.button', [
+                      'variant' => 'corner',
+                      'tag' => 'a',
+                      'text' => 'View More',
+                      'href' => base_path('/works?view=grid'),
+                      'class' => 'no-view-more__btn',
+                      'iconName' => 'plus',
+                      'iconPosition' => 'before',
+                      'icon_action' => 'rotate',
+                  ]) ?>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

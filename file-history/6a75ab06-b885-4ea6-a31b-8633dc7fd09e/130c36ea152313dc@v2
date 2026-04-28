@@ -1,0 +1,152 @@
+# Plan: no-sub-about-hero-slogan 버그 수정 & 성능 개선
+
+## Context
+
+About 페이지의 `no-sub-about-hero-slogan` 섹션에서 두 가지 문제가 발생 중:
+1. **JOURNEY span 움직임 버그** — 브라켓 안 keyword(DESIGN → UI/UX)는 정상 슬라이딩하는데, JOURNEY span만 TextReveal 마스킹 움직임이 클리핑 없이 노출됨
+2. **성능 저하** — 이 섹션에 도달하면 렌더링이 느려짐 (Three.js WebGL + backdrop-filter + filter:blur 조합)
+
+---
+
+## Bug 1: JOURNEY span 움직임
+
+### 원인
+
+`views/pages/about/index.php:147` 의 JOURNEY span 클래스명이 잘못됨:
+
+```html
+<!-- 현재 (버그) -->
+<span class="no-sub-about-hero-slogan mask-target">
+  JOURNEY
+</span>
+
+<!-- 의도 (첫 번째 줄과 동일한 BEM 패턴) -->
+<span class="no-sub-about-hero-slogan__line mask-target">
+  JOURNEY
+</span>
+```
+
+`no-sub-about-hero-slogan`은 **section 요소의 클래스**이기도 해서, span에 이 클래스가 붙으면:
+- section 수준 SCSS 규칙(`position: relative`, `backdrop-filter: blur(24px)`) 이 inline span에도 적용됨
+- `__line.mask-target` CSS rule이 적용되지 않아 `overflow: hidden` 클리핑 컨텍스트가 부재
+- TextReveal이 `masking-text__line`에 `translateY` 적용 시 클리핑 없이 노출
+
+### 수정
+
+**File:** `views/pages/about/index.php:147`
+
+```php
+// 변경 전
+<span class="no-sub-about-hero-slogan mask-target">
+
+// 변경 후
+<span class="no-sub-about-hero-slogan__line mask-target">
+```
+
+---
+
+## Bug 2: 성능 저하
+
+### 원인 분석 (심각도 순)
+
+| # | 원인 | 위치 | 심각도 |
+|---|------|------|--------|
+| 1 | `backdrop-filter: blur(24px)` on WebGL 캔버스 위 | `_sub.scss:170` | 🔴 최고 |
+| 2 | `filter: blur(8px)` × 4 keywords 동시 + GSAP animate | `_sub.scss:293` + AppManager | 🟠 높음 |
+| 3 | `will-change: width` on `keyword-viewport` | `_sub.scss:278` | 🟡 중간 |
+| 4 | GSAP `filter: blur()` tween — non-compositeable, repaint 유발 | `AppManager.ts:894` | 🟡 중간 |
+| 5 | `_initAboutHeroSloganKeywordViewportWidth`에서 `getBoundingClientRect()` × N | `AppManager.ts:376` | 🟢 낮음 |
+
+**핵심**: `backdrop-filter`는 compositor가 섹션 뒷배경(= WebGL canvas)을 매 프레임 샘플 & blur 처리해야 함. Three.js 렌더링과 동시에 일어나므로 GPU 과부하.
+
+### 수정
+
+#### 2-A. `backdrop-filter` 제거 → 단순 RGBA background
+
+**File:** `resource/scss/pages/_sub.scss`
+
+```scss
+// 변경 전
+background: rgba(0, 0, 0, var(--hero-slogan-surface-alpha));
+backdrop-filter: blur(24px);
+-webkit-backdrop-filter: blur(24px);
+
+// 변경 후
+background: rgba(0, 0, 0, var(--hero-slogan-surface-alpha));
+// backdrop-filter 제거
+```
+
+시각적 대안이 필요하면 `--hero-slogan-surface-alpha`의 MAX값을 0.72 → 0.88 로 올려 frosted glass 느낌 유지.
+
+**File:** `resource/ts/pages/about/scene/about.scene.ts:51`
+
+```ts
+// 필요 시 alpha max 조정
+const ABOUT_HERO_SLOGAN_ALPHA_MAX = 0.88; // 0.72 → 0.88
+```
+
+#### 2-B. `will-change: width` 제거
+
+**File:** `resource/scss/pages/_sub.scss` (`.no-sub-about-hero-slogan__keyword-viewport`)
+
+```scss
+// 변경 전
+will-change: width;
+
+// 변경 후
+// 삭제 — width는 layout property, compositor hint에 부적합
+```
+
+#### 2-C. inactive keyword `filter: blur` → `opacity`만 사용
+
+`filter: blur(8px)`는 GPU stencil/raster layer를 생성하며 4개가 동시에 활성화될 때 비쌈. blur 대신 opacity로만 inactive state 표현.
+
+**File:** `resource/scss/pages/_sub.scss` (`.no-sub-about-hero-slogan__keyword`)
+
+```scss
+// 변경 전
+filter: blur(8px);
+will-change: opacity, filter, text-shadow;
+
+// 변경 후
+filter: none;
+will-change: opacity, text-shadow;
+```
+
+**File:** `resource/ts/config/component.config.ts:225-226`
+
+```ts
+// 변경 전
+inactiveBlurPx: 8,
+activeBlurPx: 0,
+
+// 변경 후
+inactiveBlurPx: 0,
+activeBlurPx: 0,
+```
+
+**File:** `resource/ts/manager/AppManager.ts:871-875` (`_applyAboutHeroSloganKeywordVisualState`)
+**File:** `resource/ts/manager/AppManager.ts:893-898` (`_animateAboutHeroSloganKeywordVisualState`)
+
+두 메서드 모두 `filter: blur(...)` → 제거 (0px이면 no-op이지만 GSAP이 계속 animate하므로 아예 제거).
+
+---
+
+## 수정 대상 파일 요약
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `views/pages/about/index.php:147` | JOURNEY span 클래스 `no-sub-about-hero-slogan` → `no-sub-about-hero-slogan__line` |
+| `resource/scss/pages/_sub.scss` | `backdrop-filter` 2줄 제거, `will-change: width` 제거, keyword `filter: blur(8px)` 제거, `will-change` 축소 |
+| `resource/ts/config/component.config.ts` | `inactiveBlurPx: 8 → 0`, `activeBlurPx: 0` 유지 |
+| `resource/ts/manager/AppManager.ts` | `filter: blur(...)` style/tween 적용 코드 제거 |
+| `resource/ts/pages/about/scene/about.scene.ts` | (선택) ALPHA_MAX 0.72 → 0.88 |
+
+---
+
+## 검증
+
+1. About 페이지 스크롤 시 JOURNEY span이 클리핑 없이 이동하지 않는지 확인
+2. keyword-track이 스크롤에 따라 DESIGN → DEVELOPMENT → BRANDING → UI/UX 순서로 슬라이딩하는지 확인
+3. 섹션 도달 시 프레임 드롭 여부 브라우저 DevTools Performance 탭으로 확인 (backdrop-filter 제거 전후 비교)
+4. 배경 투명도가 시각적으로 충분한지 확인 (필요 시 alpha max 조정)

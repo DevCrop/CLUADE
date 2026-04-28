@@ -1,0 +1,252 @@
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts:1:import { Rocket } from "../objects/rocket/Rocket.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts:2:import { JetEngine } from "../objects/rocket/JetEngine.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts:19:  rocket,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\app\ObjectSetup.ts:69:    [rocket]: createSetOptionsSpec(rocket, () => new Rocket()),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:15:import { rocket as rocketObjectId } from "../core/setup.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:64:  affectsRocket: false,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:81:  affectsRocket: true,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:84:const ROCKET_FILL_LIGHT = {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:85:  id: "rocketFillLight",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:90:  affectsRocket: true,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:104:const ROCKET_RIM_LIGHT_LEFT = {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:105:  id: "rocketRimLightLeft",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:110:  affectsRocket: true,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:124:const ROCKET_RIM_LIGHT_RIGHT = {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:125:  id: "rocketRimLightRight",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:130:  affectsRocket: true,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:147:  ROCKET_FILL_LIGHT,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:148:  ROCKET_RIM_LIGHT_LEFT,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:149:  ROCKET_RIM_LIGHT_RIGHT,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:403:  rocket: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:405:    modelUrl: "/resource/models/rocket_draco.glb?v=2",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:425:    attachTo: rocketObjectId,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:445:    attachTo: rocketObjectId,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\object.config.ts:462:      "/resource/images/texture/rocket/smoke.png",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\Engine.ts:33:  THREE_LAYER_ROCKET,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\Engine.ts:91:    this._camera.layers.enable(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\scene-light.config.ts:17:  rocketFillLight: 1.68,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\scene-light.config.ts:18:  rocketRimLightLeft: 0.86,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\config\scene-light.config.ts:19:  rocketRimLightRight: 0.72,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts:7:import type { MainGravityBallsState, MainJetEngineState, MainRocketState } from "./main.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts:38:  rocket: MainRocketState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts:68:  rocket: MainRocketState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\contact.types.ts:99:  rocket: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\setup.ts:6:export const THREE_LAYER_ROCKET = 2;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\core\setup.ts:9:export const rocket = "rocket";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:8:import type { MainGravityBallsState, MainJetEngineState, MainRocketState } from "./main.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:50:  rocket: MainRocketState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:83:  rocket: AboutSceneState["rocket"];
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\about.types.ts:207:  rocket: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:13:  RocketFlameStateSnapshot,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:14:  RocketPort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:32:export type MainRocketFlameState = RocketFlameStateSnapshot;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:34:export interface MainRocketState extends MainTransformState {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:35:  flame: MainRocketFlameState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:95:export type MainRocketPort = RocketPort;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\main.types.ts:100:  rocket: MainRocketState;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:62:export type RocketTweenProps = ObjectTweenProps<
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:63:  Pick<RocketObjectOptions, never>
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:120:  rocketFillLight?: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:121:  rocketRimLightLeft?: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:122:  rocketRimLightRight?: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:174:  rocketFillLight: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:175:  rocketRimLightLeft: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:176:  rocketRimLightRight: number;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:221:  rocket: RocketTweenProps;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:252:    "rocketFillLight",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:253:    "rocketRimLightLeft",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:254:    "rocketRimLightRight",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:260:  rocket: ["position", "rotation", "visible", "flame"],
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:362:  rocket: ["modelUrl"],
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:425:export interface RocketObjectOptions extends BaseObjectOptions {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:429:  flame?: RocketFlameOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:435:  /** Scene object id to parent under (e.g. `"rocket"`). Uses animation root. */
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:503:export interface RocketFlameOptions {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:516:export interface RocketFlameStateSnapshot {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:527:export interface RocketPort {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:528:  setFlameState(state: RocketFlameStateSnapshot): void;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:529:  getFlameState(): RocketFlameStateSnapshot;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:634:    affectsRocket?: boolean;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:664:    affectsRocket?: boolean;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:731:  rocket: RocketObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\object.types.ts:763:  rocket?: RocketObjectOptions;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\utils\Physic.ts:1:import type { IRocketMotionData } from "../types/runtime.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\utils\Physic.ts:2:export { type IRocketMotionData } from "../types/runtime.types.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\utils\Physic.ts:7:export class Physic implements IRocketMotionData {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\main\GravityBalls.ts:57:  "/resource/images/texture/rocket/smoke.png",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\main\GravityBalls.ts:61:  attachTo: "rocket",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\main\GravityBalls.ts:141:  private _computeGravityScale(rocketY: number, floorY: number, o: ResolvedOpts): number {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\main\GravityBalls.ts:142:    const dist = Math.max(0, rocketY - floorY);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:14:  THREE_LAYER_ROCKET,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:204:    proxy.rocketFillLight = state.rocketFillLight;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:205:    proxy.rocketRimLightLeft = state.rocketRimLightLeft;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:206:    proxy.rocketRimLightRight = state.rocketRimLightRight;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:226:      rocketFillLight: this._readNumber(proxy.rocketFillLight, 0),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:227:      rocketRimLightLeft: this._readNumber(proxy.rocketRimLightLeft, 0),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:228:      rocketRimLightRight: this._readNumber(proxy.rocketRimLightRight, 0),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:277:    if (spec.affectsRocket) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:278:      light.layers.enable(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:289:      if (spec.affectsRocket) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\SceneLights.ts:290:        light.target.layers.enable(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:262:  affectsRocket?: boolean;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\types\runtime.types.ts:393:export interface IRocketMotionData {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:3:import { rocket } from "../../core/setup.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:27:const CLOUD_ROCKET_EFFECT_DEPTH = 12;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:28:const CLOUD_ROCKET_EFFECT_RADIUS = 0.2;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:45:  private readonly _rocketWorldPosition = new THREE.Vector3();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:46:  private readonly _rocketLocalPosition = new THREE.Vector3();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:47:  private readonly _rocketUvFallback = new THREE.Vector2();
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:196:        uRocketInfluence: { value: 0 },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:197:        uRocketRadius: { value: CLOUD_ROCKET_EFFECT_RADIUS },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:198:        uRocketUv: { value: new THREE.Vector2(0.5, 0.5) },
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:273:    this._applyRocketUniforms(uniforms);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:292:  private _applyRocketUniforms(uniforms: ShaderUniformRecord): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:294:    const rocketObject = this._context?.getObject(rocket) as
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:297:    const rocketInfluence = uniforms.uRocketInfluence;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:298:    const rocketUv = uniforms.uRocketUv;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:299:    if (!root || !rocketObject || !rocketInfluence || !rocketUv) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:300:      if (rocketInfluence) rocketInfluence.value = 0;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:304:    rocketObject.updateWorldMatrix(true, false);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:305:    rocketObject.getWorldPosition(this._rocketWorldPosition);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:307:    this._rocketLocalPosition.copy(this._rocketWorldPosition);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:308:    root.worldToLocal(this._rocketLocalPosition);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:313:    const normalizedX = this._rocketLocalPosition.x / Math.max(halfWidth, 0.0001);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:314:    const normalizedY = this._rocketLocalPosition.y / Math.max(halfHeight, 0.0001);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:316:    const depthDistance = Math.abs(this._rocketLocalPosition.z);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:321:        CLOUD_ROCKET_EFFECT_DEPTH * 0.2,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:322:        CLOUD_ROCKET_EFFECT_DEPTH,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:325:    rocketInfluence.value = lateralInfluence * depthInfluence;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:326:    const rocketUvValue =
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:327:      rocketUv.value instanceof THREE.Vector2
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:328:        ? rocketUv.value
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:329:        : this._rocketUvFallback;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:330:    rocketUvValue.set(normalizedX * 0.5 + 0.5, normalizedY * 0.5 + 0.5);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\env\CloudPlane.ts:331:    rocketUv.value = rocketUvValue;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:3:import { THREE_LAYER_ROCKET } from "../../core/setup.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:107:  /** Slightly above `Rocket` billboard flame (`renderOrder` 5). */
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:325:      child.layers.set(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:471:      mesh.layers.set(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:545:    pMesh.layers.set(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\JetEngine.ts:674:      mesh.layers.set(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:4:import { THREE_LAYER_ROCKET } from "../../core/setup.js";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:6:  RocketFlameStateSnapshot,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:7:  RocketFlameOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:8:  RocketObjectOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:9:  RocketPort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:10:  RocketTweenProps,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:14:import flameVertexShader from "../../../shaders/rocket-flame/vertex.glsl?raw";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:15:import flameFragmentShader from "../../../shaders/rocket-flame/fragment.glsl?raw";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:17:const ROCKET_CLASS = "Rocket";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:18:const ROCKET_FLAME_SHADER_KEY = "rocket-flame";
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:34:export class Rocket
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:35:  extends SceneObject<RocketTweenProps>
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:36:  implements RocketPort
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:39:  private _options: Partial<RocketObjectOptions> = {};
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:60:  setOptions(props: Partial<RocketObjectOptions> | undefined): this {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:104:        ROCKET_CLASS,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:106:        "Rocket modelUrl must be defined in object.config.ts.",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:115:      this.attachToTimelineRoot(group, "rocketRoot");
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:124:        ROCKET_CLASS,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:126:        "Failed to load rocket model.",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:158:  setFlameState(state: RocketFlameStateSnapshot): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:176:  getFlameState(): RocketFlameStateSnapshot {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:244:      child.layers.set(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:276:      key: this.createShaderKey(ROCKET_FLAME_SHADER_KEY),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:284:    mesh.layers.set(THREE_LAYER_ROCKET);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:366:  private _resolveFlameOptions(): RocketFlameOptions {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:379:    options: RocketFlameOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:386:        ROCKET_CLASS,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:388:        `Rocket flame anchor "${anchorName}" was not found. Falling back to heuristics.`,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:397:    options: RocketFlameOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:413:        ROCKET_CLASS,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:415:        "Rocket flame anchor was not found by name. Falling back to bounding-box placement.",
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:450:    options: RocketFlameOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:459:    offset: RocketFlameOptions["offset"],
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:487:  private _resolveFlameOpacity(options: RocketFlameOptions): number {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:494:    options: RocketFlameOptions,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:495:  ): Required<RocketFlameStateSnapshot>["rotation"] {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:510:  private _resolveFlameRenderOrder(options: RocketFlameOptions): number {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:516:  private _resolveFlameSpeed(options: RocketFlameOptions): number {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\objects\rocket\Rocket.ts:522:  private _resolveFlameWave(options: RocketFlameOptions): number {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:131:    rocketFillLight: readNumber(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:132:      sceneLightsState?.rocketFillLight,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:133:      defaults.rocketFillLight,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:135:    rocketRimLightLeft: readNumber(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:136:      sceneLightsState?.rocketRimLightLeft,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:137:      defaults.rocketRimLightLeft,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:139:    rocketRimLightRight: readNumber(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:140:      sceneLightsState?.rocketRimLightRight,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreRuntime.ts:141:      defaults.rocketRimLightRight,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\scene\main.scene.ts:16:  rocket,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\scene\main.scene.ts:991:  [rocket]: true,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreConfig.ts:40:  '["sceneLights","rocketFillLight"]',
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreConfig.ts:41:  '["sceneLights","rocketRimLightLeft"]',
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\works\theatre\WorksTheatreConfig.ts:42:  '["sceneLights","rocketRimLightRight"]',
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:13:  rocket as rocketId,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:27:  MainRocketPort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:28:  MainRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:56:      [rocketId]: state.rocket,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:81:    this._applyRocket(engine, state.rocket);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:107:      rocket: this._readRocket(engine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:151:  private _readRocket(engine: Engine): MainRocketState {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:152:    const transform = this._readTransform(engine, rocketId);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:153:    const defaults = DEFAULT_MAIN_SCENE_STATE.rocket;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:154:    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:157:      flame: rocket?.getFlameState() ?? defaults.flame,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:161:  private _applyRocket(engine: Engine, state: MainRocketState): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:162:    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:163:    if (!rocket) return;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:164:    rocket.setFlameState(state.flame);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:324:      rocketFillLight: defaults.rocketFillLight,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:325:      rocketRimLightLeft: defaults.rocketRimLightLeft,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneRig.ts:326:      rocketRimLightRight: defaults.rocketRimLightRight,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:9:  rocket as rocketId,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:25:  MainRocketPort,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:26:  MainRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:45:      [rocketId]: state.rocket,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:62:    this._applyRocket(engine, state.rocket);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:87:      rocket: this._readRocket(engine),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:95:  private _readRocket(engine: Engine): MainRocketState {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:96:    const transform = this._readTransform(engine, rocketId);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:97:    const defaults = DEFAULT_MAIN_SCENE_STATE.rocket;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:98:    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:101:      flame: rocket?.getFlameState() ?? defaults.flame,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:105:  private _applyRocket(engine: Engine, state: MainRocketState): void {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:106:    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:107:    if (!rocket) return;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:108:    rocket.setFlameState(state.flame);
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:260:    if (id === rocketId) {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneRig.ts:261:      const r = ABOUT_DEFAULT_SCENE_STATE.rocket;
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:8:  MainRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:9:  MainRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:15:  rocket,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:25:  cloneRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:26:  cloneRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:30:  mergeRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:31:  mergeRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:54:  rocket: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:55:    ...resolveAboutObjectTransformDefaults(rocket, {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:59:    flame: mergeRocketFlameState(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:60:      cloneRocketFlameState(DEFAULT_MAIN_SCENE_STATE.rocket.flame),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:108:    rocket: cloneRocketState(state.rocket),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:218:    rocket: mergeRocketState(defaults.rocket, state?.rocket),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:226:function blendAboutRocketFlameState(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:227:  from: MainRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:228:  to: MainRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:230:): MainRocketFlameState {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:244:function blendAboutRocketState(
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:245:  from: MainRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:246:  to: MainRocketState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:248:): MainRocketState {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:255:    flame: blendAboutRocketFlameState(from.flame, to.flame, mix),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:387:    rocket: blendAboutRocketState(from.rocket, to.rocket, mix),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:420:    rocket: cloneRocketState(state.rocket),
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\theatre\AboutSceneState.ts:444:    rocket: value?.rocket,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\scene\about.scene.ts:12:  rocket,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\scene\about.scene.ts:605:// jetEngine.runObject parents to `rocket` via attachTo; rocket must load first.
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\scene\about.scene.ts:610:  rocket,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\about\scene\about.scene.ts:638:    rocket: {
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:9:  MainRocketFlameState,
+c:\Users\edn_y\renew_nineonelabs\resource\ts\pages\main\theatre\MainSceneState.ts:10:  MainRocketState,
+
+[Showing results with pagination = limit: 250]

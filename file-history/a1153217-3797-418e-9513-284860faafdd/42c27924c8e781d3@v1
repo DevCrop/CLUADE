@@ -1,0 +1,54 @@
+import type { DeviceType } from "../types/runtime.types.js";
+export { type DeviceType } from "../types/runtime.types.js";
+
+const UA = typeof navigator !== "undefined" ? navigator.userAgent : "";
+const hasTouch =
+  typeof navigator !== "undefined" && navigator.maxTouchPoints > 1;
+
+function detectDeviceType(): DeviceType {
+  if (/iPhone|iPod/i.test(UA)) return "ios";
+  if (/iPad/i.test(UA)) return "ios";
+  if (/Macintosh/i.test(UA) && hasTouch) return "ios";
+  if (/Android/i.test(UA)) return "android";
+  if (/Mobi|Tablet/i.test(UA)) return "android";
+  return "desktop";
+}
+
+export class Device {
+  private _viewportWidth = 0;
+  private _viewportHeight = 0;
+  private _deviceType: DeviceType = "unknown";
+
+  updateFromWindow(): void {
+    if (typeof window === "undefined") return;
+    this._viewportWidth = window.innerWidth ?? 0;
+    this._viewportHeight = window.innerHeight ?? 0;
+    this._deviceType = detectDeviceType();
+  }
+
+  get viewportWidth(): number {
+    return this._viewportWidth;
+  }
+
+  get viewportHeight(): number {
+    return this._viewportHeight;
+  }
+
+  get deviceType(): DeviceType {
+    return this._deviceType;
+  }
+
+  get isMobile(): boolean {
+    return this._deviceType === "ios" || this._deviceType === "android";
+  }
+
+  private static _default: Device | null = null;
+
+  static getDefault(): Device {
+    if (!Device._default) {
+      Device._default = new Device();
+      if (typeof window !== "undefined") Device._default.updateFromWindow();
+    }
+    return Device._default;
+  }
+}

@@ -1,0 +1,22 @@
+@use "../abstract" as *;
+
+// 정적 rect 불릿 유틸리티 — 애니메이션 없는 listing용
+// 사용: <li class="no-tag-rect">텍스트</li>
+// 커스텀: --tag-rect-size, --tag-rect-color
+.no-tag-rect {
+  --tag-rect-size: #{fluid(3, 4)};
+  --tag-rect-color: currentColor;
+
+  display: flex;
+  align-items: center;
+  gap: fluid(6, 8);
+
+  &::before {
+    content: "";
+    flex-shrink: 0;
+    width: var(--tag-rect-size);
+    height: var(--tag-rect-size);
+    background: var(--tag-rect-color);
+    opacity: 0.6;
+  }
+}

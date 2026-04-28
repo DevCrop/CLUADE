@@ -1,0 +1,95 @@
+import type { PinnedRevealConfig } from "../types/component.types.js";
+import type { WindowWithGsap } from "../types/gsap.types.js";
+import type { PinnedRevealEntry } from "../types/runtime.types.js";
+
+export class PinnedRevealRuntime {
+  private readonly _entries = new Set<PinnedRevealEntry>();
+
+  init(configs: readonly PinnedRevealConfig[]): void {
+    this.dispose();
+    if (typeof document === "undefined") return;
+    if (configs.length === 0) return;
+
+    const win = window as WindowWithGsap;
+    const gsap = win.gsap;
+    const ScrollTrigger = win.ScrollTrigger;
+    if (!gsap || !ScrollTrigger) return;
+
+    configs.forEach((config) => {
+      const section = document.querySelector<HTMLElement>(
+        config.sectionSelector,
+      );
+      const target = document.querySelector<HTMLElement>(config.targetSelector);
+      if (!section || !target) return;
+
+      gsap.killTweensOf?.(target);
+      const timeline = gsap.timeline({ paused: true });
+      gsap.set(target, {
+        autoAlpha: config.animation.fromAutoAlpha,
+        y: config.animation.fromY,
+      });
+
+      timeline.fromTo(
+        target,
+        {
+          autoAlpha: config.animation.fromAutoAlpha,
+          y: config.animation.fromY,
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: config.animation.duration,
+          ease: config.animation.ease,
+          immediateRender: false,
+        },
+      );
+
+      if (config.exitAnimation) {
+        timeline.to(target, {
+          autoAlpha: config.exitAnimation.toAutoAlpha,
+          y: config.exitAnimation.toY,
+          duration: config.exitAnimation.duration,
+          ease: config.exitAnimation.ease,
+          immediateRender: false,
+        });
+      }
+
+      const trigger = ScrollTrigger.create({
+        trigger: section,
+        start: config.start,
+        end: this._resolveEnd(config.end, section),
+        scrub: config.scrub,
+        pin: target,
+        pinSpacing: config.pinSpacing,
+        animation: timeline,
+        invalidateOnRefresh: true,
+        immediateRender: false,
+      });
+
+      this._entries.add({ target, timeline, trigger });
+    });
+  }
+
+  dispose(): void {
+    if (this._entries.size === 0) return;
+
+    const win = window as WindowWithGsap;
+    const gsap = win.gsap;
+
+    this._entries.forEach(({ target, timeline, trigger }) => {
+      trigger.kill();
+      timeline.kill();
+      gsap?.killTweensOf?.(target);
+      gsap?.set(target, { clearProps: "opacity,visibility,transform" });
+    });
+    this._entries.clear();
+  }
+
+  private _resolveEnd(
+    end: PinnedRevealConfig["end"],
+    section: HTMLElement,
+  ): string | (() => string) {
+    if (end !== "viewport-auto") return end;
+    return () => `+=${Math.max(section.offsetHeight - window.innerHeight, 0)}`;
+  }
+}

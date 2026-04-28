@@ -1,0 +1,534 @@
+﻿import * as THREE from "three";
+import { ResponsiveRuntime } from "../runtime/ResponsiveRuntime.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import type {
+  PostProcessorOptions,
+  BloomOptions,
+  VignetteOptions,
+} from "../types/engine.types.js";
+import additiveBlendVertexShader from "../../shaders/post-processing/additive-blend.vertex.glsl?raw";
+import additiveBlendFragmentShader from "../../shaders/post-processing/additive-blend.fragment.glsl?raw";
+import { VignetteShader } from "three/addons/shaders/VignetteShader.js";
+
+const DEFAULT_BLOOM: Required<Omit<BloomOptions, "selective">> & {
+  selective: boolean;
+} = {
+  strength: 0.12,
+  radius: 0.35,
+  threshold: 0.93,
+  compositeStrength: 0.4,
+  selective: true,
+};
+
+const DEFAULT_VIGNETTE: Required<VignetteOptions> = {
+  offset: 0.95,
+  darkness: 1.45,
+};
+
+export class PostProcessor {
+  private _renderer: THREE.WebGLRenderer;
+  private _scene: THREE.Scene;
+  private _camera: THREE.Camera;
+  private _opts: PostProcessorOptions;
+
+  private _composer: EffectComposer | null = null;
+  private _bloomComposer: EffectComposer | null = null;
+  private _finalComposer: EffectComposer | null = null;
+  private _bloomPass: UnrealBloomPass | null = null;
+  private _blendPass: ShaderPass | null = null;
+  private _vignettePass: ShaderPass | null = null;
+  private _selective = false;
+
+  private _darkMaterial: THREE.MeshBasicMaterial | null = null;
+  private _darkMaterialDepthOff: THREE.MeshBasicMaterial | null = null;
+  private _materialCache = new Map<
+    THREE.Object3D,
+    THREE.Material | THREE.Material[]
+  >();
+  private _bloomDescendants = new Set<THREE.Object3D>();
+  private _cachedBloomSignature = "";
+  private _cachedNonBloomMeshes: THREE.Mesh[] = [];
+  private _cachedSceneMeshes: THREE.Mesh[] = [];
+  private _didWarnSelectiveFallback = false;
+  private _lastHasRoots: boolean | null = null;
+
+  constructor(
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    opts: PostProcessorOptions = {},
+  ) {
+    this._renderer = renderer;
+    this._scene = scene;
+    this._camera = camera;
+    this._opts = opts;
+    this._setup();
+  }
+
+  get isSelective(): boolean {
+    return this._selective;
+  }
+
+  private _setup(): void {
+    const bloomOpt = this._opts.bloom;
+    const vignetteOpt = this._opts.vignette;
+    const hasBloom = bloomOpt !== false;
+    const hasVignette = vignetteOpt !== false && vignetteOpt != null;
+    if (!hasBloom && !hasVignette) {
+      return;
+    }
+    const vignetteCfg = this._normalizeVignetteOptions(vignetteOpt);
+    if (!hasBloom) {
+      this._setupCustomPassPipeline(vignetteCfg);
+      return;
+    }
+    const bloomCfg = this._normalizeBloomOptions(bloomOpt);
+
+    this._selective = bloomCfg.selective ?? true;
+    const resolution = new THREE.Vector2(
+      this._renderer.domElement.width,
+      this._renderer.domElement.height,
+    );
+
+    if (this._selective) {
+      this._setupSelectiveBloom(bloomCfg, resolution, vignetteCfg);
+      return;
+    }
+    this._setupGlobalBloom(bloomCfg, resolution, vignetteCfg);
+  }
+
+  private _setupSelectiveBloom(
+    cfg: Required<Omit<BloomOptions, "selective">> & { selective: boolean },
+    resolution: THREE.Vector2,
+    vignetteCfg: Required<VignetteOptions> | null,
+  ): void {
+    this._darkMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    this._darkMaterialDepthOff = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    this._bloomComposer = new EffectComposer(this._renderer);
+    this._bloomComposer.renderToScreen = false;
+    this._bloomComposer.addPass(new RenderPass(this._scene, this._camera));
+    this._bloomPass = new UnrealBloomPass(
+      resolution,
+      cfg.strength,
+      cfg.radius,
+      cfg.threshold,
+    );
+    this._bloomComposer.addPass(this._bloomPass);
+
+    this._finalComposer = new EffectComposer(this._renderer);
+    this._finalComposer.addPass(new RenderPass(this._scene, this._camera));
+
+    const blendPass = new ShaderPass(
+      new THREE.ShaderMaterial({
+        uniforms: {
+          baseTexture: { value: null },
+          bloomTexture: {
+            value: this._bloomComposer.renderTarget2.texture,
+          },
+          bloomMix: { value: cfg.compositeStrength },
+        },
+        vertexShader: additiveBlendVertexShader,
+        fragmentShader: additiveBlendFragmentShader,
+        defines: {},
+      }),
+      "baseTexture",
+    );
+    blendPass.needsSwap = true;
+    this._blendPass = blendPass;
+    this._finalComposer.addPass(blendPass);
+    if (vignetteCfg) {
+      this._vignettePass = this._createVignettePass(vignetteCfg);
+      this._finalComposer.addPass(this._vignettePass);
+    }
+  }
+
+  private _setupGlobalBloom(
+    bloomCfg: Required<Omit<BloomOptions, "selective">> & {
+      selective: boolean;
+    },
+    resolution: THREE.Vector2,
+    vignetteCfg: Required<VignetteOptions> | null,
+  ): void {
+    this._composer = new EffectComposer(this._renderer);
+    this._composer.addPass(new RenderPass(this._scene, this._camera));
+    this._bloomPass = new UnrealBloomPass(
+      resolution,
+      bloomCfg.strength,
+      bloomCfg.radius,
+      bloomCfg.threshold,
+    );
+    this._composer.addPass(this._bloomPass);
+    if (vignetteCfg) {
+      this._vignettePass = this._createVignettePass(vignetteCfg);
+      this._composer.addPass(this._vignettePass);
+    }
+  }
+
+  private _setupCustomPassPipeline(
+    vignetteCfg: Required<VignetteOptions> | null,
+  ): void {
+    this._composer = new EffectComposer(this._renderer);
+    this._composer.addPass(new RenderPass(this._scene, this._camera));
+    if (vignetteCfg) {
+      this._vignettePass = this._createVignettePass(vignetteCfg);
+      this._composer.addPass(this._vignettePass);
+    }
+  }
+
+  render(bloomRoots: Set<THREE.Object3D>, deltaTime?: number): void {
+    if (!this._bloomPass) {
+      if (this._composer) {
+        this._composer.render(deltaTime);
+        return;
+      }
+      this._renderer.render(this._scene, this._camera);
+      return;
+    }
+
+    if (this._selective) {
+      const hasRoots = this._hasRenderableBloomRoots(bloomRoots);
+      this._renderSelective(bloomRoots, hasRoots, deltaTime);
+      return;
+    }
+    this._composer?.render(deltaTime);
+  }
+
+  private _renderSelective(
+    bloomRoots: Set<THREE.Object3D>,
+    hasRoots: boolean,
+    deltaTime?: number,
+  ): void {
+    if (
+      !this._selective ||
+      !this._bloomComposer ||
+      !this._finalComposer ||
+      !this._darkMaterial
+    ) {
+      this._composer?.render(deltaTime);
+      return;
+    }
+    if (hasRoots !== this._lastHasRoots) {
+      this._lastHasRoots = hasRoots;
+      console.log(`[BLOOM:render] hasRoots changed → ${String(hasRoots)}  bloomRoots.size=${bloomRoots.size}`);
+    }
+    if (!hasRoots) {
+      this._renderer.render(this._scene, this._camera);
+      return;
+    }
+
+    try {
+      try {
+        this._prepareBloomScene(hasRoots, bloomRoots);
+        this._bloomComposer.render(deltaTime);
+      } finally {
+        this._restoreMaterials();
+      }
+      this._finalComposer.render(deltaTime);
+    } catch (error) {
+      if (!this._didWarnSelectiveFallback) {
+        this._didWarnSelectiveFallback = true;
+      }
+      this._renderer.render(this._scene, this._camera);
+    }
+  }
+
+  private _prepareBloomScene(
+    hasRoots: boolean,
+    bloomRoots: Set<THREE.Object3D>,
+  ): void {
+    if (hasRoots) {
+      this._darkenNonBloom(bloomRoots);
+      return;
+    }
+    this._darkenAllMeshes();
+  }
+
+  private _darkenNonBloom(bloomRoots: Set<THREE.Object3D>): void {
+    this._materialCache.clear();
+    const signature = this._createBloomSignature(bloomRoots);
+    if (signature !== this._cachedBloomSignature) {
+      this._cachedBloomSignature = signature;
+      this._rebuildNonBloomMeshCache(bloomRoots);
+    }
+
+    for (const mesh of this._cachedNonBloomMeshes) {
+      this._materialCache.set(mesh, mesh.material);
+      mesh.material = this._resolveDarkMaterial(mesh);
+    }
+  }
+
+  private _resolveDarkMaterial(mesh: THREE.Mesh): THREE.MeshBasicMaterial {
+    const mat = mesh.material;
+    const isDepthOff = Array.isArray(mat)
+      ? mat.every((m) => m.depthTest === false)
+      : (mat as THREE.Material).depthTest === false;
+    if (isDepthOff) {
+      console.log("[BLOOM:darken] depthOff mesh → darkDepthOff", {
+        name: mesh.name || `(uuid:${mesh.uuid.slice(0, 8)})`,
+        renderOrder: mesh.renderOrder,
+        visible: mesh.visible,
+        darkMaterialReady: this._darkMaterialDepthOff !== null,
+      });
+    }
+    return (isDepthOff ? this._darkMaterialDepthOff : this._darkMaterial)!;
+  }
+
+  private _darkenAllMeshes(): void {
+    const dark = this._darkMaterial!;
+    this._materialCache.clear();
+    if (this._cachedSceneMeshes.length === 0) {
+      this._cachedSceneMeshes = this._collectSceneMeshes();
+    }
+    for (const mesh of this._cachedSceneMeshes) {
+      this._materialCache.set(mesh, mesh.material);
+      mesh.material = dark;
+    }
+  }
+
+  private _hasRenderableBloomRoots(bloomRoots: Set<THREE.Object3D>): boolean {
+    if (bloomRoots.size === 0) return false;
+    for (const root of bloomRoots) {
+      if (root.parent) return true;
+    }
+    return false;
+  }
+
+  private _normalizeBloomOptions(
+    bloomOpt: PostProcessorOptions["bloom"],
+  ): Required<Omit<BloomOptions, "selective">> & { selective: boolean } {
+    if (typeof bloomOpt !== "object" || bloomOpt == null) {
+      return { ...DEFAULT_BLOOM };
+    }
+    const strength = this._clampFinite(
+      bloomOpt.strength,
+      DEFAULT_BLOOM.strength,
+      0,
+      5,
+    );
+    const radius = this._clampFinite(
+      bloomOpt.radius,
+      DEFAULT_BLOOM.radius,
+      0,
+      2,
+    );
+    const threshold = this._clampFinite(
+      bloomOpt.threshold,
+      DEFAULT_BLOOM.threshold,
+      0,
+      2,
+    );
+    const compositeStrength = this._clampFinite(
+      bloomOpt.compositeStrength,
+      DEFAULT_BLOOM.compositeStrength,
+      0,
+      1,
+    );
+    const selective =
+      typeof bloomOpt.selective === "boolean"
+        ? bloomOpt.selective
+        : DEFAULT_BLOOM.selective;
+    return { strength, radius, threshold, compositeStrength, selective };
+  }
+
+  private _normalizeVignetteOptions(
+    vignetteOpt: PostProcessorOptions["vignette"],
+  ): Required<VignetteOptions> | null {
+    if (vignetteOpt === false || vignetteOpt == null) return null;
+    if (vignetteOpt === true) return { ...DEFAULT_VIGNETTE };
+    return {
+      offset: this._clampFinite(
+        vignetteOpt.offset,
+        DEFAULT_VIGNETTE.offset,
+        0,
+        4,
+      ),
+      darkness: this._clampFinite(
+        vignetteOpt.darkness,
+        DEFAULT_VIGNETTE.darkness,
+        0,
+        4,
+      ),
+    };
+  }
+
+  private _createVignettePass(
+    vignetteCfg: Required<VignetteOptions>,
+  ): ShaderPass {
+    const pass = new ShaderPass(VignetteShader);
+    pass.uniforms.offset.value = vignetteCfg.offset;
+    pass.uniforms.darkness.value = vignetteCfg.darkness;
+    return pass;
+  }
+
+  private _clampFinite(
+    value: number | undefined,
+    fallback: number,
+    min: number,
+    max: number,
+  ): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private _restoreMaterials(): void {
+    for (const [mesh, material] of this._materialCache) {
+      (mesh as THREE.Mesh).material = material;
+    }
+    this._materialCache.clear();
+  }
+
+  private _createBloomSignature(bloomRoots: Set<THREE.Object3D>): string {
+    return Array.from(bloomRoots)
+      .filter((root) => !!root.parent)
+      .map((root) => root.uuid)
+      .sort()
+      .join("|");
+  }
+
+  private _rebuildNonBloomMeshCache(bloomRoots: Set<THREE.Object3D>): void {
+    this._bloomDescendants.clear();
+    for (const root of bloomRoots) {
+      root.traverse((child) => this._bloomDescendants.add(child));
+    }
+    this._cachedSceneMeshes = this._collectSceneMeshes();
+    this._cachedNonBloomMeshes = this._cachedSceneMeshes.filter(
+      (mesh) => !this._bloomDescendants.has(mesh),
+    );
+    const depthOffMeshes = this._cachedNonBloomMeshes.filter((m) => {
+      const mat = m.material;
+      return Array.isArray(mat)
+        ? mat.every((x) => x.depthTest === false)
+        : (mat as THREE.Material).depthTest === false;
+    });
+    console.log("[BLOOM:cache] rebuilt", {
+      sceneMeshes: this._cachedSceneMeshes.length,
+      nonBloomMeshes: this._cachedNonBloomMeshes.length,
+      depthOffCount: depthOffMeshes.length,
+      depthOff: depthOffMeshes.map((m) => ({
+        name: m.name || `(uuid:${m.uuid.slice(0, 8)})`,
+        renderOrder: m.renderOrder,
+        materialType: Array.isArray(m.material) ? "multi" : m.material.type,
+      })),
+    });
+  }
+
+  private _collectSceneMeshes(): THREE.Mesh[] {
+    const meshes: THREE.Mesh[] = [];
+    this._scene.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      meshes.push(mesh);
+    });
+    return meshes;
+  }
+
+  resize(width: number, height: number, pixelRatio?: number): void {
+    const dpr =
+      pixelRatio ??
+      Math.min(
+        ResponsiveRuntime.getDefault().getSnapshot().render.clampedPixelRatio,
+        2,
+      );
+
+    if (this._selective) {
+      this._bloomComposer?.setSize(width, height);
+      this._bloomComposer?.setPixelRatio(dpr);
+      this._finalComposer?.setSize(width, height);
+      this._finalComposer?.setPixelRatio(dpr);
+    } else {
+      this._composer?.setSize(width, height);
+      this._composer?.setPixelRatio(dpr);
+    }
+
+    if (this._bloomPass) {
+      this._bloomPass.resolution.set(width, height);
+    }
+  }
+
+  getComposer(): EffectComposer | null {
+    return this._selective ? this._finalComposer : this._composer;
+  }
+
+  getBloomPass(): UnrealBloomPass | null {
+    return this._bloomPass;
+  }
+
+  getBloomOptions(): Required<Omit<BloomOptions, "selective">> | null {
+    if (!this._bloomPass) return null;
+    return {
+      strength: this._bloomPass.strength,
+      radius: this._bloomPass.radius,
+      threshold: this._bloomPass.threshold,
+      compositeStrength: this._readBloomCompositeStrength(),
+    };
+  }
+
+  setBloomOptions(options: BloomOptions): void {
+    if (!this._bloomPass) return;
+    const normalized = this._normalizeBloomOptions(options);
+    this._bloomPass.strength = normalized.strength;
+    this._bloomPass.radius = normalized.radius;
+    this._bloomPass.threshold = normalized.threshold;
+    const blendUniform = this._blendPass?.uniforms?.bloomMix;
+    if (blendUniform) {
+      blendUniform.value = normalized.compositeStrength;
+    }
+  }
+
+  getVignetteOptions(): Required<VignetteOptions> | null {
+    const uniforms = this._vignettePass?.uniforms;
+    if (!uniforms) return null;
+    return {
+      offset: uniforms.offset.value,
+      darkness: uniforms.darkness.value,
+    };
+  }
+
+  setVignetteOptions(options: VignetteOptions): void {
+    const uniforms = this._vignettePass?.uniforms;
+    if (!uniforms) return;
+    const normalized = this._normalizeVignetteOptions(options);
+    if (!normalized) return;
+    uniforms.offset.value = normalized.offset;
+    uniforms.darkness.value = normalized.darkness;
+  }
+
+  dispose(): void {
+    this._composer?.dispose();
+    this._composer = null;
+    this._bloomComposer?.dispose();
+    this._bloomComposer = null;
+    this._finalComposer?.dispose();
+    this._finalComposer = null;
+    this._bloomPass?.dispose();
+    this._bloomPass = null;
+    this._blendPass = null;
+    this._vignettePass = null;
+    this._darkMaterial?.dispose();
+    this._darkMaterial = null;
+    this._darkMaterialDepthOff?.dispose();
+    this._darkMaterialDepthOff = null;
+    this._materialCache.clear();
+    this._bloomDescendants.clear();
+    this._cachedBloomSignature = "";
+    this._cachedNonBloomMeshes = [];
+    this._cachedSceneMeshes = [];
+    this._didWarnSelectiveFallback = false;
+  }
+
+  private _readBloomCompositeStrength(): number {
+    const uniform = this._blendPass?.uniforms?.bloomMix;
+    if (!uniform || typeof uniform.value !== "number") {
+      return DEFAULT_BLOOM.compositeStrength;
+    }
+    return uniform.value;
+  }
+}

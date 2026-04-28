@@ -1,0 +1,88 @@
+// =============================================================================
+// Entry point — CSS Cascade Layers ordering.
+//
+// Load order:
+//   1. Font @imports (MUST be at stylesheet root — CSS spec forbids @import
+//      nested inside @layer blocks; violation silently drops the rules and
+//      breaks web fonts like Clash Display / --fm-en).
+//   2. @layer declaration — fixes priority independent of source order.
+//   3. Layer blocks populated via meta.load-css so each partial stays
+//      independently editable and source maps resolve to the original file.
+//
+// Layer priority (low → high):
+//   reset < base < layout < components < pages < utilities < state
+//
+// Rationale:
+//   - `pages` sits above `components` so page-specific overrides win without
+//     specificity games.
+//   - `utilities` above `pages` so `.f-display-0`, `.--regular`, `.--fm-en`
+//     etc. always trump page/component rules — mirrors the old @use source
+//     order where base/ loaded before components/ and utils were always last.
+//   - `_root.scss` (CSS custom properties + typography/color/container utility
+//     classes) lives in `utilities` so .f-*/.clr-* classes win over components
+//     and pages. :root{} custom properties work correctly in any layer.
+//   - `state` is the highest — TS-driven `data-reveal`, `data-mask`, `is-*`
+//     dynamic state always wins, without !important.
+// =============================================================================
+
+@use "sass:meta";
+
+// --- Fonts first (root-level @import) ---
+@include meta.load-css("base/fonts");
+
+@layer reset, base, layout, components, pages, utilities, state;
+
+@layer reset {
+  @include meta.load-css("base/reset");
+}
+
+@layer base {
+  @include meta.load-css("base/init");
+}
+
+@layer layout {
+  @include meta.load-css("layouts/header");
+  @include meta.load-css("layouts/drawer");
+  @include meta.load-css("layouts/footer");
+}
+
+@layer components {
+  @include meta.load-css("components/backdrop");
+  @include meta.load-css("components/masking-text");
+  @include meta.load-css("components/corner-bracket");
+  @include meta.load-css("components/button");
+  @include meta.load-css("components/dropdown");
+  @include meta.load-css("components/intro");
+  @include meta.load-css("components/form");
+  @include meta.load-css("components/marquee");
+  @include meta.load-css("components/search-bar");
+  @include meta.load-css("components/modal");
+  @include meta.load-css("components/pagination");
+  @include meta.load-css("components/prevnext");
+  @include meta.load-css("components/table");
+  @include meta.load-css("components/hud-panel");
+  @include meta.load-css("components/panel");
+  @include meta.load-css("components/hud");
+  @include meta.load-css("components/meta");
+  @include meta.load-css("components/category");
+  @include meta.load-css("components/toast");
+  @include meta.load-css("components/loading");
+  @include meta.load-css("components/loop-filter-rect");
+  @include meta.load-css("components/custom-cursor");
+  @include meta.load-css("components/space-card");
+}
+
+@layer pages {
+  @include meta.load-css("pages/main");
+  @include meta.load-css("pages/sub");
+  @include meta.load-css("pages/works-canvas");
+}
+
+@layer utilities {
+  @include meta.load-css("base/root");
+  @include meta.load-css("base/utils");
+}
+
+@layer state {
+  @include meta.load-css("state/reveal-state");
+}

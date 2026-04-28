@@ -1,0 +1,34 @@
+﻿import { AppManager } from "./manager/AppManager.js";
+import { FrameScheduler } from "./utils/FrameScheduler.js";
+
+async function start(): Promise<void> {
+  await AppManager.init();
+}
+
+function deferStart(): void {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => deferStart(), {
+      once: true,
+    });
+    return;
+  }
+  if (typeof requestIdleCallback !== "undefined") {
+    requestIdleCallback(
+      () => {
+        FrameScheduler.request(() => void start());
+      },
+      { timeout: 2000 },
+    );
+  } else {
+    FrameScheduler.request(() => void start());
+  }
+}
+
+function registerBeforeUnload(): void {
+  window.addEventListener("beforeunload", () => {
+    AppManager.disposeBootstrap();
+  });
+}
+
+registerBeforeUnload();
+deferStart();

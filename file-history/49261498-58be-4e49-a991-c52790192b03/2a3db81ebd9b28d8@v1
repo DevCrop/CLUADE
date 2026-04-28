@@ -1,0 +1,14 @@
+---
+name: RTK token optimization — mandatory prefix
+description: All Bash commands prefer `rtk` prefix; full policy in ~/.claude/RTK.md
+type: feedback
+originSessionId: f4145fdf-c8cb-416a-b0d7-4afed60e2439
+---
+RTK token-optimization policy: full reference at `~/.claude/RTK.md`. Project-side filters: `.rtk/filters.toml`.
+
+**Why:** noisy commands (git / tsc / docker / test runners / find / log files) compress 60–90% via rtk, freeing context budget.
+
+**How to apply:**
+- Native Windows: explicit `rtk <cmd>` prefix is mandatory (no auto-rewrite hook on this platform).
+- File reads: always use the Read tool — never `cat / head / tail / rtk read` for source files.
+- Verify adoption: `rtk gain` (counter at 0 means the prefix was missed).

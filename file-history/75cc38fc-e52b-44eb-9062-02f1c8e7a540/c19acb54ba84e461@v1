@@ -1,0 +1,108 @@
+<?php
+section('content');
+
+$awardRows = isset($awardRows) && is_array($awardRows) ? $awardRows : [];
+
+// TEST FALLBACK — DB 데이터 없을 때 더미, 실제 배포 전 제거
+if (count($awardRows) === 0) {
+    $awardRows = [
+        ['year' => '2025', 'title' => '한컴 Docs AI',              'awardLabel' => 'GDWEB',            'awardIcon' => '/resource/images/logo/GDWEB.png',    'prize' => '웹사이트 부문 금상',         'detailPath' => '/works', 'previewImage' => ''],
+        ['year' => '2025', 'title' => 'NOL씨어터 블루스퀘어',       'awardLabel' => '대한민국 웹어워드', 'awardIcon' => '/resource/images/logo/WEBAWARD.png', 'prize' => '엔터테인먼트 부문 대상',     'detailPath' => '/works', 'previewImage' => ''],
+        ['year' => '2024', 'title' => '삼성 갤럭시 AI 캠페인',      'awardLabel' => 'GDWEB',            'awardIcon' => '/resource/images/logo/GDWEB.png',    'prize' => '이벤트·캠페인 부문 최우수', 'detailPath' => '/works', 'previewImage' => ''],
+        ['year' => '2024', 'title' => 'LG CNS 기업 사이트 리뉴얼', 'awardLabel' => '대한민국 웹어워드', 'awardIcon' => '/resource/images/logo/WEBAWARD.png', 'prize' => '기업·기관 부문 금상',        'detailPath' => '/works', 'previewImage' => ''],
+        ['year' => '2023', 'title' => '카카오페이 브랜드 캠페인',   'awardLabel' => 'GDWEB',            'awardIcon' => '/resource/images/logo/GDWEB.png',    'prize' => '금융 부문 우수상',           'detailPath' => '/works', 'previewImage' => ''],
+    ];
+}
+?>
+
+<?= include_view('components.sub-visual', [
+        'title' => 'AWARDS',
+        'lines' => [
+            '더 나은 웹을 만들어온 여정 속 이정표를 확인하세요.',
+        ],
+    ]) ?>
+
+<section class="no-sub-award">
+    <div class="no-container-2xl">
+        <div class="no-sub-award__inner">
+            <div class="no-sub-award__head">
+                <p>YEAR</p>
+                <p>PROJECT</p>
+                <p>AWARD</p>
+                <p>PRIZE</p>
+            </div>
+            <ul class="no-sub-award-list" data-award-preview-list>
+                <?php if (count($awardRows) > 0) : ?>
+                <?php
+                    $awardIconFallbacks = [
+                        base_path('/resource/images/logo/GDWEB.png'),
+                        base_path('/resource/images/logo/WEBAWARD.png'),
+                    ];
+                    $awardVideoFallbacks = [
+                        '/resource/video/why_video_1.mp4',
+                        '/resource/video/why_video_2.mp4',
+                        '/resource/video/why_video_3.mp4',
+                        '/resource/video/why_video_4.mp4',
+                    ];
+                    $awardVideoIndex = 0;
+                ?>
+                <?php foreach ($awardRows as $row) : ?>
+                <?php
+                    $href = base_path($row['detailPath'] ?? '/works');
+                    $previewSrc = $row['previewImage'] ?? '';
+                    $iconPath = $row['awardIcon'] ?? null;
+                    $iconSrc = is_string($iconPath) && $iconPath !== ''
+                        ? base_path($iconPath)
+                        : $awardIconFallbacks[array_rand($awardIconFallbacks)];
+                    $videoSrc = $row['previewVideo'] ?? $awardVideoFallbacks[$awardVideoIndex % count($awardVideoFallbacks)];
+                    $awardVideoIndex++;
+                ?>
+                <li class="no-sub-award-item">
+                    <a
+                        href="<?= e($href) ?>"
+                        class="no-sub-award-item__link"
+                        data-award-preview-item
+                        data-preview-image="<?= e($previewSrc) ?>"
+                        data-skill-video="<?= e($videoSrc) ?>">
+                        <div class="no-sub-award-item__year"><?= e((string) ($row['year'] ?? '')) ?></div>
+                        <div class="no-sub-award-item__project"><?= e((string) ($row['title'] ?? '')) ?></div>
+                        <div class="no-sub-award-item__award">
+                            <img src="<?= e($iconSrc) ?>" alt="<?= e((string) ($row['awardLabel'] ?? '')) ?>" loading="lazy">
+                        </div>
+                        <div class="no-sub-award-item__prize"><?= e((string) ($row['prize'] ?? '') !== '' ? (string) $row['prize'] : '—') ?></div>
+                    </a>
+                </li>
+                <?php endforeach; ?>
+                <?php else : ?>
+                <li class="no-sub-award-item no-sub-award-item--empty" aria-hidden="true">
+                    <div class="no-sub-award-item__empty">등록된 수상 작업이 없습니다.</div>
+                </li>
+                <?php endif; ?>
+            </ul>
+            <div class="no-award-hover-preview" data-award-hover-preview aria-hidden="true">
+                <img src="" alt="">
+            </div>
+            <div class="no-view-more">
+                <?= include_view('components.button', [
+                      'variant' => 'corner',
+                      'tag' => 'a',
+                      'text' => 'View More',
+                      'href' => base_path('/works?view=grid'),
+                      'class' => 'no-view-more__btn',
+                      'iconName' => 'plus',
+                      'iconPosition' => 'before',
+                      'icon_action' => 'rotate',
+                  ]) ?>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<div class="no-sub-award-video-preview" data-award-video-preview aria-hidden="true">
+    <video data-why-skill-video muted playsinline loop preload="none"></video>
+</div>
+<?php end_section() ?>

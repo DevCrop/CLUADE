@@ -1,0 +1,7 @@
+# Memory Index — NINEONELABS Renewal
+
+- [프로젝트 아키텍처](project_architecture.md) — 커스텀 MVC, 씬 구조, 타입 규칙, DB 프리픽스
+- [개발 워크플로우](project_workflow.md) — 검증 커맨드, 금지 커맨드, 스킬/에이전트 위임 패턴
+- [CHOP 필수 사용](feedback_chop.md) — 모든 Bash에 chop prefix 적용 이유와 방법
+- [npm build/watch/install 금지](feedback_npm_build.md) — Vite dev 서버 자동빌드로 인해 불필요
+- [--dangerously-skip-permissions 설정됨](feedback_dangerously_skip.md) — ~/.bashrc alias, 권한 프롬프트 없음

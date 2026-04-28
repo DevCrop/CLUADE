@@ -1,0 +1,44 @@
+---
+paths:
+  - "**/*.scss"
+---
+
+# SCSS Rules
+
+- BEM pattern for class naming
+- Source: `resource/scss/` → output: `resource/dist/`
+- Do NOT run build commands — dev server reflects changes on save automatically
+- Admin CSS (`admin/resource/css/`) is separate — do not import from public SCSS entry
+
+## Token Contract
+
+- Reusable tokens → `resource/scss/abstract/` or `base/_root.scss`
+- Use `var(--clr-*)`, `var(--duration-*)` etc. in consumers — no raw hex when a semantic token exists upstream
+- Prefer semantic tokens over raw values when an upstream token exists
+- **Do NOT use CSS variable fallbacks** like `var(--token, fallback)`. Use `var(--token)` or `fluid(...)` directly.
+- Do not introduce base/root tokens for one-off component values — only when genuinely shared across multiple features
+
+## Fluid Helper
+
+- In **component, layout, page** SCSS: call `fluid(min, max)` directly
+- In shared **`abstract/`** or **`base/`**: use `#{fluid(...)}` interpolation only when emitting CSS custom properties or shared tokens
+- Files outside `resource/scss/abstract/` and `resource/scss/base/`: add `@use "../abstract" as *;` at top before using `fluid(...)` and other shared helpers
+
+## Reset / Init Contract
+
+`_init.scss`가 다음을 전역 적용함 — 컴포넌트/페이지 SCSS에서 단독 중복 선언 금지:
+- `margin: 0` → `*` selector로 이미 0
+- `padding: 0` → `*` selector로 이미 0
+- `list-style: none` → `ul, ol, li`에 이미 없음
+- `padding-left: 0` / `padding-right: 0` 등 단일 축 0도 동일하게 금지
+  (단, 직상위 규칙에서 해당 축에 non-zero 값이 선언되어 있으면 예외)
+
+`@include font("...")` mixin은 `font-size`, `line-height`, `letter-spacing`을 모두 출력함.
+mixin 호출 직후 동일 값으로 개별 재선언하지 않는다.
+
+## Context Efficiency
+
+- 토큰 사용 현황 검색: `rtk grep` 사용. raw grep 금지.
+- 파일 읽기: Read tool. bash cat 금지.
+- 5개+ 파티얼 동시 확인 필요 시: Explore subagent 위임.
+- 전체 토큰 룰: AGENTS.md § Token Optimization 참조.

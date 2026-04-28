@@ -1,0 +1,177 @@
+﻿<?php
+
+$placement_labels = [
+    1 => '메인 페이지',
+    2 => '상단 배너',
+    3 => '하단 배너',
+];
+
+$target_labels = [
+    '_self' => '현재창',
+    '_blank' => '새창',
+];
+
+$layout_labels = [
+    1 => 'HEAD',
+    2 => 'BODY',
+    3 => 'FOOTER',
+];
+
+$popup_types = $placement_labels;
+
+$has_link_options = [
+    1 => '링크',
+    2 => '비링크',
+];
+
+$link_targets = [
+    0 => ['label' => $target_labels['_self'], 'target' => '_self'],
+    1 => ['label' => $target_labels['_blank'], 'target' => '_blank'],
+];
+$_targetArr = $target_labels;
+
+$is_unlimited = [1 => '무기한 노출', 2 => '노출 기간 설정'];
+
+$seo_locations = [
+    1 => $layout_labels[1] . ' 영역',
+    2 => $layout_labels[2] . ' 영역 최상단',
+    3 => $layout_labels[3] . ' 영역 최하단',
+];
+$tag_locations = $layout_labels;
+
+if (!class_exists('Role') && !empty($NO_ADMIN_PATH)) {
+    require_once $NO_ADMIN_PATH . '/lib/Role.php';
+}
+$admin_roles = Role::getRoles();
+
+$is_active = [1 => '활성화', 0 => '비활성화'];
+$is_confirmed = [0 => '미확인', 1 => '확인'];
+
+$board_type = [
+    'bbs' => '게시판',
+    'gal' => '갤러리',
+    'new' => '뉴스',
+    'not' => '공지사항',
+];
+$board_file_allow = [
+    'avi', 'doc', 'docx', 'gif', 'hwp', 'jpg', 'jpeg', 'mov', 'mp4', 'pdf',
+    'png', 'ppt', 'pptx', 'txt', 'webp', 'xls', 'xlsx', 'zip',
+];
+
+$siteDataTarget = ['subtitle' => '서브타이틀'];
+
+$work_award_types = [
+    1 => 'GDWEB',
+    2 => 'i-AWARD',
+];
+
+$work_service_types = [
+    1 => 'UI/UX',
+    2 => 'Branding',
+    3 => 'Website',
+    4 => 'Mobile',
+    5 => 'Responsive',
+    6 => 'Interaction',
+    7 => 'Development',
+    8 => 'Maintenance',
+];
+
+$work_category_types = [
+    1 => '대기업',
+    2 => '기업',
+    3 => '제조/유통',
+    4 => '엔터/커머스',
+    5 => '서비스',
+    6 => '의료/연구',
+    7 => '프랜차이즈',
+    8 => '금융',
+    9 => 'IT/BT',
+    10 => '법무/노무',
+    11 => '기타',
+];
+
+/** works API·프론트 필터 URL 슬러그 ($work_category_types 키와 1:1) */
+$work_category_slugs = [
+    1 => 'large-corp',
+    2 => 'business',
+    3 => 'manufacturing-distribution',
+    4 => 'ent-culture',
+    5 => 'service',
+    6 => 'medical-research',
+    7 => 'franchise',
+    8 => 'finance',
+    9 => 'it-bt',
+    10 => 'legal-tax',
+    11 => 'other',
+];
+
+$work_visibility_types = [
+    1 => '노출',
+    2 => '비노출',
+];
+
+$work_notice_types = [
+    1 => '일반',
+    2 => '공지',
+];
+
+/** nb_faqs.categories 정수 코드 → 라벨 (관리자·프론트 공통) */
+$faq_categories = [
+    1 => '일반',
+    2 => '서비스',
+    3 => '계약·결제',
+    4 => '기술',
+];
+
+/**
+ * 컨택트 폼 옵션 (POST value = 키 정수, DB project_ids/service_ids/budget_key/period_key와 동일)
+ */
+$contact_request_project_options = [
+    1 => '홈페이지 제작',
+    2 => '쇼핑몰 제작',
+    3 => '앱(iOS)',
+    4 => '앱(Android)',
+    5 => '브랜딩',
+    6 => '마케팅',
+    7 => '유지보수',
+    8 => '영상 제작',
+    9 => '기타',
+];
+
+$contact_request_service_options = [
+    1 => 'UI/UX 디자인',
+    2 => '퍼블리싱',
+    3 => '프론트엔드 개발',
+    4 => '백엔드 개발',
+    5 => 'iOS 앱 개발',
+    6 => 'Android 앱 개발',
+    7 => '반응형 웹',
+    8 => '랜딩페이지',
+    9 => '관리자 페이지',
+    10 => 'API 개발/연동',
+    11 => 'CMS 구축',
+    12 => '전자상거래',
+    13 => 'SEO 최적화',
+    14 => '브랜드/서브',
+    15 => '유지보수 운영',
+];
+
+$contact_request_budget_options = [
+    1 => '1,000만원 미만',
+    4 => '1,000만원 - 3,000만원',
+    5 => '3,000만원 - 5,000만원',
+    6 => '5,000만원 - 1억원',
+    7 => '1억원 이상',
+    8 => '미정',
+    9 => '협의',
+];
+
+$work_price_types = $contact_request_budget_options;
+
+$contact_request_period_options = [
+    1 => '1개월 미만',
+    2 => '1 - 3개월',
+    3 => '3 - 6개월',
+    4 => '6개월 - 9개월',
+    5 => '9개월 이상',
+];

@@ -1,0 +1,25 @@
+---
+paths:
+  - "**/*.php"
+---
+
+# PHP Rules
+
+- Framework: custom MVC (PHP 7.4) — no Laravel/Symfony conventions
+- Namespaces: `Core\`, `Database\`, `Http\`, `Routing\`, `View\`, `Menu\`
+- Classes: PascalCase / Methods & variables: camelCase / Constants: UPPER_SNAKE_CASE
+- DB tables use `nb_` prefix (e.g. `nb_siteinfo`, `nb_admin`)
+- DB schema changes must go through migration files (`make m`), never alter tables directly
+
+## Patterns
+
+```php
+// Routing
+$router->get('/', function () {
+    return render('pages.index');
+})->name('home');
+
+// View rendering
+render('pages.index');                        // views/pages/index.php
+render('pages.works.view', ['no' => $no]);    // views/pages/works/view.php
+```

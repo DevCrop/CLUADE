@@ -1,0 +1,855 @@
+import * as THREE from "three";
+import { WorkCard } from "../../../ui/WorkCard.js";
+import type {
+  WorkCanvasConfig,
+  WorkCardRenderOptions,
+  WorkCardSize,
+  WorkCardUserData,
+  WorksHalfViewBounds,
+  WorkLayoutConstants,
+  WorksPointerSample,
+  WorkProjectItem,
+  WorksRendererConfig,
+  WorksSceneCardMeshResources,
+  WorksScatterPosition,
+  WorksSceneManagerOptions,
+  WorksViewportSnapshot,
+  WorksViewMode,
+} from "../../../types/work.types.js";
+import { FrameScheduler } from "../../../utils/FrameScheduler.js";
+import { Aria } from "../../../utils/Aria.js";
+import { disposeObject3D } from "../../../utils/disposeObject3D.js";
+import { MAX_DELTA_SECONDS } from "../../../core/AnimationLoop.js";
+import { ResponsiveRuntime } from "../../../runtime/ResponsiveRuntime.js";
+
+function dist2d(ax: number, ay: number, bx: number, by: number): number {
+  return Math.hypot(ax - bx, ay - by);
+}
+
+function buildScatterPositions(
+  totalCards: number,
+  spreadX: number,
+  spreadY: number,
+): WorksScatterPosition[] {
+  const cols = Math.ceil(Math.sqrt(totalCards * (spreadX / spreadY)));
+  const rows = Math.ceil(totalCards / cols);
+  const stepX = spreadX / Math.max(1, cols);
+  const stepY = spreadY / Math.max(1, rows);
+  const out: WorksScatterPosition[] = [];
+  for (let row = 0; row < rows && out.length < totalCards; row += 1) {
+    const rowOffset = (row % 2) * (stepX * 0.25);
+    for (let col = 0; col < cols && out.length < totalCards; col += 1) {
+      const x = (col - (cols - 1) / 2) * stepX + rowOffset;
+      const y = (row - (rows - 1) / 2) * stepY;
+      out.push({ x, y });
+    }
+  }
+  return out;
+}
+
+function sortScatterPositionsFromCenter(
+  positions: ReadonlyArray<WorksScatterPosition>,
+): WorksScatterPosition[] {
+  return [...positions].sort((left, right) => {
+    const distanceDelta =
+      Math.hypot(left.x, left.y) - Math.hypot(right.x, right.y);
+    if (distanceDelta !== 0) {
+      return distanceDelta;
+    }
+    if (left.y !== right.y) {
+      return left.y - right.y;
+    }
+    return left.x - right.x;
+  });
+}
+
+const SCATTER_CARD_RENDER_OPTIONS: WorkCardRenderOptions = {
+  showCategory: false,
+  showViewModal: false,
+};
+
+class WorksViewportRuntime {
+  private readonly _pixelRatioMax: number;
+
+  constructor(pixelRatioMax: number) {
+    this._pixelRatioMax = pixelRatioMax;
+  }
+
+  read(): WorksViewportSnapshot {
+    const snapshot = ResponsiveRuntime.getDefault().getSnapshot();
+    return {
+      width: snapshot.viewportWidth,
+      height: snapshot.viewportHeight,
+      dpr: Math.min(snapshot.render.clampedPixelRatio, this._pixelRatioMax),
+    };
+  }
+
+  readHalfView(camera: THREE.Camera): WorksHalfViewBounds {
+    if (camera instanceof THREE.OrthographicCamera) {
+      return {
+        hW: (camera.right - camera.left) * 0.5,
+        hH: (camera.top - camera.bottom) * 0.5,
+      };
+    }
+    const perspectiveCamera = camera as THREE.PerspectiveCamera;
+    const fov = (perspectiveCamera.fov * Math.PI) / 180;
+    const halfHeight = Math.tan(fov / 2) * perspectiveCamera.position.z;
+    return {
+      hW: halfHeight * perspectiveCamera.aspect,
+      hH: halfHeight,
+    };
+  }
+}
+
+class WorksHitRuntime {
+  private readonly _raycaster = new THREE.Raycaster();
+  private readonly _mouse2d = new THREE.Vector2();
+
+  resolve(
+    camera: THREE.Camera,
+    viewport: WorksViewportSnapshot,
+    pointer: WorksPointerSample,
+    meshes: THREE.Mesh[],
+  ): THREE.Mesh | null {
+    this._mouse2d.set(
+      (pointer.x / viewport.width) * 2 - 1,
+      -(pointer.y / viewport.height) * 2 + 1,
+    );
+    this._raycaster.setFromCamera(this._mouse2d, camera);
+    const hit = this._raycaster.intersectObjects(meshes, false)[0];
+    return (hit?.object as THREE.Mesh | undefined) ?? null;
+  }
+}
+
+class WorksCameraMotionRuntime {
+  private readonly _layout: WorkLayoutConstants;
+  private readonly _camPadX: number;
+  private readonly _camPadY: number;
+  private _baseCamZ: number;
+  private _isDragging = false;
+  private _dragPrevious: WorksPointerSample = { x: 0, y: 0 };
+  private _targetX = 0;
+  private _targetY = 0;
+  private _velocityX = 0;
+  private _velocityY = 0;
+  private _targetZ: number;
+  private _dynClampMinX: number;
+  private _dynClampMaxX: number;
+  private _dynClampMinY: number;
+  private _dynClampMaxY: number;
+
+  constructor(
+    layout: WorkLayoutConstants,
+    camPadX: number,
+    camPadY: number,
+    camZ: number,
+  ) {
+    this._layout = layout;
+    this._camPadX = camPadX;
+    this._camPadY = camPadY;
+    this._baseCamZ = camZ;
+    this._targetZ = camZ;
+    this._dynClampMinX = -camPadX;
+    this._dynClampMaxX = camPadX;
+    this._dynClampMinY = -camPadY;
+    this._dynClampMaxY = camPadY;
+  }
+
+  setDynamicClamp(positions: ReadonlyArray<WorksScatterPosition>): void {
+    if (positions.length === 0) {
+      this._dynClampMinX = this._dynClampMaxX = 0;
+      this._dynClampMinY = this._dynClampMaxY = 0;
+      return;
+    }
+    const MARGIN = 8;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of positions) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    this._dynClampMinX = minX - MARGIN;
+    this._dynClampMaxX = maxX + MARGIN;
+    this._dynClampMinY = minY - MARGIN;
+    this._dynClampMaxY = maxY + MARGIN;
+  }
+
+  activateScatter(): void {
+    this._targetZ = this._baseCamZ;
+  }
+
+  setTargetPosition(targetX: number, targetY: number): void {
+    this._targetX = targetX;
+    this._targetY = targetY;
+  }
+
+  setTargetZ(targetZ: number): void {
+    this._targetZ = targetZ;
+  }
+
+  readBaseCamZ(): number {
+    return this._baseCamZ;
+  }
+
+  setBaseCamZ(baseCamZ: number): void {
+    this._baseCamZ = baseCamZ;
+    this._targetZ = baseCamZ;
+  }
+
+  primeFromCamera(camera: THREE.PerspectiveCamera): void {
+    this._targetX = camera.position.x;
+    this._targetY = camera.position.y;
+    this._targetZ = camera.position.z;
+  }
+
+  primeFromCameraPosition(targetX: number, targetY: number, targetZ: number): void {
+    this._targetX = targetX;
+    this._targetY = targetY;
+    this._targetZ = targetZ;
+  }
+
+  beginDrag(camera: THREE.Camera, pointer: WorksPointerSample): void {
+    this._isDragging = true;
+    this._dragPrevious = { ...pointer };
+    this._velocityX = 0;
+    this._velocityY = 0;
+    this._targetX = camera.position.x;
+    this._targetY = camera.position.y;
+  }
+
+  endDrag(): void {
+    this._isDragging = false;
+  }
+
+  updateDrag(
+    viewport: WorksViewportSnapshot,
+    halfView: WorksHalfViewBounds,
+    pointer: WorksPointerSample,
+  ): void {
+    if (!this._isDragging) return;
+    const dx = pointer.x - this._dragPrevious.x;
+    const dy = pointer.y - this._dragPrevious.y;
+    this._targetX += (-dx * (halfView.hW * 2)) / viewport.width;
+    this._targetY += (dy * (halfView.hH * 2)) / viewport.height;
+    this._velocityX = ((-dx * (halfView.hW * 2)) / viewport.width) * 0.7;
+    this._velocityY = ((dy * (halfView.hH * 2)) / viewport.height) * 0.7;
+    this._targetX = Math.max(
+      this._dynClampMinX + halfView.hW,
+      Math.min(this._dynClampMaxX - halfView.hW, this._targetX),
+    );
+    this._targetY = Math.max(
+      this._dynClampMinY + halfView.hH,
+      Math.min(this._dynClampMaxY - halfView.hH, this._targetY),
+    );
+    this._dragPrevious = { ...pointer };
+  }
+
+  updateFrame(camera: THREE.Camera, delta: number): void {
+    if (this._isDragging) {
+      const decay = Math.pow(this._layout.velDecay, delta * 60);
+      this._velocityX *= decay;
+      this._velocityY *= decay;
+      this._targetX += this._velocityX * delta * 60;
+      this._targetY += this._velocityY * delta * 60;
+    }
+    const camFactor = 1 - Math.pow(1 - this._layout.camLerp, delta * 60);
+    camera.position.x += (this._targetX - camera.position.x) * camFactor;
+    camera.position.y += (this._targetY - camera.position.y) * camFactor;
+    const camZFactor = 1 - Math.pow(1 - this._layout.camZLerp, delta * 60);
+    camera.position.z += (this._targetZ - camera.position.z) * camZFactor;
+    camera.lookAt(camera.position.x, camera.position.y, 0);
+  }
+
+  get isDragging(): boolean {
+    return this._isDragging;
+  }
+}
+
+class WorksMeshRuntime {
+  create(
+    scene: THREE.Scene,
+    projects: ReadonlyArray<WorkProjectItem>,
+    positions: ReadonlyArray<WorksScatterPosition>,
+    config: WorkCanvasConfig,
+  ): WorksSceneCardMeshResources {
+    const cardSize: WorkCardSize = {
+      w: config.cardWidth,
+      h: config.cardHeight,
+    };
+    const meshes: THREE.Mesh[] = [];
+    positions.forEach((position, placed) => {
+      const project = projects[placed % projects.length];
+      const detailPath = project?.detailPath ?? "/works";
+      const mesh = WorkCard.createMesh(
+        project,
+        cardSize,
+        detailPath,
+        SCATTER_CARD_RENDER_OPTIONS,
+      );
+      mesh.position.set(position.x, position.y, 0);
+      scene.add(mesh);
+      meshes.push(mesh);
+    });
+    return {
+      meshes,
+      cardSize,
+    };
+  }
+
+  dispose(meshes: ReadonlyArray<THREE.Mesh>): void {
+    meshes.forEach((mesh) => {
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      material.map?.dispose();
+      material.dispose();
+      mesh.geometry.dispose();
+    });
+  }
+}
+
+class WorksThumbnailRuntime {
+  async warm(
+    meshes: ReadonlyArray<THREE.Mesh>,
+    placeholderImage: string,
+    cardSize: WorkCardSize,
+    log: (step: string, payload?: Record<string, unknown>) => void,
+  ): Promise<void> {
+    let fallback: HTMLImageElement | null = null;
+    const ensureFallback = async (): Promise<HTMLImageElement> => {
+      if (!fallback) {
+        fallback = await WorkCard.loadPlaceholderImage(placeholderImage);
+      }
+      return fallback;
+    };
+
+    let index = 0;
+    const batchSize = 4;
+    const runBatch = async (): Promise<void> => {
+      const end = Math.min(index + batchSize, meshes.length);
+      const slice = meshes.slice(index, end);
+      await Promise.all(
+        slice.map(async (mesh) => {
+          if (!mesh) return;
+          const userData = mesh.userData as WorkCardUserData;
+          const material = mesh.material as THREE.MeshBasicMaterial;
+          const map = material.map;
+          if (!map || !(map instanceof THREE.CanvasTexture)) return;
+          const thumb = userData.proj.thumbnailImage?.trim() ?? "";
+          let img: HTMLImageElement;
+          if (thumb) {
+            try {
+              img = await WorkCard.loadImage(thumb);
+            } catch {
+              img = await ensureFallback();
+            }
+          } else {
+            img = await ensureFallback();
+          }
+          WorkCard.updateTextureImage(
+            map,
+            userData.proj,
+            cardSize,
+            img,
+            SCATTER_CARD_RENDER_OPTIONS,
+          );
+        }),
+      );
+      index = end;
+      log("warmThumbnails.batch", { updatedUntil: index, total: meshes.length });
+      if (index < meshes.length) {
+        FrameScheduler.request(() => {
+          void runBatch();
+        });
+      }
+    };
+    void runBatch();
+  }
+}
+
+export class WorksSceneManager {
+  private static readonly _dragStartThresholdPx = 10;
+  /** 카테고리 전환 시 등장/퇴장 이징 길이(ms) — 전체 복귀 시 숨겨졌던 카드도 위치·투명도가 눈에 띄게 변함 */
+  private static readonly _filterBlendMs = 480;
+  private readonly root: ParentNode;
+  private readonly config: WorkCanvasConfig;
+  private readonly layout: WorkLayoutConstants;
+  private readonly projects: ReadonlyArray<WorkProjectItem>;
+  private readonly canvasId: string;
+  private readonly rendererConfig: WorksRendererConfig;
+  private readonly placeholderImage: string;
+  private readonly introEntryState: WorksSceneManagerOptions["introEntryState"];
+  private readonly viewportRuntime: WorksViewportRuntime;
+  private readonly hitRuntime = new WorksHitRuntime();
+  private readonly meshRuntime = new WorksMeshRuntime();
+  private readonly thumbnailRuntime = new WorksThumbnailRuntime();
+  private readonly cameraMotionRuntime: WorksCameraMotionRuntime;
+  private readonly onSelect?: (detailPath: string) => void;
+  private readonly onInteractionStart?: () => void;
+  private canvas: HTMLCanvasElement | null = null;
+  private scene: THREE.Scene | null = null;
+  private camera: THREE.Camera | null = null;
+  private renderer: THREE.WebGLRenderer | null = null;
+  private meshes: THREE.Mesh[] = [];
+  private rafId: number | null = null;
+  private cleanup: Array<() => void> = [];
+  private viewMode: WorksViewMode = "scatter";
+  private clock: THREE.Clock | null = null;
+  private activePointerId: number | null = null;
+  private hovered: THREE.Mesh | null = null;
+  private mouseDownX = 0;
+  private mouseDownY = 0;
+  private mouseDownMesh: THREE.Mesh | null = null;
+  private dragInteractionStarted = false;
+  private readonly camPadX: number;
+  private readonly camPadY: number;
+  private readonly scatterPositions: WorksScatterPosition[];
+  private readonly categoryScatterPositions: WorksScatterPosition[];
+  private targetPositions: WorksScatterPosition[] = [];
+  private interactiveMeshes: THREE.Mesh[] = [];
+  private activeCategory: string | null;
+  /** 직전 `applyCategory` 호출 직전의 필터 (전환 이징용) */
+  private _filterPrevCategory: string | null = null;
+  private _filterBlendStartMs = 0;
+
+  constructor(options: WorksSceneManagerOptions) {
+    this.root = options.root;
+    this.config = options.config;
+    this.layout = options.layout;
+    this.projects = options.projects;
+    this.canvasId = options.canvasId;
+    this.rendererConfig = options.renderer;
+    this.placeholderImage = options.placeholderImage;
+    this.introEntryState = options.introEntryState ?? null;
+    this.onSelect = options.onSelect;
+    this.onInteractionStart = options.onInteractionStart;
+    this.activeCategory = options.initialCategory ?? null;
+    this.camPadX = options.config.spreadX * 0.5 + 5;
+    this.camPadY = options.config.spreadY * 0.5 + 5;
+    this.viewportRuntime = new WorksViewportRuntime(options.pixelRatioMax);
+    this.cameraMotionRuntime = new WorksCameraMotionRuntime(
+      options.layout,
+      this.camPadX,
+      this.camPadY,
+      options.config.camZ,
+    );
+    this.scatterPositions = buildScatterPositions(
+      options.config.totalCards,
+      options.config.spreadX,
+      options.config.spreadY * 0.88,
+    );
+    this.categoryScatterPositions = sortScatterPositionsFromCenter(this.scatterPositions);
+    this.targetPositions = [...this.scatterPositions];
+  }
+
+  init(): void {
+    if (this.projects.length === 0) return;
+    this.start();
+  }
+
+  setViewMode(mode: WorksViewMode): void {
+    if (this.viewMode === mode) return;
+    this.viewMode = mode;
+    if (mode === "grid") {
+      this.hovered = null;
+      this.mouseDownMesh = null;
+      this.dragInteractionStarted = false;
+      this.activePointerId = null;
+      this.cameraMotionRuntime.endDrag();
+      this.stopLoop();
+      return;
+    }
+    this.cameraMotionRuntime.activateScatter();
+    this.startLoop();
+  }
+
+  applyCategory(category: string | null): void {
+    if (this.activeCategory !== category) {
+      this._filterPrevCategory = this.activeCategory;
+      this._filterBlendStartMs = performance.now();
+    }
+    this.activeCategory = category;
+    const scatterPositions =
+      category === null ? this.scatterPositions : this.categoryScatterPositions;
+    const nextPositions = [...this.scatterPositions];
+    const nextInteractiveMeshes: THREE.Mesh[] = [];
+    const visiblePositions: WorksScatterPosition[] = [];
+    let visibleIndex = 0;
+    for (let index = 0; index < this.meshes.length; index += 1) {
+      const mesh = this.meshes[index];
+      if (!mesh || !this.isMeshInCategory(mesh)) continue;
+      nextInteractiveMeshes.push(mesh);
+      const targetPosition = scatterPositions[visibleIndex] ?? this.scatterPositions[index];
+      nextPositions[index] = targetPosition;
+      visiblePositions.push(targetPosition);
+      visibleIndex += 1;
+    }
+    this.targetPositions = nextPositions;
+    this.interactiveMeshes = nextInteractiveMeshes;
+    this._centerCameraOnVisiblePositions(visiblePositions);
+    this.cameraMotionRuntime.setTargetZ(this.cameraMotionRuntime.readBaseCamZ());
+    this.cameraMotionRuntime.setDynamicClamp(visiblePositions);
+    if (this.hovered && !this.isMeshInCategory(this.hovered)) this.hovered = null;
+  }
+
+  showCanvas(): void {
+    if (!this.canvas) return;
+    this.canvas.classList.remove("is-hidden", "is-transitioning-out");
+    Aria.setHidden(this.canvas, false);
+    this.canvas.style.opacity = "1";
+  }
+
+  hideCanvas(): void {
+    if (!this.canvas) return;
+    this.canvas.classList.add("is-hidden");
+    Aria.setHidden(this.canvas, true);
+    this.canvas.style.opacity = "";
+  }
+
+  /** 카테고리 필터·카메라 Z를 초기 스캐터 상태에 맞춤 (인트로 없이 즉시 호출) */
+  applyInitialScatterState(): void {
+    this.applyCategory(this.activeCategory);
+    this.cameraMotionRuntime.setTargetZ(this.cameraMotionRuntime.readBaseCamZ());
+  }
+
+  dispose(): void {
+    this.stopLoop();
+    this.cleanup.forEach((cleanup) => cleanup());
+    this.cleanup = [];
+    this.meshRuntime.dispose(this.meshes);
+    this.meshes = [];
+    this.interactiveMeshes = [];
+    if (this.scene) {
+      disposeObject3D(this.scene);
+      this.scene.clear();
+    }
+    this.renderer?.dispose();
+    this.renderer?.forceContextLoss();
+    this.renderer = null;
+    this.camera = null;
+    this.scene = null;
+    this.canvas = null;
+    this.hovered = null;
+    this.activePointerId = null;
+    WorkCard.offTextures();
+  }
+
+  update(delta: number): void {
+    if (!this.camera || !this.scene) return;
+    const camera = this.camera;
+    this.cameraMotionRuntime.updateFrame(camera, delta);
+    const positionFactor = 1 - Math.pow(1 - this.layout.positionLerp, delta * 60);
+    const opacityFactor = 1 - Math.pow(1 - this.layout.opacityLerp, delta * 60);
+    const scaleFactor = 1 - Math.pow(1 - this.layout.scaleLerp, delta * 60);
+    const isGridView = this.viewMode === "grid";
+    const hover =
+      this.hovered && this.isMeshInCategory(this.hovered) ? this.hovered : null;
+    const blendT =
+      this._filterBlendStartMs > 0
+        ? Math.min(
+            1,
+            (performance.now() - this._filterBlendStartMs) /
+              WorksSceneManager._filterBlendMs,
+          )
+        : 1;
+    const filterEase = 1 - Math.pow(1 - blendT, 3);
+    for (let index = 0; index < this.meshes.length; index += 1) {
+      const mesh = this.meshes[index];
+      const target = this.targetPositions[index] ?? this.scatterPositions[index];
+      const isActiveCategory = this.isMeshInCategory(mesh);
+      const wasIn = this._meshIncludedInFilter(mesh, this._filterPrevCategory);
+      const nowIn = isActiveCategory;
+      let targetY = target.y;
+      if (wasIn && !nowIn && blendT < 1) {
+        targetY += (1 - filterEase) * 6.5;
+      }
+      if (!wasIn && nowIn && blendT < 1) {
+        targetY -= (1 - filterEase) * 7.5;
+      }
+      mesh.position.x += (target.x - mesh.position.x) * positionFactor;
+      mesh.position.y += (targetY - mesh.position.y) * positionFactor;
+      mesh.position.z += (0 - mesh.position.z) * positionFactor;
+      mesh.quaternion.copy(camera.quaternion);
+      const opacityAnchor = isActiveCategory ? target : mesh.position;
+      const distance = dist2d(
+        camera.position.x,
+        camera.position.y,
+        opacityAnchor.x,
+        opacityAnchor.y,
+      );
+      let targetOpacity = Math.max(0, Math.min(0.92, 1 - (distance - 8) * 0.025));
+      if (!isActiveCategory) targetOpacity = 0;
+      if (isActiveCategory && this.activeCategory !== null) {
+        targetOpacity = Math.max(0.3, targetOpacity);
+      }
+      if (isGridView) targetOpacity = 0;
+      if (hover) targetOpacity = hover === mesh ? 1 : targetOpacity * 0.55;
+      if (nowIn && !wasIn) {
+        targetOpacity *= filterEase;
+      }
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      material.opacity += (targetOpacity - material.opacity) * opacityFactor;
+      const steadyScale = hover === mesh ? 1.06 : 1;
+      mesh.scale.x += (steadyScale - mesh.scale.x) * scaleFactor;
+      mesh.scale.y += (steadyScale - mesh.scale.y) * scaleFactor;
+    }
+  }
+
+  private start(): void {
+    this.canvas = this.root.querySelector<HTMLCanvasElement>(`#${this.canvasId}`);
+    if (!this.canvas) return;
+
+    this.scene = new THREE.Scene();
+    const viewport = this.viewportRuntime.read();
+    const halfHeight =
+      Math.tan((this.config.camFov * Math.PI) / 360) * this.config.camZ;
+    const halfWidth = halfHeight * (viewport.width / viewport.height);
+    this.camera = new THREE.OrthographicCamera(
+      -halfWidth,
+      halfWidth,
+      halfHeight,
+      -halfHeight,
+      this.config.camNear,
+      this.config.camFar,
+    );
+    const introCamera = this.introEntryState?.camera;
+    this.camera.position.set(
+      introCamera?.position?.x ?? 0,
+      introCamera?.position?.y ?? 0,
+      introCamera?.position?.z ?? this.config.camZ,
+    );
+    this.camera.lookAt(this.camera.position.x, this.camera.position.y, 0);
+    this.cameraMotionRuntime.primeFromCameraPosition(
+      this.camera.position.x,
+      this.camera.position.y,
+      this.camera.position.z,
+    );
+    this.cameraMotionRuntime.activateScatter();
+
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: this.rendererConfig.antialias,
+      alpha: this.rendererConfig.alpha,
+      powerPreference: this.rendererConfig.powerPreference,
+    });
+    this.renderer.setSize(viewport.width, viewport.height);
+    this.renderer.setPixelRatio(viewport.dpr);
+    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.shadowMap.enabled = false;
+
+    const scene = this.scene;
+    if (!scene) return;
+    const cardResources = this.meshRuntime.create(
+      scene,
+      this.projects,
+      this.scatterPositions,
+      this.config,
+    );
+    this.meshes = cardResources.meshes;
+
+    this.bindEvents();
+    this.applyCategory(this.activeCategory);
+    this.startLoop();
+    void this.thumbnailRuntime
+      .warm(this.meshes, this.placeholderImage, cardResources.cardSize, () => undefined)
+      .catch(() => undefined);
+  }
+
+  private bindEvents(): void {
+    const canvas = this.canvas;
+    if (!canvas) return;
+
+    const onPointerMove = (event: PointerEvent): void => {
+      const viewport = this.viewportRuntime.read();
+      if (this.viewMode !== "scatter") {
+        this.hovered = null;
+        return;
+      }
+      if (!this.camera) return;
+      if (this.activePointerId !== event.pointerId) {
+        if (this.activePointerId === null) {
+          this.hovered = this.hitRuntime.resolve(
+            this.camera,
+            viewport,
+            { x: event.clientX, y: event.clientY },
+            this.interactiveMeshes,
+          );
+        }
+        return;
+      }
+      if (this.cameraMotionRuntime.isDragging) {
+        if (
+          !this.dragInteractionStarted &&
+          Math.hypot(event.clientX - this.mouseDownX, event.clientY - this.mouseDownY) >=
+            WorksSceneManager._dragStartThresholdPx
+        ) {
+          this.dragInteractionStarted = true;
+          this.onInteractionStart?.();
+        }
+        this.cameraMotionRuntime.updateDrag(
+          viewport,
+          this.viewportRuntime.readHalfView(this.camera),
+          { x: event.clientX, y: event.clientY },
+        );
+        this.hovered = null;
+        return;
+      }
+      this.hovered = this.hitRuntime.resolve(
+        this.camera,
+        viewport,
+        { x: event.clientX, y: event.clientY },
+        this.interactiveMeshes,
+      );
+    };
+    const onPointerDown = (event: PointerEvent): void => {
+      if (this.viewMode !== "scatter" || !this.camera) return;
+      if (event.button !== 0) return;
+      this.mouseDownX = event.clientX;
+      this.mouseDownY = event.clientY;
+      this.dragInteractionStarted = false;
+      this.activePointerId = event.pointerId;
+      this.mouseDownMesh = this.hitRuntime.resolve(
+        this.camera,
+        this.viewportRuntime.read(),
+        { x: event.clientX, y: event.clientY },
+        this.interactiveMeshes,
+      );
+      this.cameraMotionRuntime.beginDrag(this.camera, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      canvas.setPointerCapture(event.pointerId);
+    };
+    const onPointerUp = (event: PointerEvent): void => {
+      if (this.activePointerId !== event.pointerId) return;
+      if (
+        this.viewMode === "scatter" &&
+        this.mouseDownMesh &&
+        this.isMeshInCategory(this.mouseDownMesh) &&
+        Math.hypot(event.clientX - this.mouseDownX, event.clientY - this.mouseDownY) <
+          WorksSceneManager._dragStartThresholdPx
+      ) {
+        const userData = this.mouseDownMesh.userData as WorkCardUserData;
+        this.onSelect?.(userData.detailPath);
+      }
+      this._resetPointerInteraction(event.pointerId);
+    };
+    const onPointerCancel = (event: PointerEvent): void => {
+      if (this.activePointerId !== event.pointerId) return;
+      this._resetPointerInteraction(event.pointerId);
+    };
+    const onPointerLeave = (): void => {
+      if (this.activePointerId !== null) return;
+      this.hovered = null;
+    };
+    const onResize = (): void => {
+      if (!this.camera || !this.renderer) return;
+      const viewport = this.viewportRuntime.read();
+      if (this.camera instanceof THREE.OrthographicCamera) {
+        const halfHeight =
+          Math.tan((this.config.camFov * Math.PI) / 360) * this.config.camZ;
+        const halfWidth = halfHeight * (viewport.width / viewport.height);
+        this.camera.left = -halfWidth;
+        this.camera.right = halfWidth;
+        this.camera.top = halfHeight;
+        this.camera.bottom = -halfHeight;
+        this.camera.updateProjectionMatrix();
+      }
+      this.renderer.setPixelRatio(viewport.dpr);
+      this.renderer.setSize(viewport.width, viewport.height);
+    };
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointercancel", onPointerCancel);
+    canvas.addEventListener("pointerleave", onPointerLeave);
+    window.addEventListener("resize", onResize);
+    this.cleanup.push(
+      () => canvas.removeEventListener("pointermove", onPointerMove),
+      () => canvas.removeEventListener("pointerdown", onPointerDown),
+      () => canvas.removeEventListener("pointerup", onPointerUp),
+      () => canvas.removeEventListener("pointercancel", onPointerCancel),
+      () => canvas.removeEventListener("pointerleave", onPointerLeave),
+      () => window.removeEventListener("resize", onResize),
+    );
+  }
+
+  private startLoop(): void {
+    if (this.rafId !== null) return;
+    if (!this.camera || !this.renderer || !this.scene) return;
+    this.clock = new THREE.Clock();
+    this.clock.start();
+    const animate = (): void => {
+      if (!this.camera || !this.renderer || !this.scene || !this.clock) {
+        this.rafId = null;
+        return;
+      }
+      this.rafId = FrameScheduler.request(animate);
+      const delta = Math.min(this.clock.getDelta(), MAX_DELTA_SECONDS);
+      this.update(delta);
+      this.renderer.render(this.scene, this.camera);
+    };
+    animate();
+  }
+
+  private stopLoop(): void {
+    if (this.rafId !== null) {
+      FrameScheduler.cancel(this.rafId);
+      this.rafId = null;
+    }
+    this.clock?.stop();
+    this.clock = null;
+  }
+
+  private _resetPointerInteraction(pointerId: number): void {
+    this.mouseDownMesh = null;
+    this.dragInteractionStarted = false;
+    this.cameraMotionRuntime.endDrag();
+    this.activePointerId = null;
+    if (this.canvas?.hasPointerCapture(pointerId)) {
+      this.canvas.releasePointerCapture(pointerId);
+    }
+  }
+
+  private isMeshInCategory(mesh: THREE.Mesh): boolean {
+    if (this.activeCategory == null) return true;
+    const userData = mesh.userData as WorkCardUserData;
+    return userData.proj.category === this.activeCategory;
+  }
+
+  private _meshIncludedInFilter(mesh: THREE.Mesh, category: string | null): boolean {
+    if (category == null) return true;
+    const userData = mesh.userData as WorkCardUserData;
+    return userData.proj.category === category;
+  }
+
+  private _centerCameraOnVisiblePositions(
+    positions: ReadonlyArray<WorksScatterPosition>,
+  ): void {
+    const center = this._readVisiblePositionsCenter(positions);
+    this.cameraMotionRuntime.setTargetPosition(center.x, center.y);
+  }
+
+  private _readVisiblePositionsCenter(
+    positions: ReadonlyArray<WorksScatterPosition>,
+  ): WorksScatterPosition {
+    if (positions.length === 0) {
+      return { x: 0, y: 0 };
+    }
+    let minX = positions[0]?.x ?? 0;
+    let maxX = minX;
+    let minY = positions[0]?.y ?? 0;
+    let maxY = minY;
+    for (let index = 1; index < positions.length; index += 1) {
+      const position = positions[index];
+      if (!position) continue;
+      minX = Math.min(minX, position.x);
+      maxX = Math.max(maxX, position.x);
+      minY = Math.min(minY, position.y);
+      maxY = Math.max(maxY, position.y);
+    }
+    return {
+      x: (minX + maxX) * 0.5,
+      y: (minY + maxY) * 0.5,
+    };
+  }
+}

@@ -1,0 +1,221 @@
+# Service Manifests
+
+Use this file when writing service, capability, proposal, or homepage service copy. Services must sound concrete, not like agency filler.
+
+## WEB
+
+### What It Is
+
+Immersive websites, campaign pages, landing pages, brand sites, and Three.js interactive web experiences.
+
+### Concrete Deliverables
+
+- Site structure and page flow
+- Responsive UI design
+- Frontend implementation
+- Interaction and motion system
+- Three.js or scroll-based immersive scenes when useful
+- Launch-ready production assets
+
+### Best-Fit Client Situation
+
+- A new brand needs a first public web presence.
+- An existing brand needs a site that is remembered, not just visited.
+- A campaign or product needs a focused digital launch.
+
+### NINEONELABS Differentiator
+
+We do not separate the brand story from the site. Strategy, interaction, motion, and implementation are designed as one web experience.
+
+### Proof Signals
+
+- Scroll-triggered interaction
+- Production Three.js scene
+- Fast, responsive implementation
+- Clear conversion path
+- Brand-specific visual system
+
+### Korean Copy Direction
+
+사람들이 느끼고 오래 기억하는 웹. 브랜드만의 구조와 인터랙션으로, 첫 화면부터 선택받을 이유를 설계합니다.
+
+### What Not To Say
+
+- 최고의 웹사이트
+- 혁신적인 웹 솔루션
+- 감각적인 홈페이지 제작
+
+## APP
+
+### What It Is
+
+Mobile apps, PWAs, dashboards, hybrid app flows, and product interfaces that extend the brand beyond the website.
+
+### Concrete Deliverables
+
+- App flow and screen architecture
+- UI/UX design
+- Interactive prototype
+- Frontend implementation plan or build
+- Dashboard or user journey structure
+- Handoff-ready design system when needed
+
+### Best-Fit Client Situation
+
+- A service needs a repeat-use user flow.
+- A brand needs to live beyond a marketing site.
+- Internal or customer-facing workflows need a clearer interface.
+
+### NINEONELABS Differentiator
+
+We design apps around behavior, not screen count. Every screen needs a job and every transition needs a reason.
+
+### Proof Signals
+
+- Clear user flow
+- Reduced decision friction
+- Responsive or hybrid architecture
+- Reusable UI system
+- Prototype-tested interactions
+
+### Korean Copy Direction
+
+브랜드는 화면 밖에서도 계속됩니다. 사용자가 다시 돌아올 수 있는 흐름과 구조를 중심으로 앱 경험을 설계합니다.
+
+### What Not To Say
+
+- 편리한 앱을 만들어드립니다
+- 최신 기술 기반 앱 개발
+- 모든 기능을 담은 앱
+
+## BRANDING
+
+### What It Is
+
+Naming, logo systems, visual language, brand guidelines, tone of voice, and identity systems that make the brand explainable.
+
+### Concrete Deliverables
+
+- Brand positioning
+- Naming direction
+- Logo or logo system
+- Color, type, and visual language
+- Tone of voice
+- Usage guidelines
+- Web-ready identity application
+
+### Best-Fit Client Situation
+
+- A brand cannot explain itself in one sentence.
+- The current identity feels generic or inconsistent.
+- A web build needs a stronger brand system before design begins.
+
+### NINEONELABS Differentiator
+
+We build branding that survives the screen. Identity must work in web interaction, motion, UI, and real content.
+
+### Proof Signals
+
+- Clear brand sentence
+- Consistent visual system
+- Web-ready guideline
+- Naming and tone consistency
+- Cross-surface application
+
+### Korean Copy Direction
+
+브랜드를 한 문장으로 설명할 수 있어야 합니다. 우리는 그 기준을 세우고, 어디서나 같은 인상이 남는 정체성을 만듭니다.
+
+### What Not To Say
+
+- 브랜드 가치를 높입니다
+- 감각적인 로고 디자인
+- 차별화된 브랜딩 솔루션
+
+## UI/UX
+
+### What It Is
+
+User flows, wireframes, prototypes, design systems, interaction logic, and screen structures that help users move naturally.
+
+### Concrete Deliverables
+
+- User journey map
+- Information architecture
+- Wireframes
+- Prototype
+- Component logic
+- Interaction states
+- Design system foundations
+
+### Best-Fit Client Situation
+
+- Users do not know what to do next.
+- A product has features but no clear flow.
+- A site or app needs better conversion and usability.
+
+### NINEONELABS Differentiator
+
+We design from behavior. A screen is not approved because it looks good; it is approved because it moves the user forward.
+
+### Proof Signals
+
+- Shorter user path
+- Clear CTA hierarchy
+- Reduced friction
+- Consistent components
+- Tested interaction flow
+
+### Korean Copy Direction
+
+목적에 맞는 구조와 동선으로, 사용자가 편하고 자연스럽게 다음 행동으로 이어지게 설계합니다.
+
+### What Not To Say
+
+- 사용자를 위한 UI/UX
+- 직관적인 화면
+- 보기 좋은 인터페이스
+
+## MAINTENANCE
+
+### What It Is
+
+Post-launch maintenance, performance care, CMS updates, bug fixes, stability support, and ongoing iteration.
+
+### Concrete Deliverables
+
+- Performance audits
+- Bug fixes
+- CMS/content updates
+- Stability checks
+- UI/UX improvements
+- Security and compatibility review
+- Iteration plans
+
+### Best-Fit Client Situation
+
+- A launched site needs reliable operation.
+- The client wants to update content without rebuilding.
+- Growth needs continuous improvement after launch.
+
+### NINEONELABS Differentiator
+
+We treat launch as the beginning of orbit. The system must keep working, improving, and adapting after the first release.
+
+### Proof Signals
+
+- Stable operation
+- Faster issue response
+- Measured performance
+- CMS control
+- Continuous iteration
+
+### Korean Copy Direction
+
+서비스는 안정적으로 운영될 때 빛납니다. 출시 이후에도 구조를 점검하고, 문제가 생기기 전에 먼저 대응합니다.
+
+### What Not To Say
+
+- 유지보수도 가능합니다
+- 빠른 수정 지원
+- 안정적인 운영 대행

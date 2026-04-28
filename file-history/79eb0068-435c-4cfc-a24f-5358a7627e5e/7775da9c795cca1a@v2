@@ -1,0 +1,178 @@
+# GravityBalls Fix — Contact Section Floor + Rocket Emitter + Theatre Binding
+
+## Context
+
+About 페이지 contact 씬에서 GravityBalls가 잘못된 위치(씬 원점 근처)에 렌더된다. 목표: 로켓 뒤에서 볼이 분사되고, contact 씬 terrain 바닥(Y=-42)에서 퍼지며, THEATRE=1+DEBUG=1 모드에서도 편집 가능하게 한다.
+
+## Root Causes 분석
+
+| 버그 | 위치 | 원인 |
+|------|------|------|
+| 볼이 씬 원점에서 렌더됨 | `object.config.ts:438` | `attachTo`/`trackEmitter` 미설정 → root가 (0,0,0)에 머뭄 (로켓은 0,36,737) |
+| 볼 스폰 Y 버그 | `GravityBalls.ts:211` | `this._canvasMouse.y \|\| 100` — y=0 이면 falsy라 100으로 fallback |
+| 바닥 위치 불일치 | `GravityBalls.ts:189` | floor inner Y=-101.5, innerScale=0.05 → world Y≈-5. terrain은 Y=-42 |
+| Theatre 편집 불가 | `AboutSceneRig.ts:32-52` | `compose()/read()`에 `gravityBalls` 누락 |
+| TypeScript 에러 | `AboutSceneState.ts:389, AboutSceneRig.ts:64` | `pickAboutTheatreValue()`, `read()`가 `gravityBalls` 필드 누락 |
+
+## 좌표 계산
+
+```
+target: floor world Y = -42 (terrain)
+root world Y = floorWorldY - (FLOOR_LEVEL * innerScale)
+             = -42 - (-100 * 0.05) = -42 + 5 = -37
+
+→ gravityBalls default position: {x: 0, y: -37, z: 737}
+  (Z는 about 씬 로켓 Z=737과 동일)
+```
+
+**Emitter 위치 (trackEmitter 방식):**
+```
+rocket world Y=36, root world Y=-37 → delta=73
+emitter inner Y = 73 / 0.05 = 1460 inner units (≈ 73 world units 위에서 분사)
+falls to inner Y=-100 = world Y=-42 (terrain) ✓
+```
+
+## 구현 계획
+
+### 1. `resource/ts/types/object.types.ts` (line 566~569)
+`GravityBallsObjectOptions`에 필드 추가:
+```typescript
+export interface GravityBallsObjectOptions extends BaseObjectOptions {
+  attachTo?: string;
+  offset?: Vector3Optional;
+  trackEmitter?: string;   // 로켓 ID를 추적해 emitter 위치 결정
+  floorWorldY?: number;    // 바닥의 world space Y 좌표
+}
+```
+
+### 2. `resource/ts/objects/rocket/GravityBalls.ts`
+주요 변경:
+
+**a) 인스턴스 변수 추가:**
+```typescript
+private _innerScale = GravityBalls.INNER_SCALE_DEFAULT;
+private _trackedEmitterObject: THREE.Object3D | null = null;
+private _effectiveFloorLevel = GravityBalls.FLOOR_LEVEL;
+```
+
+**b) `runObject()` 수정:**
+- `_innerScale` 저장 (debug 여부 반영)
+- `options.trackEmitter` 있으면 `ctx.getObject(trackEmitter)`로 로켓 오브젝트 취득·저장
+- 디버그 모드에서 `root.position.set(0,0,0)` 강제 오버라이드 **제거** — Theatre가 위치 결정
+
+**c) `runUpdate()` 추가 로직:**
+```typescript
+if (this._trackedEmitterObject && this._innerGroup) {
+  const rootWorldPos = new THREE.Vector3();
+  root.getWorldPosition(rootWorldPos);
+  const emitterWorldPos = new THREE.Vector3();
+  this._trackedEmitterObject.getWorldPosition(emitterWorldPos);
+  this._canvasMouse.set(
+    (emitterWorldPos.x - rootWorldPos.x) / this._innerScale,
+    (emitterWorldPos.y - rootWorldPos.y) / this._innerScale,
+    (emitterWorldPos.z - rootWorldPos.z) / this._innerScale,
+  );
+}
+```
+
+**d) `_initDot()` line 211 버그 수정:**
+```typescript
+// before: let startY = this._canvasMouse.y || 100;
+const startY = this._canvasMouse.y;
+```
+
+**e) `_buildFloor()` floor world Y 적용:**
+```typescript
+// ctx.scene.attach(floor) 직후 추가:
+const floorWorldY = this._options.floorWorldY;
+if (floorWorldY != null) {
+  const rootWorldY = new THREE.Vector3();
+  this.getTimelineRoot()!.getWorldPosition(rootWorldY);
+  this._effectiveFloorLevel =
+    (floorWorldY - rootWorldY.y) / this._innerScale;
+  floor.position.y = floorWorldY;  // 시각적 world Y 고정
+}
+```
+
+**f) `_initDot()` / `_drawDot()` 에서 FLOOR_LEVEL → `this._effectiveFloorLevel`으로 교체**
+(총 4곳)
+
+### 3. `resource/ts/config/object.config.ts` (line 438~443)
+```typescript
+gravityBalls: {
+  visible: true,
+  position: { x: 0, y: 0, z: 0 },
+  rotation: { x: 0, y: 0, z: 0 },
+  scale: { x: 1, y: 1, z: 1 },
+  trackEmitter: "rocket",
+  floorWorldY: -42,
+},
+```
+> `floorWorldY: -42`는 about 페이지 terrain Y. main 페이지 대응 시 별도 설정 필요.
+
+### 4. `resource/ts/pages/about/theatre/AboutSceneState.ts`
+
+**a) `ABOUT_DEFAULT_SCENE_STATE.gravityBalls` 위치 수정 (line 67):**
+```typescript
+gravityBalls: resolveAboutObjectTransformDefaults(gravityBalls, {
+  position: { x: 0, y: -37, z: 737 },  // floor at terrain Y=-42
+}),
+```
+
+**b) `pickAboutTheatreValue()` (line 389~419) gravityBalls 추가:**
+```typescript
+gravityBalls: mergeAboutTransformState(state.gravityBalls, state.gravityBalls),
+```
+
+**c) `mergeAboutTheatreValue()` (line 421~442) gravityBalls 추가:**
+```typescript
+gravityBalls: value?.gravityBalls,
+```
+
+### 5. `resource/ts/pages/about/theatre/AboutSceneRig.ts`
+
+**a) import 추가:**
+```typescript
+import {
+  // ...existing...
+  gravityBalls as gravityBallsId,
+} from "../../../core/setup.js";
+```
+
+**b) `compose()` 에 gravityBalls 추가 (line 32~52):**
+```typescript
+[gravityBallsId]: state.gravityBalls,
+```
+
+**c) `read()` 에 gravityBalls 추가 (line 64~89):**
+```typescript
+gravityBalls: this._readTransform(engine, gravityBallsId),
+```
+
+**d) `_resolveTransformDefaults()` 에 gravityBalls case 추가:**
+```typescript
+if (id === gravityBallsId) return ABOUT_DEFAULT_SCENE_STATE.gravityBalls;
+```
+
+## 편집 모드 동작 (THEATRE=1 + DEBUG=1)
+
+- Theatre UI에서 GravityBalls position/rotation/scale 드래그 가능
+- 바닥은 magenta wireframe으로 world Y=-42에 표시
+- 볼은 로켓 world 위치 기준으로 내려옴 (동적 추적)
+- Debug renderOrder=9999, depthTest=false 유지
+
+## 수정 파일 목록
+
+| 파일 | 변경 규모 |
+|------|-----------|
+| `resource/ts/types/object.types.ts` | +2 필드 |
+| `resource/ts/objects/rocket/GravityBalls.ts` | 중간 (emitter tracking, floor Y, spawn 버그) |
+| `resource/ts/config/object.config.ts` | +2 옵션 |
+| `resource/ts/pages/about/theatre/AboutSceneState.ts` | default position + pick/merge 보완 |
+| `resource/ts/pages/about/theatre/AboutSceneRig.ts` | compose/read/defaults gravityBalls 추가 |
+
+## Verification
+
+1. `rtk tsc --noEmit` — TypeScript clean (기존 gravityBalls 관련 type 에러 해소)
+2. `http://localhost:8888/about?theatre=1&debug=1` → Theatre 패널에 GravityBalls 항목 표시, 바닥이 magenta wireframe으로 terrain 레벨에 위치
+3. About 페이지 contact 섹션까지 스크롤 → 로켓 뒤에서 볼 분사, terrain 바닥에서 퍼지는 효과 확인

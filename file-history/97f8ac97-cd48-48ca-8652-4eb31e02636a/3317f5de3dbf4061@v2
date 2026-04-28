@@ -1,0 +1,96 @@
+import type {
+  BaseObjectOptions,
+  ResponsiveNumberValue,
+  Vector2Optional,
+} from "./object-common.types.js";
+
+export interface BackgroundEnvironmentOptions {
+  topColor?: number;
+  bottomColor?: number;
+  exposure?: number;
+}
+
+export interface BackgroundPlaneOptions {
+  size?: number;
+  width?: number;
+  height?: number;
+  segments?: number;
+  curveDepth?: number;
+  curvePower?: number;
+}
+
+export type ResolvedBackgroundPlaneOptions = Required<BackgroundPlaneOptions>;
+
+export interface BackgroundShaderTextureOptions {
+  noiseTextureUrl?: string;
+  starTextureUrl?: string;
+}
+
+export interface BackgroundShaderOptions {
+  textures?: BackgroundShaderTextureOptions;
+}
+
+export interface BackgroundLookOptions {
+  topColor?: number;
+  bottomColor?: number;
+  accentColor?: number;
+  starIntensity?: number;
+  starDensity?: number;
+  nebulaStrength?: number;
+  motionStrength?: number;
+  legacyMix?: number;
+}
+
+export interface CloudPlaneShaderTextureOptions {
+  perlinTextureUrl?: string;
+  noiseTextureUrl?: string;
+}
+
+export interface CloudPlaneShaderOptions {
+  textures?: CloudPlaneShaderTextureOptions;
+  ratio?: number;
+  size?: Vector2Optional;
+  chapter?: number;
+  transition?: number;
+  opacity?: number;
+}
+
+export interface BackgroundObjectOptions extends BaseObjectOptions {
+  plane?: BackgroundPlaneOptions;
+  exposure?: number;
+  environments?: Record<string, BackgroundEnvironmentOptions>;
+  shader?: BackgroundShaderOptions;
+  look?: BackgroundLookOptions;
+}
+
+export interface CloudPlaneObjectOptions extends BaseObjectOptions {
+  label?: string;
+  plane?: BackgroundPlaneOptions;
+  shader?: CloudPlaneShaderOptions;
+  chapter?: number;
+  transition?: number;
+}
+
+export interface TransitionVeilPlaneOptions extends BackgroundPlaneOptions {
+  distance?: number;
+}
+
+export interface TransitionVeilShaderTextureOptions {
+  perlinTextureUrl?: string;
+  noiseTextureUrl?: string;
+}
+
+export interface TransitionVeilShaderOptions {
+  textures?: TransitionVeilShaderTextureOptions;
+  opacity?: number;
+  noiseStrength?: number;
+  revealSoftness?: number;
+  size?: Vector2Optional;
+}
+
+export interface TransitionVeilObjectOptions extends BaseObjectOptions {
+  plane?: TransitionVeilPlaneOptions;
+  shader?: TransitionVeilShaderOptions;
+  progress?: number;
+  active?: boolean;
+}

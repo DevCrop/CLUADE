@@ -1,0 +1,205 @@
+import type { Engine } from "../core/Engine.js";
+import { BackgroundMaterialRuntime } from "../runtime/BackgroundMaterialRuntime.js";
+import { Helpers } from "../utils/Helpers.js";
+import type {
+  BackgroundRuntimePort,
+  BackgroundTransitionMode,
+  BackgroundVariantKey,
+} from "../types/object-runtime.types.js";
+import type {
+  SceneBackgroundPolicy,
+  SceneBackgroundState,
+} from "../types/runtime.types.js";
+
+export class BackgroundController {
+  private static readonly _CLASS = "BackgroundController";
+  private _engine: Engine | null = null;
+  private readonly _lastSheetIdByBackgroundId = new Map<string, string | null>();
+  private readonly _lastStateByBackgroundId = new Map<string, SceneBackgroundState>();
+  private _transitionEnabled = true;
+
+  bind(engine: Engine): void {
+    this._engine = engine;
+  }
+
+  setTransitionEnabled(enabled: boolean): void {
+    this._transitionEnabled = enabled;
+  }
+
+  dispose(): void {
+    this._engine = null;
+    this._lastSheetIdByBackgroundId.clear();
+    this._lastStateByBackgroundId.clear();
+    this._transitionEnabled = true;
+  }
+
+  sync<TSceneKey extends string, TSheetId extends string>(
+    sceneKey: TSceneKey,
+    progress: number,
+    sheetId: TSheetId | null,
+    policy: SceneBackgroundPolicy<TSceneKey, TSheetId> | null,
+  ): void {
+    if (!policy) return;
+    const runtime = this._getBackgroundRuntime(policy.backgroundId);
+    if (!runtime) return;
+
+    const state = this._resolveState(sceneKey, progress, sheetId, policy);
+    const lastState = this._lastStateByBackgroundId.get(policy.backgroundId) ?? null;
+    const lastSheetId =
+      this._lastSheetIdByBackgroundId.get(policy.backgroundId) ?? null;
+    const didStateChange = !this._isSameState(lastState, state);
+
+    if (didStateChange) {
+      runtime.setRuntimeState({
+        look: state.look ? { ...state.look } : undefined,
+        variant: state.variant,
+      });
+    }
+
+    this._resetShaderClockOnEntry(
+      policy.backgroundId,
+      lastState?.variant ?? null,
+      state.variant,
+      policy.resetShaderClockOnVariant ?? null,
+    );
+    if (didStateChange) {
+      this._startTransitionOnChange(
+        policy.backgroundId,
+        lastSheetId,
+        sheetId,
+        this._resolveTransitionMode(lastSheetId, sheetId, policy),
+      );
+    }
+    this._logSheetChange(policy.backgroundId, sceneKey, progress, lastSheetId, sheetId, state);
+    this._lastSheetIdByBackgroundId.set(policy.backgroundId, sheetId);
+    this._lastStateByBackgroundId.set(policy.backgroundId, this._cloneState(state));
+  }
+
+  private _resolveState<TSceneKey extends string, TSheetId extends string>(
+    sceneKey: TSceneKey,
+    progress: number,
+    sheetId: TSheetId | null,
+    policy: SceneBackgroundPolicy<TSceneKey, TSheetId>,
+  ): SceneBackgroundState {
+    const baseState = this._resolveBaseState(sceneKey, sheetId, policy);
+    if (!policy.resolveState) {
+      return this._cloneState(baseState);
+    }
+
+    const resolvedState = policy.resolveState(
+      {
+        sceneKey,
+        progress: Helpers.clamp01(progress),
+        sheetId,
+      },
+      this._cloneState(baseState),
+    );
+    return this._cloneState(resolvedState);
+  }
+
+  private _resolveTransitionMode<TSheetId extends string>(
+    previousKey: string | null,
+    nextKey: string | null,
+    policy: SceneBackgroundPolicy<string, TSheetId>,
+  ): BackgroundTransitionMode {
+    if (!previousKey || !nextKey) return "crossfade";
+    const matchedRule = policy.transitionRules?.find((rule) => {
+      return rule.from === previousKey && rule.to === nextKey;
+    });
+    return matchedRule?.mode ?? "crossfade";
+  }
+
+  private _resolveBaseState<TSceneKey extends string, TSheetId extends string>(
+    sceneKey: TSceneKey,
+    sheetId: TSheetId | null,
+    policy: SceneBackgroundPolicy<TSceneKey, TSheetId>,
+  ): SceneBackgroundState {
+    const sceneState = policy.statesBySceneKey?.[sceneKey];
+    if (sceneState) {
+      return this._cloneState(sceneState);
+    }
+    if (!sheetId) {
+      return this._cloneState(policy.defaultState);
+    }
+    return this._cloneState(
+      policy.statesBySheetId?.[sheetId] ?? policy.defaultState,
+    );
+  }
+
+  private _cloneState(
+    state: Readonly<SceneBackgroundState>,
+  ): SceneBackgroundState {
+    return {
+      variant: state.variant,
+      look: state.look ? { ...state.look } : undefined,
+    };
+  }
+
+  private _startTransitionOnChange(
+    backgroundId: string,
+    previousKey: string | null,
+    nextKey: string | null,
+    mode: BackgroundTransitionMode,
+  ): void {
+    if (!this._transitionEnabled) return;
+    if (!previousKey || !nextKey || previousKey === nextKey) {
+      return;
+    }
+    if (mode === "skip") return;
+    this._engine?.getBackgroundManager()?.startTransition(backgroundId);
+  }
+
+  private _resetShaderClockOnEntry(
+    backgroundId: string,
+    previousVariant: BackgroundVariantKey | null,
+    nextVariant: BackgroundVariantKey,
+    resetVariant: BackgroundVariantKey | null,
+  ): void {
+    if (!resetVariant) return;
+    if (nextVariant !== resetVariant) return;
+    if (previousVariant === nextVariant) return;
+    this._engine?.getBackgroundManager()?.resetShaderClock(backgroundId);
+  }
+
+  private _getBackgroundRuntime(id: string): BackgroundRuntimePort | null {
+    return this._engine?.getSceneObjectById(id) as BackgroundRuntimePort | null;
+  }
+
+  private _logSheetChange(
+    backgroundId: string,
+    sceneKey: string,
+    progress: number,
+    previousSheetId: string | null,
+    nextSheetId: string | null,
+    state: SceneBackgroundState,
+  ): void {
+    if (previousSheetId === nextSheetId) return;
+  }
+
+  private _isSameState(
+    previousState: SceneBackgroundState | null,
+    nextState: SceneBackgroundState,
+  ): boolean {
+    if (!previousState) return false;
+    if (previousState.variant !== nextState.variant) return false;
+    return this._isSameLook(previousState.look, nextState.look);
+  }
+
+  private _isSameLook(
+    previousLook: SceneBackgroundState["look"],
+    nextLook: SceneBackgroundState["look"],
+  ): boolean {
+    if (!previousLook && !nextLook) return true;
+    if (!previousLook || !nextLook) return false;
+    return (
+      previousLook.topColor === nextLook.topColor &&
+      previousLook.bottomColor === nextLook.bottomColor &&
+      previousLook.accentColor === nextLook.accentColor &&
+      previousLook.starIntensity === nextLook.starIntensity &&
+      previousLook.starDensity === nextLook.starDensity &&
+      previousLook.nebulaStrength === nextLook.nebulaStrength &&
+      previousLook.motionStrength === nextLook.motionStrength &&
+      previousLook.legacyMix === nextLook.legacyMix
+    );
+  }
+}

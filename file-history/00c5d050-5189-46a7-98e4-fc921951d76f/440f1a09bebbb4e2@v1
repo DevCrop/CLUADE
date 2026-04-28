@@ -1,0 +1,14 @@
+# Memory Index — NINEONELABS Renewal
+
+- [Project Architecture](project_architecture.md) — custom MVC, scene structure, bfcache pattern, SEO files, shared utils
+- [TS Ownership](project_ts_map.md) — AppManager / PageRuntime / PageTheatreBinder ownership-boundary rules + Works standalone renderer exception
+- [TS Best Practices Pointer](project_ts_bestpractices_pointer.md) — WebGL lifecycle, hot-path, disposal checklist, Theatre rules (see `.claude/BEST_PRACTICES.md`)
+- [PHP Patterns](project_php_map.md) — `render()` entry point, dual-track routing, `imageUpload` webp pattern, `nb_` table list
+- [SCSS Rules](project_scss_map.md) — `var(--token, fallback)` forbidden, fluid / mq signatures, layer priority, breakpoints
+- [Development Workflow](project_workflow.md) — rtk verification commands, forbidden commands, skill / agent delegation pattern
+- [RTK auto-rewrite hook active](feedback_rtk.md) — PreToolUse hook auto-prefixes Bash; bypass `RTK_DISABLED=1`. Full reference at ~/.claude/RTK.md.
+- [Never run npm build/watch/install](feedback_npm_build.md) — Vite dev server auto-builds on save
+- [--dangerously-skip-permissions active](feedback_dangerously_skip.md) — VS Code setting `allowDangerouslySkipPermissions`, no permission prompts
+- [Content manager + branding role](feedback_doc_manager_role.md) — direct edit of view-file copy + brand docs allowed. Token rule: Read tool, `rtk grep`, parallel calls.
+- [Session workflow rules](feedback_session_workflow.md) — after 2 failures use `/rewind` or `/clear`; delegate large searches to explorers; parallel-call independent work
+- [English-only AI content](feedback_english_for_ai.md) — All AI-consumed files (docs, hooks, plans, MEMORY topics, AUTO marks) must be in English; user chat replies remain Korean

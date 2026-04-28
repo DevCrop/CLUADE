@@ -1,0 +1,177 @@
+# Plan: Hero HERO 섹션 JetEngine 성능 최적화
+
+## Context
+
+메인 페이지 HERO 섹션에서 로켓이 움직일 때 프레임 드롭이 발생한다. 원인은 `JetEngine.runUpdate()`가 매 프레임 120개 이상의 JS→GPU uniform 할당을 수행하고, 26-39개 bloom billboard의 quaternion을 매 프레임 복사하는 것이다. 시각적 구현은 그대로 유지하면서 CPU/GPU 부하만 줄인다.
+
+---
+
+## Root Cause
+
+### 1. JetEngine uniform 중복 쓰기 (최고 impact)
+`runUpdate()`에서 매 프레임:
+- 13 inner material × (uTime + uFlameLen + uThrottle) = **39 writes**
+- 1 parent material × 3 = **3 writes**
+- ~30 bloom material × uTime = **30 writes**
+- 합계: **72+ 동일값 반복 할당** — 모든 inner 엔진이 같은 `flameLenScaled`, `throttleScaled`, `elapsed`를 공유함에도 각자 다른 uniform 객체에 씀
+
+### 2. Bloom billboard quaternion 매 프레임 복사
+- 26-39개 `b.mesh.quaternion.copy(camQ)` 매 프레임
+- `quaternion.copy()`는 Three.js 내부에서 `.needsUpdate` flag를 세워 world matrix 재계산을 유발
+- 카메라가 회전하지 않은 프레임에서도 항상 실행
+
+### 3. Rocket-flame fragment shader FBM 4-octave
+- `fbm()` = noise() 4번 호출
+- `getFlameNoise()`에서 `fbm()` 2회 = 8 noise() 호출/fragment
+- `mainImage()`에서 직접 noise() 3회 추가
+- 4번째 octave 기여: 0.0625 계수 = **시각적 기여 6.25%**, 삭제해도 육안 구분 어려움
+
+---
+
+## Changes
+
+### Change 1: Shared uniform objects — `JetEngine.ts`
+
+**현재**: 각 ShaderMaterial이 독립적인 `{ value: 0 }` 객체를 가짐.  
+**변경**: 클래스 레벨에 공유 uniform 객체를 두고, 모든 material이 같은 참조를 사용.
+
+Three.js uniform 시스템은 `{ value: T }` 객체의 **참조**를 저장함. 같은 객체를 여러 material이 공유하면 `sharedObj.value = X` 한 번 쓰면 모든 material이 최신값을 본다.
+
+```typescript
+// 클래스 필드 추가
+private _uTime: { value: number } = { value: 0 };
+private _uFlameLen: { value: number } = { value: 1 };
+private _uThrottle: { value: number } = { value: 1 };
+
+// _build()에서 재초기화 (rebuild 시 새 값으로)
+this._uTime = { value: 0 };
+this._uFlameLen = { value: 1 };
+this._uThrottle = { value: 1 };
+
+// inner material 생성시 (line ~448):
+uniforms: {
+  uTime: this._uTime,       // 공유 참조
+  uFlameLen: this._uFlameLen,
+  uThrottle: this._uThrottle,
+  uSeed: { value: i * 2.71828 + 0.5 }, // 여전히 per-material
+}
+
+// bloom material 생성시 (_buildBlooms, line ~604):
+uniforms: {
+  uTime: this._uTime,       // 공유 참조
+  uColor: { value: new THREE.Color(...l.color) },
+  uIntensity: { value: l.baseI },
+  uRadius: { value: l.radius },
+}
+
+// parent material 생성시 (line ~514):
+uniforms: {
+  uTime: this._uTime,
+  uFlameLen: this._uFlameLen,
+  uThrottle: this._uThrottle,
+  uSeed: { value: 99.9 },
+}
+
+// runUpdate() 전체 for-loop 제거 후 3 writes로 축약:
+this._uTime.value = elapsed;
+this._uFlameLen.value = flameLenScaled;
+this._uThrottle.value = throttleScaled;
+// + bloom uIntensity (per-bloom, 수식은 동일)
+```
+
+**결과**: 72+ writes → **3 writes** (uIntensity per-bloom ~30개 잔존)
+
+### Change 2: Camera quaternion caching — `JetEngine.ts`
+
+**현재**: 매 프레임 `b.mesh.quaternion.copy(camQ)` 무조건 실행.  
+**변경**: 직전 프레임의 카메라 quaternion과 비교, 변화 없으면 skip.
+
+```typescript
+// 클래스 필드 추가
+private _lastCamQ = new THREE.Quaternion();
+
+// runUpdate() 내:
+const camQ = camera.quaternion;
+if (!camQ.equals(this._lastCamQ)) {
+  this._lastCamQ.copy(camQ);
+  for (const eng of this._inner) {
+    for (const b of eng.blooms) b.mesh.quaternion.copy(camQ);
+  }
+  if (parent) {
+    for (const b of parent.blooms) b.mesh.quaternion.copy(camQ);
+  }
+}
+```
+
+**결과**: 정적 프레임에서 26-39 quaternion 복사 → 0
+
+### Change 3: Reduce FBM octaves — `resource/shaders/rocket-flame/fragment.glsl`
+
+**현재**: 4-octave (값: 0.5 + 0.25 + 0.125 + 0.0625).  
+**변경**: 3-octave (0.5 + 0.25 + 0.125). 4번째 term 제거.
+
+```glsl
+// fragment.glsl line 74–87: fbm() 함수에서 마지막 octave 제거
+float fbm(vec2 uv) {
+  float value;
+  mat2 rotScale = mat2(1.6, 1.2, -1.2, 1.6);
+
+  value = 0.5000 * noise(uv);
+  uv = rotScale * uv;
+  value += 0.2500 * noise(uv);
+  uv = rotScale * uv;
+  value += 0.1250 * noise(uv);
+  // 제거: uv = rotScale * uv; value += 0.0625 * noise(uv);
+
+  return 0.5 + 0.5 * value;
+}
+```
+
+**결과**: `getFlameNoise()` 당 noise() 호출 8 → 6회, 약 18% 셰이더 연산 감소
+
+### Change 4: Bloom skip when throttle ≈ 0 — `JetEngine.ts`
+
+intensity가 Theatre.js로 0으로 낮아지면 bloom이 완전히 투명. 이때 uIntensity writes와 quaternion copy 불필요.
+
+```typescript
+const bloomActive = flameLenScaled > 0.02;
+if (bloomActive) {
+  const innerBloomScale = ...;
+  for (const eng of this._inner) {
+    for (const b of eng.blooms) {
+      b.mat.uniforms.uIntensity.value = b.baseIntensity * innerBloomScale;
+    }
+  }
+  // parent blooms...
+}
+```
+
+---
+
+## Files to Modify
+
+| File | 변경 내용 |
+|------|-----------|
+| [resource/ts/objects/rocket/JetEngine.ts](resource/ts/objects/rocket/JetEngine.ts) | 공유 uniform 필드, quaternion 캐시, runUpdate() 리팩터, _build()/_buildBlooms() uniform 참조 |
+| [resource/shaders/rocket-flame/fragment.glsl](resource/shaders/rocket-flame/fragment.glsl) | fbm() 4th octave 제거 |
+
+---
+
+## What Does NOT Change
+
+- 13 inner cylinder 구조 (geometry 유지)
+- 26-39 bloom billboard 수 (visual 유지)
+- CombustionSim 로직 (애니메이션 패턴 유지)
+- cloud-plane 셰이더 (texture-based, 이미 최적)
+- PostProcessor bloom 파이프라인 (별개 시스템)
+- hero background 레이마치 셰이더 (별개 시스템)
+
+---
+
+## Verification
+
+1. `rtk tsc --noEmit` — TypeScript 타입 오류 없음
+2. `rtk npm run test` — Vitest 회귀 없음
+3. 브라우저 `http://localhost:8888` 에서 로켓 이동 시 프레임 드롭 해소 확인
+4. DevTools Performance 패널: `runUpdate` 호출 당 JS 시간 감소 확인
+5. 불꽃 시각적 품질 동일 여부 육안 확인

@@ -1,0 +1,68 @@
+<?php
+
+namespace Core;
+
+use Spatie\Image\Image;
+use Throwable;
+
+class ImageProcessor
+{
+    public const MAX_WIDTH = 2560;
+    public const WEBP_QUALITY = 82;
+    public const CONVERTIBLE = ['jpg', 'jpeg', 'png', 'gif'];
+
+    /**
+     * 업로드된 원본 이미지 옆에 .webp sibling 을 생성한다.
+     * 원본은 그대로 둔다. 실패해도 예외를 삼켜서 업로드 플로우를 깨뜨리지 않는다.
+     */
+    public static function makeWebpSibling(string $absolutePath): bool
+    {
+        if (!is_file($absolutePath)) {
+            return false;
+        }
+
+        $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::CONVERTIBLE, true)) {
+            return false;
+        }
+
+        $webpPath = preg_replace('/\.[^.]+$/', '.webp', $absolutePath);
+
+        try {
+            $image = Image::load($absolutePath);
+
+            $size = @getimagesize($absolutePath);
+            if (is_array($size) && isset($size[0]) && $size[0] > self::MAX_WIDTH) {
+                $image->width(self::MAX_WIDTH);
+            }
+
+            $image->format('webp')
+                ->quality(self::WEBP_QUALITY)
+                ->save($webpPath);
+
+            return is_file($webpPath);
+        } catch (Throwable $e) {
+            error_log('[ImageProcessor] webp sibling failed for ' . $absolutePath . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 주어진 이미지 경로의 .webp sibling 을 삭제한다. 원본은 건드리지 않는다.
+     * imageDelete() 에서 호출되어 삭제 시 동반 정리를 담당.
+     */
+    public static function deleteWebpSibling(string $absolutePath): bool
+    {
+        $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::CONVERTIBLE, true)) {
+            return false;
+        }
+
+        $webpPath = preg_replace('/\.[^.]+$/', '.webp', $absolutePath);
+        if (is_file($webpPath)) {
+            return @unlink($webpPath);
+        }
+
+        return false;
+    }
+}

@@ -1,0 +1,263 @@
+import type * as THREE from "three";
+import type { SceneFromState } from "./core.types.js";
+import type { SceneLightsStateSnapshot } from "./object.types.js";
+
+export interface WorkApiItem {
+  no: string;
+  title: string;
+  thumbnailImage: string;
+  thumbnailVideo: string | null;
+  fileAttach1: string;
+  category: string;
+  categoryLabel: string;
+  tagLabels: string[];
+  detailPath: string;
+  modalPath: string;
+  client: string | null;
+  updatedAtLabel: string | null;
+}
+
+export interface WorkProjectVisualPreset {
+  bg: string;
+  ac: string;
+  w: number;
+  h: number;
+}
+
+export interface WorkProjectItem extends WorkApiItem, WorkProjectVisualPreset {}
+
+export interface WorksListResponse {
+  items: WorkApiItem[];
+  nextOffset: number | null;
+  hasMore: boolean;
+}
+
+
+export interface WorkCanvasConfig {
+  canvasId: string;
+  spreadX: number;
+  spreadY: number;
+  totalCards: number;
+  camZ: number;
+  cardWidth: number;
+  cardHeight: number;
+  camFov: number;
+  camNear: number;
+  camFar: number;
+}
+
+export interface WorkLayoutConstants {
+  camLerp: number;
+  camZLerp: number;
+  velDecay: number;
+  opacityLerp: number;
+  scaleLerp: number;
+  positionLerp: number;
+}
+
+export interface WorksIntroConfig {
+  enabled: boolean;
+  hideWhenReady: boolean;
+  toggleRevealDelayMs: number;
+}
+
+export interface WorksRendererConfig {
+  antialias: boolean;
+  alpha: boolean;
+  powerPreference: "default" | "high-performance" | "low-power";
+}
+
+export type WorksViewMode = "grid" | "scatter";
+
+export interface WorksPageState {
+  view: WorksViewMode;
+  category: string | null;
+  page: number;
+  limit: number;
+}
+
+export interface WorksGridInfiniteConfig {
+  thresholdPx: number;
+}
+
+export interface WorksPageDomConfig {
+  rootSelector: string;
+  gridSelector: string;
+  gridListSelector: string;
+  gridPaginationSelector: string;
+  gridEnterClass: string;
+  controlsSelector: string;
+  toggleSelector: string;
+  filterWrapSelector: string;
+  gridFilterWrapSelector: string;
+  filterButtonSelector: string;
+  filterPanelSelector: string;
+  filterOptionSelector: string;
+  dragHintSelector: string;
+  dragHintVisibleClass: string;
+  dragHintHidingClass: string;
+}
+
+export interface WorksPageElements {
+  root: HTMLElement | null;
+  canvas: HTMLCanvasElement | null;
+  grid: HTMLElement | null;
+  gridList: HTMLUListElement | null;
+  gridPagination: HTMLElement | null;
+  controls: HTMLElement | null;
+  toggle: HTMLElement | null;
+  filterWrap: HTMLElement | null;
+  gridFilterWrap: HTMLElement | null;
+  filterButton: HTMLButtonElement | null;
+  filterPanel: HTMLElement | null;
+  dragHint: HTMLElement | null;
+}
+
+export interface WorksGridFeedState {
+  nextOffset: number | null;
+  hasMore: boolean;
+}
+
+export interface WorkCardSize {
+  w: number;
+  h: number;
+}
+
+export interface WorkCardRenderOptions {
+  showCategory: boolean;
+  showViewModal: boolean;
+}
+
+export interface WorksViewportSnapshot {
+  width: number;
+  height: number;
+  dpr: number;
+}
+
+export interface WorksHalfViewBounds {
+  hW: number;
+  hH: number;
+}
+
+export interface WorksScatterPosition {
+  x: number;
+  y: number;
+}
+
+export interface WorksPointerSample {
+  x: number;
+  y: number;
+}
+
+export interface WorksSceneCardMeshResources {
+  meshes: THREE.Mesh[];
+  cardSize: WorkCardSize;
+}
+
+export interface WorkCardUserData {
+  proj: WorkProjectItem;
+  detailPath: string;
+  loadedImage?: HTMLImageElement | null;
+}
+
+export interface WorksSceneManagerOptions {
+  root: ParentNode;
+  config: WorkCanvasConfig;
+  layout: WorkLayoutConstants;
+  projects: ReadonlyArray<WorkProjectItem>;
+  initialCategory?: string | null;
+  introEntryState?: Pick<SceneFromState, "camera" | "cameraTarget"> | null;
+  onSelect?: (detailPath: string) => void;
+  onInteractionStart?: () => void;
+  canvasId: string;
+  pixelRatioMax: number;
+  renderer: WorksRendererConfig;
+  placeholderImage: string;
+}
+
+export interface WorksHintConfig {
+  enabled: boolean;
+  autoHideMs: number;
+  hideStartDelayMs: number;
+  exitDurationMs: number;
+}
+
+export type WorksIntroSourceSheetId = "works";
+
+export interface WorksIntroSheetStepConfig {
+  sheetId: WorksIntroSourceSheetId;
+  progressStart: number;
+  progressEnd: number;
+  durationMs: number;
+}
+
+export interface WorksIntroTheatreConfig {
+  steps: readonly WorksIntroSheetStepConfig[];
+}
+
+export type WorksTheatreSheetId = "works";
+
+export type WorksSceneSectionKey = WorksTheatreSheetId;
+
+export interface WorksTheatrePlaybackRange {
+  start: number;
+  end: number;
+}
+
+export interface WorksTheatreSnapshotCamera {
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  target: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  fov: number;
+}
+
+export interface WorksTheatreSnapshot {
+  camera: WorksTheatreSnapshotCamera;
+  sceneLights: SceneLightsStateSnapshot;
+  window: WorksAuthorWindowState;
+}
+
+export interface WorksAuthorWindowState {
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotation: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  scale: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  visible: boolean;
+}
+
+export interface WorksAuthorState {
+  camera: WorksTheatreSnapshotCamera;
+  sceneLights: SceneLightsStateSnapshot;
+  window: WorksAuthorWindowState;
+}
+
+export interface WorksTheatreValue {
+  camera: SceneFromState["camera"];
+  cameraTarget: SceneFromState["cameraTarget"];
+  sceneLights: SceneLightsStateSnapshot;
+  window: SceneFromState["window"];
+}
+
+export type WorksPageConfig = import("./core.types.js").PageConfig<
+  "works",
+  WorksSceneSectionKey,
+  WorksTheatreSheetId
+>;

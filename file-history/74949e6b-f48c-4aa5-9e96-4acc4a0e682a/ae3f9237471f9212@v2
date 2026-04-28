@@ -1,0 +1,89 @@
+# Plan: NineOneLabs Brand Identity Documentation
+
+## Context
+
+나인원랩스의 우주 컨셉 기반 브랜드 정체성을 AI 에이전트(Claude, Cursor, Codex)가 공통으로 참조할 수 있도록 문서화한다. 현재 콘텐츠·스토리텔링 전면 수정 전에 브랜드 기준을 먼저 확립하여, 이후 모든 콘텐츠 작업이 일관된 방향을 유지하도록 하는 것이 목적이다.
+
+---
+
+## What We're Creating
+
+### 1. `/BRAND.md` (신규 — 루트)
+모든 AI 에이전트가 읽을 수 있는 **단일 브랜드 진실 공급원(Single Source of Truth)**. 아래 섹션으로 구성:
+
+```
+# NINEONELABS — Brand Identity
+
+## Company
+## Core Values
+## Brand Concept & Narrative
+## Slogan
+## Services
+## Technology Strengths
+## Visual Identity
+## Tone of Voice
+## Content Guidelines
+## What We Are NOT
+```
+
+주요 내용:
+- **회사**: 나인원랩스(NineOneLabs) — 웹 에이전시
+- **핵심 가치**: 실험(Experiment) · 도전(Challenge) · 증명(Proof)
+- **내러티브**: 지구에서 출발해 미지의 행성 NX-2로 향하는 여정 — 클라이언트와 함께 떠나는 조력자
+- **슬로건**: JOIN THE JOURNEY
+- **서비스**: APP · WEB · BRANDING · UI/UX · MAINTENANCE
+- **기술 강점**: Three.js, GSAP, Webflow CMS, TypeScript, PHP
+- **비주얼 요소**: 로켓, 행성, 우주비행사
+- **톤**: 담대하고 실험적이되 전문적. 우주 은유로 설명하되 웹 에이전시임을 명확히.
+- **금지 방향**: 우주 기업/항공사로 오해받는 방향, 지나치게 추상적인 카피
+
+---
+
+### 2. `CLAUDE.md` 업데이트
+기존 파일 하단에 아래 섹션 추가:
+
+```markdown
+## Brand & Content
+- Branding/content 작업 시 `/BRAND.md`를 반드시 참조
+- 카피·섹션명·스토리텔링 제안 시 브랜드 가이드라인 준수
+```
+
+---
+
+### 3. `AGENTS.md` 업데이트
+기존 파일의 적절한 위치(Task Framing 또는 Output Preferences 근처)에 아래 내용 추가:
+
+```markdown
+## Brand Identity
+See `/BRAND.md` for the complete brand identity reference.
+When writing copy, section names, or storytelling:
+- Anchor to core values: Experiment · Challenge · Proof
+- Use the Earth → NX-2 journey metaphor
+- Keep NineOneLabs clearly positioned as a web agency, not a space company
+- Reflect the "JOIN THE JOURNEY" slogan in CTAs and narrative flow
+```
+
+---
+
+## Files to Modify
+
+| Action | File |
+|--------|------|
+| CREATE | `/BRAND.md` |
+| UPDATE | `/CLAUDE.md` |
+| UPDATE | `/AGENTS.md` |
+
+## Files to Read Before Executing
+
+- `CLAUDE.md` — 기존 내용 끝에 append 위치 확인
+- `AGENTS.md` — 삽입 위치(섹션) 확인
+- `views/pages/index.php` — 현재 섹션 구조 확인 (콘텐츠 가이드 작성 참고용)
+
+---
+
+## Verification
+
+1. 세 파일 모두 존재하는지 확인
+2. `BRAND.md`가 루트에서 직접 열리는지 확인
+3. `CLAUDE.md`·`AGENTS.md`에서 `BRAND.md` 링크가 유효한지 확인
+4. Cursor·Codex 등 다른 에이전트가 루트 `.md` 파일을 자동 인덱싱하므로 별도 등록 불필요

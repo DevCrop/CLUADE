@@ -1,0 +1,470 @@
+import { ObjectSetup } from "../../../app/ObjectSetup.js";
+import { Engine } from "../../../core/Engine.js";
+import { planet, sceneLights, windowObj } from "../../../core/setup.js";
+import { MAIN_SCENE_LIGHT_STATE_DEFAULTS } from "../../../config/scene-light.config.js";
+import { WorksSceneDefinition } from "../scene/works.scene.js";
+import type { SceneFromState } from "../../../types/core.types.js";
+import type { SceneLightsPort } from "../../../types/object.types.js";
+import type {
+  WorksAuthorState,
+  WorksTheatreSheetId,
+  WorksTheatreScrubCameraPort,
+} from "../../../types/work.types.js";
+import { Helpers } from "../../../utils/Helpers.js";
+import { TheatrePlaybackService } from "../../../lib/theatre/TheatrePlaybackService.js";
+import { TheatreProjectSession } from "../../../lib/theatre/TheatreProjectSession.js";
+import { TheatreSheetSession } from "../../../lib/theatre/TheatreSheetSession.js";
+import { TheatreStudioService } from "../../../lib/theatre/TheatreStudioService.js";
+import type {
+  TheatreObjectPort,
+  TheatreScrubPort,
+  TheatreSheetPort,
+} from "../../../types/theatre.types.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import {
+  normalizeWorksSceneLightsState,
+  readWorksTheatreAuthorStateSource,
+} from "./WorksTheatreRuntime.js";
+import {
+  WORKS_THEATRE_OBJECT_ID,
+  WORKS_THEATRE_PROJECT_ID,
+  WORKS_THEATRE_SHEET_IDS,
+} from "./WorksTheatreConfig.js";
+
+function sanitizeWorksSaveFile(
+  saveFile: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (!saveFile) return null;
+  const sheetsByIdValue = saveFile.sheetsById;
+  if (
+    sheetsByIdValue == null ||
+    typeof sheetsByIdValue !== "object" ||
+    Array.isArray(sheetsByIdValue)
+  ) {
+    return saveFile;
+  }
+  const sheetsById = sheetsByIdValue as Record<string, unknown>;
+  const nextSheetsById: Record<string, unknown> = {};
+  WORKS_THEATRE_SHEET_IDS.forEach((sheetId) => {
+    if (!Object.prototype.hasOwnProperty.call(sheetsById, sheetId)) return;
+    nextSheetsById[sheetId] = sheetsById[sheetId];
+  });
+  return {
+    ...saveFile,
+    sheetsById: nextSheetsById,
+  };
+}
+
+function createWorksEngine(
+  canvasId: string,
+  canvasElement?: HTMLCanvasElement | null,
+): Engine {
+  const three = WorksSceneDefinition.createThreeConfig(canvasId);
+  return new Engine({
+    canvasId: three.canvasId,
+    canvasElement,
+    camera: three.camera,
+    cameraTarget: three.cameraTarget,
+    renderer: three.renderer,
+    pixelRatioMax: three.pixelRatioMax,
+    shadowMap: three.shadowMap,
+    renderBudget: three.renderBudget,
+    scene: three.scene,
+    postProcessing: three.postProcessing,
+  });
+}
+
+function createWorksAuthorState(engine: Engine): WorksAuthorState {
+  const camera = engine.getCamera();
+  const target = engine.getCameraTarget();
+  const sceneLightObject = engine.getSceneObjectById(sceneLights) as
+    | SceneLightsPort
+    | null;
+  const windowObject = engine.getObjectById(windowObj) as
+    | {
+        position?: { x: number; y: number; z: number };
+        scale?: { x: number; y: number; z: number };
+        visible?: boolean;
+      }
+    | null;
+  const windowRotation = Helpers.readRotationDeg(windowObject as never);
+  const planetObject = engine.getObjectById(planet) as
+    | {
+        position?: { x: number; y: number; z: number };
+        scale?: { x: number; y: number; z: number };
+        visible?: boolean;
+      }
+    | null;
+  const planetRotation = Helpers.readRotationDeg(planetObject as never);
+  return {
+    camera: {
+      position: {
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z,
+      },
+      target: {
+        x: target.position.x,
+        y: target.position.y,
+        z: target.position.z,
+      },
+      fov: camera.fov,
+    },
+    sceneLights: normalizeWorksSceneLightsState(sceneLightObject?.getState()),
+    window: {
+      position: {
+        x: windowObject?.position?.x ?? 0,
+        y: windowObject?.position?.y ?? 0,
+        z: windowObject?.position?.z ?? 0,
+      },
+      rotation: {
+        x: windowRotation.x,
+        y: windowRotation.y,
+        z: windowRotation.z,
+      },
+      scale: {
+        x: windowObject?.scale?.x ?? 1,
+        y: windowObject?.scale?.y ?? 1,
+        z: windowObject?.scale?.z ?? 1,
+      },
+      visible: windowObject?.visible ?? true,
+    },
+    planet: {
+      position: {
+        x: planetObject?.position?.x ?? 0,
+        y: planetObject?.position?.y ?? 0,
+        z: planetObject?.position?.z ?? 0,
+      },
+      rotation: {
+        x: planetRotation.x,
+        y: planetRotation.y,
+        z: planetRotation.z,
+      },
+      scale: {
+        x: planetObject?.scale?.x ?? 1,
+        y: planetObject?.scale?.y ?? 1,
+        z: planetObject?.scale?.z ?? 1,
+      },
+      visible: planetObject?.visible ?? true,
+    },
+  };
+}
+
+function createWorksAuthorSceneState(state: WorksAuthorState): SceneFromState {
+  const windowPosition = state.window?.position ?? { x: 0, y: 0, z: 0 };
+  const windowRotation = state.window?.rotation ?? { x: 0, y: 0, z: 0 };
+  const windowScale = state.window?.scale ?? { x: 1, y: 1, z: 1 };
+  return {
+    camera: {
+      position: { ...state.camera.position },
+      fov: state.camera.fov,
+    },
+    cameraTarget: {
+      position: { ...state.camera.target },
+    },
+    [sceneLights]: {
+      ...state.sceneLights,
+      ground: {
+        position: { ...state.sceneLights.ground.position },
+        rotation: { ...state.sceneLights.ground.rotation },
+        scale: { ...state.sceneLights.ground.scale },
+        visible: state.sceneLights.ground.visible,
+      },
+    } as Record<string, unknown>,
+    [windowObj]: {
+      position: { ...windowPosition },
+      rotation: { ...windowRotation },
+      scale: { ...windowScale },
+      visible: state.window?.visible ?? true,
+    } as Record<string, unknown>,
+    [planet]: { ...state.planet } as Record<string, unknown>,
+  };
+}
+
+function createDefaultWorksAuthorState(): WorksAuthorState {
+  return {
+    camera: {
+      position: { x: 0, y: 0, z: 0 },
+      target: { x: 0, y: 0, z: 0 },
+      fov: 64,
+    },
+    sceneLights: {
+      ...MAIN_SCENE_LIGHT_STATE_DEFAULTS,
+      ground: {
+        position: { ...MAIN_SCENE_LIGHT_STATE_DEFAULTS.ground.position },
+        rotation: { ...MAIN_SCENE_LIGHT_STATE_DEFAULTS.ground.rotation },
+        scale: { ...MAIN_SCENE_LIGHT_STATE_DEFAULTS.ground.scale },
+        visible: MAIN_SCENE_LIGHT_STATE_DEFAULTS.ground.visible,
+      },
+    },
+    window: {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+      visible: true,
+    },
+    planet: {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+      visible: true,
+    },
+  };
+}
+
+export class WorksTheatreBridge {
+  private static readonly _statusId = "works-theatre-status";
+  private static readonly _exportButtonId = "works-theatre-export";
+  private static readonly _sheetSelectId = "works-theatre-sheet-select";
+
+  private _engine: Engine | null = null;
+  private _objectSetup: ObjectSetup | null = null;
+  private _controls: OrbitControls | null = null;
+  private _authorSheetId: WorksTheatreSheetId = WORKS_THEATRE_SHEET_IDS[0] ?? "works";
+  private readonly _sheetById = new Map<
+    WorksTheatreSheetId,
+    TheatreSheetPort<WorksAuthorState, WorksAuthorState>
+  >();
+  private readonly _objectBySheetId = new Map<
+    WorksTheatreSheetId,
+    TheatreObjectPort<WorksAuthorState, WorksAuthorState>
+  >();
+  private _unsubscribeValues: (() => void) | null = null;
+  private _recordScrub: TheatreScrubPort<WorksAuthorState, WorksAuthorState> | null =
+    null;
+  private _sampling = false;
+  private _lastSampleAt = 0;
+  private readonly _onControlsStart = () => this._recordStart();
+  private readonly _onControlsEnd = () => this._recordEnd();
+  private readonly _onControlsChange = () => this._recordFrame();
+  private readonly _onExportClick = () => void this._exportSaveFile();
+  private readonly _onSheetChange = (event: Event) => {
+    const select = event.currentTarget;
+    if (!(select instanceof HTMLSelectElement)) return;
+    this._setAuthorSheetId(select.value);
+  };
+
+  async run(
+    canvasId: string,
+    canvasElement?: HTMLCanvasElement | null,
+  ): Promise<void> {
+    const engine = createWorksEngine(canvasId, canvasElement);
+    if (!engine.init()) return;
+    this._engine = engine;
+    this._objectSetup = new ObjectSetup();
+    const config = WorksSceneDefinition.createIntroPageConfig(
+      canvasId,
+      WorksSceneDefinition.createInitialState(
+        createWorksAuthorSceneState(createDefaultWorksAuthorState()),
+      ),
+    );
+    await this._objectSetup.init(engine, config);
+    engine.setState(config.initialState ?? {});
+    engine.start(() => undefined, () => undefined);
+
+    const renderer = engine.getRenderer() as { domElement?: HTMLCanvasElement } | null;
+    const domElement = renderer?.domElement;
+    if (!domElement) return;
+    this._controls = new OrbitControls(engine.getCamera(), domElement);
+    this._controls.target = engine.getCameraTarget().position;
+    this._controls.enableDamping = true;
+    this._controls.update();
+
+    await TheatreStudioService.ensureReady("works");
+    TheatreStudioService.restoreUi();
+
+    const project = TheatreProjectSession.open<WorksAuthorState, WorksAuthorState>(
+      WORKS_THEATRE_PROJECT_ID,
+      {
+        state: readWorksTheatreAuthorStateSource() ?? undefined,
+      },
+    );
+    await project.ready;
+    WORKS_THEATRE_SHEET_IDS.forEach((sheetId) => {
+      const sheet = TheatreSheetSession.open(project, sheetId);
+      const object = sheet.object(
+        WORKS_THEATRE_OBJECT_ID,
+        createWorksAuthorState(engine),
+        { reconfigure: true },
+      );
+      this._sheetById.set(sheetId, sheet);
+      this._objectBySheetId.set(sheetId, object);
+    });
+    this._attachSheet(this._authorSheetId);
+    this._bindControls();
+    this._renderSheetSelector();
+    this._renderExportButton();
+    this._renderStatus("WORKS THEATRE READY");
+  }
+
+  dispose(): void {
+    this._controls?.removeEventListener("start", this._onControlsStart);
+    this._controls?.removeEventListener("end", this._onControlsEnd);
+    this._controls?.removeEventListener("change", this._onControlsChange);
+    this._controls?.dispose();
+    this._controls = null;
+    this._recordScrub?.discard();
+    this._recordScrub = null;
+    this._unsubscribeValues?.();
+    this._unsubscribeValues = null;
+    TheatreStudioService.removeAuthorControl(
+      WorksTheatreBridge._exportButtonId,
+      "button",
+      this._onExportClick as EventListener,
+    );
+    TheatreStudioService.removeAuthorControl(
+      WorksTheatreBridge._sheetSelectId,
+      "select",
+      this._onSheetChange as EventListener,
+    );
+    TheatreStudioService.removeAuthorControl(WorksTheatreBridge._statusId, "status");
+    this._sheetById.clear();
+    this._objectBySheetId.clear();
+    this._objectSetup?.dispose();
+    this._objectSetup = null;
+    this._engine?.dispose();
+    this._engine = null;
+  }
+
+  private _attachSheet(sheetId: WorksTheatreSheetId): void {
+    const sheet = this._sheetById.get(sheetId);
+    const object = this._objectBySheetId.get(sheetId);
+    if (!sheet || !object || !this._engine) return;
+    this._unsubscribeValues?.();
+    this._authorSheetId = sheetId;
+    this._unsubscribeValues = TheatrePlaybackService.bindValues(
+      object,
+      (values: WorksAuthorState) => {
+        if (!this._engine) return;
+        this._engine.setState(
+          WorksSceneDefinition.createInitialState(
+            createWorksAuthorSceneState(values),
+          ),
+        );
+        this._applySceneLightsState(values);
+        this._syncControlsToCameraState();
+      },
+    );
+    TheatreStudioService.setSelection([sheet, object]);
+    this._renderStatus(`ACTIVE SHEET ${sheetId.toUpperCase()}`);
+  }
+
+  private _applySceneLightsState(values: WorksAuthorState): void {
+    if (!this._engine) return;
+    const sceneLightObject = this._engine.getSceneObjectById(sceneLights) as
+      | SceneLightsPort
+      | null;
+    if (!sceneLightObject) return;
+    sceneLightObject.setState(
+      normalizeWorksSceneLightsState(values.sceneLights),
+    );
+  }
+
+  private _bindControls(): void {
+    if (!this._controls) return;
+    this._controls.addEventListener("start", this._onControlsStart);
+    this._controls.addEventListener("end", this._onControlsEnd);
+    this._controls.addEventListener("change", this._onControlsChange);
+  }
+
+  private _recordStart(): void {
+    this._sampling = true;
+    this._recordScrub?.discard();
+    this._recordScrub = TheatreStudioService.createScrub<
+      WorksAuthorState,
+      WorksAuthorState
+    >();
+    this._recordFrame(true);
+  }
+
+  private _recordEnd(): void {
+    this._recordFrame(true);
+    this._sampling = false;
+    this._recordScrub?.commit();
+    this._recordScrub = null;
+  }
+
+  private _recordFrame(force = false): void {
+    if (!force && !this._sampling) return;
+    const object = this._objectBySheetId.get(this._authorSheetId);
+    const scrub = this._recordScrub;
+    const engine = this._engine;
+    if (!object || !scrub || !engine) return;
+    const now = performance.now();
+    if (!force && now - this._lastSampleAt < 1000 / 30) return;
+    this._lastSampleAt = now;
+    const values = createWorksAuthorState(engine);
+    (scrub as unknown as WorksTheatreScrubCameraPort).capture(({ set }) => {
+      set(object.props.camera, values.camera);
+    });
+  }
+
+  private _setAuthorSheetId(sheetId: string): void {
+    if (!(WORKS_THEATRE_SHEET_IDS as readonly string[]).includes(sheetId)) return;
+    this._attachSheet(sheetId as WorksTheatreSheetId);
+    const select = document.getElementById(
+      WorksTheatreBridge._sheetSelectId,
+    ) as HTMLSelectElement | null;
+    if (select) select.value = sheetId;
+  }
+
+  private _syncControlsToCameraState(): void {
+    if (!this._controls || !this._engine) return;
+    this._controls.target.copy(this._engine.getCameraTarget().position);
+    this._controls.update();
+  }
+
+  private _renderExportButton(): void {
+    TheatreStudioService.renderAuthorButton(
+      {
+        id: WorksTheatreBridge._exportButtonId,
+        text: "EXPORT STATE JSON",
+        bottom: "16px",
+      },
+      this._onExportClick,
+    );
+  }
+
+  private _renderSheetSelector(): void {
+    if (WORKS_THEATRE_SHEET_IDS.length <= 1) {
+      TheatreStudioService.removeAuthorControl(
+        WorksTheatreBridge._sheetSelectId,
+        "select",
+        this._onSheetChange as EventListener,
+      );
+      return;
+    }
+    TheatreStudioService.renderAuthorSelect(
+      {
+        id: WorksTheatreBridge._sheetSelectId,
+        bottom: "92px",
+        value: this._authorSheetId,
+        options: WORKS_THEATRE_SHEET_IDS.map((sheetId) => ({
+          value: sheetId,
+          text: sheetId,
+        })),
+      },
+      this._onSheetChange,
+    );
+  }
+
+  private _renderStatus(text: string): void {
+    TheatreStudioService.renderAuthorStatus(WorksTheatreBridge._statusId, text);
+  }
+
+  private async _exportSaveFile(): Promise<void> {
+    const saveFile = sanitizeWorksSaveFile(
+      TheatreStudioService.createContentOfSaveFile(WORKS_THEATRE_PROJECT_ID),
+    );
+    if (!saveFile) {
+      this._renderStatus("EXPORT FAILED");
+      return;
+    }
+    const raw = JSON.stringify(saveFile, null, 2);
+    if (!TheatreStudioService.downloadFile(raw, { fileName: "works.json" })) {
+      this._renderStatus("EXPORT BLOCKED");
+      return;
+    }
+    this._renderStatus("STATE JSON DOWNLOADED");
+  }
+}

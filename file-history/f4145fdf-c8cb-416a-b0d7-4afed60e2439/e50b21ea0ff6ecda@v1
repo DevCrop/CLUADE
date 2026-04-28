@@ -1,0 +1,23 @@
+@AGENTS.md
+
+# Claude-Only Notes
+
+This file imports `AGENTS.md` (above) which contains all cross-AI repo rules. Add Claude-specific deltas only here. File-type rules in `.claude/rules/{frontend,php,scss}.md` auto-load via `paths:` frontmatter — no need to inline them.
+
+## Hook-Aware Behavior
+
+- `chop` may be auto-applied via Claude hook rewriting in supported environments; explicit `chop <command>` always works.
+- `.claude/settings.json` runs `tsc --noEmit` after every `.ts`/`.tsx` edit — no need to manually re-run unless investigating a specific error.
+
+## Skills (slash commands)
+
+- `/migration <description>` — DB schema change
+- `/new-route <description>` — new public page
+
+## Brand Copy Extra
+
+- For homepage copy edits, read `brand/homepage-flow.md` + `brand/review-algorithm.md` first (in addition to the BRAND.md routing table).
+
+## Tests
+
+- `npm run test` — Vitest suite

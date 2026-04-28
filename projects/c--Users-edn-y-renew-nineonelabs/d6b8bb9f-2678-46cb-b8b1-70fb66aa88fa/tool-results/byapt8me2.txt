@@ -1,0 +1,541 @@
+.claude/BEST_PRACTICES.md                          | 149 +++++-----------
+ .claude/rules/php.md                               |  45 +++--
+ .claude/rules/scss.md                              |  17 +-
+ .claude/settings.json                              |   4 +-
+ .claude/settings.local.json                        |   2 +-
+ .claude/skills/migration/SKILL.md                  |   2 +-
+ .claude/skills/new-route/SKILL.md                  |   2 +-
+ .claude/works-improvements-260414.md               | 193 ---------------------
+ .codex/rules/default.rules                         |  11 +-
+ .cursor/rules/project-core.mdc                     |   2 +-
+ AGENTS.md                                          |  96 +++++-----
+ CLAUDE.md                                          |  39 ++---
+ README.md                                          |  76 +++++---
+ config/functions.php                               |  17 +-
+ inc/lib/func.php                                   |   5 +-
+ resource/scss/components/_button.scss              |  50 +++---
+ resource/scss/components/_modal.scss               |   5 +
+ resource/scss/pages/_sub.scss                      |  29 ++--
+ resource/scss/pages/_works-canvas.scss             |   5 +
+ .../ts/pages/works/render/WorksSceneManager.ts     |  16 +-
+ .../ts/pages/works/runtime/WorksPageRuntime.ts     |  45 ++++-
+ scripts/backfill-webp.php                          |   7 +-
+ src/Core/ImageProcessor.php                        |  54 +++++-
+ 23 files changed, 379 insertions(+), 492 deletions(-)
+
+--- Changes ---
+
+.claude/BEST_PRACTICES.md
+  @@ -1,15 +1,10 @@
+  -# Claude Code Best Practices
+  -
+  -Part A covers **TypeScript architecture** (how Claude should write and extend code).
+  -Part B covers **Claude Code harness** (token efficiency, hooks, settings).
+  -
+  ----
+  -
+  -# Part A — TypeScript Architecture Guidelines
+  +# TypeScript Architecture Guidelines
+   
+   Source of truth for code additions/refactors in `resource/ts/`. Read this before writing new code.
+   
+  -## A1. God objects — current state
+  +> Setup-time harness checklist (CLAUDE.md sizing, hooks, allowedTools, skills config) lives in `.claude/SETUP_CHECKLIST.md`. This file is for code-writing decisions.
+  +
+  +## 1. God objects — current state
+   
+   A god object = single class mixing 3+ reasons to change or > ~600 lines of heterogeneous logic.
+   
+  @@ -33,7 +28,7 @@ A god object = single class mixing 3+ reasons to change or > ~600 lines of heter
+  -## A2. How to extend — adding a new feature
+  +## 2. How to extend — adding a new feature
+   
+   ### Decision tree
+   
+  @@ -87,7 +82,7 @@ Use `/new-route` skill. Adds:
+  -## A3. Roles
+  +## 3. Roles
+   
+   | Folder | Role | What lives here | What does NOT |
+   |---|---|---|---|
+  @@ -112,7 +107,7 @@ Use `/new-route` skill. Adds:
+  -## A4. OOP / SOLID checklist for new code
+  +## 4. OOP / SOLID checklist for new code
+   
+   Run through this list mentally before writing the class.
+   
+  @@ -167,7 +162,7 @@ Use the helpers:
+  -## A5. THREE.js GPU/CPU optimization playbook
+  +## 5. THREE.js GPU/CPU optimization playbook
+   
+   ### Render-loop hot path rules (hard bans)
+   
+  @@ -210,7 +205,7 @@ Use the helpers:
+  -## A6. Responsive architecture
+  +## 6. Responsive architecture
+   
+   The project centralizes all responsive state through `ResponsiveRuntime` (pub/sub). Build new responsive features on top of it; do not add ad-hoc `window.matchMedia` listeners.
+   
+  @@ -259,109 +254,61 @@ const unsubscribe = runtime.subscribe((next) => {
+  -# Part B — Claude Code Harness Checklist
+  -
+  -Token efficiency and configuration health checklist for this project.
+  -
+  ----
+  -
+  -## 1. CLAUDE.md
+  -
+  -- [ ] Under 50 lines?
+  -- [ ] Does not contain anything Claude can infer from reading the code (file structure, naming conventions, etc.)?
+  -- [ ] File-type rules are separated into `.claude/rules/`?
+  -- [ ] Explicit "do not" prohibition patterns listed?
+  -- [ ] Verification commands included (tsc, lint, test, etc.)?
+  +# Part B — Working With Claude
+   
+  -## 2. Rules (`.claude/rules/`)
+  +Operational playbook for the human ↔ Claude loop. Part A (above) governs *what* code looks like; Part B governs *how* the session is run.
+   
+  -- [ ] Split by file extension? (`php.md`, `frontend.md`, `scss.md`)
+  -- [ ] Each rules file has a `paths:` frontmatter header?
+  -- [ ] Rules contain only things that cannot be inferred from the code?
+  +## 1. Plan-first cycle
+   
+  -## 3. Hooks (`.claude/settings.json`)
+  +Use `Shift+Tab` (or `/plan`) to enter Plan Mode before any change that:
+  +- modifies 2+ files, OR
+  +- touches an unfamiliar subsystem, OR
+  +- you cannot describe in one sentence as a diff.
+   
+  -- [ ] Auto-runs tsc after editing a `.ts` file?
+  -- [ ] Hook verified to actually fire by editing a `.ts` file?
+  -- [ ] Frequently used safe commands registered in `allowedTools`?
+  +Plan files land in `~/.claude/plans/<slug>.md`. Review and edit the plan there before approving.
+   
+  -## 4. Skills (`.claude/skills/`)
+  +Skip Plan Mode for: typo fixes, single-line tweaks, copy edits, doc-only updates with obvious scope. Time-box exploration — if a plan keeps growing, stop and ask the user instead.
+   
+  -- [ ] Repeatable workflows packaged as skills?
+  -- [ ] Project-specific workflows like `/migration`, `/new-route` defined?
+  +Cycle: **Explore → Plan → Implement → Verify → Commit.** Each phase has a clean exit; do not interleave.
+   
+  -## 5. Subagents (`.claude/agents/`)
+  +## 2. Course-correct protocol
+   
+  -- [ ] Exploration agents available for read-heavy tasks?
+  -- [ ] Three.js scene exploration delegated to `scene-explorer` agent?
+  -- [ ] PHP structure exploration delegated to `php-explorer` agent?
+  +Tight feedback beats long debugging. When Claude goes off-track:
+   
+  -## 6. Session habits
+  -
+  -- [ ] Using `/clear` between unrelated tasks?
+  -- [ ] After two failed corrections, starting fresh with `/clear` + better prompt?
+  -- [ ] Protecting main context by asking "use a subagent to investigate"?
+  -- [ ] Resuming long sessions with `--continue` / `--resume`?
+  -
+  -## 7. Token waste patterns (fix immediately if found)
+  -
+  -- [ ] No docs/ folder accumulating content Claude can infer from code?
+  -- [ ] CLAUDE.md not exceeding 50 lines?
+  -- [ ] Claude prefixing Bash tool calls with `chop`? (verify with `chop gain`)
+  -- [ ] `chop gain` count increasing? Zero means chop is not actually being used.
+  -
+  ----
+  -
+  -## Current project setup status
+  -
+  -| Item | Status |
+  -| --- | --- |
+  -| CLAUDE.md concise | ✅ |
+  -| CLAUDE.md skill invocation examples | ✅ |
+  -| Rules on-demand | ✅ php / frontend / scss |
+  -| Hooks (tsc) | ✅ Node.js stdin pattern |
+  -| Hook verified | ✅ Confirmed firing via Edit tool on .ts file |
+  -| allowedTools | ✅ chop / git / tsc / docker / npm test |
+  -| Skills | ✅ migration / new-route |
+  -| Subagents | ✅ scene-explorer / php-explorer |
+  -| docs/ removed + README cleaned | ✅ |
+  -| spatie/image WEBP optimization | ✅ 1.10.6 (PHP 7.4 compat), ImageProcessor, dockerfile libwebp-dev |
+  -| CHOP applied | ✅ |
+  -| MEMORY.md | ✅ architecture / workflow / chop / npm / permissions |
+  -| Test framework | ✅ vitest (19 tests) |
+  -| --dangerously-skip-permissions | ✅ VS Code setting (allowDangerouslySkipPermissions) |
+  -| npm build/watch/install forbidden | ✅ CLAUDE.md / AGENTS.md / frontend.md |
+  -| All AI-read files in English | ✅ |
+  -
+  -## Permission setup — `allowDangerouslySkipPermissions`
+  +| Failure count | Action |
+  +|---|---|
+  +| 1st | Reply with a corrective prompt naming the specific mistake |
+  +| 2nd | `Esc Esc` or `/rewind` to a checkpoint before the wrong turn — do **not** keep correcting |
+  +| 3rd+ | `/clear`, then restart with a tighter prompt that incorporates what you learned |
+   
+  -To prevent Claude Code from asking for permission on every action, enable via VS Code:
+  +Across sessions: `claude --continue` resumes the latest, `claude --resume` picks from history. `/rename <slug>` makes long-running work findable.
+   
+  -1. Open **File → Preferences → Settings** (or `Ctrl+,`)
+  -2. Search for `claudeCode.allowDangerouslySkipPermissions`
+  -3. Check the box — this adds "Bypass permissions" to the mode cycle
+  +A polluted context is worse than a fresh one. If you've corrected the same issue twice, the failed attempts are now in scope and Claude will repeat them.
+  ... (37 lines truncated)
+  +48 -98
+
+.claude/rules/php.md
+  @@ -27,26 +27,38 @@ render('pages.works.view', ['no' => $no]);    // views/pages/works/view.php
+  -After saving, it automatically calls `\Core\ImageProcessor::makeWebpSibling()`.
+  +**Strategy: original-replacement (not sibling).** Convertible images are converted to `.webp` and the original is deleted; the DB stores the `.webp` filename directly.
+   
+   ```php
+  -// Standard upload call — WEBP sibling is created automatically
+  +// Standard upload call — WEBP replaces the original on success
+   $result = imageUpload($UPLOAD_DIR_CLIENTS, $_FILES['thumb_image']);
+  -$saved = $result['saved'];   // e.g. "6830abc.png" — DB stores this, foo.webp created alongside
+  +$saved = $result['saved'];
+  +// jpg/png/gif input → "6830abc.webp" (original removed, DB stores this)
+  +// svg/ico input    → "6830abc.svg"  (untouched)
+  +// 변환 실패 시     → 원본 파일명 그대로 (안전 fallback)
+   
+  -// If you add a NEW upload path that bypasses imageUpload(), call manually:
+  +// If you add a NEW upload path that bypasses imageUpload(), use the high-level API:
+   move_uploaded_file($tmp, "$dir/$filename");
+  -\Core\ImageProcessor::makeWebpSibling("$dir/$filename");
+  +$filename = \Core\ImageProcessor::convertToWebp("$dir/$filename") ?? $filename;
+  +// → 성공 시 $filename = "<basename>.webp" (원본 삭제됨). 실패/스킵 시 원본 파일명 유지.
+   
+  -// Deletion — imageDelete() handles sibling cleanup automatically
+  -imageDelete("$UPLOAD_DIR_CLIENTS/$saved");  // removes .png + .webp
+  +// Deletion
+  +imageDelete("$UPLOAD_DIR_CLIENTS/$saved");
+  +// Removes the file at $saved + any leftover sibling (`.webp` next to `.png`, etc.) for legacy rows
+   ```
+   
+  +Two API levels in `Core\ImageProcessor`:
+  +- **`convertToWebp($abs): ?string`** — high-level. 변환 + 검증 + 원본 unlink + 새 basename 반환. 신규 업로드 경로는 이것 한 줄.
+  +- **`makeWebpSibling($abs): bool`** — low-level primitive. 변환만, 원본 삭제는 호출자 책임. *마이그레이션 스크립트의 2-phase 패턴 (변환 → DB UPDATE → 원본 unlink) 전용.* 신규 업로드 경로에서 직접 호출 금지.
+  +- **`deleteWebpSibling($abs): bool`** — legacy 행 (.png + .webp 짝) 청소용. 신 전략에서는 거의 호출되지 않음.
+  +
+   Rules:
+   - Do not add image resize/convert logic outside `Core\ImageProcessor`.
+  -- `makeWebpSibling()` is silent on failure — never throw from it.
+  -- Convertible: `jpg`, `jpeg`, `png`, `gif`. Skipped: `svg`, `ico`.
+  +- All three methods are silent on failure — never throw from them.
+  +- Convertible: `jpg`, `jpeg`, `png`, `gif` (`ImageProcessor::CONVERTIBLE`). Skipped untouched: `svg`, `ico`.
+   - Max width: 2560px (auto-resize). Quality: 82.
+  +- During conversion `ImageProcessor` temporarily raises `memory_limit` to `1024M` (`MEMORY_LIMIT` const) and restores it in `finally` — large GD bitmaps OOM at the default 128M.
+  +- `MAX_CONVERTIBLE_PIXELS` (16 MP) 한계를 넘는 이미지는 마이그레이션 스크립트가 사전에 skip — `convertToWebp` 자체는 size 검사 안 함 (`makeWebpSibling` 의 spatie/image 가 silent fail).
+   
+   ## Image Rendering
+   
+  @@ -64,6 +76,15 @@ Rules:
+  -- SVG/ICO는 `<picture>` 없이 plain `<img>` 출력.
+  -- `class`는 `<img>` 요소에 적용. `<picture>` 자체에 class가 필요하면 외부에서 감싸기.
+  -- 기존 파일 backfill: `php scripts/backfill-webp.php`
+  +- 출력은 항상 plain `<img>`. `<picture>`/`<source webp>` 분기는 없음 — 업로드 시점에 이미 `.webp` 로 저장되므로 클라이언트 분기 불필요.
+  +- `class` 는 `<img>` 요소에 적용. 외부 wrapper 가 필요하면 호출 측에서 감싸기.
+  +
+  +## Image Backfill Scripts (CLI, `scripts/`)
+  +
+  +| 스크립트 | 용도 |
+  +|---|---|
+  +| `migrate-works-to-webp.php` | 신 전략(원본 대체) 1회성 마이그레이션 — `nb_works` 의 jpg/png/gif → webp + DB 컬럼 업데이트 + 원본 삭제. 16MP 초과는 skip. `--dry-run`, `--id=<n>`, `--limit=<n>` |
+  +| `convert-large-works-jpg.php` | `migrate-works-to-webp.php` 가 16MP 초과로 skip 한 잔여 행을 webp 한계(16383px) 이하로 리사이즈 후 변환 |
+  +| `backfill-webp.php` | 구 전략(sibling) 잔여 backfill — 신규 업로드 경로에는 사용 금지 |
+  +
+  +DB 업데이트가 성공한 뒤에만 원본을 삭제 — 데이터 손실 방지. 새 마이그레이션은 `migrate-works-to-webp.php` 패턴 따라 작성.
+  +33 -12
+
+.claude/rules/scss.md
+  @@ -5,15 +5,24 @@ paths:
+  -- Use BEM pattern for class naming
+  -- Source: `resource/scss/` → compiled output: `resource/dist/`
+  +- BEM pattern for class naming
+  +- Source: `resource/scss/` → output: `resource/dist/`
+   - Do NOT run build commands — dev server reflects changes on save automatically
+  +- Admin CSS (`admin/resource/css/`) is separate — do not import from public SCSS entry
+   
+   ## Token Contract
+   
+   - Reusable tokens → `resource/scss/abstract/` or `base/_root.scss`
+  -- Use `var(--clr-*)`, `var(--duration-*)` etc. in consumers — no raw hex when semantic token exists upstream
+  -- Admin CSS (`admin/resource/css/`) is separate — do not import from public SCSS entry
+  +- Use `var(--clr-*)`, `var(--duration-*)` etc. in consumers — no raw hex when a semantic token exists upstream
+  +- Prefer semantic tokens over raw values when an upstream token exists
+  +- **Do NOT use CSS variable fallbacks** like `var(--token, fallback)`. Use `var(--token)` or `fluid(...)` directly.
+  +- Do not introduce base/root tokens for one-off component values — only when genuinely shared across multiple features
+  +
+  +## Fluid Helper
+  +
+  +- In **component, layout, page** SCSS: call `fluid(min, max)` directly
+  +- In shared **`abstract/`** or **`base/`**: use `#{fluid(...)}` interpolation only when emitting CSS custom properties or shared tokens
+  +- Files outside `resource/scss/abstract/` and `resource/scss/base/`: add `@use "../abstract" as *;` at top before using `fluid(...)` and other shared helpers
+   
+   ## Reset / Init Contract
+   
+  +13 -4
+
+.claude/settings.json
+  @@ -1,6 +1,6 @@
+  -    "Bash(chop *)",
+  +    "Bash(rtk *)",
+       "Bash(git status*)",
+       "Bash(git log*)",
+       "Bash(git diff*)",
+  @@ -20,7 +20,7 @@
+  -            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const i=JSON.parse(d);const f=(i.tool_input&&i.tool_input.file_path)||'';if(f.endsWith('.ts')){const {execSync}=require('child_process');try{execSync('chop node_modules/.bin/tsc --noEmit',{stdio:'inherit',cwd:process.cwd()})}catch(e){process.exit(1)}}}catch(e){}});\""
+  +            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const i=JSON.parse(d);const f=(i.tool_input&&i.tool_input.file_path)||'';if(f.endsWith('.ts')){const {execSync}=require('child_process');try{execSync('rtk tsc --noEmit',{stdio:'inherit',cwd:process.cwd()})}catch(e){process.exit(1)}}}catch(e){}});\""
+             }
+           ]
+         }
+  +2 -2
+
+.claude/settings.local.json
+  @@ -1,7 +1,7 @@
+  -      "Bash(chop npx *)",
+  +      "Bash(rtk npx *)",
+         "Bash(echo \"EXIT=$?\")"
+       ]
+     }
+  +1 -1
+
+.claude/skills/migration/SKILL.md
+  @@ -13,4 +13,4 @@ Create a database migration for: $ARGUMENTS
+  -5. Verify with `chop make migrate-status` after applying
+  +5. Verify with `rtk make migrate-status` after applying
+  +1 -1
+
+.claude/skills/new-route/SKILL.md
+  @@ -27,5 +27,5 @@ $router->get('/path', function () {
+  -chop node_modules/.bin/tsc --noEmit   # errors only
+  +rtk tsc --noEmit   # errors only
+   ```
+  +1 -1
+
+.claude/works-improvements-260414.md
+  @@ -1,193 +0,0 @@
+  -# Works 페이지 개선 작업 문서
+  -> Branch: `260414` · 작업일: 2026-04-23
+  -
+  ----
+  -
+  -## 개요
+  -
+  -Works 페이지(scatter / grid 뷰)에 총 6가지 개선 사항을 구현했다. DB `nb_works.video` 컬럼과 API `thumbnailVideo` 필드는 이미 존재했으므로 데이터 계층 변경 없이 프론트엔드 로직만 추가됐다.
+  -
+  ----
+  -
+  -## 1. Hover-to-Video
+  -
+  -### Grid (`WorksPageRuntime.ts` → `WorksGridFeedRuntime`)
+  -
+  -**변경 전**: `_createMedia()`가 이미지 OR 비디오 중 하나만 렌더링.
+  -
+  -**변경 후**:
+  -- `_createMedia()` — `thumbnailImage` 우선 (`<img>`). 없을 때만 `<video>` 폴백.
+  -- `_attachVideoHover(li, videoUrl, figure)` — `thumbnailImage + thumbnailVideo` 모두 있을 때만 호출.
+  -  - `<video preload="none">` 을 figure 안에 삽입 (초기 opacity 0).
+  -  - `pointerenter`: src lazy 할당 → `video.play()` → `.is-video-active` 클래스 추가.
+  -  - `pointerleave`: `video.pause()` → 클래스 제거.
+  -- cleanup은 `_videoHoverCleanups[]` 배열에 저장 → `dispose()` / `_clearList()` 시 일괄 실행.
+  -
+  -**SCSS** (`_sub.scss`):
+  -```scss
+  -.__img video { opacity: 0; pointer-events: none; transition: ..., opacity 0.35s ease; }
+  -.__img.is-video-active img { opacity: 0; }
+  -.__img.is-video-active video { opacity: 1; }
+  -```
+  -
+  -### Scatter (`WorksSceneManager.ts`)
+  -
+  -**추가 클래스**: `WorksHoverVideoRuntime`
+  -- 단일 `<video>` element 보유 (한 번에 하나만 hover 가능).
+  -- `activate(mesh, texture, videoUrl, proj, size, staticImage)` — src 세팅 후 play.
+  -- `deactivate()` — pause + `WorkCard.updateTextureImage()`로 정적 이미지 복원.
+  -- `drawFrame()` — `WorkCard.updateTextureVideoFrame()`으로 video 현재 프레임을 CanvasTexture에 드로잉.
+  -
+  -**연동** (`update()` 루프):
+  -```ts
+  -if (this.hovered !== this._prevHovered) {
+  -  // prev가 있으면 deactivate, 새 hovered에 video URL 있으면 activate
+  -}
+  -if (this._hoverVideo.isActive()) this._hoverVideo.drawFrame();
+  -```
+  -
+  -**신규 메서드** (`WorkCard.ts`):
+  -```ts
+  -static updateTextureVideoFrame(texture, proj, size, video: HTMLVideoElement, renderOptions?): void
+  -// video.readyState >= 2 체크 후 ctx.drawImage(video, ...) → texture.needsUpdate = true
+  -```
+  -
+  -**신규 타입** (`work.types.ts`):
+  -```ts
+  -interface WorkCardUserData {
+  -  // ...
+  -  loadedImage?: HTMLImageElement | null; // warm() 콜백으로 채워짐
+  -}
+  -```
+  -
+  ----
+  -
+  -## 2. Grid 모바일 no-panel 숨기기
+  -
+  -**위치**: `WorksPageRuntime._showPanel()`
+  -
+  -```ts
+  -private _showPanel(): void {
+  -  const snapshot = ResponsiveRuntime.getDefault().getSnapshot();
+  -  if (snapshot.isMobile) return; // 모바일에서 panel 미표시
+  -  this._setPanelVisible(true);
+  -}
+  -```
+  -
+  ----
+  -
+  -## 3. Grid 무한스크롤 모바일 수정
+  -
+  -**문제**: `window.scroll` 이벤트가 Lenis smooth scroll 환경의 모바일에서 정상 발화하지 않을 수 있음.
+  -
+  -**해결**: `IntersectionObserver` sentinel 방식으로 교체.
+  -
+  -```ts
+  -// gridList 다음에 1px sentinel div 삽입
+  -// rootMargin: thresholdPx로 미리 트리거
+  -_attachSentinel(): void { ... }
+  -_detachSentinel(): void { ... }
+  -```
+  -
+  -- `init()` 완료 후, `_loadMore()` 완료 후 `_attachSentinel()` 호출.
+  -- `_clearList()` / `dispose()` 시 `_detachSentinel()`.
+  -- 기존 `window.scroll` 핸들러는 데스크탑 fallback으로 유지.
+  -
+  ----
+  -
+  -## 4. Grid 필터 모달 (모바일 전용)
+  -
+  -### PHP (`views/pages/works/index.php`)
+  ... (89 lines truncated)
+  +0 -184
+
+.codex/rules/default.rules
+  @@ -1,13 +1,14 @@
+  -    pattern = ["chop"],
+  +    pattern = ["rtk"],
+       decision = "allow",
+  -    justification = "Allow project-standard chop-prefixed commands.",
+  +    justification = "Allow project-standard rtk-prefixed commands (token-optimized output).",
+       match = [
+  -        "chop git status",
+  -        "chop git diff",
+  -        "chop node_modules/.bin/tsc --noEmit",
+  +        "rtk git status",
+  +        "rtk git diff",
+  +        "rtk tsc --noEmit",
+  +        "rtk docker compose ps",
+       ],
+   )
+   
+  +6 -5
+
+.cursor/rules/project-core.mdc
+  @@ -11,4 +11,4 @@ alwaysApply: true
+  -- For verification, prefer the smallest relevant check: `chop node_modules/.bin/tsc --noEmit`, `docker compose exec web php -l <file>`, and `chop git diff`.
+  +- For verification, prefer the smallest relevant check: `rtk tsc --noEmit`, `rtk docker compose exec web php -l <file>`, and `rtk git diff`.
+  +1 -1
+
+AGENTS.md
+  @@ -1,12 +1,10 @@
+  -Use this file for Codex-specific repo instructions. Keep Claude-specific behavior in `CLAUDE.md`.
+  +Cross-AI repo rules. Claude reads this via `CLAUDE.md @AGENTS.md` import. File-type details additionally live in `.claude/rules/{frontend,php,scss}.md` (Claude auto-loads by `paths:` frontmatter; Codex should read them on-demand for the matching extension).
+   
+   ## Brand Identity
+   
+  -See `/BRAND.md` first for the brand, copy, design language, homepage flow, and review algorithm index. Do not load the full brand system by default; read only the relevant `brand/*.md` files for the task.
+  -
+  -Key rules:
+  +See `BRAND.md` first for the brand routing index. Do not load the full `brand/*.md` set by default — read only files needed for the task.
+   
+   - Company: **NINEONELABS (나인원랩스)** — digital web agency
+   - Core values: **Experiment · Challenge · Proof** (실험 · 도전 · 증명)
+  @@ -14,76 +12,64 @@ Key rules:
+  -- Never use mixed camel case brand naming; use `NINEONELABS` for display and `nineonelabs` only for technical context
+  +- Display name: `NINEONELABS` (uppercase). Technical: `nineonelabs` only for files/slugs/code. Korean: `나인원랩스`. Never mixed camel case.
+   - Never position NINEONELABS as an aerospace/aviation entity
+   
+   ## Project Defaults
+   
+   - Stack: TypeScript, SCSS, Three.js, Vite, PHP 7.4 custom MVC, MySQL, Apache via Docker
+   - Dev server: `http://localhost:8888`
+  -- Default task framing: state the goal, relevant context, constraints, and done condition.
+  -- For complex or ambiguous work, plan first before editing code.
+  -- Prefer `chop` for long git, typecheck, and Docker inspection output when available.
+  -- For read-only `git` inspection commands that may produce non-trivial output, prefer `chop` by default.
+  -- Typical examples: `chop git status`, `chop git diff`, `chop git log --oneline -20`.
+  -- Prefer `chop rg ...` for repository searches when the result may be longer than a few lines.
+  -- For PowerShell builtins or pipeline-based inspection commands, wrap the whole script with `chop powershell -Command "..."`.
+  -- Typical examples: `chop powershell -Command "Get-Content ... | Select-Object -Skip 720 -First 90"` and `chop powershell -Command "Get-Content ... | Select-String ..."`.
+  -- Very short one-line commands may skip `chop`, but when in doubt prefer `chop`.
+  -- **Do not run `npm run build`, `npm run watch`, or `npm install`** — Vite dev server auto-rebuilds the bundle on every file save; there is no reason to run these. Only `npm install <package>` is allowed when explicitly adding a new dependency.
+  -- Do not add any of these commands to agent roles, task plans, verification steps, or PR notes unless the user explicitly asks for it.
+  -- On Windows PowerShell, use explicit UTF-8 for Korean text reads and writes.
+  +- Default task framing: state goal, context, constraints, done condition. Plan first for complex/ambiguous work.
+  +- **Forbidden commands**: `npm run build`, `npm run watch`, `npm install` — Vite auto-rebuilds on save. Only `npm install <package>` is allowed when adding a new dependency. Never list these in roles, plans, verification steps, or PR notes.
+  +- Prefer `rtk` for output that may exceed a few lines (git, search, typecheck, docker, PowerShell pipelines). Examples: `rtk git status`, `rtk git diff`, `rtk git log --oneline -20`, `rtk grep ...`, `rtk docker compose ps`. Short one-liners may skip `rtk`. In WSL Remote sessions the PreToolUse hook auto-rewrites `git`/`docker`/`tsc`/etc. to their `rtk`-prefixed equivalents.
+  +- Windows PowerShell: explicit UTF-8 for Korean text reads/writes.
+   
+   ## Architecture
+   
+  -- Public routes stay closure-based in `routes/web.php` and render via `render()`.
+  -- Do not reintroduce Barba.js or SPA navigation contracts.
+  -- Do not duplicate ownership already handled by `AppManager`, `PageRuntime`, or `PageTheatreBinder`.
+  -- Keep shared engine or runtime code out of page folders.
+  -- Put page scene code in `resource/ts/pages/<page>/scene/`.
+  -- Put Theatre bindings in `resource/ts/pages/<page>/theatre/`.
+  -- Keep shared types in `resource/ts/types/*.types.ts`.
+  -- Image upload entry point: `imageUpload()` in `inc/lib/func.php`. After a successful upload it automatically calls `\Core\ImageProcessor::makeWebpSibling()` to create a `.webp` sibling alongside the original. The DB value remains the original filename — no view changes required.
+  -- `Core\ImageProcessor` (`src/Core/ImageProcessor.php`): static utility for WEBP conversion via spatie/image 1.10.6 (GD driver). Covers jpg/jpeg/png/gif; silently skips svg/ico. Resize threshold: 2560px width. Quality: 82.
+  +- Public routes are closure-based in `routes/web.php` and render via `render()`. Do not reintroduce Barba.js or SPA navigation contracts.
+  +- Ownership separation: do not duplicate work in `AppManager`, `PageRuntime`, or `PageTheatreBinder`. See `.claude/BEST_PRACTICES.md` Part A and memory `project_ts_map.md` for boundaries.
+  +- Page scenes: `resource/ts/pages/<page>/scene/`. Theatre bindings: `resource/ts/pages/<page>/theatre/`. Page-scoped runtime: `resource/ts/pages/<page>/runtime/`. Shared types: `resource/ts/types/*.types.ts`. Keep shared engine/runtime code out of page folders.
+  +- Image uploads: entry point `imageUpload()` in `inc/lib/func.php`. Convertible inputs (jpg/jpeg/png/gif) are converted to `.webp` and the original is deleted; DB stores the `.webp` filename. svg/ico pass through untouched. New upload paths that bypass `imageUpload()` must call `\Core\ImageProcessor::convertToWebp($abs) ?? $original` — single-line API that handles convert + verify + unlink. Detail in `.claude/rules/php.md`.
+  +- `Core\ImageProcessor` (`src/Core/ImageProcessor.php`): two API levels. **`convertToWebp(): ?string`** = high-level upload API (변환+검증+unlink+새 basename 반환). **`makeWebpSibling(): bool`** = low-level primitive, *마이그레이션 2-phase 패턴 전용*. WEBP via spatie/image 1.10.6 (GD). Resize threshold 2560px. Quality 82. Conversion temporarily raises `memory_limit` to `MEMORY_LIMIT` (`1024M`) and restores it in `finally`. Pixel ceiling: `MAX_CONVERTIBLE_PIXELS` (16 MP) — 마이그레이션 스크립트가 사전 skip 에 사용.
+  +- Image rendering: always use `render_uploaded_image()` (`config/functions.php`) — outputs plain `<img>`. No `<picture>`/`<source webp>` branching since the stored file is already optimal.
+  +- One-shot CLI for legacy data: `scripts/migrate-works-to-webp.php` (`nb_works` jpg/png/gif → webp + DB update, 16MP skip), `scripts/convert-large-works-jpg.php` (resize + convert the skipped >16MP rows). Both support `--dry-run`. Old `scripts/backfill-webp.php` is sibling-strategy and not used for new work.
+   
+   ## Editing Rules
+   
+  -- Follow existing custom MVC patterns; do not introduce Laravel or Symfony conventions.
+  -- Use BEM-style naming in SCSS.
+  -- Keep admin CSS and JS separate from the public SCSS pipeline.
+  -- For SCSS responsive sizing, prefer shared abstract helpers such as `fluid(...)` instead of ad-hoc raw values when the project already uses that pattern.
+  -- Use `#{fluid(...)}` only inside shared `abstract` or `base` files when emitting CSS custom properties or shared tokens.
+  -- In component, layout, and page SCSS files, use `fluid(min, max)` directly instead of `#{fluid(...)}`.
+  -- In SCSS files outside `resource/scss/abstract/` and `resource/scss/base/`, add `@use "../abstract" as *;` at the top before using shared helpers like `fluid(...)`.
+  -- Do not use CSS variable fallbacks like `var(--token, fallback)` in SCSS. Use either `var(--token)` or `fluid(...)` directly.
+  -- Do not introduce base/root tokens unless the value is genuinely shared across multiple features. Avoid token waste for one-off component values.
+  -- For reusable SCSS values, define the source of truth in the shared `abstract` or `base` layer first, then reference it from component or page partials.
+  -- Prefer semantic tokens over raw hex values when an upstream token exists.
+  -- Dispose Three.js geometries, materials, and textures.
+  -- Avoid object creation inside render loops.
+  -- Match event listener registration with cleanup.
+  +- Follow existing custom MVC patterns; no Laravel/Symfony conventions.
+  +- SCSS: BEM naming. Use shared `fluid(min, max)` over raw responsive values. `var(--token, fallback)` is forbidden — use `var(--token)` or `fluid(...)` directly. Full SCSS rules in `.claude/rules/scss.md`.
+  +- TypeScript/Three.js: dispose every geometry/material/texture; no object creation in render loops; match `addEventListener` with `removeEventListener`. Full rules in `.claude/rules/frontend.md`.
+  +- PHP: closure routing, `nb_` table prefix, migrations only for schema changes. Full rules in `.claude/rules/php.md`.
+   - Never hardcode credentials or secrets.
+  -- For image uploads, do not add resize/conversion logic outside `Core\ImageProcessor`. Call `makeWebpSibling()` after `move_uploaded_file()` if adding a new upload path that bypasses `imageUpload()`.
+   
+   ## Verification
+   
+  -- TypeScript: `chop node_modules/.bin/tsc --noEmit`
+  -- PHP lint: `docker compose exec web php -l <file>`
+  -- Diff inspection: `chop git diff`
+  -- Do not use `npm run build`, `npm run watch`, or `npm install` for verification; saved files are already handled by the automatic build flow.
+  -- After changes, run the smallest relevant verification and report any checks not run.
+  -- Review the final diff for regressions, risky patterns, and missing tests before handing off.
+  +- TypeScript: `rtk tsc --noEmit` (or `rtk node_modules/.bin/tsc --noEmit`)
+  +- PHP lint: `rtk docker compose exec web php -l <file>` (matches `php-lint` filter in `.rtk/filters.toml`)
+  +- Tests: `rtk npm run test` (Vitest single run — `vitest run`, not `watch`)
+  +- Diff: `rtk git diff`
+
+... (more changes truncated)
+  +22 -47
+[full diff: rtk git diff --no-compact]

@@ -1,0 +1,411 @@
+<?php
+
+use Database\DB;
+use Http\Request;
+use Http\Response;
+
+/** @var \Routing\Router $router */
+$router = app()->router();
+$rootPath = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__);
+
+require_once $rootPath . '/config/inside_board.php';
+
+$loadWorksApi = static function () use ($rootPath): void {
+    require_once $rootPath . '/api/works.php';
+};
+
+$resolveWorksView = static function (Request $req): string {
+    $viewRaw = strtolower(trim((string) $req->query('view', 'scatter')));
+    return in_array($viewRaw, ['scatter', 'grid'], true) ? $viewRaw : 'scatter';
+};
+
+$resolvePositiveInt = static function ($value, int $default, int $min = 1, ?int $max = null): int {
+    $validated = filter_var($value, FILTER_VALIDATE_INT);
+    if ($validated === false) {
+        return $default;
+    }
+
+    $normalized = max($min, (int) $validated);
+    if ($max === null) {
+        return $normalized;
+    }
+
+    return min($max, $normalized);
+};
+
+$renderWorksDetailPage = static function (
+    string $viewName,
+    string $no,
+    string $pageType,
+    string $pageNamespace
+) use ($loadWorksApi) {
+    $loadWorksApi();
+
+    return render($viewName, [
+        'no' => $no,
+        'work' => get_work_detail($no),
+        'pageType' => $pageType,
+        'pageNamespace' => $pageNamespace,
+    ]);
+};
+
+/* =========================
+ * 공용/홈/정책
+ * ========================= */
+$router->get('/', function () use ($loadWorksApi) {
+    $loadWorksApi();
+
+    $homeWorksResponse = get_works_list(0, 10);
+
+    return render('pages.index', [
+        'pageType' => 'main',
+        'homeWorks' => $homeWorksResponse['items'],
+    ]);
+})->name('home');
+
+/* =======================================================
+ * ABOUT
+ * ======================================================= */
+$router->get('/about', function () use ($loadWorksApi) {
+    $loadWorksApi();
+
+    return render('pages.about.index', [
+        'pageType' => 'about',
+        'awardRows' => get_works_award_page_rows(),
+    ]);
+})->name('about.index');
+
+/* =======================================================
+ * WORKS
+ * ======================================================= */
+$router->group(['prefix' => '/works'], function ($r) use (
+    $loadWorksApi,
+    $resolveWorksView,
+    $resolvePositiveInt,
+    $renderWorksDetailPage
+) {
+    $r->get('', function (Request $req) use ($loadWorksApi, $resolveWorksView, $resolvePositiveInt) {
+        $loadWorksApi();
+
+        $view = $resolveWorksView($req);
+        $category = resolve_works_category($req->query('category'));
+        $perPage = 12;
+        $page = $resolvePositiveInt($req->query('page', 1), 1);
+
+        return render('pages.works.index', [
+            'pageType' => 'works',
+            'pageNamespace' => 'works-index',
+            'worksState' => [
+                'view' => $view,
+                'category' => $category,
+                'page' => $page,
+                'limit' => $perPage,
+            ],
+            'worksCategories' => get_works_categories(),
+        ]);
+    })->name('works.index');
+    $r->get('/list', function (Request $req) use ($loadWorksApi, $resolvePositiveInt) {
+        $loadWorksApi();
+
+        $offsetRaw = $req->query('offset', 0);
+        $limitRaw = $req->query('limit', 8);
+        $category = resolve_works_category($req->query('category'));
+        $offsetValidated = filter_var($offsetRaw, FILTER_VALIDATE_INT);
+        $limitValidated = filter_var($limitRaw, FILTER_VALIDATE_INT);
+        if ($offsetValidated === false || $limitValidated === false) {
+            return (new Response())->json([
+                'error' => 'Invalid pagination parameters',
+                'code' => 'INVALID_QUERY',
+            ], 400);
+        }
+
+        $offset = max(0, (int) $offsetValidated);
+        $limit = $resolvePositiveInt($limitValidated, 8, 1, 24);
+        $featured = filter_var($req->query('featured', ''), FILTER_VALIDATE_BOOLEAN);
+        $data = get_works_list($offset, $limit, $category, $featured);
+
+        return (new Response())->json([
+            'items' => $data['items'],
+            'nextOffset' => $data['nextOffset'],
+            'hasMore' => $data['hasMore'],
+        ], 200);
+    })->name('works.list');
+    $r->get('/view/{no}', function (Request $req, Response $res, string $no) use ($renderWorksDetailPage) {
+        return $renderWorksDetailPage('pages.works.view', $no, 'works-view', 'works-view');
+    })->name('works.view');
+    $r->get('/modal/{no}', function (Request $req, Response $res, string $no) use ($renderWorksDetailPage) {
+        return $renderWorksDetailPage('pages.works.modal', $no, 'works-modal', 'works-modal');
+    })->name('works.modal');
+    $r->get('/modal-component/{no}', function (Request $req, Response $res, string $no) use ($loadWorksApi) {
+        $loadWorksApi();
+
+        $work = get_work_detail($no);
+        if ($work === null) {
+            return response(
+                '<div class="no-work-modal__empty">Work data not found.</div>',
+                404,
+                ['Content-Type' => 'text/html; charset=UTF-8']
+            );
+        }
+
+        return response(
+            include_view('components.work-modal', ['work' => $work]),
+            200,
+            ['Content-Type' => 'text/html; charset=UTF-8']
+        );
+    })->name('works.modal.component');
+});
+
+/* =======================================================
+ * CAREERS
+ * ======================================================= */
+$router->group(['prefix' => '/careers'], function ($r) {
+    $r->get('', fn() => render('pages.careers.index', ['pageType' => 'careers']))->name('careers.index');
+    $r->get('/view/{no}', function (Request $req, Response $res, string $no) {
+        return render('pages.careers.view', ['no' => $no, 'pageType' => 'careers']);
+    })->name('careers.view');
+});
+
+/* =======================================================
+ * INSIDE
+ * ======================================================= */
+$insideListHandler = static function (
+        Request $req,
+        int $boardNo,
+        string $viewName,
+        string $listRouteName
+    ) use ($resolvePositiveInt): string {
+        $page = $resolvePositiveInt($req->query('page', 1), 1);
+        $categoryRaw = $req->query('category');
+        $categoryNo = null;
+        if ($categoryRaw !== null && $categoryRaw !== '') {
+            $cv = filter_var($categoryRaw, FILTER_VALIDATE_INT);
+            if ($cv !== false && (int) $cv > 0) {
+                $categoryNo = (int) $cv;
+            }
+        }
+        $q = trim((string) $req->query('q', ''));
+        $list = inside_board_list(
+            $boardNo,
+            $page,
+            $categoryNo,
+            $q !== '' ? $q : null
+        );
+
+        $listUrl = route($listRouteName, [], false);
+        $mergeQuery = static function (array $extra) use ($q): array {
+            $p = $extra;
+            if ($q !== '') {
+                $p['q'] = $q;
+            }
+
+            return array_filter(
+                $p,
+                static fn ($v) => $v !== null && $v !== ''
+            );
+        };
+
+        $categoryItems = [];
+        $manage = inside_board_manage($boardNo);
+        $catEnabled = ($manage['category_yn'] ?? 'N') === 'Y';
+        $allQuery = $mergeQuery([]);
+        $categoryItems[] = [
+            'label' => 'ALL',
+            'href' => $listUrl . ($allQuery !== [] ? '?' . http_build_query($allQuery) : ''),
+            'active' => $categoryNo === null,
+        ];
+        if ($catEnabled) {
+            foreach (inside_board_categories($boardNo) as $row) {
+                $cn = (int) ($row['no'] ?? 0);
+                if ($cn < 1) {
+                    continue;
+                }
+                $cq = $mergeQuery(['category' => $cn]);
+                $categoryItems[] = [
+                    'label' => (string) ($row['name'] ?? ''),
+                    'href' => $listUrl . '?' . http_build_query($cq),
+                    'active' => $categoryNo === $cn,
+                ];
+            }
+        }
+
+        $paginationQuery = $mergeQuery([]);
+
+        return render($viewName, [
+            'pageType' => 'inside',
+            'boardNo' => $boardNo,
+            'posts' => $list['rows'],
+            'paginationTotal' => $list['totalPages'],
+            'paginationCurrent' => $list['page'],
+            'paginationQueryParams' => $paginationQuery,
+            'categoryItems' => $categoryItems,
+            'searchQuery' => $q,
+            'listRouteName' => $listRouteName,
+            'activeCategoryNo' => $categoryNo,
+        ]);
+};
+
+$insideViewHandler = static function (string $no, int $boardNo, string $viewName, string $listRouteName, string $viewRouteName) {
+        $postNo = filter_var($no, FILTER_VALIDATE_INT);
+        if ($postNo === false || $postNo < 1) {
+            return response(render('errors.404', ['pageType' => 'legal']), 404);
+        }
+
+        $post = inside_board_find((int) $postNo, $boardNo);
+
+        // TEST FALLBACK — DB 게시물 없을 때 더미 뷰 데이터, 실제 배포 전 제거
+        if ($post === null) {
+            $fallbackPosts = [
+                INSIDE_BOARD_NEWS => [
+                    1 => ['no' => 1, 'board_no' => INSIDE_BOARD_NEWS, 'title' => '2025 대한민국 웹어워드 수상', 'contents' => '<p>나인원랩스가 2025 대한민국 웹어워드에서 수상했습니다.</p><p>이번 수상은 팀 전체의 노력 덕분입니다.</p>', 'regdate' => '2025-06-01 09:00:00', 'is_notice' => 'Y', 'category_no' => null, 'category_name' => ''],
+                    2 => ['no' => 2, 'board_no' => INSIDE_BOARD_NEWS, 'title' => 'NINEONELABS, 상반기 신규 프로젝트 다수 수주', 'contents' => '<p>2025년 상반기 다수의 신규 프로젝트를 수주했습니다.</p>', 'regdate' => '2025-05-15 10:30:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => ''],
+                    3 => ['no' => 3, 'board_no' => INSIDE_BOARD_NEWS, 'title' => '글로벌 IT 기업과 UI/UX 협업 프로젝트 완료', 'contents' => '<p>글로벌 IT 기업과의 협업 프로젝트가 성공적으로 완료되었습니다.</p>', 'regdate' => '2025-04-08 14:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => ''],
+                    4 => ['no' => 4, 'board_no' => INSIDE_BOARD_NEWS, 'title' => '나인원랩스, 새로운 브랜딩 서비스 라인업 공개', 'contents' => '<p>새로운 브랜딩 서비스 라인업을 공개합니다.</p>', 'regdate' => '2025-03-20 11:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => ''],
+                    5 => ['no' => 5, 'board_no' => INSIDE_BOARD_NEWS, 'title' => '2025 상반기 채용 공고 — 프론트엔드 · 디자이너', 'contents' => '<p>2025 상반기 채용을 진행합니다. 많은 지원 부탁드립니다.</p>', 'regdate' => '2025-02-10 09:00:00', 'is_notice' => 'Y', 'category_no' => null, 'category_name' => ''],
+                    6 => ['no' => 6, 'board_no' => INSIDE_BOARD_NEWS, 'title' => '모바일 앱 리뉴얼 프로젝트 케이스 스터디 발행', 'contents' => '<p>모바일 앱 리뉴얼 케이스 스터디를 발행했습니다.</p>', 'regdate' => '2025-01-22 16:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => ''],
+                ],
+                INSIDE_BOARD_INSIGHT => [
+                    1 => ['no' => 1, 'board_no' => INSIDE_BOARD_INSIGHT, 'title' => '2025 웹 디자인 트렌드: 움직임과 공간의 언어', 'contents' => '<p>2025년 웹 디자인의 핵심 트렌드를 정리했습니다.</p>', 'regdate' => '2025-06-05 10:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+                    2 => ['no' => 2, 'board_no' => INSIDE_BOARD_INSIGHT, 'title' => 'Three.js로 만드는 인터랙티브 브랜드 경험', 'contents' => '<p>Three.js를 활용한 인터랙티브 웹 경험 제작 과정을 공유합니다.</p>', 'regdate' => '2025-05-12 09:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+                    3 => ['no' => 3, 'board_no' => INSIDE_BOARD_INSIGHT, 'title' => 'UI/UX 설계에서 사용자 여정 지도 활용하기', 'contents' => '<p>사용자 여정 지도를 UI/UX 설계에 효과적으로 활용하는 방법입니다.</p>', 'regdate' => '2025-04-01 11:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+                    4 => ['no' => 4, 'board_no' => INSIDE_BOARD_INSIGHT, 'title' => '모바일 퍼스트 시대의 반응형 브랜딩 전략', 'contents' => '<p>모바일 환경에서 브랜드 아이덴티티를 일관되게 유지하는 전략입니다.</p>', 'regdate' => '2025-03-18 14:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+                    5 => ['no' => 5, 'board_no' => INSIDE_BOARD_INSIGHT, 'title' => '다크모드 UI 설계 시 고려해야 할 5가지', 'contents' => '<p>다크모드 UI 설계 시 놓치기 쉬운 5가지 포인트를 정리했습니다.</p>', 'regdate' => '2025-02-14 09:30:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+                    6 => ['no' => 6, 'board_no' => INSIDE_BOARD_INSIGHT, 'title' => '클라이언트와 브랜드 아이덴티티 구축하는 법', 'contents' => '<p>클라이언트와의 협업을 통해 브랜드 아이덴티티를 구축하는 과정입니다.</p>', 'regdate' => '2025-01-20 10:00:00', 'is_notice' => 'N', 'category_no' => null, 'category_name' => '', 'thumb_image' => ''],
+                ],
+            ];
+            $post = $fallbackPosts[$boardNo][$postNo] ?? null;
+            if ($post === null) {
+                return response(render('errors.404', ['pageType' => 'legal']), 404);
+            }
+        }
+
+        $neighbors = inside_board_neighbors((int) $postNo, $boardNo);
+        $listUrl = route($listRouteName, [], false);
+
+        $prevUrl = null;
+        $prevTitle = '';
+        if ($neighbors['prev'] !== null) {
+            $prevUrl = route($viewRouteName, ['no' => (string) ($neighbors['prev']['no'] ?? '')], false);
+            $prevTitle = (string) ($neighbors['prev']['title'] ?? '');
+        }
+
+        $nextUrl = null;
+        $nextTitle = '';
+        if ($neighbors['next'] !== null) {
+            $nextUrl = route($viewRouteName, ['no' => (string) ($neighbors['next']['no'] ?? '')], false);
+            $nextTitle = (string) ($neighbors['next']['title'] ?? '');
+        }
+
+        return render($viewName, [
+            'pageType' => 'inside',
+            'boardNo' => $boardNo,
+            'post' => $post,
+            'listUrl' => $listUrl,
+            'prevUrl' => $prevUrl,
+            'prevTitle' => $prevTitle,
+            'nextUrl' => $nextUrl,
+            'nextTitle' => $nextTitle,
+        ]);
+};
+
+$router->group(['prefix' => '/inside'], function ($r) use ($loadWorksApi, $insideListHandler, $insideViewHandler) {
+    $r->get('', function () use ($insideListHandler) {
+        $req = app()->request();
+
+        return $insideListHandler($req, INSIDE_BOARD_INSIGHT, 'pages.inside.insight', 'inside.insight');
+    })->name('inside.index');
+    $r->get('/news', function () use ($insideListHandler) {
+        $req = app()->request();
+
+        return $insideListHandler($req, INSIDE_BOARD_NEWS, 'pages.inside.news', 'inside.news');
+    })->name('inside.news');
+    $r->get('/news/view/{no}', function (Request $req, Response $res, string $no) use ($insideViewHandler) {
+        return $insideViewHandler($no, INSIDE_BOARD_NEWS, 'pages.inside.news-view', 'inside.news', 'inside.news.view');
+    })->name('inside.news.view');
+    $r->get('/insight', function () use ($insideListHandler) {
+        $req = app()->request();
+
+        return $insideListHandler($req, INSIDE_BOARD_INSIGHT, 'pages.inside.insight', 'inside.insight');
+    })->name('inside.insight');
+    $r->get('/insight/view/{no}', function (Request $req, Response $res, string $no) use ($insideViewHandler) {
+        return $insideViewHandler($no, INSIDE_BOARD_INSIGHT, 'pages.inside.insight-view', 'inside.insight', 'inside.insight.view');
+    })->name('inside.insight.view');
+    $r->get('/award', function () use ($loadWorksApi) {
+        $loadWorksApi();
+
+        return render('pages.inside.award', [
+            'pageType' => 'inside',
+            'awardRows' => get_works_award_page_rows(),
+        ]);
+    })->name('inside.award');
+    $r->get('/detail', fn() => render('pages.inside.detail', ['pageType' => 'inside']))->name('inside.detail');
+    $r->get('/detail/{id}', function (Request $req, Response $res, string $id) {
+        return render('pages.inside.detail', ['pageType' => 'inside', 'id' => $id]);
+    })->name('inside.detail.view');
+});
+
+/* =======================================================
+ * CONTACT
+ * ======================================================= */
+$router->get('/contact', function () {
+    $g = $GLOBALS;
+
+    return render('pages.contact.index', [
+        'pageType' => 'contact',
+        'contact_request_project_options' => $g['contact_request_project_options'] ?? [],
+        'contact_request_service_options' => $g['contact_request_service_options'] ?? [],
+        'contact_request_budget_options' => $g['contact_request_budget_options'] ?? [],
+        'contact_request_period_options' => $g['contact_request_period_options'] ?? [],
+    ]);
+})->name('contact.index');
+
+$router->post('/contact', function (Request $req) use ($rootPath) {
+    global $NO_SITE_UNIQUE_KEY;
+
+    $response = new Response();
+    require_once $rootPath . '/module/request.php';
+    $out = contact_request_process_submit($req, (string) ($NO_SITE_UNIQUE_KEY ?? 'NEWNO'), $rootPath);
+
+    return $response->json($out['body'], $out['http']);
+})->name('contact.submit');
+
+/* =======================================================
+ * Legal (개인정보처리방침, 이용약관)
+ * ======================================================= */
+$router->group(['prefix' => '/legal'], function ($r) {
+    $r->get('/privacy', fn() => render('pages.legal.privacy', ['pageType' => 'legal']))->name('legal.privacy');
+    $r->get('/terms', fn() => render('pages.legal.terms', ['pageType' => 'legal']))->name('legal.terms');
+});
+
+$router->get('/sitemap.xml', function () {
+    $db = Database\DB::getInstance();
+    $sitekey = defined('NB_SITEKEY') ? (string) NB_SITEKEY : 'PROJ00';
+
+    $worksStmt = $db->prepare(
+        'SELECT id, updated_at FROM nb_works WHERE deleted_at IS NULL AND is_visible = 1 ORDER BY id DESC'
+    );
+    $worksStmt->execute();
+    $worksRows = $worksStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $newsStmt = $db->prepare(
+        'SELECT no, regdate FROM nb_board WHERE sitekey = :sitekey AND board_no = :board_no ORDER BY no DESC'
+    );
+    $newsStmt->execute([':sitekey' => $sitekey, ':board_no' => INSIDE_BOARD_NEWS]);
+    $newsRows = $newsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $insightStmt = $db->prepare(
+        'SELECT no, regdate FROM nb_board WHERE sitekey = :sitekey AND board_no = :board_no ORDER BY no DESC'
+    );
+    $insightStmt->execute([':sitekey' => $sitekey, ':board_no' => INSIDE_BOARD_INSIGHT]);
+    $insightRows = $insightStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $xml = view('pages.sitemap', [
+        'worksRows'   => $worksRows,
+        'newsRows'    => $newsRows,
+        'insightRows' => $insightRows,
+    ])->setLayout(null)->render();
+
+    $res = response($xml);
+    $res->header('Content-Type', 'application/xml; charset=utf-8');
+    return $res;
+})->name('sitemap.xml');

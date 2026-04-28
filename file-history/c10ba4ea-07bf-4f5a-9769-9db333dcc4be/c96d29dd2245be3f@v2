@@ -1,0 +1,90 @@
+---
+paths:
+  - "**/*.php"
+---
+
+# PHP Rules
+
+- Framework: custom MVC (PHP 7.4) — no Laravel/Symfony conventions
+- Namespaces: `Core\`, `Database\`, `Http\`, `Routing\`, `View\`, `Menu\`
+- Classes: PascalCase / Methods & variables: camelCase / Constants: UPPER_SNAKE_CASE
+- DB tables use `nb_` prefix (e.g. `nb_siteinfo`, `nb_admin`)
+- DB schema changes must go through migration files (`make m`), never alter tables directly
+
+## Patterns
+
+```php
+// Routing
+$router->get('/', function () {
+    return render('pages.index');
+})->name('home');
+
+// View rendering
+render('pages.index');                        // views/pages/index.php
+render('pages.works.view', ['no' => $no]);    // views/pages/works/view.php
+```
+
+## Image Upload & WEBP Optimization
+
+All Admin image uploads flow through `imageUpload()` in `inc/lib/func.php`.
+**Strategy: original-replacement (not sibling).** Convertible images are converted to `.webp` and the original is deleted; the DB stores the `.webp` filename directly.
+
+```php
+// Standard upload call — WEBP replaces the original on success
+$result = imageUpload($UPLOAD_DIR_CLIENTS, $_FILES['thumb_image']);
+$saved = $result['saved'];
+// jpg/png/gif input → "6830abc.webp" (original removed, DB stores this)
+// svg/ico input    → "6830abc.svg"  (untouched)
+// 변환 실패 시     → 원본 파일명 그대로 (안전 fallback)
+
+// If you add a NEW upload path that bypasses imageUpload(), convert manually:
+move_uploaded_file($tmp, "$dir/$filename");
+if (in_array($ext, \Core\ImageProcessor::CONVERTIBLE, true)) {
+    if (\Core\ImageProcessor::makeWebpSibling("$dir/$filename")) {
+        $webp = preg_replace('/\.[^.]+$/', '.webp', $filename);
+        @unlink("$dir/$filename");
+        $filename = $webp; // store this in DB
+    }
+}
+
+// Deletion
+imageDelete("$UPLOAD_DIR_CLIENTS/$saved");
+// Removes the file at $saved + any leftover sibling (`.webp` next to `.png`, etc.) for legacy rows
+```
+
+Rules:
+- Do not add image resize/convert logic outside `Core\ImageProcessor`.
+- `makeWebpSibling()` is silent on failure — never throw from it. The name is historical; under the new strategy it produces the file that *replaces* the original.
+- Convertible: `jpg`, `jpeg`, `png`, `gif` (`ImageProcessor::CONVERTIBLE`). Skipped untouched: `svg`, `ico`.
+- Max width: 2560px (auto-resize). Quality: 82.
+- During conversion `ImageProcessor` temporarily raises `memory_limit` to `1024M` (`MEMORY_LIMIT` const) and restores it in `finally` — large GD bitmaps OOM at the default 128M.
+- Conversion fails silently above ~16 MP; the upload keeps the original and the DB row keeps the original filename.
+
+## Image Rendering
+
+모든 업로드 이미지 출력은 `render_uploaded_image()` (`config/functions.php`) 경유 필수.
+업로드 경로에 `<img>` 단독 태그 직접 사용 금지.
+
+```php
+// 히어로 (above-the-fold — LCP)
+<?= render_uploaded_image((string) ($work['thumbnailImage'] ?? ''), $title, '', 'eager') ?>
+
+// 그리드/목록 (below-the-fold)
+<?= render_uploaded_image((string) ($work['thumbnailImage'] ?? ''), $workLabel, '', 'lazy') ?>
+```
+
+Rules:
+- 첫 번째 인자는 **raw 미이스케이프** URL. 헬퍼가 내부에서 escape 처리.
+- `$thumbnailImage = e(...)` 로 이미 escape된 변수를 넘기면 이중 escape 발생 — raw 소스 배열에서 꺼낼 것.
+- 출력은 항상 plain `<img>`. `<picture>`/`<source webp>` 분기는 없음 — 업로드 시점에 이미 `.webp` 로 저장되므로 클라이언트 분기 불필요.
+- `class` 는 `<img>` 요소에 적용. 외부 wrapper 가 필요하면 호출 측에서 감싸기.
+
+## Image Backfill Scripts (CLI, `scripts/`)
+
+| 스크립트 | 용도 |
+|---|---|
+| `migrate-works-to-webp.php` | 신 전략(원본 대체) 1회성 마이그레이션 — `nb_works` 의 jpg/png/gif → webp + DB 컬럼 업데이트 + 원본 삭제. 16MP 초과는 skip. `--dry-run`, `--id=<n>`, `--limit=<n>` |
+| `convert-large-works-jpg.php` | `migrate-works-to-webp.php` 가 16MP 초과로 skip 한 잔여 행을 webp 한계(16383px) 이하로 리사이즈 후 변환 |
+| `backfill-webp.php` | 구 전략(sibling) 잔여 backfill — 신규 업로드 경로에는 사용 금지 |
+
+DB 업데이트가 성공한 뒤에만 원본을 삭제 — 데이터 손실 방지. 새 마이그레이션은 `migrate-works-to-webp.php` 패턴 따라 작성.

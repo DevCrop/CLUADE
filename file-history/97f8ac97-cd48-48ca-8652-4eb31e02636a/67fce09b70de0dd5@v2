@@ -1,0 +1,325 @@
+
+
+
+export interface IPageController {
+  init(root?: ParentNode | null): Promise<void>;
+  dispose(): void;
+}
+
+
+export interface IPageStrategy {
+  init(root?: ParentNode | null): Promise<void>;
+  dispose(): void;
+}
+
+export interface IPageRuntime {
+  init(root?: ParentNode | null): Promise<void>;
+  dispose(): void;
+}
+
+export interface IUIComponent {
+  init(): void;
+  setVisibleOn(): void | Promise<void>;
+  setVisibleOff(): void | Promise<void>;
+  getVisibleState(): boolean;
+  dispose(): void;
+}
+
+export interface IVisible {
+  setVisibleOn(): void;
+  setVisibleOff(): void;
+  getVisibleState(): boolean;
+}
+
+export interface ITimelineActionTarget {
+  readonly timelineKey: string;
+  getTimelineCallback(vars: Record<string, unknown>): (() => void) | null;
+}
+
+import type * as THREE from "three";
+import type { ObjectEffects, Vector3Optional } from "./object.types.js";
+import type { LoadGLTFResult } from "./runtime.types.js";
+
+export type RendererBackend = "webgl" | "webgpu";
+
+
+export interface IRendererBase {
+  toneMappingExposure: number;
+  toneMapping?: THREE.ToneMapping;
+  outputColorSpace?: THREE.ColorSpace | string;
+  domElement?: HTMLCanvasElement;
+  setSize?: (width: number, height: number) => void;
+  setPixelRatio?: (pixelRatio: number) => void;
+  dispose?: () => void;
+  render?: (scene: THREE.Scene, camera: THREE.Camera) => void;
+}
+
+
+export interface IWebGLRendererFeatures {
+  getPixelRatio: () => number;
+  setRenderTarget?: (target: THREE.WebGLRenderTarget | null) => void;
+  shadowMap?: {
+    enabled: boolean;
+    type: THREE.ShadowMapType;
+  };
+  info?: {
+    memory?: {
+      geometries?: number;
+      textures?: number;
+    };
+  };
+}
+
+
+export type RendererLike = IRendererBase & Partial<IWebGLRendererFeatures>;
+
+
+export function hasWebGLRendererFeatures(
+  renderer: RendererLike,
+): renderer is IRendererBase & IWebGLRendererFeatures {
+  return typeof renderer.getPixelRatio === "function";
+}
+
+
+export interface SceneObjectContext {
+  scene: THREE.Scene;
+  camera: THREE.Camera;
+  renderer: RendererLike;
+  rendererBackend: RendererBackend;
+  compileScene?: (camera?: THREE.Camera) => void;
+  prepareTexture?: (texture: THREE.Texture) => void;
+  getObject: (id: string) => THREE.Object3D | Record<string, unknown> | null;
+  registerObject: (id: string, object: THREE.Object3D | Record<string, unknown>) => void;
+  unregisterObject: (id: string) => void;
+  loadModel: (path: string) => Promise<THREE.Object3D>;
+  loadModelWithAnimation?: (path: string) => Promise<LoadGLTFResult>;
+  loadTexture?: (path: string) => Promise<THREE.Texture>;
+  loadHdrTexture?: (path: string) => Promise<THREE.Texture>;
+}
+
+
+export interface Object3DLike {
+  position: { x: number; y: number; z: number };
+  scale: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+}
+
+export interface ProjectionMatrixUpdatable {
+  updateProjectionMatrix(): void;
+}
+
+export interface HasPositionSet {
+  position: { set: (x: number, y: number, z: number) => void };
+  rotation?: { set: (x: number, y: number, z: number) => void };
+  scale?: { set: (x: number, y: number, z: number) => void };
+}
+
+export function hasPositionSet(obj: unknown): obj is HasPositionSet {
+  if (obj == null || typeof obj !== "object") return false;
+  const candidate = obj as HasPositionSet;
+  return typeof candidate.position?.set === "function";
+}
+
+
+export interface IDisposable {
+  dispose(): void;
+}
+
+
+export type TextureSlotKey =
+  | "map"
+  | "normalMap"
+  | "roughnessMap"
+  | "metalnessMap"
+  | "aoMap"
+  | "emissiveMap"
+  | "bumpMap"
+  | "displacementMap"
+  | "alphaMap"
+  | "envMap"
+  | "lightMap"
+  | "specularMap"
+  | "clearcoatMap"
+  | "clearcoatNormalMap"
+  | "clearcoatRoughnessMap"
+  | "sheenColorMap"
+  | "sheenRoughnessMap"
+  | "transmissionMap"
+  | "thicknessMap"
+  | "gradientMap"
+  | "matcap";
+
+export type MaterialWithTextures = THREE.Material & Partial<Record<TextureSlotKey, THREE.Texture | null>>;
+
+export interface Object3DWithResources extends THREE.Object3D {
+  geometry?: THREE.BufferGeometry;
+  material?: THREE.Material | THREE.Material[];
+}
+
+
+export type TweenApplyMode = "mergeAndSync" | "gsapOnly";
+
+
+export interface ISceneObject extends IDisposable {
+  init(context?: SceneObjectContext): void | Promise<void>;
+  runObject(): void | Promise<void>;
+  runUpdate(delta: number): void;
+  setVisibleOn(): void;
+  setVisibleOff(): void;
+  getVisibleState(): boolean;
+  getAnimationTarget(): object | null;
+  getRuntimeOptions?(): Record<string, unknown>;
+  getTweenApplyMode?(): TweenApplyMode;
+  setTimelineVars?(
+    vars: Record<string, unknown>,
+    kind: "from" | "to",
+  ): void;
+  
+  getBloomEnabled?(): boolean;
+  
+  setEffects?(effects: ObjectEffects): void;
+  getEffects?(): ObjectEffects;
+}
+
+
+export interface ITimelineController {
+  setPauseOn(): void;
+  setPauseOff(): void;
+  play(): void;
+  runWaitClick(
+    selector: string,
+    options?: {
+      onTrigger?: () => void | Promise<void>;
+      preventDefault?: boolean;
+      delegate?: boolean;
+    },
+  ): void;
+  runWaitDelay(ms: number): void;
+  runWaitPromise(promise: Promise<unknown>): void;
+  dispose(): void;
+}
+
+
+export interface IBackgroundEnvironment {
+  readonly id: string;
+  getRoot(): THREE.Group;
+  setOpacity(value: number): void;
+  hasSky(): boolean;
+  updateSkyParam(key: string, value: number): void;
+  getEnvTexture(): THREE.Texture | null;
+  getSkyExposure(): number;
+  dispose(): void;
+}
+
+
+
+
+
+
+export interface CameraParams {
+  fov?: number;
+  near?: number;
+  far?: number;
+  position?: Vector3Optional;
+  rotation?: Vector3Optional;
+}
+
+
+export interface RendererEngineOptions {
+  antialias?: boolean;
+  alpha?: boolean;
+  backend?: "webgl" | "webgpu";
+  powerPreference?: "default" | "high-performance" | "low-power";
+}
+
+
+export interface FogOptions {
+  color?: number;
+  near?: number;
+  far?: number;
+}
+
+
+export interface SceneEngineOptions {
+  background?: number | null;
+  fog?: FogOptions | null;
+}
+
+
+export interface BloomOptions {
+  strength?: number;
+  radius?: number;
+  threshold?: number;
+  compositeStrength?: number;
+  selective?: boolean;
+}
+
+export interface VignetteOptions {
+  offset?: number;
+  darkness?: number;
+}
+
+export interface PostProcessorOptions {
+  bloom?: boolean | BloomOptions;
+  vignette?: boolean | VignetteOptions;
+}
+
+export interface RenderBudgetOptions {
+  budgetMs?: number;
+  mode?: "performance" | "consistent";
+  enterSkipFrames?: number;
+  exitSkipFrames?: number;
+}
+
+
+export interface CameraTargetParams {
+  position?: Vector3Optional;
+}
+
+
+export interface EngineOptions {
+  canvasId?: string;
+  canvasElement?: HTMLCanvasElement | null;
+  camera?: CameraParams;
+
+  cameraTarget?: CameraTargetParams;
+  renderer?: RendererEngineOptions;
+  pixelRatioMax?: number;
+  shadowMap?: {
+    enabled?: boolean;
+    type?: THREE.ShadowMapType;
+  };
+  renderBudget?: RenderBudgetOptions;
+  scene?: SceneEngineOptions;
+  postProcessing?: PostProcessorOptions;
+  dependencies?: EngineDependencies;
+}
+
+export interface EngineDependencies {
+  sceneFactory?: () => SceneLike;
+  modelLoaderFactory?: () => ModelLoaderLike;
+}
+
+export interface SceneLike {
+  readonly three: THREE.Scene;
+  setContext(context: SceneObjectContext): void;
+  getObject(id: string): THREE.Object3D | Record<string, unknown> | null;
+  registerObject(
+    id: string,
+    object: THREE.Object3D | Record<string, unknown>,
+  ): void;
+  unregisterObject(id: string): void;
+  getBloomRoots(): Set<THREE.Object3D>;
+  update(deltaTime: number): void;
+  dispose(): void;
+}
+
+export interface ModelLoaderLike {
+  dispose(): void;
+  clearModelCache?(): void;
+}
+
+export interface TweenDescriptor {
+  target: object;
+  vars: Record<string, unknown>;
+}

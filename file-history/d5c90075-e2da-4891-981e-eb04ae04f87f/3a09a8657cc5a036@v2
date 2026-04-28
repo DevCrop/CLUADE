@@ -1,0 +1,136 @@
+<?php section('content') ?>
+
+
+<section class="no-sub-careers-view">
+    <div class="no-container-xl">
+        <div class="no-sub-careers-view__inner">
+
+            <article class="no-sub-careers-view__wrap">
+                <!-- 뒤로가기 -->
+                <?= include_view('components.button', [
+                  'variant' => 'prev-button',
+                  'text' => 'Previous',
+                  'href' => '/careers',
+                  'class' => 'no-sub-careers-view__prev',
+                ]) ?>
+                <div class="no-sub-careers-view__title">
+                    <h2 class="f-heading-1 --bold">시니어 UX/UI 디자이너</h2>
+                </div>
+                <div class="no-sub-careers-view__content">
+
+                    <div class="no-sub-careers-view__section">
+                        <h3>직무 소개</h3>
+                        <p>나인원랩스는 디지털 경험의 새로운 지평을 함께 열어갈 시니어 UX/UI 디자이너를 찾고 있습니다. 사용자 중심의 인터페이스 설계부터 비주얼 디자인 시스템 구축까지, 웹과 모바일 환경에서 브랜드의 본질을 담은 인터랙티브 경험을 만들어 낼 수 있는 분과 함께하고 싶습니다.</p>
+                        <p>단순히 화면을 그리는 역할이 아니라, 비즈니스 목표와 사용자 니즈를 연결하는 전략적 설계자로서 프로젝트 전 과정에 깊게 관여하게 됩니다.</p>
+                    </div>
+
+                    <div class="no-sub-careers-view__section">
+                        <h3>주요 업무</h3>
+                        <ul>
+                            <li>웹·앱 서비스 UX/UI 기획 및 설계 (와이어프레임, 프로토타입)</li>
+                            <li>브랜드 아이덴티티 기반 디자인 시스템 수립 및 운영</li>
+                            <li>사용자 리서치·인터뷰·휴리스틱 평가를 통한 인사이트 도출</li>
+                            <li>개발팀과의 긴밀한 협업을 통한 디자인 스펙 전달 및 QA</li>
+                            <li>클라이언트 커뮤니케이션 및 제안 과정 참여</li>
+                        </ul>
+                    </div>
+
+                    <div class="no-sub-careers-view__section">
+                        <h3>자격 요건</h3>
+                        <ul>
+                            <li>UX/UI 디자인 실무 경력 5년 이상</li>
+                            <li>Figma를 활용한 협업 설계 경험 (Auto Layout, Component, Variable 포함)</li>
+                            <li>사용자 리서치 방법론 이해 및 적용 경험</li>
+                            <li>디자인 시스템 구축·운영 경험</li>
+                            <li>포트폴리오 제출 필수 (웹/앱 프로젝트 최소 3건 이상)</li>
+                        </ul>
+                    </div>
+
+                    <div class="no-sub-careers-view__section">
+                        <h3>우대 사항</h3>
+                        <ul>
+                            <li>Three.js, GSAP 등 인터랙티브 웹 관련 도구에 대한 이해</li>
+                            <li>HTML/CSS 기초 지식 보유자 (개발자와 직접 소통 가능한 수준)</li>
+                            <li>브랜딩·모션·영상 디자인 경험</li>
+                            <li>에이전시 또는 스타트업 환경 근무 경험</li>
+                        </ul>
+                    </div>
+
+                    <div class="no-sub-careers-view__section">
+                        <h3>복리후생</h3>
+                        <ul>
+                            <li>유연 근무제 (코어타임 11:00–17:00)</li>
+                            <li>장비 지원 (MacBook Pro, 외장 모니터)</li>
+                            <li>도서·강의·컨퍼런스 비용 지원 (연 50만 원)</li>
+                            <li>사내 스낵바 및 음료 무제한 제공</li>
+                            <li>반기 성과 리뷰 및 연봉 협의</li>
+                        </ul>
+                    </div>
+
+                </div>
+            </article>
+            <div class="no-sub-careers-view__info">
+                <div class="no-sub-careers-view__info-card">
+                    <ul class="no-sub-careers-view__info-list">
+                        <li class="no-sub-careers-view__info-item">
+                            <span>
+                                직군
+                            </span>
+                            <p>
+                                디자인
+                            </p>
+                        </li>
+                        <li class="no-sub-careers-view__info-item">
+                            <span>
+                                경력
+                            </span>
+                            <p>
+                                5년 이상
+                            </p>
+                        </li>
+                        <li class="no-sub-careers-view__info-item">
+                            <span>
+                                고용 형태
+                            </span>
+                            <p>
+                                정규직
+                            </p>
+                        </li>
+                        <li class="no-sub-careers-view__info-item">
+                            <span>
+                                근무 형태
+                            </span>
+                            <p>
+                                서울시 노원구 한글비석로 430
+                            </p>
+                        </li>
+                    </ul>
+                    <!-- 지도 -->
+                    <div class="no-sub-careers-view__map">
+                        <iframe
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3158.435369041092!2d127.06709127643367!3d37.66247651861992!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357cb91a87171709%3A0x2e4343fa74110766!2z64KY7J247JuQ656p7Iqk!5e0!3m2!1sko!2skr!4v1771857989717!5m2!1sko!2skr"
+                            width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    </div>
+                </div>
+
+                <!-- 뒤로가기 -->
+                <?= include_view('components.button', [
+                  'variant' => 'corner',
+                  'tag' => 'a',
+                  'text' => '지원하기',
+                  'href' => '#',
+                  'class' => 'no-sub-careers-view__apply',
+                  'icon_svg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M566.9 342.6L589.5 320L566.9 297.4L406.9 137.4L384.3 114.8L339 160.1C340.3 161.4 383 204.1 467 288.1L64.3 288.1L64.3 352.1L467 352.1C383 436.1 340.3 478.8 339 480.1L384.3 525.4L406.9 502.8L566.9 342.8z"/></svg>',
+                  'iconPosition' => 'after',
+                ]) ?>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

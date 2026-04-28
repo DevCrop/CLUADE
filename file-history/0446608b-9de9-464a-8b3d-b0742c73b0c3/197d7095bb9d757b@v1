@@ -1,0 +1,55 @@
+# Vocabulary
+
+## Naming Rules
+
+| Context | Allowed |
+|---|---|
+| Public display / brand text | `NINEONELABS` |
+| Technical path, slug, package, code context | `nineonelabs` |
+| Korean public text | `나인원랩스` |
+
+Forbidden:
+
+- mixed camel case brand naming
+- sentence-case brand naming
+- lowercase brand naming in public display
+- missing-final-`B` misspellings
+
+## Concept Vocabulary Test
+
+Before approving a display word, ask:
+
+1. Does this word belong to the NINEONELABS brand world?
+2. Can Korean users understand it quickly?
+3. Does it support web, design, service, proof, or action?
+4. Does it sound like NINEONELABS rather than a generic agency?
+
+If a word has the right dictionary meaning but the wrong brand texture, replace it.
+
+## Preferred Families
+
+| Family | Use For | Words |
+|---|---|---|
+| Journey | partnership and progress | journey, route, path, coordinates |
+| Launch | activation and first release | launch, ready, lift, signal |
+| Orbit | ongoing operation | orbit, cycle, motion |
+| Build | service clarity | build, structure, system, web, screen |
+| Proof | credibility | proof, tested, real, measured |
+| Challenge | story and attitude | challenge, friction, unknown, uncharted |
+
+## Use With Care
+
+| Word | Risk | Better Direction |
+|---|---|---|
+| familiar | too general; weak brand texture | default, ordinary, expected, uncharted |
+| innovative | generic agency language | new, tested, built, proven |
+| solution | corporate and vague | system, structure, website, build |
+| future | vague unless grounded in service | launch, next screen, next orbit |
+| mission | can become costume | project, build, structure, launch |
+| universe | can feel like space fantasy | web experience, brand journey, orbit |
+
+## Display Copy Guidance
+
+- Use space words only when the next phrase grounds them in web, app, branding, UI/UX, maintenance, proof, or action.
+- Prefer concrete digital words near metaphors: `web`, `screen`, `structure`, `system`, `launch`, `proof`.
+- If Korean body copy is needed to explain an English headline, the English is too clever or too vague.

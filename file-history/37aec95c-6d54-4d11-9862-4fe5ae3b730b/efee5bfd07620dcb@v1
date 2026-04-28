@@ -1,0 +1,225 @@
+import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import type { SceneObjectContext } from "../../types/engine.types.js";
+import type { GravityBallsObjectOptions } from "../../types/object.types.js";
+
+interface SmokeParticle {
+  ID: number;
+  totalTicks: number;
+  tick: number;
+  birthEnd: number;
+  deathStart: number;
+  peakOpacity: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  rotSpeed: number;
+  scalePerTick: number;
+  sprite: THREE.Sprite;
+  material: THREE.SpriteMaterial;
+}
+
+type ResolvedOpts = {
+  attachTo: string;
+  spawnOffset: { x?: number; y?: number; z?: number };
+  radius: number;
+  colors: string[];
+  textureUrl: string;
+  spawnIntervalMs: number;
+  particleLifeMs: number;
+  maxScale: number;
+  peakOpacity: number;
+};
+
+const BIRTH_RATIO = 0.15;
+const DEATH_RATIO = 0.25;
+// Assumed tick size at 60 fps — used only to convert ms lifetime to tick count
+const TICK_MS = 1000 / 60;
+
+const DEFAULTS = {
+  attachTo: "rocket",
+  spawnOffset: { x: 0 as number, y: -0.34 as number, z: 0 as number },
+  radius: 0.3,
+  colors: ["#F1EBDD"] as string[],
+  textureUrl: "",
+  spawnIntervalMs: 200,
+  particleLifeMs: 3000,
+  maxScale: 3.5,
+  peakOpacity: 0.65,
+};
+
+export class GravityBalls extends SceneObject<Record<string, never>> {
+  private readonly _particles = new Map<number, SmokeParticle>();
+  private _idx = 0;
+  private _spawnAccumMs = 0;
+  private readonly _spawnPt = new THREE.Vector3();
+  private _opts: GravityBallsObjectOptions = {};
+  private _baseMat: THREE.SpriteMaterial | null = null;
+  private _texture: THREE.Texture | null = null;
+
+  setOptions(props: Partial<GravityBallsObjectOptions> | undefined): this {
+    if (props) this._opts = { ...this._opts, ...props };
+    return this;
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._opts as Record<string, unknown>;
+  }
+
+  override async runObject(): Promise<void> {
+    const ctx = this._context;
+    if (!ctx) return;
+
+    const o = this._resolve();
+
+    if (o.textureUrl && ctx.loadTexture) {
+      try {
+        this._texture = await ctx.loadTexture(this.resolveAssetPath(o.textureUrl));
+      } catch {
+        // fall back to flat color sprite
+      }
+    }
+
+    this._baseMat = new THREE.SpriteMaterial({
+      map: this._texture ?? null,
+      transparent: true,
+      depthWrite: false,
+      opacity: 0,
+    });
+
+    this._applyOptionVisibility();
+  }
+
+  override runUpdate(delta: number): void {
+    const ctx = this._context;
+    if (!ctx || this._disposed) return;
+
+    const o = this._resolve();
+
+    if (o.attachTo) {
+      const rkt = ctx.getObject(o.attachTo);
+      if (rkt instanceof THREE.Object3D) {
+        rkt.getWorldPosition(this._spawnPt);
+        this._spawnPt.x += o.spawnOffset.x ?? 0;
+        this._spawnPt.y += o.spawnOffset.y ?? 0;
+        this._spawnPt.z += o.spawnOffset.z ?? 0;
+      }
+    }
+
+    this._spawnAccumMs += delta * 1000;
+    while (this._spawnAccumMs >= o.spawnIntervalMs) {
+      this._spawnAccumMs -= o.spawnIntervalMs;
+      this._spawnParticle(ctx, o);
+    }
+
+    const dead: number[] = [];
+    this._particles.forEach((p, id) => { if (this._updateParticle(p)) dead.push(id); });
+    for (const id of dead) this._particles.delete(id);
+  }
+
+  private _spawnParticle(ctx: SceneObjectContext, o: ResolvedOpts): void {
+    const baseMat = this._baseMat;
+    if (!baseMat) return;
+
+    const mat = baseMat.clone();
+    mat.color.set(o.colors[Math.floor(Math.random() * o.colors.length)] ?? o.colors[0]);
+    mat.opacity = 0;
+    mat.rotation = Math.random() * Math.PI * 2;
+
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.setScalar(o.radius);
+    sprite.position.set(this._spawnPt.x, this._spawnPt.y, this._spawnPt.z);
+
+    const totalTicks = Math.round(o.particleLifeMs / TICK_MS);
+    const birthEnd = Math.round(totalTicks * BIRTH_RATIO);
+    const deathStart = Math.round(totalTicks * (1 - DEATH_RATIO));
+    const scalePerTick = (o.radius * (o.maxScale - 1)) / totalTicks;
+
+    const vxMag = 0.002 + Math.random() * 0.003;
+    const vzMag = 0.001 + Math.random() * 0.003;
+    const particle: SmokeParticle = {
+      ID: ++this._idx,
+      totalTicks,
+      tick: 0,
+      birthEnd,
+      deathStart,
+      peakOpacity: o.peakOpacity,
+      vx: (Math.random() < 0.5 ? 1 : -1) * vxMag,
+      vy: -0.004 + Math.random() * 0.005,
+      vz: (Math.random() < 0.5 ? 1 : -1) * vzMag,
+      rotSpeed: (Math.random() < 0.5 ? 1 : -1) * (0.002 + Math.random() * 0.006),
+      scalePerTick,
+      sprite,
+      material: mat,
+    };
+
+    ctx.scene.add(sprite);
+    this._particles.set(particle.ID, particle);
+  }
+
+  // Returns true when the particle should be removed
+  private _updateParticle(p: SmokeParticle): boolean {
+    p.tick++;
+
+    p.sprite.position.x += p.vx;
+    p.sprite.position.y += p.vy;
+    p.sprite.position.z += p.vz;
+
+    p.sprite.scale.x += p.scalePerTick;
+    p.sprite.scale.y += p.scalePerTick;
+
+    p.material.rotation += p.rotSpeed;
+
+    if (p.tick <= p.birthEnd) {
+      p.material.opacity = p.peakOpacity * (p.tick / p.birthEnd);
+    } else if (p.tick >= p.deathStart) {
+      const t = (p.tick - p.deathStart) / (p.totalTicks - p.deathStart);
+      p.material.opacity = Math.max(0, p.peakOpacity * (1 - t));
+    } else {
+      p.material.opacity = p.peakOpacity;
+    }
+
+    if (p.tick >= p.totalTicks) {
+      this._context?.scene.remove(p.sprite);
+      p.material.dispose();
+      return true;
+    }
+    return false;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    this._particles.forEach(p => { p.sprite.visible = visible; });
+  }
+
+  override dispose(): void {
+    if (this._disposed) return;
+    const scene = this._context?.scene;
+
+    this._particles.forEach(p => {
+      scene?.remove(p.sprite);
+      p.material.dispose();
+    });
+    this._particles.clear();
+
+    this._baseMat?.dispose();
+    this._baseMat = null;
+    // Texture owned by engine's texture cache — do not dispose
+
+    super.dispose();
+  }
+
+  private _resolve(): ResolvedOpts {
+    const o = this._opts;
+    return {
+      attachTo: o.attachTo ?? DEFAULTS.attachTo,
+      spawnOffset: o.spawnOffset ?? DEFAULTS.spawnOffset,
+      radius: o.radius ?? DEFAULTS.radius,
+      colors: (o.colors && o.colors.length > 0) ? o.colors : DEFAULTS.colors,
+      textureUrl: o.textureUrl ?? DEFAULTS.textureUrl,
+      spawnIntervalMs: o.spawnIntervalMs ?? DEFAULTS.spawnIntervalMs,
+      particleLifeMs: o.particleLifeMs ?? DEFAULTS.particleLifeMs,
+      maxScale: o.maxScale ?? DEFAULTS.maxScale,
+      peakOpacity: o.peakOpacity ?? DEFAULTS.peakOpacity,
+    };
+  }
+}

@@ -1,0 +1,410 @@
+<ide_diagnostics>[
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 15,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 16,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 18,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 19,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 24,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 25,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 27,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 28,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 34,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 35,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 41,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 42,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 46,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 47,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 53,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 54,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 58,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 59,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 63,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 64,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 88,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 88,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 89,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 90,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 93,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 93,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 94,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 95,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 96,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 107,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 107,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 108,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 109,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 110,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 111,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 114,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 114,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 117,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 117,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 118,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 129,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 129,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 130,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 131,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 132,
+    "column": 1,
+    "message": "MD007/ul-indent: Unordered list indentation [Expected: 0; Actual: 3]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 165,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 165,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 165,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 165,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 165,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/snappy-hopping-origami.md",
+    "line": 165,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  }
+]</ide_diagnostics>

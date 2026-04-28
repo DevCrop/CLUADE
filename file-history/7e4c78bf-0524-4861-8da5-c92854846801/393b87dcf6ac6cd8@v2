@@ -1,0 +1,436 @@
+import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import { Helpers } from "../../utils/Helpers.js";
+import type {
+  TransitionVeilTweenProps,
+} from "../../types/object.types.js";
+import type { TransitionVeilObjectOptions } from "../../types/object-visual.types.js";
+import type {
+  ShaderUniformRecord,
+  TransitionVeilRuntimePort,
+  TransitionVeilRuntimeState,
+} from "../../types/object-runtime.types.js";
+import transitionVeilVertexShader from "../../../shaders/who-reveal/vertex.glsl?raw";
+import transitionVeilFragmentShader from "../../../shaders/who-reveal/fragment.glsl?raw";
+
+const TRANSITION_VEIL_RENDER_ORDER = 2200;
+const TRANSITION_VEIL_DEFAULT_OPACITY = 0.96;
+const TRANSITION_VEIL_DEFAULT_NOISE_STRENGTH = 1;
+const TRANSITION_VEIL_DEFAULT_REVEAL_SOFTNESS = 0.24;
+const TRANSITION_VEIL_DEFAULT_SIZE_X = 2.4;
+const TRANSITION_VEIL_DEFAULT_SIZE_Y = 1.8;
+const TRANSITION_VEIL_DEFAULT_COLOR_DARK = 0xc7d3de;
+const TRANSITION_VEIL_DEFAULT_COLOR_LIGHT = 0xfbfdff;
+const TRANSITION_VEIL_TIME_EPSILON = 0.0001;
+const TRANSITION_VEIL_PROGRESS_EPSILON = 0.0001;
+const TRANSITION_VEIL_DEFAULT_DISTANCE = 16;
+const TRANSITION_VEIL_COVER_OVERSCAN = 1.35;
+const TRANSITION_VEIL_CAMERA_FORWARD = new THREE.Vector3();
+const TRANSITION_VEIL_CAMERA_RIGHT = new THREE.Vector3();
+const TRANSITION_VEIL_CAMERA_UP = new THREE.Vector3();
+const TRANSITION_VEIL_OFFSET = new THREE.Vector3();
+
+export class TransitionVeil
+  extends SceneObject<TransitionVeilTweenProps>
+  implements TransitionVeilRuntimePort
+{
+  private _options: Partial<TransitionVeilObjectOptions> = {};
+  private _runtimeState: TransitionVeilRuntimeState = { active: false, progress: 0 };
+  private _mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> | null =
+    null;
+  private _material: THREE.ShaderMaterial | null = null;
+  private _noiseTexture: THREE.Texture | null = null;
+  private _perlinTexture: THREE.Texture | null = null;
+  private _elapsedTime = 0;
+  private _lastActive = false;
+  private _lastProgress = Number.NaN;
+  private _lastResolutionWidth = 0;
+  private _lastResolutionHeight = 0;
+  private _lastTimeUniform = Number.NaN;
+
+  setOptions(props: Partial<TransitionVeilObjectOptions> | undefined): this {
+    if (!props) return this;
+    this._options = {
+      ...this._options,
+      ...props,
+      position: { ...this._options.position, ...props.position },
+      rotation: { ...this._options.rotation, ...props.rotation },
+      scale: { ...this._options.scale, ...props.scale },
+      plane: { ...this._options.plane, ...props.plane },
+      shader: {
+        ...this._options.shader,
+        ...props.shader,
+        textures: {
+          ...this._options.shader?.textures,
+          ...props.shader?.textures,
+        },
+        size: {
+          ...this._options.shader?.size,
+          ...props.shader?.size,
+        },
+      },
+    };
+    return this;
+  }
+
+  setRuntimeState(state: Partial<TransitionVeilRuntimeState>): void {
+    const prevActive = this._runtimeState.active;
+    const prevProgress = this._runtimeState.progress;
+    this._runtimeState = {
+      ...this._runtimeState,
+      ...state,
+    };
+    const nextActive = this._runtimeState.active;
+    const nextProgress = this._runtimeState.progress ?? 0;
+    if (prevActive !== nextActive) {
+      console.log(`[VEIL:mesh] active changed  ${String(prevActive)} → ${String(nextActive)}  progress=${nextProgress.toFixed(4)}`);
+    } else if (
+      Math.abs((prevProgress ?? 0) - nextProgress) > 0.05
+    ) {
+      console.log(`[VEIL:mesh] progress jump  ${(prevProgress ?? 0).toFixed(4)} → ${nextProgress.toFixed(4)}  active=${String(nextActive)}`);
+    }
+    this._syncVisibility();
+    if (!this._runtimeState.active) return;
+    this._applyRuntimeUniforms();
+  }
+
+  getRuntimeState(): TransitionVeilRuntimeState {
+    return { ...this._runtimeState };
+  }
+
+  override getAnimationTarget(): THREE.Object3D | null {
+    return this.getTimelineRoot();
+  }
+
+  override getBloomEnabled(): boolean {
+    return false;
+  }
+
+  override getTweenApplyMode(): "mergeAndSync" {
+    return "mergeAndSync";
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options;
+  }
+
+  protected override mergeOptionsFromTimeline(
+    vars: Partial<TransitionVeilTweenProps>,
+  ): void {
+    if (vars.position) this._options.position = { ...this._options.position, ...vars.position };
+    if (vars.rotation) this._options.rotation = { ...this._options.rotation, ...vars.rotation };
+    if (vars.scale) this._options.scale = { ...this._options.scale, ...vars.scale };
+    if (typeof vars.visible === "boolean") this._options.visible = vars.visible;
+    if (typeof vars.progress === "number") this._runtimeState.progress = vars.progress;
+    if (typeof vars.active === "boolean") this._runtimeState.active = vars.active;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    root.visible = visible && (this._runtimeState.active ?? false);
+  }
+
+  protected override syncFromOptions(): void {
+    this._applyStaticUniforms();
+    this._syncVisibility();
+  }
+
+  override async runObject(): Promise<void> {
+    const scene = this._context?.scene;
+    if (!scene) return;
+
+    const root = this.ensureTimelineRoot("transitionVeilRoot");
+    if (!root) return;
+    await this._loadTextures();
+
+    this._material = this._createMaterial();
+    this._mesh = new THREE.Mesh(this._createGeometry(), this._material);
+    this._mesh.frustumCulled = false;
+    this._mesh.renderOrder = TRANSITION_VEIL_RENDER_ORDER;
+    root.add(this._mesh);
+
+    this._followCamera();
+    this._applyStaticUniforms();
+    this._applyRuntimeUniforms();
+    this._syncVisibility();
+  }
+
+  override runUpdate(deltaTime: number): void {
+    if (this._disposed) return;
+    this._followCamera();
+    if (!this._runtimeState.active) return;
+    this._elapsedTime += Number.isFinite(deltaTime) ? Math.max(0, deltaTime) : 0;
+    this._applyRuntimeUniforms();
+  }
+
+  override dispose(): void {
+    this._mesh?.geometry.dispose();
+    this._material?.dispose();
+    this._noiseTexture?.dispose();
+    this._perlinTexture?.dispose();
+    this._mesh = null;
+    this._material = null;
+    this._noiseTexture = null;
+    this._perlinTexture = null;
+    super.dispose();
+  }
+
+  private async _loadTextures(): Promise<void> {
+    const loadTexture = this._context?.loadTexture;
+    const textures = this._options.shader?.textures;
+    const perlinTextureUrl = textures?.perlinTextureUrl?.trim();
+    const noiseTextureUrl = textures?.noiseTextureUrl?.trim();
+    if (!loadTexture || !perlinTextureUrl || !noiseTextureUrl) return;
+
+    const [perlinTexture, noiseTexture] = await Promise.all([
+      loadTexture(this.resolveAssetPath(perlinTextureUrl)),
+      loadTexture(this.resolveAssetPath(noiseTextureUrl)),
+    ]);
+    this._prepareTexture(perlinTexture);
+    this._prepareTexture(noiseTexture);
+    this._perlinTexture = perlinTexture;
+    this._noiseTexture = noiseTexture;
+    this._context?.prepareTexture?.(perlinTexture);
+    this._context?.prepareTexture?.(noiseTexture);
+  }
+
+  private _prepareTexture(texture: THREE.Texture): void {
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.needsUpdate = true;
+  }
+
+  private _createGeometry(): THREE.PlaneGeometry {
+    return new THREE.PlaneGeometry(1, 1, 1, 1);
+  }
+
+  private _createMaterial(): THREE.ShaderMaterial {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uProgress: { value: 0 },
+        uOpacity: {
+          value: this._finiteOr(
+            this._options.shader?.opacity,
+            TRANSITION_VEIL_DEFAULT_OPACITY,
+          ),
+        },
+        uNoiseStrength: {
+          value: this._finiteOr(
+            this._options.shader?.noiseStrength,
+            TRANSITION_VEIL_DEFAULT_NOISE_STRENGTH,
+          ),
+        },
+        uRevealSoftness: {
+          value: this._finiteOr(
+            this._options.shader?.revealSoftness,
+            TRANSITION_VEIL_DEFAULT_REVEAL_SOFTNESS,
+          ),
+        },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uSize: {
+          value: new THREE.Vector2(
+            this._finiteOr(
+              this._options.shader?.size?.x,
+              TRANSITION_VEIL_DEFAULT_SIZE_X,
+            ),
+            this._finiteOr(
+              this._options.shader?.size?.y,
+              TRANSITION_VEIL_DEFAULT_SIZE_Y,
+            ),
+          ),
+        },
+        uDarkColor: {
+          value: new THREE.Color(TRANSITION_VEIL_DEFAULT_COLOR_DARK),
+        },
+        uLightColor: {
+          value: new THREE.Color(TRANSITION_VEIL_DEFAULT_COLOR_LIGHT),
+        },
+        tPerlin: { value: this._perlinTexture },
+        tNoise: { value: this._noiseTexture },
+      },
+      vertexShader: transitionVeilVertexShader,
+      fragmentShader: transitionVeilFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      side: THREE.DoubleSide,
+    });
+  }
+
+  private _applyStaticUniforms(): void {
+    const uniforms = this._material?.uniforms as ShaderUniformRecord | undefined;
+    if (!uniforms) return;
+    this._followCamera();
+    this._setUniformNumber(
+      uniforms,
+      "uOpacity",
+      this._finiteOr(
+        this._options.shader?.opacity,
+        TRANSITION_VEIL_DEFAULT_OPACITY,
+      ),
+    );
+    this._setUniformNumber(
+      uniforms,
+      "uNoiseStrength",
+      this._finiteOr(
+        this._options.shader?.noiseStrength,
+        TRANSITION_VEIL_DEFAULT_NOISE_STRENGTH,
+      ),
+    );
+    this._setUniformNumber(
+      uniforms,
+      "uRevealSoftness",
+      this._finiteOr(
+        this._options.shader?.revealSoftness,
+        TRANSITION_VEIL_DEFAULT_REVEAL_SOFTNESS,
+      ),
+    );
+    const size = uniforms.uSize?.value;
+    if (!(size instanceof THREE.Vector2)) return;
+    size.set(
+      this._finiteOr(
+        this._options.shader?.size?.x,
+        TRANSITION_VEIL_DEFAULT_SIZE_X,
+      ),
+      this._finiteOr(
+        this._options.shader?.size?.y,
+        TRANSITION_VEIL_DEFAULT_SIZE_Y,
+      ),
+    );
+  }
+
+  private _applyRuntimeUniforms(): void {
+    const uniforms = this._material?.uniforms as ShaderUniformRecord | undefined;
+    if (!uniforms) return;
+    const isActive = this._runtimeState.active ?? false;
+    const progress = Helpers.clamp01(
+      this._runtimeState.progress ?? this._options.progress ?? 0,
+    );
+    if (
+      isActive ||
+      this._lastActive !== isActive ||
+      Math.abs(progress - this._lastProgress) > TRANSITION_VEIL_PROGRESS_EPSILON
+    ) {
+      this._setUniformNumber(uniforms, "uProgress", progress);
+      this._lastProgress = progress;
+    }
+    if (
+      isActive &&
+      Math.abs(this._elapsedTime - this._lastTimeUniform) > TRANSITION_VEIL_TIME_EPSILON
+    ) {
+      this._setUniformNumber(uniforms, "uTime", this._elapsedTime);
+      this._lastTimeUniform = this._elapsedTime;
+    }
+    const resolution = uniforms.uResolution?.value;
+    const renderer = this._context?.renderer;
+    const width = renderer?.domElement?.width;
+    const height = renderer?.domElement?.height;
+    if (!(resolution instanceof THREE.Vector2)) return;
+    if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+    const nextWidth = width as number;
+    const nextHeight = height as number;
+    if (
+      nextWidth !== this._lastResolutionWidth ||
+      nextHeight !== this._lastResolutionHeight
+    ) {
+      resolution.set(nextWidth, nextHeight);
+      this._lastResolutionWidth = nextWidth;
+      this._lastResolutionHeight = nextHeight;
+    }
+    this._lastActive = isActive;
+  }
+
+  private _syncVisibility(): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    root.visible = this._options.visible !== false && (this._runtimeState.active ?? false);
+  }
+
+  private _followCamera(): void {
+    const root = this.getTimelineRoot();
+    const camera = this._context?.camera;
+    if (!root || !camera) return;
+
+    const distance = this._resolveDistance();
+    camera.getWorldDirection(TRANSITION_VEIL_CAMERA_FORWARD);
+    root.quaternion.copy(camera.quaternion);
+    root.position.copy(camera.position).addScaledVector(
+      TRANSITION_VEIL_CAMERA_FORWARD,
+      distance,
+    );
+
+    TRANSITION_VEIL_CAMERA_RIGHT.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    TRANSITION_VEIL_CAMERA_UP.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    TRANSITION_VEIL_OFFSET.set(
+      this._finiteOr(this._options.position?.x, 0),
+      this._finiteOr(this._options.position?.y, 0),
+      this._finiteOr(this._options.position?.z, 0),
+    );
+    root.position
+      .addScaledVector(TRANSITION_VEIL_CAMERA_RIGHT, TRANSITION_VEIL_OFFSET.x)
+      .addScaledVector(TRANSITION_VEIL_CAMERA_UP, TRANSITION_VEIL_OFFSET.y)
+      .addScaledVector(TRANSITION_VEIL_CAMERA_FORWARD, TRANSITION_VEIL_OFFSET.z);
+
+    const coverSize = this._resolveCoverSize(camera, distance);
+    const planeWidth = this._finiteOr(this._options.plane?.width, coverSize.width);
+    const planeHeight = this._finiteOr(this._options.plane?.height, coverSize.height);
+    root.scale.set(
+      Math.max(planeWidth, coverSize.width),
+      Math.max(planeHeight, coverSize.height),
+      1,
+    );
+  }
+
+  private _resolveDistance(): number {
+    return this._finiteOr(
+      this._options.plane?.distance,
+      TRANSITION_VEIL_DEFAULT_DISTANCE,
+    );
+  }
+
+  private _resolveCoverSize(
+    camera: THREE.Camera,
+    distance: number,
+  ): { width: number; height: number } {
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+      const height =
+        2 * Math.tan(verticalFov * 0.5) * distance * TRANSITION_VEIL_COVER_OVERSCAN;
+      return {
+        width: height * camera.aspect,
+        height,
+      };
+    }
+    if (camera instanceof THREE.OrthographicCamera) {
+      const width =
+        ((camera.right - camera.left) / Math.max(camera.zoom, 0.0001)) *
+        TRANSITION_VEIL_COVER_OVERSCAN;
+      const height =
+        ((camera.top - camera.bottom) / Math.max(camera.zoom, 0.0001)) *
+        TRANSITION_VEIL_COVER_OVERSCAN;
+      return { width, height };
+    }
+    return {
+      width: this._finiteOr(this._options.plane?.width, 1) * TRANSITION_VEIL_COVER_OVERSCAN,
+      height: this._finiteOr(this._options.plane?.height, 1) * TRANSITION_VEIL_COVER_OVERSCAN,
+    };
+  }
+
+  private _setUniformNumber(
+    uniforms: ShaderUniformRecord,
+    key: string,
+    value: number,
+  ): void {
+    const target = uniforms[key];
+    if (!target) return;
+    target.value = value;
+  }
+
+  private _finiteOr(value: number | undefined, fallback: number): number {
+    return Number.isFinite(value) ? (value as number) : fallback;
+  }
+}

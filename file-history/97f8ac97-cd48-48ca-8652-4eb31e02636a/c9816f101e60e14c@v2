@@ -1,0 +1,688 @@
+import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import { THREE_LAYER_DEFAULT, THREE_LAYER_EARTH } from "../../core/setup.js";
+import { createPointLightFromSpec } from "../env/SceneLights.js";
+import type {
+  AboutLightProfileStop,
+  AboutLightsObjectOptions,
+  AboutLightsTweenProps,
+} from "../../types/object.types.js";
+import type { LightSpec } from "../../types/runtime.types.js";
+import type {
+  AboutLightsProxy,
+  FollowCameraEntry,
+  GroupTransformProxy,
+} from "../../types/object-runtime.types.js";
+import type {
+  AboutLightState,
+  AboutLightsPort,
+} from "../../types/about.types.js";
+import { Helpers } from "../../utils/Helpers.js";
+
+const ABOUT_AMBIENT_LIGHT_ID = "ambientLight";
+const ABOUT_KEY_LIGHT_ID = "keyLight";
+const ABOUT_FILL_LIGHT_ID = "fillLight";
+const ABOUT_RIM_LIGHT_ID = "rimLight";
+
+export class AboutLights
+  extends SceneObject<AboutLightsTweenProps>
+  implements AboutLightsPort
+{
+  private static readonly EMITTER_HALO_SEGMENTS = 16;
+  private _options: Partial<AboutLightsObjectOptions> = {};
+  private _lights = new Map<string, THREE.Light>();
+  private _specs: LightSpec[] = [];
+  private _profileStops: AboutLightProfileStop[] = [];
+  private _profileKeys: string[] = [];
+  private _travelProgress = 0;
+  private _masterIntensity = 1;
+  private _timelineProxy: AboutLightsProxy = {
+    rig: this._createDefaultGroupProxy(),
+  };
+  private _groups: Record<"rig", THREE.Group | null> = {
+    rig: null,
+  };
+  private _followCameraEntries: FollowCameraEntry[] = [];
+  private _followCamPos = new THREE.Vector3();
+  private _followCamQuat = new THREE.Quaternion();
+  private _followWorldOffset = new THREE.Vector3();
+
+  setOptions(props: Partial<AboutLightsObjectOptions> | undefined): this {
+    if (props == null) return this;
+    this._options = { ...this._options, ...props };
+    if (Number.isFinite(props.travelProgress as number)) {
+      this._setTravelProgress(props.travelProgress as number);
+    }
+    if (Number.isFinite(props.intensity as number)) {
+      this._setMasterIntensity(props.intensity as number);
+    }
+    if (Array.isArray(props.lights)) {
+      this._specs = props.lights;
+      if (this.getTimelineRoot()) this._rebuildFromSpecs();
+    }
+    this._setProfileStops(props.profileStops);
+    return this;
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (root) root.visible = visible;
+  }
+
+  protected override syncFromOptions(): void {
+    if (Number.isFinite(this._options.travelProgress as number)) {
+      this._setTravelProgress(this._options.travelProgress as number);
+    }
+    if (Number.isFinite(this._options.intensity as number)) {
+      this._setMasterIntensity(this._options.intensity as number);
+    }
+    this._setProfileStops(this._options.profileStops);
+    this._syncProxyScalarState();
+  }
+
+  override getAnimationTarget(): AboutLightsProxy {
+    return this._timelineProxy;
+  }
+
+  override getTweenApplyMode(): "gsapOnly" {
+    return "gsapOnly";
+  }
+
+  override runObject(): void {
+    if (!this._context?.scene) return;
+    const root = this.ensureTimelineRoot("aboutLightsRoot");
+    if (!root) return;
+
+    if (Number.isFinite(this._options.travelProgress as number)) {
+      this._setTravelProgress(this._options.travelProgress as number);
+    }
+    if (Number.isFinite(this._options.intensity as number)) {
+      this._setMasterIntensity(this._options.intensity as number);
+    }
+    if (!this._specs.length) {
+      const optLights = this._options.lights;
+      if (Array.isArray(optLights)) this._specs = optLights;
+    }
+    this._setProfileStops(this._options.profileStops);
+
+    this._createGroupNodes(root);
+    this._specs.forEach((spec) => this._addLight(spec));
+    this._buildFollowCameraEntries();
+    this._syncProxyFromGroups();
+    this._syncProxyLightBaseIntensities();
+    this._syncProxyScalarState();
+  }
+
+  override runUpdate(_delta: number): void {
+    this._applyGroupTransformsFromProxy();
+    this._applyScalarStateFromProxy();
+    this._applyDirectLightIntensityOverrides();
+    this._applyProfileByProgress();
+    this._syncProxyScalarState();
+    this._applyCameraFollow();
+  }
+
+  override dispose(): void {
+    this._disposeLightDecorators();
+    this._disposeLights();
+    this._followCameraEntries = [];
+    this._profileStops = [];
+    this._profileKeys = [];
+    this._groups = { rig: null };
+    super.dispose();
+  }
+
+  private _disposeLights(): void {
+    this._lights.forEach((light) => {
+      light.parent?.remove(light);
+      const disposable = light as THREE.Light & { dispose?: () => void };
+      disposable.dispose?.();
+      const withTarget = light as THREE.Light & { target?: THREE.Object3D };
+      if (withTarget.target && withTarget.target.parent) {
+        withTarget.target.parent.remove(withTarget.target);
+      }
+    });
+    this._lights.clear();
+  }
+
+  setState(state: AboutLightState): void {
+    if (state.visible) {
+      this.setVisibleOn();
+    } else {
+      this.setVisibleOff();
+    }
+    this._setTravelProgress(state.travelProgress);
+    this._setMasterIntensity(state.intensity);
+    this._timelineProxy.rig.position = { ...state.rig.position };
+    this._timelineProxy.rig.rotation = { ...state.rig.rotation };
+    this._timelineProxy.rig.scale = { ...state.rig.scale };
+    this._setProxyLightIntensityValue(ABOUT_AMBIENT_LIGHT_ID, state.ambientLight);
+    this._setProxyLightIntensityValue(ABOUT_KEY_LIGHT_ID, state.keyLight);
+    this._setProxyLightIntensityValue(ABOUT_FILL_LIGHT_ID, state.fillLight);
+    this._setProxyLightIntensityValue(ABOUT_RIM_LIGHT_ID, state.rimLight);
+    this._applyLightIntensityValue(ABOUT_AMBIENT_LIGHT_ID, state.ambientLight);
+    this._applyLightIntensityValue(ABOUT_KEY_LIGHT_ID, state.keyLight);
+    this._applyLightIntensityValue(ABOUT_FILL_LIGHT_ID, state.fillLight);
+    this._applyLightIntensityValue(ABOUT_RIM_LIGHT_ID, state.rimLight);
+    this._applyGroupTransformsFromProxy();
+    this._applyProfileByProgress();
+    this._syncProxyScalarState();
+  }
+
+  getState(): AboutLightState {
+    this._syncProxyFromGroups();
+    return {
+      visible: this.getVisibleState(),
+      rig: {
+        position: { ...this._timelineProxy.rig.position },
+        rotation: { ...this._timelineProxy.rig.rotation },
+        scale: { ...this._timelineProxy.rig.scale },
+        visible: this.getVisibleState(),
+      },
+      travelProgress: this._travelProgress,
+      intensity: this._masterIntensity,
+      ambientLight: this._readLightIntensityValue(ABOUT_AMBIENT_LIGHT_ID),
+      keyLight: this._readLightIntensityValue(ABOUT_KEY_LIGHT_ID),
+      fillLight: this._readLightIntensityValue(ABOUT_FILL_LIGHT_ID),
+      rimLight: this._readLightIntensityValue(ABOUT_RIM_LIGHT_ID),
+    };
+  }
+
+  private _rebuildFromSpecs(): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+
+    this._disposeLightDecorators();
+    this._disposeLights();
+    for (let i = root.children.length - 1; i >= 0; i -= 1) {
+      root.remove(root.children[i]);
+    }
+    this._followCameraEntries = [];
+    this._groups = { rig: null };
+
+    this._createGroupNodes(root);
+    this._specs.forEach((spec) => this._addLight(spec));
+    this._buildFollowCameraEntries();
+    this._syncProxyFromGroups();
+    this._syncProxyLightBaseIntensities();
+  }
+
+  private _createGroupNodes(root: THREE.Group): void {
+    const group = new THREE.Group();
+    group.name = "aboutLights-rig";
+    root.add(group);
+    this._groups.rig = group;
+  }
+
+  private _addLight(spec: LightSpec): void {
+    if (!spec.id) return;
+    const parent = this._groups.rig;
+    if (!parent) return;
+
+    const color = spec.color ?? 0xffffff;
+    const intensity = Number.isFinite(spec.intensity as number)
+      ? Number(spec.intensity)
+      : 1;
+    const type = (spec.type ?? "directional").toLowerCase();
+    let light: THREE.Light;
+
+    if (type === "ambient") {
+      light = new THREE.AmbientLight(color, intensity);
+    } else if (type === "point") {
+      light = createPointLightFromSpec(spec, color, intensity);
+      this._applyPosition(light, spec.position);
+    } else if (type === "spot") {
+      const spot = new THREE.SpotLight(
+        color,
+        intensity,
+        spec.distance,
+        spec.angle,
+        spec.penumbra,
+        spec.decay,
+      );
+      this._applyPosition(spot, spec.position);
+      this._applyDirectionalTarget(parent, spot, spec.target);
+      this._applyShadow(spot, spec);
+      light = spot;
+    } else {
+      const directional = new THREE.DirectionalLight(color, intensity);
+      this._applyPosition(directional, spec.position);
+      this._applyDirectionalTarget(parent, directional, spec.target);
+      this._applyShadow(directional, spec);
+      light = directional;
+    }
+
+    this._attachEmitter(light, spec);
+    light.name = `aboutLight:${spec.id}`;
+    light.layers.set(THREE_LAYER_DEFAULT);
+    if (spec.affectsEarth !== false) {
+      light.layers.enable(THREE_LAYER_EARTH);
+    }
+    if (
+      (light instanceof THREE.DirectionalLight ||
+        light instanceof THREE.SpotLight) &&
+      light.target
+    ) {
+      light.target.layers.set(THREE_LAYER_DEFAULT);
+      if (spec.affectsEarth !== false) {
+        light.target.layers.enable(THREE_LAYER_EARTH);
+      }
+    }
+    parent.add(light);
+    this._lights.set(spec.id, light);
+  }
+
+  private _attachEmitter(light: THREE.Light, spec: LightSpec): void {
+    const emitter = spec.emitter;
+    if (emitter?.enabled === false) return;
+    if (!emitter) return;
+
+    const radius = Math.max(0.001, emitter.radius ?? 0.045);
+    const color = emitter.color ?? spec.color ?? 0xffffff;
+    const opacity = Math.max(0, Math.min(1, emitter.opacity ?? 0.95));
+    const haloScale = Math.max(1, emitter.haloScale ?? 2.8);
+    const haloOpacity = Math.max(0, Math.min(1, emitter.haloOpacity ?? 0.18));
+
+    const coreGeometry = new THREE.SphereGeometry(
+      radius,
+      AboutLights.EMITTER_HALO_SEGMENTS,
+      AboutLights.EMITTER_HALO_SEGMENTS,
+    );
+    const coreMaterial = new THREE.MeshBasicMaterial({
+      color,
+      transparent: opacity < 1,
+      opacity,
+      toneMapped: false,
+      depthWrite: false,
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    core.name = `${light.name || spec.id}:emitter-core`;
+    core.renderOrder = 20;
+
+    const haloGeometry = new THREE.SphereGeometry(
+      radius * haloScale,
+      AboutLights.EMITTER_HALO_SEGMENTS,
+      AboutLights.EMITTER_HALO_SEGMENTS,
+    );
+    const haloMaterial = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: haloOpacity,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+      depthWrite: false,
+    });
+    const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+    halo.name = `${light.name || spec.id}:emitter-halo`;
+    halo.renderOrder = 19;
+
+    light.add(core);
+    light.add(halo);
+  }
+
+  private _applyDirectionalTarget(
+    parent: THREE.Object3D,
+    light: THREE.DirectionalLight | THREE.SpotLight,
+    target?: LightSpec["target"],
+  ): void {
+    if (!target) return;
+    const targetObj = new THREE.Object3D();
+    targetObj.name = `${light.name || "aboutDirectionalLight"}:target`;
+    targetObj.position.set(target.x ?? 0, target.y ?? 0, target.z ?? 0);
+    parent.add(targetObj);
+    light.target = targetObj;
+  }
+
+  private _applyShadow(
+    light: THREE.DirectionalLight | THREE.SpotLight,
+    spec: LightSpec,
+  ): void {
+    if (!spec.castShadow || !light.shadow) return;
+    light.castShadow = true;
+    const shadow = spec.shadow;
+    if (shadow?.mapSize) {
+      light.shadow.mapSize.width = light.shadow.mapSize.height = shadow.mapSize;
+    }
+    if (shadow?.bias != null) light.shadow.bias = shadow.bias;
+    if (shadow?.normalBias != null) light.shadow.normalBias = shadow.normalBias;
+    if (shadow?.radius != null && "radius" in light.shadow) {
+      (light.shadow as { radius?: number }).radius = shadow.radius;
+    }
+  }
+
+  private _applyPosition(
+    obj: THREE.Object3D,
+    pos?: LightSpec["position"],
+  ): void {
+    if (!pos) return;
+    obj.position.set(pos.x ?? 0, pos.y ?? 0, pos.z ?? 0);
+  }
+
+  private _setTravelProgress(value: number): void {
+    const clamped = Math.max(
+      0,
+      Math.min(1, Number.isFinite(value) ? value : 0),
+    );
+    this._travelProgress = clamped;
+    this._options.travelProgress = clamped;
+  }
+
+  private _setMasterIntensity(value: number): void {
+    const clamped = Math.max(
+      0,
+      Math.min(4, Number.isFinite(value) ? value : 1),
+    );
+    this._masterIntensity = clamped;
+    this._options.intensity = clamped;
+  }
+
+  private _syncProxyFromGroups(): void {
+    const group = this._groups.rig;
+    if (!group) return;
+    const proxy = this._timelineProxy.rig;
+    proxy.position.x = group.position.x;
+    proxy.position.y = group.position.y;
+    proxy.position.z = group.position.z;
+    proxy.rotation.x = Helpers.radToDeg(group.rotation.x);
+    proxy.rotation.y = Helpers.radToDeg(group.rotation.y);
+    proxy.rotation.z = Helpers.radToDeg(group.rotation.z);
+    proxy.scale.x = group.scale.x;
+    proxy.scale.y = group.scale.y;
+    proxy.scale.z = group.scale.z;
+  }
+
+  private _applyGroupTransformsFromProxy(): void {
+    const group = this._groups.rig;
+    const proxy = this._timelineProxy.rig;
+    if (!group) return;
+    group.position.set(
+      proxy.position.x ?? 0,
+      proxy.position.y ?? 0,
+      proxy.position.z ?? 0,
+    );
+    Helpers.applyRotationDeg(group, proxy.rotation);
+    group.scale.set(proxy.scale.x ?? 1, proxy.scale.y ?? 1, proxy.scale.z ?? 1);
+  }
+
+  private _applyScalarStateFromProxy(): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    const progress = proxy.travelProgress;
+    if (typeof progress === "number" && Number.isFinite(progress)) {
+      this._setTravelProgress(progress);
+    }
+    const intensity = proxy.intensity;
+    if (typeof intensity === "number" && Number.isFinite(intensity)) {
+      this._setMasterIntensity(intensity);
+    }
+  }
+
+  private _applyDirectLightIntensityOverrides(): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    for (const [id] of this._lights.entries()) {
+      const value = proxy[id];
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      this._applyLightIntensityValue(id, value);
+    }
+  }
+
+  private _applyLightIntensityValue(id: string, value: number): void {
+    const light = this._lights.get(id);
+    if (!light) return;
+    light.intensity = Math.max(0, value) * this._masterIntensity;
+  }
+
+  private _readLightIntensityValue(id: string): number {
+    return this._readProxyLightIntensityValue(id);
+  }
+
+  private _readProxyLightIntensityValue(id: string): number {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    const value = proxy[id];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    const light = this._lights.get(id);
+    if (!light) return 0;
+    const master = Math.max(1e-6, this._masterIntensity);
+    return light.intensity / master;
+  }
+
+  private _setProxyLightIntensityValue(id: string, value: number): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    proxy[id] = value;
+  }
+
+  private _setProfileStops(
+    stops: AboutLightsObjectOptions["profileStops"],
+  ): void {
+    if (!Array.isArray(stops)) {
+      this._profileStops = [];
+      this._profileKeys = [];
+      return;
+    }
+    this._profileStops = stops
+      .filter(
+        (stop): stop is AboutLightProfileStop =>
+          stop != null &&
+          Number.isFinite(stop.progress) &&
+          stop.values != null &&
+          typeof stop.values === "object",
+      )
+      .map((stop) => ({
+        progress: Math.max(0, Math.min(1, stop.progress)),
+        values: { ...stop.values },
+      }))
+      .sort((a, b) => a.progress - b.progress);
+    this._profileKeys = this._collectProfileKeys(this._profileStops);
+  }
+
+  private _collectProfileKeys(stops: AboutLightProfileStop[]): string[] {
+    const seen = new Set<string>();
+    for (const stop of stops) {
+      for (const key of Object.keys(stop.values)) {
+        if (key === "travelProgress" || key === "intensity") continue;
+        seen.add(key);
+      }
+    }
+    return Array.from(seen);
+  }
+
+  private _applyProfileByProgress(): void {
+    if (this._profileStops.length === 0) return;
+    const sampled = this._sampleProfile(this._travelProgress);
+    if (!sampled) return;
+    const [left, right, t] = sampled;
+    const keys = this._profileKeys;
+    for (let i = 0; i < keys.length; i += 1) {
+      const key = keys[i];
+      const leftValue = left.values[key];
+      const rightValue = right.values[key];
+      if (
+        !Number.isFinite(leftValue as number) &&
+        !Number.isFinite(rightValue as number)
+      ) {
+        continue;
+      }
+      const l = Number.isFinite(leftValue as number)
+        ? Number(leftValue)
+        : Number(rightValue);
+      const r = Number.isFinite(rightValue as number) ? Number(rightValue) : l;
+      this._applyLightIntensityValue(key, l + (r - l) * t);
+    }
+  }
+
+  private _sampleProfile(
+    progress: number,
+  ): [AboutLightProfileStop, AboutLightProfileStop, number] | null {
+    const stops = this._profileStops;
+    if (stops.length === 0) return null;
+    if (stops.length === 1) return [stops[0], stops[0], 0];
+    const clamped = Math.max(0, Math.min(1, progress));
+    if (clamped <= stops[0].progress) return [stops[0], stops[0], 0];
+    const last = stops[stops.length - 1];
+    if (clamped >= last.progress) return [last, last, 0];
+    for (let index = 0; index < stops.length - 1; index += 1) {
+      const left = stops[index];
+      const right = stops[index + 1];
+      if (clamped < left.progress || clamped > right.progress) continue;
+      const span = Math.max(Number.EPSILON, right.progress - left.progress);
+      return [left, right, (clamped - left.progress) / span];
+    }
+    return [last, last, 0];
+  }
+
+  private _syncProxyLightBaseIntensities(): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    const master = Math.max(1e-6, this._masterIntensity);
+    for (const [id, light] of this._lights.entries()) {
+      proxy[id] = light.intensity / master;
+    }
+  }
+
+  private _syncProxyScalarState(): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    proxy.travelProgress = this._travelProgress;
+    proxy.intensity = this._masterIntensity;
+  }
+
+  private _buildFollowCameraEntries(): void {
+    this._followCameraEntries = [];
+    const camera = this._context?.camera;
+    if (!(camera instanceof THREE.Object3D)) return;
+
+    const camPos = new THREE.Vector3();
+    const camQuat = new THREE.Quaternion();
+    const camInvQuat = new THREE.Quaternion();
+    camera.getWorldPosition(camPos);
+    camera.getWorldQuaternion(camQuat);
+    camInvQuat.copy(camQuat).invert();
+
+    for (const spec of this._specs) {
+      const rawFollow = spec.followCamera;
+      const followOpts =
+        typeof rawFollow === "object" && rawFollow != null ? rawFollow : null;
+      const enabled = rawFollow === true || followOpts?.enabled === true;
+      if (!enabled) continue;
+
+      const light = this._lights.get(spec.id);
+      if (!light) continue;
+      const rotateWithCamera = followOpts?.rotateWithCamera ?? true;
+      const lightType = (spec.type ?? "directional").toLowerCase();
+      const hasTarget = lightType === "directional" || lightType === "spot";
+      const targetObj =
+        hasTarget &&
+        (light instanceof THREE.DirectionalLight ||
+          light instanceof THREE.SpotLight)
+          ? light.target
+          : null;
+
+      const positionOffset = followOpts?.positionOffset
+        ? new THREE.Vector3(
+            followOpts.positionOffset.x ?? 0,
+            followOpts.positionOffset.y ?? 0,
+            followOpts.positionOffset.z ?? 0,
+          )
+        : this._worldDeltaToOffset(
+            light.position.clone().sub(camPos),
+            rotateWithCamera,
+            camInvQuat,
+          );
+
+      const targetOffset =
+        targetObj != null
+          ? followOpts?.targetOffset
+            ? new THREE.Vector3(
+                followOpts.targetOffset.x ?? 0,
+                followOpts.targetOffset.y ?? 0,
+                followOpts.targetOffset.z ?? 0,
+              )
+            : this._worldDeltaToOffset(
+                targetObj.position.clone().sub(camPos),
+                rotateWithCamera,
+                camInvQuat,
+              )
+          : null;
+
+      this._followCameraEntries.push({
+        lightId: spec.id,
+        rotateWithCamera,
+        positionOffset,
+        targetOffset,
+      });
+    }
+  }
+
+  private _worldDeltaToOffset(
+    delta: THREE.Vector3,
+    rotateWithCamera: boolean,
+    camInvQuat: THREE.Quaternion,
+  ): THREE.Vector3 {
+    if (!rotateWithCamera) return delta;
+    return delta.applyQuaternion(camInvQuat);
+  }
+
+  private _applyCameraFollow(): void {
+    if (this._followCameraEntries.length === 0) return;
+    const camera = this._context?.camera;
+    if (!(camera instanceof THREE.Object3D)) return;
+
+    const camPos = this._followCamPos;
+    const camQuat = this._followCamQuat;
+    const worldOffset = this._followWorldOffset;
+    camera.getWorldPosition(camPos);
+    camera.getWorldQuaternion(camQuat);
+
+    for (const entry of this._followCameraEntries) {
+      const light = this._lights.get(entry.lightId);
+      if (!light) continue;
+
+      if (entry.positionOffset) {
+        worldOffset.copy(entry.positionOffset);
+        if (entry.rotateWithCamera) worldOffset.applyQuaternion(camQuat);
+        light.position.copy(camPos).add(worldOffset);
+      }
+
+      if (
+        entry.targetOffset &&
+        (light instanceof THREE.DirectionalLight ||
+          light instanceof THREE.SpotLight) &&
+        light.target
+      ) {
+        worldOffset.copy(entry.targetOffset);
+        if (entry.rotateWithCamera) worldOffset.applyQuaternion(camQuat);
+        light.target.position.copy(camPos).add(worldOffset);
+      }
+    }
+  }
+
+  private _disposeLightDecorators(): void {
+    for (const light of this._lights.values()) {
+      for (const child of [...light.children]) {
+        light.remove(child);
+        child.traverse((node) => {
+          if (!(node instanceof THREE.Mesh)) return;
+          node.geometry?.dispose();
+          const material = Array.isArray(node.material)
+            ? node.material
+            : [node.material];
+          for (const item of material) {
+            item?.dispose?.();
+          }
+        });
+      }
+    }
+  }
+
+  private _createDefaultGroupProxy(): GroupTransformProxy {
+    return {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    };
+  }
+}

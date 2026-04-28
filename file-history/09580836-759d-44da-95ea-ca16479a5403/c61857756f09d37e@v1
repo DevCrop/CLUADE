@@ -1,0 +1,127 @@
+<?php
+/** @var array<string, mixed>|null $work */
+$work = is_array($work ?? null) ? $work : null;
+if ($work === null) {
+    return;
+}
+
+$title = e((string) ($work['title'] ?? ''));
+$services = is_array($work['services'] ?? null) ? $work['services'] : [];
+$categories = is_array($work['categories'] ?? null) ? $work['categories'] : [];
+$client = e((string) ($work['client'] ?? '-'));
+$updatedAtLabel = e((string) ($work['updatedAtLabel'] ?? '-'));
+$linkUrl = is_string($work['linkUrl'] ?? null) ? $work['linkUrl'] : null;
+$overviewText = trim((string) ($work['overviewText'] ?? ''));
+$contentsHtml = is_string($work['contentsHtml'] ?? null) ? $work['contentsHtml'] : null;
+$detailImages = is_array($work['detailImages'] ?? null) ? $work['detailImages'] : [];
+$award = is_array($work['award'] ?? null) ? $work['award'] : null;
+$thumbnailVideo = is_string($work['thumbnailVideo'] ?? null) ? $work['thumbnailVideo'] : null;
+$thumbnailImage = e((string) ($work['thumbnailImage'] ?? ''));
+?>
+<div class="no-work-modal" data-work-modal-root role="dialog" aria-modal="true" aria-hidden="false">
+    <button class="no-work-modal__backdrop no-backdrop" type="button" data-work-modal-close aria-label="작업 모달 닫기"></button>
+    <div class="no-work-modal__shell">
+      <?= include_view('components.button', [
+          'variant' => 'corner',
+          'tag' => 'button',
+          'text' => '',
+          'type' => 'button',
+          'href' => '',
+          'class' => 'no-work-modal__close',
+          'iconName' => 'xmark',
+          'iconPosition' => 'after',
+          'withWrapper' => false,
+          'extraAttrs' => [
+              'data-work-modal-close' => '',
+              'aria-label' => '작업 모달 닫기',
+          ],
+        ]) ?>
+      <div class="no-work-modal__panel" role="document">
+        <div class="no-work-modal__content-wrap">
+          <div class="no-work-modal__top">
+            <div class="no-work-modal__header">
+              <h2 class="no-work-modal__title"><?= $title ?></h2>
+              <?php if ($award !== null): ?>
+              <p class="no-work-modal__award">
+                  <?php if (!empty($award['icon'])): ?>
+                  <img src="<?= e((string) $award['icon']) ?>" alt="<?= e((string) $award['label']) ?>">
+                  <?php endif; ?>
+                  <span><?= e((string) $award['label']) ?></span>
+              </p>
+              <?php endif; ?>
+            </div>
+            <div class="no-work-modal__info">
+            <ul class="no-work-modal__info-list">
+              <li class="no-work-modal__info-item">
+                <span class="no-work-modal__info-label">SERVICE</span>
+                <ul class="no-work-modal__info-sub-list">
+                  <?php foreach ($services as $service): ?>
+                    <li class="no-work-modal__info-sub-item">
+                      <p class="no-work-modal__info-sub-text"><?= e((string) $service) ?></p>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              </li>
+              <li class="no-work-modal__info-item">
+                <span class="no-work-modal__info-label">CLIENT</span>
+                <p class="no-work-modal__info-client"><?= $client ?></p>
+              </li>
+              <li class="no-work-modal__info-item">
+                <span class="no-work-modal__info-label">CATEGORY</span>
+                <ul class="no-work-modal__info-sub-list">
+                  <?php foreach ($categories as $category): ?>
+                  <li class="no-work-modal__info-sub-item">
+                    <p class="no-work-modal__info-sub-text"><?= e((string) ($category['label'] ?? '')) ?></p>
+                  </li>
+                  <?php endforeach; ?>
+                </ul>
+              </li>
+              <li class="no-work-modal__info-item">
+                <span class="no-work-modal__info-label">UPDATE</span>
+                <p class="no-work-modal__info-time"><?= $updatedAtLabel ?></p>
+              </li>
+            </ul>
+              <?php if ($linkUrl !== null): ?>
+              <?= include_view('components.button', [
+                  'variant' => 'corner',
+                  'tag' => 'a',
+                  'text' => 'Visit Website',
+                  'href' => $linkUrl,
+                  'target' => '_blank',
+                  'class' => 'no-work-modal__button',
+                  'iconName' => 'arrow-right',
+                  'iconPosition' => 'after',
+                  'extraAttrs' => ['rel' => 'noopener noreferrer'],
+              ]) ?>
+              <?php endif; ?>
+          </div>
+        </div>
+        <div class="no-work-modal__thumbnail">
+          <?php if ($thumbnailVideo !== null): ?>
+          <video src="<?= e($thumbnailVideo) ?>" autoplay muted loop playsinline></video>
+          <?php else: ?>
+          <img src="<?= $thumbnailImage ?>" alt="<?= $title ?>">
+          <?php endif; ?>
+        </div>
+        <div class="no-work-modal__content">
+          <?php if ($overviewText !== ''): ?>
+          <div class="no-work-modal__content__overview">
+            <h2 class="no-work-modal__content-title">OVERVIEW</h2>
+            <p class="no-work-modal__content-description"><?= nl2br(e($overviewText)) ?></p>
+          </div>
+          <?php endif; ?>
+          <?php if ($contentsHtml !== null): ?>
+          <div class="no-work-modal__content__overview">
+            <h2 class="no-work-modal__content-title">CONTENTS</h2>
+            <div class="no-work-modal__content-description"><?= $contentsHtml ?></div>
+          </div>
+          <?php endif; ?>
+          <div class="no-work-modal__content__image">
+            <?php foreach ($detailImages as $detailImage): ?>
+            <img src="<?= e((string) $detailImage) ?>" alt="<?= $title ?>">
+            <?php endforeach; ?>
+          </div>
+      </div>
+    </div>
+    </div>
+</div>

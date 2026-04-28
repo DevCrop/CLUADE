@@ -1,0 +1,20 @@
+---
+name: NINEONELABS 프로젝트 아키텍처
+description: 핵심 아키텍처 결정사항 — 커스텀 MVC, Three.js 씬 구조, Theatre.js 바인딩 위치
+type: project
+originSessionId: 624772be-a851-4c46-81a2-c61d8d7b4ad9
+---
+커스텀 PHP 7.4 MVC + Three.js + Theatre.js 기반 웹에이전시 사이트 리뉴얼 프로젝트.
+
+**핵심 아키텍처 결정:**
+- 라우팅: 클로저 방식 (`routes/web.php` + `render()`) — 컨트롤러 클래스 MVC 아님
+- Three.js 씬: `resource/ts/pages/<page>/scene/` 
+- Theatre.js 바인딩: `resource/ts/pages/<page>/theatre/`
+- 공유 코드: page 폴더 밖 (`resource/ts/runtime/`, `resource/ts/manager/` 등)
+- TypeScript 타입: `resource/ts/types/*.types.ts` 전용 파일 18개 (인라인 타입 금지)
+- 빌드: Vite (번들), sass CLI (CSS) — `npm run build` 사용 금지 (dev 서버 자동 반영)
+- DB 테이블: `nb_` 프리픽스 (예: `nb_siteinfo`, `nb_admin`)
+
+**Why:** Barba.js/SPA 계약을 제거하고 AppManager, PageRuntime, PageTheatreBinder 소유권 분리를 명확히 하기 위한 설계.
+
+**How to apply:** 새 페이지/기능 추가 시 반드시 이 구조를 따르고, `/new-route` 스킬 활용.

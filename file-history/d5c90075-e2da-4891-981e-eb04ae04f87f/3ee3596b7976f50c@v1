@@ -1,0 +1,84 @@
+<?php
+$posts = $posts ?? [];
+$paginationTotal = (int) ($paginationTotal ?? 1);
+$paginationCurrent = (int) ($paginationCurrent ?? 1);
+$paginationQueryParams = is_array($paginationQueryParams ?? null) ? $paginationQueryParams : [];
+$categoryItems = $categoryItems ?? [];
+$searchQuery = (string) ($searchQuery ?? '');
+$listRouteName = (string) ($listRouteName ?? 'inside.news');
+$listUrl = route($listRouteName, [], false);
+$activeCategoryNo = $activeCategoryNo ?? null;
+
+section('content') ?>
+
+<?= include_view('components.sub-visual', [
+    'title' => 'NEWS',
+    'lines' => [
+        '나인원랩스의 최근 소식과 업데이트를 확인하세요.',
+    ],
+]) ?>
+
+<section class="no-sub-news">
+    <div class="no-container-2xl">
+        <div class="no-sub-news__inner">
+            <div class="no-filter-bar">
+                <?= include_view('components.category', [
+                    'items' => $categoryItems,
+                ]) ?>
+                <form class="no-filter-bar__search" method="get" action="<?= e($listUrl) ?>" role="search">
+                    <?php if ($activeCategoryNo !== null && (int) $activeCategoryNo > 0) : ?>
+                    <input type="hidden" name="category" value="<?= (int) $activeCategoryNo ?>">
+                    <?php endif; ?>
+                    <?= include_view('components.search-bar', [
+                        'id' => 'search-bar-news',
+                        'name' => 'q',
+                        'placeholder' => '검색어를 입력해주세요.',
+                        'show_label' => false,
+                        'value' => $searchQuery,
+                        'with_submit' => true,
+                    ]) ?>
+                </form>
+            </div>
+            <div class="--cnt">
+                <ul class="no-sub-news-list">
+                    <?php foreach ($posts as $row) :
+                        $viewUrl = route('inside.news.view', ['no' => (string) ($row['no'] ?? '')], false);
+                        $badge = inside_board_notice_label($row);
+                        $dateDisp = inside_board_format_date($row['regdate'] ?? null);
+                        $dateAttr = inside_board_datetime_attr($row['regdate'] ?? null);
+                        $title = (string) ($row['title'] ?? '');
+                        ?>
+                    <li class="no-sub-news-list-item">
+                        <a href="<?= e($viewUrl) ?>" class="no-sub-news-list-item__link">
+                            <div class="no-sub-news-list-item__body">
+                                <div class="--badge"><?= e($badge) ?></div>
+                                <h3 class="f-heading-3 --medium"><?= e($title) ?></h3>
+                                <?php if ($dateAttr !== '') : ?>
+                                <time class="--time" datetime="<?= e($dateAttr) ?>"><?= e($dateDisp) ?></time>
+                                <?php endif; ?>
+                            </div>
+                        </a>
+                    </li>
+                    <?php endforeach; ?>
+                    <?php if (count($posts) === 0) : ?>
+                    <li class="no-sub-news-list-item no-sub-news-list-item--empty">
+                        <p class="f-body-3">등록된 글이 없습니다.</p>
+                    </li>
+                    <?php endif; ?>
+                </ul>
+                <div class="no-view-more">
+                    <?= include_view('components.pagination', [
+                        'total' => max(1, $paginationTotal),
+                        'current' => max(1, min($paginationTotal, $paginationCurrent)),
+                        'queryParams' => $paginationQueryParams,
+                    ]) ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

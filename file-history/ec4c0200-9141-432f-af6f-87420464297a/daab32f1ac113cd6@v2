@@ -1,0 +1,46 @@
+# Auto-register current project into active-projects.json pinned list on SessionStart.
+# Idempotent. <50ms. Receives stdin payload when async:false.
+
+$ErrorActionPreference = 'SilentlyContinue'
+$base        = 'D:\.claude'
+$projectsDir = "$base\projects"
+$registryPath = "$base\active-projects.json"
+
+# Try to extract cwd from SessionStart payload
+$cwd = $null
+try {
+    $raw = [Console]::In.ReadToEnd()
+    if ($raw) { $cwd = ($raw | ConvertFrom-Json).cwd }
+} catch {}
+
+# Find a target folder under projects/ by partial match on cwd's leaf segment
+$match = $null
+if ($cwd) {
+    $seg = Split-Path $cwd -Leaf
+    $match = Get-ChildItem $projectsDir -Directory -ErrorAction SilentlyContinue |
+             Where-Object { $_.Name -like "*$seg*" } |
+             Select-Object -First 1 -ExpandProperty Name
+}
+
+# No cwd payload -> cannot guess; exit silently (async:true cannot receive cwd)
+if (-not $match) { exit 0 }
+
+# Read active-projects.json
+$registry = if (Test-Path $registryPath) {
+    Get-Content $registryPath -Raw | ConvertFrom-Json
+} else {
+    [PSCustomObject]@{ pinned = @() }
+}
+
+$pinned = @($registry.pinned)
+if ($pinned -contains $match) { exit 0 }
+
+# Append and persist
+$pinned += $match
+$registry.pinned = $pinned
+$registry | ConvertTo-Json | Set-Content $registryPath -Encoding UTF8
+
+$ts = Get-Date -Format 'yyyy-MM-dd HH:mm'
+"[$ts] auto-pin: $match" | Add-Content "$base\cleanup.log"
+
+exit 0

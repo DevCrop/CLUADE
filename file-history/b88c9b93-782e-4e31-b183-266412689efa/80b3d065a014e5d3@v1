@@ -1,0 +1,587 @@
+@use "../abstract" as *;
+
+/*
+CSS @property and the New Style
+https://ryanmulligan.dev/blog/css-property-new-style/
+*/
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@property --gradient-angle-offset {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@property --gradient-percent {
+  syntax: "<percentage>";
+  initial-value: 5%;
+  inherits: false;
+}
+
+@property --gradient-shine {
+  syntax: "<color>";
+  initial-value: white;
+  inherits: false;
+}
+
+.shiny-cta {
+  --animation: gradient-angle linear infinite;
+  --duration: 3s;
+  --shadow-size: 2px;
+  isolation: isolate;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  outline-offset: 4px;
+  padding: 1.25rem 2.5rem;
+  font-family: inherit;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  border-radius: 360px;
+  color: var(--shiny-cta-fg);
+  background:
+    linear-gradient(var(--shiny-cta-bg), var(--shiny-cta-bg)) padding-box,
+    conic-gradient(
+        from calc(var(--gradient-angle) - var(--gradient-angle-offset)),
+        transparent,
+        var(--shiny-cta-highlight) var(--gradient-percent),
+        var(--gradient-shine) calc(var(--gradient-percent) * 2),
+        var(--shiny-cta-highlight) calc(var(--gradient-percent) * 3),
+        transparent calc(var(--gradient-percent) * 4)
+      )
+      border-box;
+  box-shadow: inset 0 0 0 1px var(--shiny-cta-bg-subtle);
+
+  &::before,
+  &::after,
+  span::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-start: 50%;
+    translate: -50% -50%;
+    z-index: -1;
+  }
+
+  &:active {
+    translate: 0 1px;
+  }
+}
+
+/* Dots pattern */
+.shiny-cta::before {
+  --size: calc(100% - var(--shadow-size) * 3);
+  --position: 2px;
+  --space: calc(var(--position) * 2);
+  width: var(--size);
+  height: var(--size);
+  background: radial-gradient(
+      circle at var(--position) var(--position),
+      white calc(var(--position) / 4),
+      transparent 0
+    )
+    padding-box;
+  background-size: var(--space) var(--space);
+  background-repeat: space;
+  mask-image: conic-gradient(
+    from calc(var(--gradient-angle) + 45deg),
+    black,
+    transparent 10% 90%,
+    black
+  );
+  border-radius: inherit;
+  opacity: 0.4;
+  z-index: -1;
+}
+
+/* Inner shimmer */
+.shiny-cta::after {
+  --animation: shimmer linear infinite;
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(
+    -50deg,
+    transparent,
+    var(--shiny-cta-highlight),
+    transparent
+  );
+  mask-image: radial-gradient(circle at bottom, transparent 40%, black);
+  opacity: 0.6;
+}
+
+.shiny-cta span {
+  z-index: 1;
+
+  &::before {
+    --size: calc(100% + 1rem);
+    width: var(--size);
+    height: var(--size);
+    box-shadow: inset 0 -1ex 2rem 4px var(--shiny-cta-highlight);
+    opacity: 0;
+  }
+}
+
+/* Animate */
+.shiny-cta {
+  --transition: 800ms cubic-bezier(0.25, 1, 0.5, 1);
+  transition: var(--transition);
+  transition-property:
+    --gradient-angle-offset, --gradient-percent, --gradient-shine;
+
+  &,
+  &::before,
+  &::after {
+    animation:
+      var(--animation) var(--duration),
+      var(--animation) calc(var(--duration) / 0.4) reverse paused;
+    animation-composition: add;
+  }
+
+  span::before {
+    transition: opacity var(--transition);
+    animation: calc(var(--duration) * 1.5) breathe linear infinite;
+  }
+}
+
+.shiny-cta:is(:hover, :focus-visible) {
+  --gradient-percent: 20%;
+  --gradient-angle-offset: 95deg;
+  --gradient-shine: var(--shiny-cta-highlight-subtle);
+
+  &,
+  &::before,
+  &::after {
+    animation-play-state: running;
+  }
+
+  span::before {
+    opacity: 1;
+  }
+}
+
+@keyframes gradient-angle {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes breathe {
+  from,
+  to {
+    scale: 1;
+  }
+  50% {
+    scale: 1.2;
+  }
+}
+
+.no-text-button {
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: var(--gutter-2xs);
+  padding: var(--gutter-2xs) var(--gutter-xs);
+  transition: opacity var(--transition-default);
+  border: 1px solid var(--clr-border-default);
+  &:hover {
+    opacity: 1;
+  }
+}
+.no-corner-btn-wrap {
+  display: inline-block;
+}
+
+.no-corner-btn {
+  --corner-btn-color: inherit;
+  --corner-btn-border: var(--clr-border-weak);
+  --corner-btn-bg: transparent;
+  --corner-btn-shadow: none;
+  --corner-btn-corner: var(--clr-border-strong);
+  --corner-btn-hover-color: var(--corner-btn-color);
+  --corner-btn-hover-border: var(--clr-border-default);
+  --corner-btn-hover-bg: color-mix(
+    in srgb,
+    var(--clr-border-weak) 12%,
+    transparent
+  );
+  --corner-btn-hover-shadow: var(--corner-btn-shadow);
+  --corner-btn-hover-corner: var(--clr-text-desc);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: fluid(8, 12) fluid(14, 18);
+  border: 1px solid var(--corner-btn-border);
+  background: var(--corner-btn-bg);
+  box-shadow: var(--corner-btn-shadow);
+  color: var(--corner-btn-color);
+  font-family: var(--family-ui);
+  cursor: pointer;
+  appearance: none;
+  pointer-events: auto;
+  transition:
+    border-color var(--transition-default),
+    background var(--transition-default),
+    box-shadow var(--transition-default),
+    color var(--transition-default);
+
+  &__text {
+    display: inline;
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    margin-left: fluid(8, 12);
+    transition: color var(--transition-default);
+    svg {
+      width: fluid(14, 16);
+      height: fluid(14, 16);
+      fill: currentColor;
+    }
+  }
+
+  &.no-corner-btn--icon-before &__icon {
+    margin-left: 0;
+    margin-right: fluid(8, 12);
+  }
+
+  &.no-corner-btn--icon-only {
+    padding: 0;
+  }
+
+  &.no-corner-btn--icon-only &__icon {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  &.no-corner-btn--panel {
+    --corner-panel-padding: fluid(20, 28);
+    --corner-panel-border: var(--clr-border-weak);
+    --corner-panel-background: transparent;
+    --corner-panel-backdrop-filter: none;
+    --corner-panel-corner: var(--clr-border-strong);
+    --corner-panel-border-hover: var(--clr-border-default);
+    --corner-panel-background-hover: color-mix(
+      in srgb,
+      var(--clr-border-weak) 12%,
+      transparent
+    );
+    --corner-panel-hover-offset-y: 0px;
+    --corner-panel-corner-hover: var(--clr-text-desc);
+    --corner-btn-border: var(--corner-panel-border);
+    --corner-btn-bg: var(--corner-panel-background);
+    --corner-btn-corner: var(--corner-panel-corner);
+    --corner-btn-hover-border: var(--corner-panel-border-hover);
+    --corner-btn-hover-bg: var(--corner-panel-background-hover);
+    --corner-btn-hover-corner: var(--corner-panel-corner-hover);
+    display: flex;
+    width: 100%;
+    min-height: 100%;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: var(--corner-panel-padding);
+    cursor: default;
+    text-align: left;
+    transition:
+      border-color var(--transition-default),
+      background var(--transition-default),
+      box-shadow var(--transition-default),
+      color var(--transition-default),
+      transform var(--transition-default);
+    backdrop-filter: var(--corner-panel-backdrop-filter);
+    -webkit-backdrop-filter: var(--corner-panel-backdrop-filter);
+  }
+
+  &--highlight {
+    --corner-btn-color: var(--clr-text-title);
+    --corner-btn-border: color-mix(
+      in srgb,
+      var(--clr-text-title) 48%,
+      transparent
+    );
+    --corner-btn-bg:
+      linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--clr-text-title) 16%, transparent),
+          color-mix(in srgb, var(--clr-text-title) 8%, transparent)
+        )
+        0 0 / 100% 100% no-repeat,
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--clr-text-title) 22%, transparent) 48%,
+        transparent 100%
+      )
+      -140% 0 / 60% 100% no-repeat;
+    --corner-btn-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--clr-text-title) 18%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--clr-text-title) 12%, transparent),
+      0 0 fluid(20, 36) color-mix(in srgb, var(--clr-text-title) 22%, transparent);
+    --corner-btn-corner: color-mix(
+      in srgb,
+      var(--clr-text-title) 72%,
+      var(--clr-border-strong)
+    );
+    --corner-btn-hover-border: color-mix(
+      in srgb,
+      var(--clr-text-title) 68%,
+      transparent
+    );
+    --corner-btn-hover-bg:
+      linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--clr-text-title) 22%, transparent),
+          color-mix(in srgb, var(--clr-text-title) 12%, transparent)
+        )
+        0 0 / 100% 100% no-repeat,
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--clr-text-title) 28%, transparent) 48%,
+        transparent 100%
+      )
+      -140% 0 / 60% 100% no-repeat;
+    --corner-btn-hover-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--clr-text-title) 24%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--clr-text-title) 18%, transparent),
+      0 0 fluid(28, 48) color-mix(in srgb, var(--clr-text-title) 32%, transparent);
+    --corner-btn-hover-corner: var(--clr-text-title);
+    animation: no-corner-btn-highlight-sweep 2.8s ease-in-out infinite;
+  }
+
+  &--highlight &__icon {
+    color: var(--clr-text-title);
+  }
+
+  &__corner {
+    color: var(--corner-btn-corner);
+    transition: color var(--transition-default);
+
+    .no-corner-bracket__corner svg {
+      stroke: currentColor;
+    }
+  }
+
+  // 호버: 마그네틱 코너를 쓰지 않는 일반 no-corner-btn 전용 이펙트 (양옆 브라켓 확 펼쳐짐)
+  &:hover {
+    color: var(--corner-btn-hover-color);
+    border-color: var(--corner-btn-hover-border);
+    background: var(--corner-btn-hover-bg);
+    box-shadow: var(--corner-btn-hover-shadow);
+
+    .no-corner-btn__corner {
+      color: var(--corner-btn-hover-corner);
+    }
+
+    .no-corner-bracket__corner--tl {
+      transform: translate(-6px, -6px);
+    }
+    .no-corner-bracket__corner--tr {
+      transform: translate(6px, -6px);
+    }
+    .no-corner-bracket__corner--bl {
+      transform: translate(-6px, 6px);
+    }
+    .no-corner-bracket__corner--br {
+      transform: translate(6px, 6px);
+    }
+  }
+
+  &:focus-visible {
+    color: var(--corner-btn-hover-color);
+    border-color: var(--corner-btn-hover-border);
+    background: var(--corner-btn-hover-bg);
+    box-shadow: var(--corner-btn-hover-shadow);
+
+    .no-corner-btn__corner {
+      color: var(--corner-btn-hover-corner);
+    }
+  }
+
+  &.no-corner-btn--panel:hover {
+    transform: translate3d(0, var(--corner-panel-hover-offset-y), 0);
+  }
+
+  &--icon-rotate &__icon {
+    transition:
+      color var(--transition-default),
+      transform var(--transition-default);
+  }
+
+  &--icon-rotate:hover &__icon {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes no-corner-btn-highlight-sweep {
+  0%,
+  28% {
+    background-position:
+      0 0,
+      -140% 0;
+  }
+  72%,
+  100% {
+    background-position:
+      0 0,
+      240% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .no-corner-btn--highlight {
+    animation: none;
+    background-position:
+      0 0,
+      50% 0;
+  }
+}
+
+.no-magnetic-corner-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: fluid(10, 16) fluid(16, 24);
+  background: transparent;
+  border: 1px solid var(--clr-border-weak);
+  font-family: var(--family-ui);
+  color: var(--clr-text-desc);
+  cursor: pointer;
+  appearance: none;
+  transition: color var(--transition-fast);
+  will-change: transform;
+
+  &:hover {
+    color: var(--clr-text-title);
+  }
+  &__text {
+    pointer-events: none;
+    will-change: transform;
+  }
+}
+
+.no-btn-bracket {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--family-ui);
+  @include font("f-body-3");
+  color: var(--clr-text-desc);
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  appearance: none;
+  text-decoration: none;
+
+  &__cap {
+    display: inline-flex;
+    align-items: center;
+    transition: ease all 0.3s;
+    svg {
+      width: fluid(14, 16);
+      height: fluid(14, 16);
+      fill: currentColor;
+    }
+  }
+
+  &__text {
+    transition: ease all 0.3s;
+  }
+}
+
+.no-prev-button {
+  width: fluid(32, 48);
+  height: fluid(32, 48);
+  @include flex-center();
+  border: 1px solid var(--clr-border-default);
+  svg {
+    width: fluid(16, 24);
+    height: fluid(16, 24);
+    fill: currentColor;
+    flex-shrink: 0;
+  }
+}
+
+// no-btn-char — per-character rolling text button
+.no-btn-char {
+  display: inline-flex;
+  align-items: center;
+  gap: fluid(6, 10);
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  color: inherit;
+
+  &--sm { @include font("f-body-3"); }
+  &--md { @include font("f-body-2"); }
+  &--lg { @include font("f-body-1"); }
+
+  &__text {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  &__cell {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+  }
+
+  &__char {
+    display: inline-block;
+    will-change: transform;
+
+    &--clone {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: translateY(100%);
+    }
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: fluid(12, 14);
+  }
+
+  &__icon--reveal {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  &:hover &__icon--reveal,
+  &:focus-visible &__icon--reveal {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__char { will-change: auto; }
+
+    &__icon--reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+}

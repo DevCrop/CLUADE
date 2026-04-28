@@ -1,0 +1,110 @@
+# Plan: 글로벌 .claude 정리 + 자동 청소 자동화
+
+## Context
+글로벌 `.claude` 폴더(149MB, 2531파일) 감사 결과 약 34MB의 불필요 파일 확인.
+세션 종료 후 누적되는 플랜 파일과 shell-snapshot을 자동 삭제하는 `Stop` 훅 로직도 함께 구축.
+
+---
+
+## Part 1: 일회성 즉시 청소 (~34MB)
+
+### A. 오래된 프로젝트 폴더 삭제 (~22MB)
+현재 active 프로젝트(`renew_nineonelabs`)를 제외한 5개 stale 프로젝트 폴더:
+```
+C:\Users\edn_y\.claude\projects\c--Users-edn-y-260320\   (~5MB, 2026-03-20)
+C:\Users\edn_y\.claude\projects\c--Users-edn-y-260329\   (~2.8MB, 2026-03-29)
+C:\Users\edn_y\.claude\projects\c--Users-edn-y-260330\   (~13MB, 2026-04-13)
+C:\Users\edn_y\.claude\projects\c--Users-edn-y-260412\   (~1.3MB, 2026-04-12)
+C:\Users\edn_y\.claude\projects\D--n8n\                  (~296KB, n8n 별도 프로젝트)
+```
+
+### B. shell-snapshots/ 전체 삭제 (~6.1MB)
+- 41개 `.sh` 파일 (bash 환경 스냅샷, 2026-03-20 ~ 2026-04-26)
+- 디버그 목적 아티팩트, 재생성 불필요
+
+### C. plans/ 63개 구 플랜 삭제 (~5MB)
+- 현재 세션 플랜(`starry-skipping-crown.md`)만 보존
+- 나머지 63개 삭제
+
+### D. 기타 소파일 (~250KB)
+| 파일 | 이유 |
+|------|------|
+| `cache/changelog.md` | 자동 재생성됨 |
+| `ide/15202.lock` | orphaned lock |
+| `settings.json.bak` | 현재 settings.json 있음 |
+| `templates/rtk-completion-log.md` | CLAUDE.md에서 미참조 |
+
+### E. session-env/ 빈 디렉토리 제거
+- 75개 UUID 서브디렉토리, 모두 0바이트 — 디렉토리 구조만 삭제
+
+---
+
+## Part 2: 자동화 — Stop 훅 + 정리 스크립트
+
+### 구조
+```
+C:\Users\edn_y\.claude\
+├── cleanup.ps1          ← 새로 생성 (자동 청소 스크립트)
+└── settings.json        ← Stop 훅 추가
+```
+
+### cleanup.ps1 내용
+```powershell
+$base = "C:\Users\edn_y\.claude"
+
+# plans/: 2일 이상 된 파일 삭제
+Get-ChildItem "$base\plans" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-2) } |
+    Remove-Item -Force
+
+# shell-snapshots/: 7일 이상 된 파일 삭제
+Get-ChildItem "$base\shell-snapshots" -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-7) } |
+    Remove-Item -Force
+
+# session-env/: 빈 서브디렉토리 제거
+Get-ChildItem "$base\session-env" -Directory -ErrorAction SilentlyContinue |
+    Where-Object { (Get-ChildItem $_.FullName -Force).Count -eq 0 } |
+    Remove-Item -Force
+```
+
+### settings.json Stop 훅 추가
+기존 `hooks` 객체에 `"Stop"` 키 추가:
+```json
+"Stop": [
+  {
+    "hooks": [
+      {
+        "type": "command",
+        "command": "powershell.exe -NonInteractive -File \"C:/Users/edn_y/.claude/cleanup.ps1\""
+      }
+    ]
+  }
+]
+```
+
+---
+
+## 변경 파일 목록
+| 파일 | 작업 |
+|------|------|
+| `C:\Users\edn_y\.claude\cleanup.ps1` | 신규 생성 |
+| `C:\Users\edn_y\.claude\settings.json` | Stop 훅 추가 |
+| 스탈 프로젝트 5개 폴더 | 삭제 (PowerShell Remove-Item -Recurse) |
+| shell-snapshots/ 전체 | 삭제 |
+| plans/ 구 파일 63개 | 삭제 |
+| 기타 소파일 4개 | 삭제 |
+| session-env/ 빈 디렉토리 | 삭제 |
+
+## 보존 항목
+- `projects/c--Users-edn-y-renew-nineonelabs/` — active 프로젝트 전체
+- `file-history/` — Claude Code undo/recovery 내부 사용
+- `sessions/` — 현재 세션 메타데이터
+- `CLAUDE.md`, `RTK.md`, `settings.json` — 글로벌 설정
+- `templates/rtk-setup.md` — CLAUDE.md 직접 참조
+- `backups/` — 최신 2개 유지 (3개 삭제)
+
+## 검증
+1. 정리 후 `du -sh ~/.claude` 또는 PowerShell `(Get-ChildItem ... -Recurse | Measure-Object -Sum Length)` 로 용량 확인
+2. `cat C:\Users\edn_y\.claude\settings.json` 으로 Stop 훅 포맷 확인
+3. 다음 세션 종료 후 plans/ 에 2일 이상 된 파일이 사라지는지 검증

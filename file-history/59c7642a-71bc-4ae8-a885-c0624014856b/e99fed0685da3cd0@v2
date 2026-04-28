@@ -1,0 +1,32 @@
+<?php
+/**
+ * cors-test config.local.php — www.noltheater-daehakro.com
+ * gitignore 대상. FTP 업로드 시 파일명을 config.local.php 로 바꿔서 올릴 것.
+ */
+
+// === 자기 호스트 ===
+define('THIS_HOST',      'www.noltheater-daehakro.com');
+
+// === peer (반대편 호스팅) ===
+define('PEER_BASE_URL',  'https://bluesquare.kr/cors-test');
+
+// === 시크릿 (bluesquare 측과 반드시 동일) ===
+define('SYNC_SECRET',    '510cab4fa2e011135d277a089e9929652e1b6e51ad2d424c0b09d129d5aa4ce6');
+
+// === 관리자 토큰 (noltheater 전용 — bluesquare와 다른 값) ===
+define('ADMIN_TOKEN',    '050ba78d8997088152a5d0c3dba9f58b');
+
+// === peer IP 화이트리스트 ===
+define('ALLOWED_PEER_IPS', []);
+
+// === DB 자격증명 ===
+define('DB_HOST', 'db.usrdaehakro0605.gabia.io');
+define('DB_NAME', 'dbusrdaehakro0605');
+define('DB_USER', 'usrdaehakro0605');
+define('DB_PASS', 'dae@hak_0605!r9x');
+
+// === 역할 ===
+define('ROLE', 'BOTH');
+
+// === 비상 차단 스위치 ===
+define('KILL_SWITCH', false);

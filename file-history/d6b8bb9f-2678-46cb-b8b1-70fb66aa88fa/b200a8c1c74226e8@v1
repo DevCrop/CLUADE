@@ -1,0 +1,272 @@
+import type {
+  WorkApiItem,
+  WorkCanvasConfig,
+  WorkProjectItem,
+  WorkProjectVisualPreset,
+  WorksGridInfiniteConfig,
+  WorksHintConfig,
+  WorkLayoutConstants,
+  WorksPageDomConfig,
+  WorksPageState,
+  WorksPageConfig,
+  WorksRendererConfig,
+  WorksIntroConfig,
+} from "../../../types/work.types.js";
+import { getDefaultThreeConfig } from "../../../config/base.config.js";
+import type { SceneFromState } from "../../../types/core.types.js";
+import {
+  mainBackground,
+  planet,
+  sceneLights,
+  windowObj,
+} from "../../../core/setup.js";
+import {
+  MAIN_BACKGROUND_OBJECT_DEFAULTS,
+  WORKS_BACKGROUND_LOOK,
+} from "../../../config/background.config.js";
+import type { BackgroundLookOptions } from "../../../types/object-visual.types.js";
+
+export const WORK_PLACEHOLDER_IMAGE =
+  "/resource/images/placeholder/placeholder.jpg";
+export const WORKS_LIST_API_MAX_LIMIT = 24;
+export const WORK_BACKGROUND_CANVAS_ID = "works-background-canvas";
+
+export const WORK_PAGE_STATE_DEFAULT: WorksPageState = {
+  view: "scatter",
+  category: null,
+  page: 1,
+  limit: 12,
+};
+
+/** 필터 패널·버튼 라벨 SCSS `0.3s ease`와 동기 (aria 지연 등) */
+export const WORKS_FILTER_TRANSITION_MS = 300;
+
+export const WORK_PAGE_DOM: WorksPageDomConfig = {
+  rootSelector: "[data-works-root]",
+  gridSelector: "#works-grid",
+  gridListSelector: ".no-sub-works__gallery-list",
+  gridPaginationSelector: ".no-view-more",
+  gridEnterClass: "is-grid-enter",
+  controlsSelector: ".no-works-canvas__bottom-controls",
+  toggleSelector: ".no-works-canvas__bottom-toggle",
+  filterWrapSelector: ".no-works-canvas__filter-wrap",
+  filterButtonSelector: "[data-works-filter-button]",
+  filterPanelSelector: "[data-works-filter-panel]",
+  filterOptionSelector: "[data-works-filter-option]",
+  dragHintSelector: "[data-works-drag-hint]",
+  dragHintVisibleClass: "is-visible",
+  dragHintHidingClass: "is-hiding",
+};
+
+export const WORK_PROJECT_VISUALS: Readonly<
+  Record<string, WorkProjectVisualPreset>
+> = {
+  "large-corp": { bg: "#161826", ac: "#8da2ff", w: 4.4, h: 6.2 },
+  business: { bg: "#1d1411", ac: "#ffad66", w: 4.4, h: 6.2 },
+  "manufacturing-distribution": { bg: "#131b16", ac: "#52d88a", w: 6.8, h: 4.4 },
+  "ent-culture": { bg: "#1a1018", ac: "#ff5db1", w: 4.4, h: 6.2 },
+  service: { bg: "#101922", ac: "#53c0ff", w: 6.8, h: 4.4 },
+  "medical-research": { bg: "#0d1a18", ac: "#4ce0cf", w: 4.4, h: 6.2 },
+  franchise: { bg: "#1b170d", ac: "#ffcf5a", w: 6.8, h: 4.4 },
+  finance: { bg: "#14121d", ac: "#9c86ff", w: 4.4, h: 6.2 },
+  "it-bt": { bg: "#0d1420", ac: "#49b8ff", w: 4.4, h: 6.2 },
+  "legal-tax": { bg: "#1a1612", ac: "#d8b27a", w: 4.4, h: 6.2 },
+  other: { bg: "#141414", ac: "#f4f4f4", w: 4.4, h: 6.2 },
+  default: { bg: "#101010", ac: "#f4f4f4", w: 4.4, h: 6.2 },
+};
+
+export const WORK_CATEGORY_LABELS: Readonly<Record<string, string>> = {
+  "large-corp": "대기업",
+  business: "기업",
+  "manufacturing-distribution": "제조/유통",
+  "ent-culture": "엔터/컬쳐",
+  service: "서비스",
+  "medical-research": "의료/연구",
+  franchise: "프랜차이즈",
+  finance: "금융",
+  "it-bt": "IT/BT",
+  "legal-tax": "법무/세무",
+  other: "기타",
+};
+
+export function createWorkProjectItem(
+  item: WorkApiItem,
+  index: number,
+): WorkProjectItem {
+  const preset =
+    WORK_PROJECT_VISUALS[item.category] ?? WORK_PROJECT_VISUALS.default;
+  const useLandscape = preset.w > preset.h || index % 7 === 0;
+  return {
+    ...item,
+    bg: preset.bg,
+    ac: preset.ac,
+    w: useLandscape ? 6.8 : preset.w,
+    h: useLandscape ? 4.4 : preset.h,
+  };
+}
+
+export function formatWorkCategoryLabel(category: string): string {
+  if (category.length === 0) return "";
+  return WORK_CATEGORY_LABELS[category] ?? category;
+}
+
+export const WORK_CANVAS_CONFIG: WorkCanvasConfig = {
+  canvasId: "works-canvas",
+  spreadX: 188,
+  spreadY: 132,
+  totalCards: 128,
+  camZ: 24,
+  cardWidth: 10,
+  cardHeight: 6.9,
+  camFov: 52,
+  camNear: 0.1,
+  camFar: 2000,
+};
+
+export const WORK_LAYOUT: WorkLayoutConstants = {
+  camLerp: 0.055,
+  camZLerp: 0.07,
+  velDecay: 0.92,
+  opacityLerp: 0.06,
+  scaleLerp: 0.08,
+  positionLerp: 0.08,
+};
+
+export const WORK_INTRO_CONFIG: WorksIntroConfig = {
+  enabled: true,
+  hideWhenReady: true,
+  toggleRevealDelayMs: 0,
+};
+
+export const WORK_HINT_CONFIG: WorksHintConfig = {
+  enabled: true,
+  autoHideMs: 4200,
+  hideStartDelayMs: 160,
+  exitDurationMs: 320,
+};
+
+export const WORK_GRID_INFINITE_CONFIG: WorksGridInfiniteConfig = {
+  thresholdPx: 280,
+};
+
+const defaultThree = getDefaultThreeConfig();
+
+export const WORK_RENDERER_CONFIG: WorksRendererConfig = {
+  antialias: defaultThree.renderer.antialias,
+  alpha: true,
+  powerPreference: defaultThree.renderer.powerPreference,
+};
+
+export const WORK_PIXEL_RATIO_MAX = defaultThree.pixelRatioMax;
+
+export class WorksSceneDefinition {
+  static createScenes(): WorksPageConfig["scenes"] {
+    return {
+      works: {},
+    };
+  }
+
+  static createThreeConfig(
+    canvasId: string,
+  ): NonNullable<WorksPageConfig["three"]> {
+    return {
+      ...defaultThree,
+      canvasId,
+      camera: {
+        ...defaultThree.camera,
+        near: 0.1,
+        far: 40000,
+      },
+      cameraTarget: { ...defaultThree.cameraTarget },
+      renderer: { ...defaultThree.renderer, alpha: true },
+      scene: {
+        ...defaultThree.scene,
+        background: null,
+      },
+      postProcessing: defaultThree.postProcessing,
+    };
+  }
+
+  static createInitialState(
+    state: SceneFromState,
+  ): NonNullable<WorksPageConfig["initialState"]> {
+    return {
+      camera: state.camera
+        ? {
+            position: { ...state.camera.position },
+            fov: state.camera.fov,
+          }
+        : undefined,
+      cameraTarget: state.cameraTarget
+        ? {
+            position: { ...state.cameraTarget.position },
+          }
+        : undefined,
+      ...WorksSceneDefinition.createInitialObjectOptions(state),
+    };
+  }
+
+  static createIntroPageConfig(
+    canvasId: string,
+    initialState: WorksPageConfig["initialState"],
+  ): WorksPageConfig {
+    return {
+      pageId: "works",
+      scenes: WorksSceneDefinition.createScenes(),
+      objects: {
+        [sceneLights]: true,
+        [planet]: true,
+        [windowObj]: true,
+      },
+      three: WorksSceneDefinition.createThreeConfig(canvasId),
+      initialState,
+    };
+  }
+
+  static createBackgroundPageConfig(canvasId: string): WorksPageConfig {
+    return {
+      pageId: "works",
+      scenes: WorksSceneDefinition.createScenes(),
+      objects: {
+        [mainBackground]: true,
+      },
+      three: WorksSceneDefinition.createThreeConfig(canvasId),
+      objectOptions: {
+        [mainBackground]: {
+          position: { ...MAIN_BACKGROUND_OBJECT_DEFAULTS.position },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { ...MAIN_BACKGROUND_OBJECT_DEFAULTS.scale },
+          exposure: MAIN_BACKGROUND_OBJECT_DEFAULTS.exposure,
+          look: { ...WORKS_BACKGROUND_LOOK },
+        },
+      },
+    };
+  }
+
+  static createBackgroundRuntimeState(): {
+    variant: "works";
+    look: Required<BackgroundLookOptions>;
+    exposure: number;
+  } {
+    return {
+      variant: "works",
+      look: { ...WORKS_BACKGROUND_LOOK },
+      exposure: MAIN_BACKGROUND_OBJECT_DEFAULTS.exposure,
+    };
+  }
+
+  static createInitialObjectOptions(
+    state: SceneFromState,
+  ): Record<string, Record<string, unknown> | undefined> {
+    return {
+      [windowObj]:
+        state[windowObj] != null
+          ? { ...(state[windowObj] as Record<string, unknown>) }
+          : undefined,
+      [sceneLights]:
+        state[sceneLights] != null
+          ? { ...(state[sceneLights] as Record<string, unknown>) }
+          : undefined,
+    };
+  }
+}

@@ -1,0 +1,410 @@
+<ide_diagnostics>[
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 9,
+    "column": 1,
+    "message": "MD025/single-title/single-h1: Multiple top-level headings in the same document",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 11,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 12,
+    "column": 1,
+    "message": "MD058/blanks-around-tables: Tables should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 13,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 13,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 13,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 13,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 25,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 26,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 40,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 41,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 47,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 48,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 54,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 55,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 60,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 61,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 67,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 68,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 72,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 73,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 75,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 80,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 84,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 88,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 97,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 98,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 106,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 107,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 110,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 117,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 118,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 132,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 133,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 135,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 138,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 141,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 151,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 154,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 155,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 158,
+    "column": 1,
+    "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 166,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 167,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 176,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 176,
+    "column": 8,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 176,
+    "column": 8,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 176,
+    "column": 15,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 176,
+    "column": 15,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 176,
+    "column": 22,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 176,
+    "column": 22,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/about-gpu-cpu-clever-wadler.md",
+    "line": 176,
+    "column": 33,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  }
+]</ide_diagnostics>

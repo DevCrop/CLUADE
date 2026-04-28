@@ -1,0 +1,375 @@
+<?php
+/**
+ * cors-test UI — thin proxy. SYNC_SECRET 은 절대 브라우저로 노출하지 않는다.
+ * 모든 서버측 케이스는 자기 도메인 /api/run.php 를 통해 실행.
+ * brower→peer 직접 호출은 *의도적으로* 실패하는 케이스 (CORS 막힘 검증).
+ */
+require __DIR__ . '/../lib/bootstrap.php';
+requireMethod('GET');
+header('Content-Type: text/html; charset=utf-8');
+header('X-Robots-Tag: noindex, nofollow, noarchive');
+header('Cache-Control: no-store');
+
+$selfHost   = THIS_HOST;
+$peerBase   = PEER_BASE_URL;
+$role       = ROLE;
+$kill       = (bool) KILL_SWITCH;
+$selfBaseJs = '/cors-test'; // 같은 webroot 가정. config 로 빼지 않음 — 단순함 유지.
+?>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>cors-test :: <?= htmlspecialchars($selfHost, ENT_QUOTES) ?></title>
+<style>
+  * { box-sizing: border-box; }
+  body { font: 13px/1.4 -apple-system, "Segoe UI", system-ui, sans-serif; margin: 0; padding: 16px; background: #fafafa; color: #222; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  h2 { font-size: 14px; margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
+  .self { background: #fff; border: 1px solid #ddd; padding: 10px 12px; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; }
+  .self b { color: #06b; }
+  .self.kill { background: #fff3cd; border-color: #f0ad4e; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 6px 0; }
+  button { padding: 6px 10px; border: 1px solid #888; background: #fff; cursor: pointer; border-radius: 3px; font: inherit; }
+  button:hover { background: #eef; }
+  button.danger { background: #fee; border-color: #c33; color: #c33; }
+  button.primary { background: #06b; color: #fff; border-color: #06b; }
+  input[type=text], input[type=password] { padding: 5px 7px; border: 1px solid #aaa; border-radius: 3px; font: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0 16px; background: #fff; }
+  th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: #f0f0f0; font-weight: 600; }
+  td.id { font-family: ui-monospace, Consolas, monospace; white-space: nowrap; color: #555; }
+  td.verdict { font-size: 16px; text-align: center; width: 32px; }
+  td pre { margin: 0; white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow: auto; font: 11px ui-monospace, Consolas, monospace; }
+  .small { color: #666; font-size: 11px; }
+  .grid-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin: 6px 0; }
+  .grid-images figure { margin: 0; border: 1px solid #ddd; padding: 6px; background: #fff; }
+  .grid-images figcaption { font-size: 11px; color: #555; margin-top: 4px; word-break: break-all; }
+  .grid-images img, .grid-images .bg-test { width: 100%; height: 80px; object-fit: contain; background: #f5f5f5; display: block; }
+  .ok { color: #2a8; } .bad { color: #c33; } .warn { color: #c80; }
+  .pre-block { background: #fff; border: 1px solid #ddd; padding: 8px; margin: 4px 0 8px; max-height: 220px; overflow: auto; font: 11px ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<h1>cors-test :: <?= htmlspecialchars($selfHost, ENT_QUOTES) ?></h1>
+
+<div class="self <?= $kill ? 'kill' : '' ?>">
+  <div><b>self:</b> <?= htmlspecialchars($selfHost) ?> &nbsp; <b>role:</b> <?= htmlspecialchars($role) ?> &nbsp; <b>kill_switch:</b> <?= $kill ? 'TRUE (요청 503)' : 'false' ?></div>
+  <div><b>peer:</b> <?= htmlspecialchars($peerBase) ?></div>
+  <div><b>fingerprint:</b> <?= htmlspecialchars(secretFingerprint(SYNC_SECRET)) ?> &nbsp; <span class="small">peer 와 *반드시* 동일해야 함</span></div>
+  <?php if ($kill): ?><div style="margin-top:6px"><b style="color:#c33">⚠ KILL_SWITCH=true</b> — config.local.php 에서 false 로 토글해야 매트릭스 동작.</div><?php endif; ?>
+</div>
+
+<div class="row" style="margin-top:10px">
+  <label>Admin Token: <input type="password" id="adminToken" size="40" autocomplete="off"></label>
+  <button onclick="saveToken()">저장 (localStorage)</button>
+  <span class="small" id="tokenHint"></span>
+</div>
+
+<h2>A. 채널 정상성</h2>
+<button class="primary" onclick="runAll('A')">A 시리즈 전체 실행</button>
+<button onclick="runOne('whoami_peer','A1')">A1 whoami_peer</button>
+<button onclick="runOne('ping_peer','A2')">A2 ping_peer</button>
+<button onclick="runOne('ping_bad_ts','A3')">A3 stale_timestamp</button>
+<button onclick="runOne('ping_bad_sig','A4')">A4 bad_signature</button>
+<button onclick="runOne('ping_no_auth','A5')">A5 missing_auth</button>
+<button onclick="runOne('options_peer','A6')">A6 OPTIONS=405</button>
+<button onclick="runOne('cors_probe_peer','A7')">A7 cors-probe</button>
+<table id="tblA"><thead><tr><th style="width:60px">#</th><th>case</th><th>expected</th><th>actual</th><th>v</th><th>note</th></tr></thead><tbody></tbody></table>
+
+<h2>B. 업로드 / 동기화</h2>
+<div class="row">
+  <input type="file" id="fileInput">
+  <label><input type="checkbox" id="autoPush"> upload 직후 peer push</label>
+  <button class="primary" onclick="uploadSelected()">자기 도메인에 업로드</button>
+  <button onclick="runOne('list_self','B-list-self')">자기 list</button>
+  <button onclick="runOne('list_peer','B-list-peer',{tail:50})">peer list</button>
+  <button onclick="runOne('integrity','B-integrity')">integrity 비교</button>
+</div>
+<div class="small">자기 도메인 /api/upload.php 로 multipart 직접 전송. B3/B4/B5 (잘못된 파일) 검증은 fixture 파일을 골라서 실행.</div>
+<table id="tblB"><thead><tr><th style="width:60px">#</th><th>case</th><th>expected</th><th>actual</th><th>v</th><th>note</th></tr></thead><tbody></tbody></table>
+
+<h2>C. 이미지 cross-origin 매트릭스</h2>
+<div class="row">
+  <input type="text" id="targetName" placeholder="검사할 파일명 (storage 기준)" size="32">
+  <button onclick="loadStorageNames()">자기 storage 파일 목록</button>
+  <button class="primary" onclick="runImageMatrix()">C 시리즈 전체 실행</button>
+</div>
+<div id="storageNames" class="small"></div>
+<table id="tblC"><thead><tr><th style="width:60px">#</th><th>context</th><th>expected</th><th>actual</th><th>v</th><th>note</th></tr></thead><tbody></tbody></table>
+<div id="imgGrid" class="grid-images"></div>
+
+<h2>D. 종료 / 회복</h2>
+<button onclick="runOne('whoami_peer','D-kill-check')">peer whoami (KILL_SWITCH=true 시 503 기대)</button>
+<button class="danger" onclick="purgeAll()">storage + ledger 전체 삭제 (purge)</button>
+<table id="tblD"><thead><tr><th style="width:60px">#</th><th>case</th><th>expected</th><th>actual</th><th>v</th><th>note</th></tr></thead><tbody></tbody></table>
+
+<h2>Ledger (자기 호스트 audit)</h2>
+<button onclick="loadAudit()">최근 100건 로드</button>
+<div id="auditOut" class="pre-block">—</div>
+
+<script>
+const SELF_BASE = <?= json_encode($selfBaseJs) ?>;
+const PEER_BASE = <?= json_encode($peerBase) ?>;
+
+function getToken() { return document.getElementById('adminToken').value || localStorage.getItem('cors-test-admin-token') || ''; }
+function saveToken() {
+  const v = document.getElementById('adminToken').value;
+  if (v) { localStorage.setItem('cors-test-admin-token', v); document.getElementById('tokenHint').textContent = '저장됨'; }
+  else { localStorage.removeItem('cors-test-admin-token'); document.getElementById('tokenHint').textContent = '삭제됨'; }
+}
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('cors-test-admin-token');
+  if (saved) document.getElementById('adminToken').value = saved;
+});
+
+function appendRow(tableId, id, label, expected, actual, verdict, note) {
+  const tbody = document.querySelector('#'+tableId+' tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="id">${id}</td><td>${label}</td>
+    <td><pre>${pretty(expected)}</pre></td>
+    <td><pre>${pretty(actual)}</pre></td>
+    <td class="verdict ${verdict==='✅'?'ok':verdict==='❌'?'bad':'warn'}">${verdict||'?'}</td>
+    <td>${note||''}</td>`;
+  tbody.appendChild(tr);
+}
+function pretty(v) {
+  if (v === undefined || v === null) return '—';
+  if (typeof v === 'string') return escapeHtml(v);
+  try { return escapeHtml(JSON.stringify(v, null, 2)); } catch(e) { return String(v); }
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]); }
+
+async function runOne(caseId, label, params = {}) {
+  const tableId = label.startsWith('A') ? 'tblA' : label.startsWith('B') ? 'tblB' : label.startsWith('C') ? 'tblC' : 'tblD';
+  try {
+    const r = await fetch(SELF_BASE + '/api/run.php', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-Admin-Token': getToken()},
+      body: JSON.stringify({case: caseId, params})
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      appendRow(tableId, label, caseId, '200', `HTTP ${r.status} :: ${j.error||''}`, '❌', j.message||'');
+      return;
+    }
+    const d = j.data || {};
+    appendRow(tableId, label, caseId, d.expected, d.actual, d.verdict, (d.note||'') + ' (' + (d.timing_ms||0) + 'ms)');
+  } catch (e) {
+    appendRow(tableId, label, caseId, '?', String(e), '❌', 'fetch failed');
+  }
+}
+
+async function runAll(group) {
+  if (group === 'A') {
+    await runOne('whoami_peer','A1');
+    await runOne('ping_peer','A2');
+    await runOne('ping_bad_ts','A3');
+    await runOne('ping_bad_sig','A4');
+    await runOne('ping_no_auth','A5');
+    await runOne('options_peer','A6');
+    await runOne('cors_probe_peer','A7');
+  }
+}
+
+async function uploadSelected() {
+  const f = document.getElementById('fileInput').files[0];
+  if (!f) { alert('파일 선택'); return; }
+  const push = document.getElementById('autoPush').checked;
+  const fd = new FormData();
+  fd.append('file', f);
+  const url = SELF_BASE + '/api/upload.php' + (push ? '?push=1' : '');
+  try {
+    const r = await fetch(url, {method:'POST', headers:{'X-Admin-Token': getToken()}, body: fd});
+    const j = await r.json();
+    const expected = {status: 200, sha256:'(non-empty)'};
+    const actual = {status: r.status, error: j.error||null, name: j.data?.name, sha256: j.data?.sha256, pushed: j.data?.pushed?.status};
+    const v = (r.ok && j.ok) ? '✅' : '❌';
+    appendRow('tblB', 'B-upload', f.name + ' (' + f.size + 'B)', expected, actual, v, j.message||'');
+  } catch (e) {
+    appendRow('tblB', 'B-upload', f.name, '200', String(e), '❌', 'fetch failed');
+  }
+}
+
+async function loadStorageNames() {
+  try {
+    const r = await fetch(SELF_BASE + '/api/run.php', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Token': getToken()},
+      body: JSON.stringify({case:'list_self', params:{tail:1}})
+    });
+    const j = await r.json();
+    const files = j.data?.response?.files || [];
+    const names = files.map(f => f.name);
+    document.getElementById('storageNames').textContent = '자기 storage: ' + (names.length ? names.join(', ') : '(비어있음)');
+    if (names.length && !document.getElementById('targetName').value) {
+      document.getElementById('targetName').value = names[0];
+    }
+  } catch (e) {
+    document.getElementById('storageNames').textContent = 'list 실패: ' + e;
+  }
+}
+
+async function issueAssetToken(name) {
+  const r = await fetch(SELF_BASE + '/api/run.php', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-Admin-Token': getToken()},
+    body: JSON.stringify({case:'asset_token_issue', params:{name, ttl: 600}})
+  });
+  return await r.json();
+}
+
+async function runImageMatrix() {
+  const name = document.getElementById('targetName').value.trim();
+  if (!name) { alert('파일명 입력 또는 storage 목록 로드 후 선택'); return; }
+  document.querySelector('#tblC tbody').innerHTML = '';
+  document.getElementById('imgGrid').innerHTML = '';
+
+  // 자기 도메인 token 발급. peer.asset.php 도 같은 SYNC_SECRET 으로 검증 가능 — 이게 핵심.
+  const tokRes = await issueAssetToken(name);
+  const tok = tokRes.data?.actual?.token;
+  if (!tok) { alert('token 발급 실패 — peer storage 에 같은 이름 파일이 있어야 함'); return; }
+  const peerAssetUrl = PEER_BASE + '/api/asset.php?name=' + encodeURIComponent(name) + '&token=' + tok;
+  const peerAssetUrlNoToken = PEER_BASE + '/api/asset.php?name=' + encodeURIComponent(name);
+  const peerStorageDirect = PEER_BASE + '/storage/' + encodeURIComponent(name);
+  const peerProbe = PEER_BASE + '/api/cors-probe.php';
+  const peerAssetHttp = peerAssetUrl.replace(/^https:/, 'http:');
+
+  // C1 — storage 직접 GET (HEAD 로 status 만)
+  await testImg('C1', '<img src="…/storage/'+name+'">', 'load 실패', peerStorageDirect, false, '403 기대 (htaccess Deny)');
+  // C2 — asset.php 토큰
+  await testImg('C2', '<img src="…/asset.php?token=…">', '200 표시', peerAssetUrl, true, '분리 후 살아남는 이미지 패스');
+  // C3 — token 없음
+  await testImg('C3', '<img src="…/asset.php"> (token 누락)', 'load 실패', peerAssetUrlNoToken, false, '401 token_required 기대');
+  // C4 — fetch asset.php
+  await testFetch('C4', 'fetch(asset.php?token)', 'CORS 차단 또는 opaque 실패', peerAssetUrl);
+  // C5 — fetch cors-probe
+  await testFetch('C5', 'fetch(cors-probe.php)', 'CORS 차단', peerProbe);
+  // C6 — CSS background-image
+  await testCssBg('C6', 'CSS background-image(asset.php?token)', '표시', peerAssetUrl);
+  // C7 — img crossorigin=anonymous
+  await testImg('C7', '<img crossorigin="anonymous" src="…asset.php?token">', '깨짐 (CORS 헤더 부재)', peerAssetUrl, false, 'CORS-tagged img → 차단. 운영 코드에 crossorigin 사용 0건 (font CDN 제외) 으로 영향 없음', true);
+  // C8 — Range 요청
+  await testRange('C8', 'fetch Range bytes=0-99', '206 Partial', peerAssetUrl);
+  // C9 — Hotlink Referer (이 페이지 자체가 다른 도메인이므로 Referer 자동으로 cross-origin)
+  await testFetch('C9', 'fetch(asset.php) Referer cross-origin', '200 또는 403 (가비아 hotlink 룰 의존)', peerAssetUrl, true);
+  // C10 — Mixed Content
+  await testImg('C10', '<img src="http://…asset.php">', '브라우저 차단', peerAssetHttp, false, 'https 페이지에서 http 자원 → 차단');
+}
+
+function testImg(id, label, expected, url, expectLoad, note, isCrossorigin) {
+  return new Promise(resolve => {
+    const fig = document.createElement('figure');
+    const img = document.createElement('img');
+    if (isCrossorigin) img.crossOrigin = 'anonymous';
+    let done = false;
+    const finish = (ok, why) => {
+      if (done) return; done = true;
+      const verdict = (ok === expectLoad) ? '✅' : '❌';
+      appendRow('tblC', id, label, expected, why, verdict, note||'');
+      const cap = document.createElement('figcaption');
+      cap.textContent = id + ': ' + why;
+      fig.appendChild(cap);
+      document.getElementById('imgGrid').appendChild(fig);
+      resolve();
+    };
+    img.onload = () => finish(true, 'load OK ('+img.naturalWidth+'x'+img.naturalHeight+')');
+    img.onerror = () => finish(false, 'load 실패');
+    setTimeout(() => finish(false, 'timeout 5s'), 5000);
+    img.src = url;
+    fig.appendChild(img);
+  });
+}
+
+async function testCssBg(id, label, expected, url) {
+  // CSS bg는 load 이벤트가 안 떠서 새 Image() 로 우회 (단순 GET 동작)
+  return new Promise(resolve => {
+    const fig = document.createElement('figure');
+    const div = document.createElement('div');
+    div.className = 'bg-test';
+    div.style.backgroundImage = 'url("' + url.replace(/"/g,'\\"') + '")';
+    div.style.backgroundSize = 'contain';
+    div.style.backgroundRepeat = 'no-repeat';
+    div.style.backgroundPosition = 'center';
+    fig.appendChild(div);
+    const probe = new Image();
+    let done = false;
+    const finish = (ok, why) => {
+      if (done) return; done = true;
+      appendRow('tblC', id, label, expected, why, ok ? '✅' : '❌', 'CSS background — 단순 GET');
+      const cap = document.createElement('figcaption');
+      cap.textContent = id + ': ' + why;
+      fig.appendChild(cap);
+      document.getElementById('imgGrid').appendChild(fig);
+      resolve();
+    };
+    probe.onload = () => finish(true, '표시');
+    probe.onerror = () => finish(false, '실패');
+    setTimeout(() => finish(false, 'timeout'), 5000);
+    probe.src = url;
+  });
+}
+
+async function testFetch(id, label, expected, url, allowOk) {
+  let actual, verdict;
+  try {
+    const r = await fetch(url, {method:'GET', mode:'cors'});
+    actual = 'status ' + r.status;
+    verdict = allowOk ? '✅' : '❌';
+  } catch (e) {
+    actual = 'CORS 차단 또는 fetch 실패: ' + (e.message||e);
+    verdict = '✅'; // 차단되는 게 정답
+  }
+  appendRow('tblC', id, label, expected, actual, verdict, '브라우저 fetch — preflight/CORS 헤더 부재로 차단되는 게 정답');
+}
+
+async function testRange(id, label, expected, url) {
+  try {
+    const r = await fetch(url, {method:'GET', headers:{'Range':'bytes=0-99'}, mode:'cors'});
+    const buf = await r.arrayBuffer().catch(() => null);
+    const actual = 'status ' + r.status + (buf ? ' / bytes=' + buf.byteLength : '');
+    const verdict = r.status === 206 ? '✅' : (r.status === 200 ? '⚠' : '❌');
+    appendRow('tblC', id, label, expected, actual, verdict, '※ Range 요청도 cross-origin → CORS 차단 가능');
+  } catch (e) {
+    appendRow('tblC', id, label, expected, 'fetch 실패: ' + e, '⚠', '브라우저 차단 — server→server 로 별도 검증 권장');
+  }
+}
+
+async function purgeAll() {
+  if (!confirm('storage/* 와 logs/audit-*.jsonl 모두 삭제. 진짜?')) return;
+  try {
+    const r = await fetch(SELF_BASE + '/api/purge.php', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Token': getToken()},
+      body: JSON.stringify({confirm:'YES'})
+    });
+    const j = await r.json();
+    appendRow('tblD','D-purge','purge', {confirm:'YES'}, {status:r.status, removed_files:j.data?.removed_files, removed_logs:j.data?.removed_logs}, j.ok?'✅':'❌', j.message||'');
+  } catch (e) {
+    appendRow('tblD','D-purge','purge','200', String(e), '❌', '');
+  }
+}
+
+async function loadAudit() {
+  try {
+    const r = await fetch(SELF_BASE + '/api/run.php', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Admin-Token': getToken()},
+      body: JSON.stringify({case:'list_self', params:{tail:100}})
+    });
+    const j = await r.json();
+    const entries = j.data?.response?.entries || [];
+    document.getElementById('auditOut').textContent = entries.length
+      ? entries.map(e => e.iso + ' [' + e.event + '] ' + JSON.stringify(e.data)).join('\n')
+      : '(비어있음)';
+  } catch (e) {
+    document.getElementById('auditOut').textContent = '실패: ' + e;
+  }
+}
+</script>
+
+</body>
+</html>

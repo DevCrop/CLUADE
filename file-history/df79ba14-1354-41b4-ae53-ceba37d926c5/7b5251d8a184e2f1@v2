@@ -1,0 +1,56 @@
+import {
+  siThreedotjs,
+  siGreensock,
+  siGsap,
+  siTypescript,
+  siReact,
+  siPhp,
+  siMysql,
+  siFlutter,
+  siSwift,
+  siKotlin,
+  siFigma,
+  siFramer,
+  siWebflow,
+  siDocker,
+  siApache,
+  siGit,
+  siGithubactions,
+} from "simple-icons";
+
+// Minimal monochrome SVGs for icons removed from simple-icons v14+
+const FALLBACK_SVGS: Record<string, string> = {
+  adobeillustrator: `<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 0C1.344 0 0 1.344 0 3v18c0 1.656 1.344 3 3 3h18c1.656 0 3-1.344 3-3V3c0-1.656-1.344-3-3-3zm7.672 5.998h1.315l3.67 9.004h-1.424l-.93-2.418H9.372l-.924 2.418H7.046zm.641 1.74-1.547 3.783h3.085zm5.215-.041h1.28v7.305h-1.28z"/></svg>`,
+  adobephotoshop: `<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M0 3C0 1.344 1.344 0 3 0h18c1.656 0 3 1.344 3 3v18c0 1.656-1.344 3-3 3H3c-1.656 0-3-1.344-3-3zm7.615 3.113a.26.26 0 0 0-.26.26V14.5a.26.26 0 0 0 .26.26h.693c.144 0 .26-.116.26-.26v-2.83h1.21c1.67 0 2.803-1.036 2.803-2.756 0-1.742-1.12-2.801-2.797-2.801zm.954 1.098h.975c1.04 0 1.695.582 1.695 1.7 0 1.098-.65 1.68-1.694 1.68H8.57zm8.28-.003c-1.53 0-2.464.718-2.464 1.892 0 1.012.638 1.6 1.872 1.954l.526.148c.88.243 1.194.54 1.194 1.074 0 .628-.565 1.028-1.45 1.028-.79 0-1.36-.27-1.804-.857a.26.26 0 0 0-.384-.048l-.546.46a.26.26 0 0 0-.043.355c.596.81 1.518 1.265 2.778 1.265 1.656 0 2.65-.83 2.65-2.11 0-1.047-.618-1.638-1.975-2.02l-.53-.152c-.8-.228-1.072-.512-1.072-.998 0-.568.487-.93 1.25-.93.655 0 1.15.218 1.574.7a.26.26 0 0 0 .38.016l.524-.51a.26.26 0 0 0 .008-.364c-.556-.6-1.34-.903-2.487-.903z"/></svg>`,
+  adobeaftereffects: `<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M0 3C0 1.344 1.344 0 3 0h18c1.656 0 3 1.344 3 3v18c0 1.656-1.344 3-3 3H3c-1.656 0-3-1.344-3-3zm7.582 3.113a.26.26 0 0 0-.248.18L4.9 14.48a.26.26 0 0 0 .249.341h1.045a.26.26 0 0 0 .248-.18l.574-1.66h2.917l.574 1.66a.26.26 0 0 0 .247.18h1.084a.26.26 0 0 0 .248-.341L9.603 6.293a.26.26 0 0 0-.248-.18zm.43 1.62.983 2.846H7.03zm5.09-.147a.26.26 0 0 0-.26.26V14.5a.26.26 0 0 0 .26.26h4.655a.26.26 0 0 0 .26-.26v-.826a.26.26 0 0 0-.26-.26h-3.37v-2.11h2.945a.26.26 0 0 0 .26-.26v-.799a.26.26 0 0 0-.26-.26H14.39V8.84h3.288a.26.26 0 0 0 .26-.26v-.834a.26.26 0 0 0-.26-.26z"/></svg>`,
+  zeplin: `<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.508 16.5H7.492a.492.492 0 0 1-.348-.84l7.908-8.16H7.5a.5.5 0 0 1 0-1h9a.5.5 0 0 1 .354.854l-7.912 8.146h7.566a.5.5 0 1 1 0 1z"/></svg>`,
+};
+
+const ICON_MAP: Record<string, string> = {
+  threedotjs: siThreedotjs.svg,
+  greensock: siGreensock.svg,
+  gsap: siGsap.svg,
+  typescript: siTypescript.svg,
+  react: siReact.svg,
+  php: siPhp.svg,
+  mysql: siMysql.svg,
+  flutter: siFlutter.svg,
+  swift: siSwift.svg,
+  kotlin: siKotlin.svg,
+  figma: siFigma.svg,
+  framer: siFramer.svg,
+  webflow: siWebflow.svg,
+  docker: siDocker.svg,
+  apache: siApache.svg,
+  git: siGit.svg,
+  githubactions: siGithubactions.svg,
+  ...FALLBACK_SVGS,
+};
+
+export function hydrateIcons(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLElement>("[data-icon]").forEach((el) => {
+    const slug = el.dataset.icon ?? "";
+    const svg = ICON_MAP[slug];
+    if (svg) el.innerHTML = svg;
+  });
+}

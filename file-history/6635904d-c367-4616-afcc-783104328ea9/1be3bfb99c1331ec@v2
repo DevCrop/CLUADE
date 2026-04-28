@@ -1,0 +1,181 @@
+<?php
+
+if (!function_exists('isDevelopment')) {
+    function isDevelopment()
+    {
+        return ENV === ENV_DEVELOPMENT;
+    }
+}
+
+if (!function_exists('isProduction')) {
+    function isProduction()
+    {
+        return ENV === ENV_PRODUCTION;
+    }
+}
+
+if (!function_exists('set_locale')) {
+    function set_locale(string $locale): void
+    {
+        $locale = in_array($locale, locales(), true) ? $locale : DEFAULT_LOCALE;
+        $app = app();
+        if (method_exists($app, 'setLocale')) {
+            $app->setLocale($locale);
+        } else {
+            $GLOBALS['app_locale'] = $locale;
+        }
+    }
+}
+
+
+if (!function_exists('locale')) {
+    function locale(): string
+    {
+        $app = app();
+        if (method_exists($app, 'getLocale')) return $app->getLocale();
+        return $GLOBALS['app_locale'] ?? DEFAULT_LOCALE;
+    }
+}
+
+/** 번역: /lang/{locale}.php에서 배열 로드, 'a.b.c' 점 표기 지원 */
+if (!function_exists('__')) {
+    function __(string $key, array $replace = [], ?string $default = null): string
+    {
+        static $cache = [];
+        $loc = locale();
+        if (!isset($cache[$loc])) {
+            $file = rtrim(ROOT_PATH, '/') . '/lang/' . $loc . '.php';
+            $cache[$loc] = is_file($file) ? (include $file) : [];
+        }
+        $val = array_reduce(explode('.', $key), function ($carry, $segment) {
+            if (is_array($carry) && array_key_exists($segment, $carry)) return $carry[$segment];
+            return null;
+        }, $cache[$loc]);
+
+        if ($val === null) $val = $default ?? $key;
+
+        if ($replace) {
+            foreach ($replace as $k => $v) $val = str_replace(':' . $k, (string)$v, $val);
+        }
+        return (string)$val;
+    }
+}
+
+if (!function_exists('dump')) {
+    /**
+     * 변수 디버깅 출력 (라라벨 dump() 유사)
+     *
+     * @param mixed ...$vars
+     * @return void
+     */
+    function dump(...$vars): void
+    {
+        foreach ($vars as $var) {
+            echo '<pre style="background:#222;color:#eee;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:13px;line-height:1.4">';
+            echo htmlspecialchars(print_r($var, true), ENT_QUOTES, 'UTF-8');
+            echo '</pre>';
+        }
+    }
+}
+
+if (!function_exists('dd')) {
+    /**
+     * Dump and Die (라라벨 dd() 유사)
+     *
+     * @param mixed ...$vars
+     * @return never
+     */
+    function dd(...$vars): void
+    {
+        dump(...$vars);
+        exit(1);
+    }
+}
+
+if (!function_exists('e')) {
+    function e(?string $string): string
+    {
+        return htmlspecialchars((string)($string ?? ''), ENT_QUOTES, 'UTF-8', false);
+    }
+}
+
+if (!function_exists('ed')) {
+    function ed(string $string)
+    {
+        return htmlspecialchars_decode((string)$string, ENT_QUOTES);
+    }
+}
+
+if (!function_exists('locales')) {
+    function locales(): array
+    {
+        return array_keys(LOCALES);
+    }
+}
+
+if (!function_exists('path')) {
+    function path(string $path, bool $cache = false): string
+    {
+        return ROOT_PATH . '/' . ltrim($path, '/') . ($cache ? '?v=' . time() : '');
+    }
+}
+
+if (!function_exists('base_path')) {
+    function base_path(string $path, bool $cache = false): string
+    {
+        return BASE_PATH . '/' . ltrim($path, '/') . ($cache ? '?v=' . time() : '');
+    }
+}
+
+if (!function_exists('img_path')) {
+    function img_path(string $path, bool $cache = false): string
+    {
+        return base_path('/resource/images' . '/' . ltrim($path, '/'), $cache);
+    }
+}
+
+/** resource/images 경로 (img_path와 동일, 호환용) */
+if (!function_exists('img_optimized_path')) {
+    function img_optimized_path(string $path, bool $cache = false): string
+    {
+        return base_path('/resource/images/' . ltrim($path, '/'), $cache);
+    }
+}
+
+if (!function_exists('lord_icon')) {
+    /**
+     * LordIcon 비활성화: cdn.lordicon.com 요청 없이 플레이스홀더만 출력 (네트워크 절약).
+     */
+    function lord_icon(
+        string $key,
+        string $primary = null,
+        string $secondary = '#08a88a',
+        bool $loop = false
+    ): string {
+        return '<span class="lord-icon-placeholder --ld-icon" data-lord-icon-key="' . htmlspecialchars($key) . '" aria-hidden="true"></span>';
+    }
+}
+
+if (!function_exists('render_uploaded_image')) {
+    function render_uploaded_image(
+        string $src,
+        string $alt,
+        string $class = '',
+        string $loading = ''
+    ): string {
+        if ($src === '') {
+            return '';
+        }
+
+        $eSrc        = htmlspecialchars($src,     ENT_QUOTES, 'UTF-8', false);
+        $eAlt        = htmlspecialchars($alt,     ENT_QUOTES, 'UTF-8', false);
+        $classAttr   = $class   !== '' ? ' class="'   . htmlspecialchars($class,   ENT_QUOTES, 'UTF-8', false) . '"' : '';
+        $loadingAttr = $loading !== '' ? ' loading="' . htmlspecialchars($loading, ENT_QUOTES, 'UTF-8', false) . '"' : '';
+
+        // imageUpload() 가 변환 가능한 확장자는 모두 .webp 로 저장하므로 <picture> 분기 불필요.
+        // svg/ico/webp 와, 변환 실패한 잔존 jpg/png/gif 모두 동일한 <img> 로 출력.
+        return '<img src="' . $eSrc . '" alt="' . $eAlt . '"' . $classAttr . $loadingAttr . '>';
+    }
+}
+
+require_once __DIR__ . '/hreflang.php';

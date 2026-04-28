@@ -1,0 +1,511 @@
+<?php section('content'); ?>
+<?php
+$mainWhyCards = [
+    '/resource/images/main/main_why_img_1.jpg',
+    '/resource/images/main/main_why_img_2.jpg',
+    '/resource/images/main/main_why_img_3.jpg',
+    '/resource/images/main/main_why_img_4.jpg',
+    '/resource/images/main/main_why_img_5.jpg',
+    '/resource/images/main/main_why_img_6.jpg',
+];
+$homeWorks = is_array($homeWorks ?? null) ? $homeWorks : [];
+?>
+<div class="scroll-container">
+    <!-- 캔버스 전용 고정 레이어 (화면 따라감, z 낮음) -->
+    <div class="canvas-container" aria-hidden="true">
+        <canvas id="canvas"></canvas>
+        <div class="no-overlay" aria-hidden="true"></div>
+    </div>
+
+    <!-- 스크롤되는 콘텐츠 (캔버스 위를 덮고 스크롤, z 높음) -->
+    <div class="main-content">
+        <!-- SCENE 1: hero — 캔버스가 비치도록 배경 투명 -->
+        <div id="main">
+            <section class="no-main-intro" data-scene="intro" aria-hidden="false">
+                <div class="no-container">
+                    <div class="no-main-intro__inner">
+                        <div class="no-main-intro__body">
+                            <div class="no-main-intro__txt">
+                                <div class="no-main-intro__txt--top">
+                                    <div class="no-main-intro-1 no-main-intro__title">
+                                        <h2 class="f-display-x --bold --fm-en-title mask-target">
+                                            WE DESIGN <br>
+                                            YOUR JOURNEY
+                                        </h2>
+                                    </div>
+                                </div>
+                                <div class="no-main-intro__txt--bottom">
+                                    <div class="no-main-intro__txt--hook">
+                                        <h3 class="f-heading-4 --bold --fm-en">Your Story Begins Here</h3>
+                                        <p class="f-body-1 --regular  mask-target">
+                                            단순한 제작이 아닙니다.<br>
+                                            브랜드가 세상 앞에 나서는 그 순간부터,<br>
+                                            우리와 함께라면 더 멀리 갑니다.
+                                        </p>
+                                    </div>
+                                    <?= include_view('components.button', [
+                                      'variant' => 'corner',
+                                      'tag' => 'button',
+                                      'type' => 'button',
+                                      'text' => 'Click To Start',
+                                      'iconName' => 'arrow-down',
+                                      'iconPosition' => 'after',
+                                      'class' => 'no-main-intro__cta',
+                                      'withWrapper' => false,
+                                      'beforeTextHtml' => '<span class="no-loop-filter-rect" aria-hidden="true"><span></span><span></span><span></span><span></span></span>',
+                                      'extraAttrs' => [
+                                        'data-intro-action' => 'after-intro',
+                                      ],
+                                  ]) ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- 여기가 우주로 날라가는 모습입니다. -->
+            <section class="no-main-intro-action" data-scene="introAction" aria-hidden="true">
+                <div class="no-container">
+                    <div class="no-main-intro-action__inner">
+                        <div class="no-main-intro-action__countdown" aria-hidden="true">
+                            <div class="no-main-intro-action__countdown-shell">
+                                <span class="no-main-intro-action__countdown-orbit" aria-hidden="true"></span>
+                                <span class="no-main-intro-action__countdown-value">5</span>
+                            </div>
+                        </div>
+                        <div class="no-main-intro-action__skip-wrap">
+                            <?= include_view('components.button', [
+                              'variant' => 'corner',
+                              'tag' => 'button',
+                              'type' => 'button',
+                              'text' => 'Skip',
+                              'class' => 'no-main-intro-action__skip',
+                              'withWrapper' => false,
+                              'beforeTextHtml' => '<span class="no-loop-filter-rect" aria-hidden="true"><span></span><span></span><span></span><span></span></span>',
+                              'extraAttrs' => [
+                                'tabindex' => '-1',
+                                'inert' => '',
+                              ],
+                          ]) ?>
+                        </div>
+                        <!-- 점화 — Mission Control -->
+                        <div class="no-main-intro-action__content content-1">
+                            <h2 class="f-display-1 --regular --fm-en-title mask-target">
+                                We're Your<br>
+                                Mission Control.
+                            </h2>
+                            <p class="f-body-1 --medium mask-target">
+                                단순한 웹사이트를 만드는 것이 아닙니다.<br>
+                                브랜드가 세상과 처음 마주하는 그 순간의 경험,<br>
+                                그리고 그다음 장면까지 — 우리가 함께 설계합니다.
+                            </p>
+                        </div>
+                        <!-- 이륙 — Your Brand. Our Mission. -->
+                        <div class="no-main-intro-action__content content-2">
+                            <h2 class="f-display-1 --regular --fm-en-title mask-target">
+                                Your Brand.<br>
+                                Our Mission.
+                            </h2>
+                            <p class="f-body-1 --medium mask-target">
+                                브랜드의 첫인상은 단 한 번, 되돌릴 수 없습니다.<br>
+                                그렇기에 우리는 그 출발의 순간을 가장 강하게 만들고,<br>
+                                당신의 브랜드가 더 오래, 더 멀리 기억되도록 함께합니다.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- 이미 날라감 날라가고 있는 상황임. -->
+            <section class="no-main-hero" data-scene="hero" data-handoff-visible="false" aria-hidden="false">
+                <div class="no-container">
+                    <div class="no-main-hero__inner">
+                        <div class="no-main-hero__body">
+                            <div class="no-main-hero__content slogan">
+                                <div class="no-main-hero__title">
+                                    <h2 class="f-display-0 --regular --fm-en-title no-main-hero__reveal mask-target">
+                                        Join The Journey
+                                    </h2>
+                                </div>
+                                <div class="no-main-hero__desc">
+                                    <p class="no-main-hero__reveal mask-target">
+                                        세상에 단 하나뿐인 브랜드 경험 —<br>
+                                        나인원랩스가 당신의 궤도를 함께 설계합니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="no-main-story" data-scene="story" aria-hidden="false">
+                <div class="no-container">
+                    <div class="no-main-story__inner">
+                        <div class="no-main-story__body">
+                            <div class="no-main-story__content">
+                                <div class="block left">
+                                    <div class="title">
+                                        <h2 class="f-display-1 --regular --fm-en-title mask-target">
+                                            Define The Design
+                                        </h2>
+                                        <h4 class="f-heading-4 --fm-en-title --regular mask-target">
+                                            We Don't Follow Trends. We Set Them.
+                                        </h4>
+                                    </div>
+                                    <div class="body">
+                                        <p class="f-body-1 mask-target">
+                                            트렌드를 따라가지 않습니다.<br>
+                                            당신의 브랜드만을 위한 단 하나의 웹사이트,<br>
+                                            그것만을 위해 나인원랩스는 존재합니다.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="block right">
+                                    <div class="title">
+                                        <h2 class="f-display-2 --regular --fm-en-title mask-target">
+                                            Strategy Meets Design.<br>
+                                            Brand Identity Is Not Decorated —<br>
+                                            It's Engineered From The Ground Up.
+                                        </h2>
+                                    </div>
+                                </div>
+                                <div class="etc ">
+                                    <p class="f-body-1 --regular">
+                                        <span class="--divider-row --divider"></span>
+                                        <span>
+                                            당신의 브랜드가 더 멀리 나아갈 수 있도록,<br>
+                                            우리는 같은 여정을 함께 씁니다.
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="no-main-who" data-scene="who" aria-hidden="false">
+                <div class="no-container">
+                    <div class="no-main-who__inner">
+                        <div class="no-main-who__body">
+                            <div class="no-main-who__content">
+                                <div class="no-main-who__title">
+                                    <h2 class="f-display-1 --fm-en-title --regular mask-target">
+                                        Your Journey.<br>
+                                        Our Architecture.
+                                    </h2>
+                                </div>
+                                <div class="no-main-who__desc">
+                                    <p class="f-heading-5 --regular mask-target">
+                                        나인원랩스는 브랜드가 세상과 처음 마주하는<br>
+                                        순간부터 더 멀리 나아갈 다음 장면까지<br>
+                                        함께 설계하는 디지털 웹에이전시입니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 왜 우리랑 해야하는지  -->
+            <section class="no-main-why" data-scene="whyus" aria-hidden="false">
+                <div class="no-main-why__wrap">
+                    <div class="no-container-2xl">
+                        <div class="no-main-why__inner">
+
+                            <ul class="no-main-why__skill-list" data-why-skill-list>
+                                <li class="no-main-why__skill-item" data-why-skill-item
+                                    data-skill-video="/resource/video/why_video.mp4">
+                                    <span class="no-main-why__skill-label f-display-x --semibold --fm-en-title">THREE.JS</span>
+                                </li>
+                                <li class="no-main-why__skill-item" data-why-skill-item
+                                    data-skill-video="/resource/video/why_video.mp4">
+                                    <span class="no-main-why__skill-label f-display-x --semibold --fm-en-title">GSAP</span>
+                                </li>
+                                <li class="no-main-why__skill-item" data-why-skill-item
+                                    data-skill-video="/resource/video/why_video.mp4">
+                                    <span class="no-main-why__skill-label f-display-x --semibold --fm-en-title">WEBFLOW</span>
+                                </li>
+                                <li class="no-main-why__skill-item" data-why-skill-item
+                                    data-skill-video="/resource/video/why_video.mp4">
+                                    <span class="no-main-why__skill-label f-display-x --semibold --fm-en-title">UI / UX DESIGN</span>
+                                </li>
+                                <li class="no-main-why__skill-item" data-why-skill-item
+                                    data-skill-video="/resource/video/why_video.mp4">
+                                    <span class="no-main-why__skill-label f-display-x --semibold --fm-en-title">BRANDING SYSTEM</span>
+                                </li>
+                                <li class="no-main-why__skill-item" data-why-skill-item
+                                    data-skill-video="/resource/video/why_video.mp4">
+                                    <span class="no-main-why__skill-label f-display-x --semibold --fm-en-title">3D MODELING</span>
+                                </li>
+                                <li class="no-main-why__skill-item" data-why-skill-item
+                                    data-skill-video="/resource/video/why_video.mp4">
+                                    <span class="no-main-why__skill-label f-display-x --semibold --fm-en-title">SEO STRATEGY</span>
+                                </li>
+                                <li class="no-main-why__skill-item" data-why-skill-item
+                                    data-skill-video="/resource/video/why_video.mp4">
+                                    <span class="no-main-why__skill-label f-display-x --semibold --fm-en-title">CMS</span>
+                                </li>
+                            </ul>
+                            <div class="no-main-why__preview" data-why-skill-preview aria-hidden="true">
+                                <video class="no-main-why__preview-video" muted playsinline loop
+                                    data-why-skill-video></video>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 서비스 소개 (일반 스크롤, 5개 반복) -->
+            <section class="no-main-services" data-scene="services" aria-hidden="false">
+                <div class="no-main-services__body  no-section-md">
+                    <div class="no-container">
+                        <div class="no-main-services__txt">
+                            <div class="no-main-services__title">
+                                <h2 class="--fm-en-title f-heading-4 --regular mask-target">Services</h2>
+                            </div>
+                            <div class="no-main-servcies__desc">
+                                <p class="f-display-1 --medium --fm-en-title mask-target">
+                                    Every Service Your Brand Needs,
+                                    Handled By One <b>Team.</b>
+                                    From Strategy To Execution.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="no-container">
+                        <div class="--cnt">
+                            <?php
+                          $services = [
+                              [
+                                  'num' => '01',
+                                  'title' => 'Web Build',
+                                  'desc' => '사람들이 느끼고 오래 기억하는 웹. <br> 브랜드만의 독창적인 인터랙션으로 특별한 경험을 설계합니다.'
+                              ],
+                              [
+                                  'num' => '02',
+                                  'title' => 'App Build',
+                                  'desc' => '브랜드는 화면 밖에서도 계속됩니다. <br> 사용자가 편하게 쓰는 흐름을 중심으로, 손 안에서 완성되는 앱을 만듭니다.'
+                              ],
+                              [
+                                  'num' => '03',
+                                  'title' => 'Branding',
+                                  'desc' => '브랜드를 한 문장으로 설명할 수 있어야 합니다. <br> 핵심을 명확히 정리하고, 어디서나 같은 인상이 남는 정체성을 만듭니다.'
+                              ],
+                              [
+                                  'num' => '04',
+                                  'title' => 'UI · UX',
+                                  'desc' => '목적에 맞는 구조와 동선으로, <br> 사용자가 편하고 자연스럽게 다음 행동으로 이어지게 설계합니다.'
+                              ],
+                              [
+                                  'num' => '05',
+                                  'title' => 'Maintenance',
+                                  'desc' => '서비스는 안정적으로 운영될 때 빛납니다. <br> 구조를 정리하고, 문제가 생기기 전에 먼저 대응합니다.'
+                              ],
+                          ];
+                          ?>
+                            <ul class="no-main-services__list">
+                                <?php foreach ($services as $index => $service): ?>
+                                <li class="no-main-services__item">
+                                    <div class="no-services__num" aria-hidden="true">
+                                        <span class="no-loop-filter-rect"
+                                            style="--loop-filter-delay-base: <?= number_format($index * 0.14, 2, '.', '') ?>s;">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </span>
+                                    </div>
+                                    <h3
+                                        class="no-main-services__item-title f-display-1 --fm-en-title --regular mask-target">
+                                        <?= $service['title'] ?>
+                                    </h3>
+                                    <p class="f-body-2 --regular mask-target">
+                                        <?= $service['desc'] ?>
+                                    </p>
+                                </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- 테스트: 캔버스 다시 보이는 구간 (배경 투명) -->
+            <section class="no-main-portfolio-intro scene-shell" data-scene="works" aria-hidden="true">
+            </section>
+            <section class="no-main-portfolio scene-shell" data-scene="worksDetail" aria-hidden="false">
+                <div class="no-container-2xl">
+                    <div class="no-main-portfolio__head" data-active="false">
+                        <div class="first-title">
+                            <h2 class="f-display-1_5 --regular --fm-en-title mask-target">
+                                Beyond <br>
+                                The Window
+                            </h2>
+                        </div>
+                        <div class="title-bottom">
+                            <div class="second-title">
+                                <h2 class="f-display-1_5 --regular --fm-en-title mask-target">
+                                    Work <br>
+                                    Becomes Real
+                                </h2>
+                            </div>
+                            <div class="desc">
+                                <p class="f-heading-4 mask-target">
+                                    우리가 이끌어온 <br>
+                                    브랜드 여정의 결과입니다.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="no-main-portfolio-gallery no-section-lg" data-scene="worksFinal" aria-hidden="false">
+                <div class="no-container-2xl">
+                    <div id="main-portfolio-hook" class="no-main-portfolio__gallery">
+                        <ul class="no-main-portfolio__list">
+                            <?php foreach ($homeWorks as $work): ?>
+                            <?php
+                            $workTitle = trim((string) ($work['title'] ?? ''));
+                            $workClient = trim((string) ($work['client'] ?? ''));
+                            $workLabel = $workTitle !== '' ? $workTitle : $workClient;
+                            if ($workLabel === '') {
+                                $workLabel = 'WORK';
+                            }
+
+                            $workTags = is_array($work['tagLabels'] ?? null) ? $work['tagLabels'] : [];
+                            if ($workTags === []) {
+                                $fallbackCategory = trim((string) ($work['categoryLabel'] ?? ''));
+                                if ($fallbackCategory !== '') {
+                                    $workTags[] = $fallbackCategory;
+                                }
+                            }
+                            ?>
+                            <li class="no-main-portfolio__item">
+                                <a href="<?= e((string) ($work['detailPath'] ?? '/works')) ?>">
+                                    <div class="no-sub-gallery-item__img-wrap">
+                                        <?= include_view('components.button.corner-markup', ['class' => 'no-sub-gallery__corner']) ?>
+                                        <div class="no-sub-gallery-item__img-inner">
+                                            <figure class="no-sub-gallery-item__img">
+                                                <img src="<?= e((string) ($work['thumbnailImage'] ?? '')) ?>"
+                                                    alt="<?= e($workLabel) ?>">
+                                            </figure>
+                                        </div>
+                                    </div>
+                                    <div class="no-main-portfolio__item__content">
+                                        <h3 class="f-heading-3 --fm-en-title"><?= e($workLabel) ?></h3>
+                                        <div class="no-main-portfolio__item-category">
+                                            <ul class="no-main-portfolio__item-category-list">
+                                                <?php foreach ($workTags as $tagLabel): ?>
+                                                <li class="no-main-portfolio__item-category-chip">
+                                                    <?= e((string) $tagLabel) ?>
+                                                </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <!-- <div class="no-main-portfolio__item__content">
+                                        <h3 class="f-heading-3 --fm-en-title">팔레트 주식회사</h3>
+                                        <div class="no-main-portfolio__item-category">
+                                            <ul class="no-main-portfolio__item-category-list">
+                                                <li class="no-main-portfolio__item-category-chip">
+                                                    Branding
+                                                </li>
+                                                <li class="no-main-portfolio__item-category-chip">
+                                                    Web
+                                                </li>
+                                                <li class="no-main-portfolio__item-category-chip">
+                                                    Campaign
+                                                </li>
+                                                <li class="no-main-portfolio__item-category-chip">
+                                                    Motion
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div> -->
+                                </a>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <div class="no-view-more">
+                            <?= include_view('components.button', [
+                              'variant' => 'corner',
+                              'tag' => 'a',
+                              'href' => '/works',
+                              'text' => 'View More',
+                              'iconName' => 'arrow-right',
+                              'class' => 'no-main-portfolio__view-more',
+                              'withWrapper' => false,
+                          ]) ?>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="no-main-clients no-section-lg" data-scene="client" aria-hidden="false">
+                <div class="no-container-2xl">
+                    <div class="no-main-clients__head-wrap">
+                        <div class="no-main-clients__head">
+                            <h2 class="f-display-1 --fm-en-title --regular mask-target">
+                                Partners
+                            </h2>
+                            <p class="f-body-1 mask-target">
+                                나인원랩스와 함께 여정을 걸어온 브랜드들.<br>
+                                우리는 지금도 그 여정 위에 있습니다.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="no-main-clients__list">
+                        <ul class="no-main-clients__items">
+                            <?php for($i = 1; $i < 23; $i++): ?>
+                            <li class="no-main-clients__item is-block-reveal">
+                                <a href="#">
+                                    <img src="<?= base_path('/resource/images/logo/client_logo_'.$i.'.svg') ?>" alt="">
+                                </a>
+                            </li>
+                            <?php endfor; ?>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            <section class="no-main-contact scene-shell" data-scene="contact" aria-hidden="false">
+                <div class="no-container-2xl">
+                    <div class="no-main-contact__head" data-active="false">
+                        <h2 class="f-display-0 --regular --fm-en-title mask-target">
+                            Your Journey <br> Starts Here.
+                        </h2>
+                        <p class="f-body-1 mask-target">
+                            브랜드의 첫 발사를 함께할 준비가 됐습니다.<br>
+                            지금 나인원랩스와 여정을 시작하세요.
+                        </p>
+                    </div>
+                    <div class="no-main-contact__actions">
+                        <?= include_view('components.button', [
+                            'variant' => 'corner',
+                            'tag' => 'a',
+                            'href' => '/contact',
+                            'text' => 'Contact',
+                            'iconSvg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M571.3 331.3C577.5 325.1 577.5 314.9 571.3 308.7L395.3 132.7C389.1 126.5 378.9 126.5 372.7 132.7C366.5 138.9 366.5 149.1 372.7 155.3L521.4 304L80 304C71.2 304 64 311.2 64 320C64 328.8 71.2 336 80 336L521.4 336L372.7 484.7C366.5 490.9 366.5 501.1 372.7 507.3C378.9 513.5 389.1 513.5 395.3 507.3L571.3 331.3z" fill="currentColor"/></svg>',
+                            'iconPosition' => 'after',
+                            'class' => 'no-main-contact__action',
+                        ]) ?>
+                        <?= include_view('components.button', [
+                            'variant' => 'corner',
+                            'tag' => 'a',
+                            'href' => '/works',
+                            'text' => 'Works',
+                            'iconSvg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M571.3 331.3C577.5 325.1 577.5 314.9 571.3 308.7L395.3 132.7C389.1 126.5 378.9 126.5 372.7 132.7C366.5 138.9 366.5 149.1 372.7 155.3L521.4 304L80 304C71.2 304 64 311.2 64 320C64 328.8 71.2 336 80 336L521.4 336L372.7 484.7C366.5 490.9 366.5 501.1 372.7 507.3C378.9 513.5 389.1 513.5 395.3 507.3L571.3 331.3z" fill="currentColor"/></svg>',
+                            'iconPosition' => 'after',
+                            'class' => 'no-main-contact__action',
+                        ]) ?>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<?= include_view('components.hud-panel') ?>
+
+<?php end_section(); ?>
+
+<?php section('portal'); ?>
+<?php end_section(); ?>

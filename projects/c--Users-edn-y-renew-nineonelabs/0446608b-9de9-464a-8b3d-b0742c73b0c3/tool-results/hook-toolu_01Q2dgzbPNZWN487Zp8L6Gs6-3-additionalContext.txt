@@ -1,0 +1,538 @@
+<ide_diagnostics>[
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 13,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 14,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 18,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 19,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 23,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 24,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 33,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 37,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 44,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 53,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 54,
+    "column": 1,
+    "message": "MD058/blanks-around-tables: Tables should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 55,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 55,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 55,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 55,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 55,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 55,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 63,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 64,
+    "column": 1,
+    "message": "MD058/blanks-around-tables: Tables should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 65,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 65,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 65,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 65,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 65,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 65,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 72,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 73,
+    "column": 1,
+    "message": "MD058/blanks-around-tables: Tables should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 74,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 74,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 74,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 75,
+    "column": 30,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 75,
+    "column": 50,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 75,
+    "column": 65,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 80,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 85,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 86,
+    "column": 1,
+    "message": "MD058/blanks-around-tables: Tables should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 87,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 87,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 87,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 88,
+    "column": 24,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 88,
+    "column": 43,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 88,
+    "column": 60,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 94,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 99,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 100,
+    "column": 16,
+    "message": "MD009/no-trailing-spaces: Trailing spaces [Expected: 0 or 2; Actual: 1]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 103,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 104,
+    "column": 1,
+    "message": "MD058/blanks-around-tables: Tables should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 105,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 105,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 105,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 106,
+    "column": 19,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 106,
+    "column": 36,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 106,
+    "column": 52,
+    "message": "MD060/table-column-style: Table column style [Table pipe does not align with header for style \"aligned\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 110,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 111,
+    "column": 1,
+    "message": "MD058/blanks-around-tables: Tables should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 112,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 112,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 112,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 112,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 112,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 112,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 123,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 126,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 130,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 133,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 136,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/.claude/plans/20-lively-candle.md",
+    "line": 138,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  }
+]</ide_diagnostics>

@@ -1,0 +1,16 @@
+@use "../abstract" as *;
+
+.no-tag-rect {
+  display: flex;
+  align-items: center;
+  gap: fluid(6, 8);
+
+  &::before {
+    content: "";
+    flex-shrink: 0;
+    width: fluid(3, 4);
+    height: fluid(3, 4);
+    background: currentColor;
+    opacity: 0.6;
+  }
+}

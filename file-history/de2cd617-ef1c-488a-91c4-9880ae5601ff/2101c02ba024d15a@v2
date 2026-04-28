@@ -1,0 +1,607 @@
+@use "../abstract" as *;
+
+// =============================================================================
+// Drawer — 풀스크린 메뉴 (이미지 시안: 검정 배경, 좌 GNB / 우 연락처·언어)
+// =============================================================================
+
+.no-drawer {
+  $root: &;
+
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-drawer);
+  width: 100%;
+  height: calc(100vh - var(--header-height));
+  height: calc(
+    100dvh - var(--header-height)
+  ); // dvh: iOS 주소창 높이 포함 안 함
+  top: var(--header-height);
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+
+  background: var(--clr-ui-bg);
+
+  &.is-open {
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* 열기 트랜지션 초기값 — GSAP은 to()만 사용 */
+  &.is-open.is-animating-in {
+    opacity: 0;
+  }
+
+  &.is-open.is-animating-in &__inner {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  /* Barba 전환: 링크 클릭 시 텍스트(inner) 아래로 사라진 뒤 드로어 닫기 */
+  &.is-barba-leaving &__inner {
+    transform: translateY(60px);
+    opacity: 0;
+    transition:
+      transform 0.38s ease-out,
+      opacity 0.32s ease-out;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Layout — 스크롤은 __inner에서만 (내용이 넘치면 자연스럽게 스크롤)
+  // ---------------------------------------------------------------------------
+  &__inner {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    min-height: 0;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  &__container {
+    width: 100%;
+    margin: 0 auto;
+    padding-top: var(--gutter-xl);
+    // 하단: iOS 홈 인디케이터 + 여백 확보
+    padding-bottom: max(var(--gutter-3xl), env(safe-area-inset-bottom, 0px));
+  }
+
+  &__center {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 8fr 4fr;
+    gap: var(--gutter-md);
+    @include mq(lg) {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 텍스트 마스크 + stagger (열릴 때 아래에서 순차 상승)
+  // ---------------------------------------------------------------------------
+  $drawer-reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  $drawer-reveal-dur: 0.78s;
+  $drawer-reveal-stagger: 0.055s; // GNB 항목 간 간격
+
+  &__reveal {
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__reveal-inner {
+    display: block;
+    width: 100%;
+    will-change: transform, opacity;
+    transform: translate3d(0, calc(100% + 0.5rem), 0);
+    opacity: 0;
+  }
+
+  // 오버레이 playOut 전(is-drawer-text-reveal 없음): 아래에 고정. 닫기 시 텍스트만 먼저 내릴 때도 동일 셀렉터로 transition 적용
+  &.is-open:not(.is-drawer-text-reveal) &__reveal-inner {
+    transition:
+      transform 0.28s ease-out,
+      opacity 0.28s ease-out;
+  }
+
+  // BlockOverlay.playOut() 이후 TS가 부여
+  &.is-open.is-drawer-text-reveal &__reveal-inner {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+    transition:
+      transform $drawer-reveal-dur $drawer-reveal-ease,
+      opacity 0.55s var(--ease-smooth);
+  }
+
+  /*
+   * stagger: transition 단축 속성이 delay를 0으로 두고, 예전 셀렉터 특이도가 낮아 delay가 덮어씌워지지 않았음.
+   * 반드시 .is-open.is-drawer-text-reveal 아래에서만 delay를 지정 (특이도 > 위 단축 규칙의 암시적 delay).
+   */
+  &.is-open.is-drawer-text-reveal {
+    @for $i from 1 through 14 {
+      #{$root}__gnb-item:nth-child(#{$i}) #{$root}__reveal-inner {
+        transition-delay: ($i - 1) * $drawer-reveal-stagger;
+      }
+    }
+
+    $drawer-address-base: 0.48s;
+
+    #{$root}__address-block:nth-child(1) #{$root}__reveal-inner {
+      transition-delay: $drawer-address-base;
+    }
+
+    #{$root}__address-block:nth-child(2) #{$root}__reveal-inner {
+      transition-delay: $drawer-address-base + $drawer-reveal-stagger;
+    }
+
+    #{$root}__address-block:nth-child(3) #{$root}__reveal-inner {
+      transition-delay: $drawer-address-base + $drawer-reveal-stagger * 2;
+    }
+
+    #{$root}__address-block:nth-child(4) #{$root}__reveal-inner {
+      transition-delay: $drawer-address-base + $drawer-reveal-stagger * 3;
+    }
+
+    #{$root}__address-block:nth-child(5) #{$root}__reveal-inner {
+      transition-delay: $drawer-address-base + $drawer-reveal-stagger * 4;
+    }
+  }
+
+  &:not(.is-open) &__reveal-inner {
+    transition-duration: 0.28s;
+    transition-delay: 0s !important;
+    transition-timing-function: ease-out;
+  }
+
+  &__gnb-item > #{$root}__reveal {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__gnb-item:not(&__gnb-item--has-sub)
+    > #{$root}__reveal
+    > #{$root}__reveal-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gutter-sm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #{$root}__reveal-inner {
+      transition: none !important;
+    }
+
+    &.is-open.is-drawer-text-reveal #{$root}__reveal-inner {
+      transform: none !important;
+      opacity: 1 !important;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // GNB (Global Navigation) — 왼쪽 열, 큰 클래시 디스플레이
+  // ---------------------------------------------------------------------------
+  &__nav {
+    width: 100%;
+  }
+
+  &__gnb {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  &__gnb-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--gutter-sm);
+
+    &--has-sub {
+      align-items: baseline;
+    }
+  }
+
+  &__gnb-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--gutter-md) var(--gutter-lg);
+    width: 100%;
+  }
+
+  &__gnb-sub {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gutter-sm) var(--gutter-md);
+
+    @include mq(md) {
+      display: none;
+    }
+  }
+
+  &__gnb-sub-item {
+    display: inline-flex;
+  }
+
+  &__gnb-sub-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    color: var(--clr-text-desc);
+    font-family: var(--family-en-title);
+    @include font("f-heading-3");
+    font-weight: 400;
+    transition: color var(--transition-fast);
+
+    &:hover {
+      color: var(--clr-text-title);
+    }
+
+    &.is-active {
+      color: var(--clr-text-title);
+      font-weight: 500;
+    }
+  }
+
+  &__gnb-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: var(--gutter-sm) 0;
+    gap: var(--gutter-sm);
+    color: var(--clr-text-desc);
+    font-family: var(--family-en-title);
+    transition:
+      color var(--transition-fast),
+      text-shadow var(--transition-fast);
+    @include mq(md) {
+      padding: var(--gutter-xs) 0;
+    }
+    &:hover {
+      color: var(--clr-text-title);
+      text-shadow: 0 0 fluid(20, 40) rgba(255, 255, 255, 0.4);
+    }
+
+    // is-active 시 코너 브라켓 표시 (실 요소, 마그네틱과 동일 8-path 형식)
+    &.is-active {
+      color: var(--clr-text-title);
+      text-shadow: none;
+    }
+  }
+
+  // GNB 호버 rect 인디케이터 — GSAP이 transform 전부 소유 (CSS transform 금지)
+  &__gnb-rect {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    // yPercent: -50 은 GSAP이 마운트 시 적용 — CSS transform 쓰면 GSAP이 덮어씀
+    pointer-events: none;
+  }
+
+  // GNB/LNB 내 마스킹 텍스트 — 인라인 유지 (gnb → lnb → address 순 노출)
+  &__gnb-link .masking-text,
+  &__gnb-sub-link .masking-text {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  // GNB 배지(작품 수) — 필요 시 표시
+  &__badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: fluid(40, 46);
+    padding: fluid(8, 10) fluid(12, 14);
+    border: 1px solid var(--clr-border-weak);
+    background: transparent;
+    --corner-bracket-size: 10px;
+    color: var(--clr-text-desc);
+    font-family: var(--family-en-title);
+    @include font("f-body-3");
+    font-weight: 500;
+    transition:
+      border-color var(--transition-default),
+      background-color var(--transition-default),
+      transform var(--transition-default),
+      color var(--transition-default);
+
+    @include mq(md) {
+      display: none;
+    }
+  }
+
+  &__badge-inner {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: fluid(10, 12);
+    padding: fluid(4, 5) fluid(6, 8);
+  }
+
+  &__badge-corner {
+    color: color-mix(in srgb, var(--clr-border-strong) 82%, transparent);
+  }
+
+  &__badge-rect {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &__badge-count {
+    display: inline-block;
+    color: var(--clr-text-title);
+    line-height: 1;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    text-shadow: 0 0 18px
+      color-mix(in srgb, var(--clr-white-100) 12%, transparent);
+  }
+
+  &__gnb-item:hover &__badge,
+  &__gnb-item:focus-within &__badge {
+    border-color: var(--clr-border-default);
+    background-color: color-mix(
+      in srgb,
+      var(--clr-border-weak) 12%,
+      transparent
+    );
+    transform: translateY(-2px);
+    color: var(--clr-text-title);
+  }
+
+  &__gnb-item:hover &__badge-rect span,
+  &__gnb-item:focus-within &__badge-rect span {
+    opacity: 0.9;
+  }
+
+  // ---------------------------------------------------------------------------
+  // LNB (서브메뉴, INSIDE 하단 Insight / News / Notice 등)
+  // ---------------------------------------------------------------------------
+  &__submenu {
+    margin-top: var(--gutter-md);
+  }
+
+  &__lnb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gutter-sm) var(--gutter-md);
+  }
+
+  &__lnb-item {
+    display: inline-flex;
+  }
+
+  &__lnb-link {
+    display: inline-flex;
+    align-items: center;
+    color: var(--clr-text-desc);
+    font-family: var(--family-en-title);
+    @include font("f-body-3");
+    font-weight: 400;
+
+    transition: color var(--transition-fast);
+
+    &:hover {
+      color: var(--clr-text-title);
+    }
+
+    &.is-active {
+      color: var(--clr-text-title);
+      font-weight: 500;
+    }
+  }
+
+  &__lnb-label {
+    display: block;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Address (오른쪽 열) — Headquarter, Email, Tel
+  // ---------------------------------------------------------------------------
+  &__address {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gutter-lg);
+    min-width: 0;
+  }
+
+  &__address-block {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__address-title {
+    font-family: var(--family-en-title);
+    @include font("f-body-2");
+    font-weight: 500;
+    color: var(--clr-text-desc);
+    margin-top: fluid(4, 8);
+  }
+
+  &__address-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gutter-2xs);
+  }
+
+  &__address-item {
+    @include font("f-heading-5");
+    a,
+    button {
+      @include font("f-heading-5");
+    }
+    color: var(--clr-text-title);
+    b {
+      font-weight: 600;
+      margin-right: fluid(2, 4);
+    }
+  }
+
+  &__address-link {
+    color: var(--clr-text-title);
+
+    transition: color var(--transition-fast);
+
+    &:hover {
+      color: var(--clr-text-desc);
+      text-decoration: underline;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Aside (언어 선택 [ EN | KO ] 등) — 오른쪽 열 하단
+  // ---------------------------------------------------------------------------
+  &__aside {
+    display: flex;
+    align-items: center;
+    gap: var(--gutter-md);
+    margin-top: var(--gutter-xl);
+    padding-top: var(--gutter-lg);
+    border-top: 1px solid var(--clr-border-default);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Language selector — [ EN | KO ] 스타일
+  // ---------------------------------------------------------------------------
+  &__lang {
+    position: relative;
+  }
+
+  &__lang-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gutter-xs);
+    padding: var(--gutter-2xs) 0;
+    background: transparent;
+    border: none;
+    color: var(--clr-text-desc);
+    font-family: var(--family-ui);
+    @include font("f-body-4");
+    font-weight: 400;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+
+    &:hover {
+      color: var(--clr-text-title);
+    }
+  }
+
+  &__lang-text {
+    &[aria-current="true"] {
+      color: var(--clr-text-title);
+      font-weight: 500;
+    }
+  }
+
+  &__lang-dropdown {
+    position: absolute;
+    top: calc(100% + var(--gutter-xs));
+    left: 0;
+    min-width: 100%;
+    background: var(--clr-surface-elevated);
+    border: 1px solid var(--clr-border-default);
+    border-radius: var(--gutter-xs);
+    box-shadow: var(--shadow-floating-card);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(fluid(-6, -8));
+    transition: var(--transition-default);
+    z-index: var(--z-index-dropdown);
+    overflow: hidden;
+
+    #{$root}__lang.is-open & {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+  }
+
+  &__lang-item {
+    display: flex;
+    align-items: center;
+    padding: fluid(10, 14) fluid(14, 18);
+    color: var(--clr-text-desc);
+
+    transition: var(--transition-fast);
+    @include font("f-body-3");
+    background: transparent;
+
+    &:hover {
+      background: var(--clr-background-hover);
+      color: var(--clr-text-title);
+    }
+
+    &.is-active {
+      color: var(--clr-text-title);
+      font-weight: 600;
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--clr-border-default);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Logo (드로어 내부 상단 로고용, 필요 시)
+  // ---------------------------------------------------------------------------
+  &__logo {
+    display: inline-flex;
+    align-items: center;
+    color: var(--clr-text-desc);
+    font-family: var(--family-en-title);
+    @include font("f-body-2");
+    font-weight: 500;
+
+    transition: color var(--transition-fast);
+
+    &:hover {
+      color: var(--clr-text-title);
+    }
+  }
+
+  &__symbol {
+    display: none;
+  }
+
+  // ---------------------------------------------------------------------------
+  // User CTA (필요 시)
+  // ---------------------------------------------------------------------------
+  &__user-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gutter-xs);
+    padding: fluid(10, 14) fluid(16, 20);
+    background: var(--clr-text-title);
+    border: 1px solid var(--clr-text-title);
+    border-radius: var(--gutter-xs);
+    color: var(--clr-ui-bg);
+    font-weight: 600;
+    @include font("f-body-3");
+
+    transition: var(--transition-fast);
+
+    &:hover {
+      background: var(--clr-text-desc);
+      border-color: var(--clr-text-desc);
+    }
+  }
+
+  &__user-text {
+    display: block;
+  }
+}

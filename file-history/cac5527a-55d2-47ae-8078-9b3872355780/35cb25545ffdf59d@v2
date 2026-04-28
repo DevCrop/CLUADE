@@ -1,0 +1,38 @@
+export interface ProofRotationStrategy {
+  feed(scrollProgress: number, scrollDelta: number): void;
+  next(): number;
+}
+
+export interface ScrollAcceleratingConfig {
+  baseSpeed: number;
+  progressScale: number;
+  velocityScale: number;
+  decayFactor: number;
+}
+
+export const DEFAULT_SCROLL_ACCELERATING_CONFIG: ScrollAcceleratingConfig = {
+  baseSpeed: 0.0005,
+  progressScale: 1.8,
+  velocityScale: 100,
+  decayFactor: 0.88,
+};
+
+export class ScrollAcceleratingRotation implements ProofRotationStrategy {
+  private _progress = 0;
+  private _velocity = 0;
+
+  constructor(private readonly _cfg: ScrollAcceleratingConfig) {}
+
+  feed(progress: number, delta: number): void {
+    this._progress = progress;
+    this._velocity += delta;
+  }
+
+  next(): number {
+    this._velocity *= this._cfg.decayFactor;
+    return (
+      this._cfg.baseSpeed *
+      (1 + this._progress * this._cfg.progressScale + this._velocity * this._cfg.velocityScale)
+    );
+  }
+}

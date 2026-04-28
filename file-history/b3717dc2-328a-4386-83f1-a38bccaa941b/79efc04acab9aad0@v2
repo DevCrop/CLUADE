@@ -1,0 +1,76 @@
+# Plan: Story Section Copy Rewrite
+
+## Context
+
+`no-main-story` 섹션의 현재 카피는 후킹이 약함. 헤드라인 "우리는 남들과 다르게 브랜드를 만들고 증명합니다"는 section job(믿음과 문제의식 선언)을 수행하지 못하고, "우리는" 패턴이 3번 반복되며, convention을 긍정적으로 전복하지 못함. 사용자 승인된 방향: "새로운 브랜드에는 새로운 구조가 필요합니다."
+
+---
+
+## New Copy
+
+### H2 Headline (`f-display-2 --fm-en-title mask-target`)
+```
+새로운 브랜드에는
+새로운 구조가 필요합니다.
+```
+→ 긍정적 믿음 선언. convention rejection이 묵시적으로 내포됨. "우리는" 없음.
+
+### Body (`f-heading-4 --regular mask-target`)
+```
+브랜드마다 세상에 증명되는 방식이 다릅니다.<br>
+정해진 답 없이, 그 방식을 처음부터 설계합니다.
+```
+→ 헤드라인 근거 제시 (왜 새로운 구조가 필요한가). "정해진 답 없이" = brand vocabulary의 "default" 계열. 2문장이므로 `<br>` 하나.
+
+### Etc (`f-body-1 --regular`) — 유지
+```
+브랜드가 선택받을 이유,
+우리가 함께 만들어갑니다.
+```
+→ "who" 섹션(클라이언트 주도 + NINEONELABS 구조 설계)으로 넘어가는 브리지로 적합. 변경 없음.
+
+---
+
+## Layout Assessment
+
+변경 불필요. 이유:
+- `.block.left` + `.etc` 구조는 믿음 선언 + 보조 텍스트 형태에 맞음
+- `.block.right` CSS는 이미 `_main.scss:469-569`에 존재하나 콘텐츠 근거 없이 추가하면 과잉
+- 2문장 body는 기존 3줄 body와 시각적 볼륨 유사
+
+---
+
+## Files to Edit
+
+| File | Lines | What Changes |
+|---|---|---|
+| `views/pages/index.php` | 160–167 | Section comment — CURRENT JOB / COPY RULE 업데이트 |
+| `views/pages/index.php` | 176–179 | H2 텍스트 교체 |
+| `views/pages/index.php` | 182–186 | Body p 텍스트 교체 + `<br>` 위치 조정 |
+
+SCSS (`resource/scss/pages/_main.scss`) — 변경 없음  
+TS (`resource/ts/pages/main/scene/main.scene.ts`) — 변경 없음
+
+---
+
+## Updated Section Comment
+
+```html
+<!--
+    SCENE: story
+    ARC: 승 -> 전
+    PREVIOUS BEAT: hero에서 여정의 언어와 출발 이유가 선언됐다.
+    CURRENT JOB: 새로운 브랜드에는 정해진 답이 없다는 믿음을 긍정적으로 선언한다.
+                 브랜드마다 증명 방식이 다르다는 근거로 뒷받침한다.
+    VISUAL CONTEXT: 출발 이후의 시야가 넓어지며, 왜 이 길을 택하는지가 문장으로 정리된다.
+    COPY RULE: 긍정적 믿음 선언. 프로세스 설명, 기술 나열, 서비스 소개로 흐르지 않는다.
+               "우리는" 헤드라인 반복 금지.
+    NEXT BEAT: who에서 브랜드와 에이전시의 역할을 분리해서 설명한다.
+    -->
+```
+
+---
+
+## Verification
+
+`rtk git diff views/pages/index.php` 로 변경 확인 후 `http://localhost:8888` 에서 story 섹션 시각 확인.

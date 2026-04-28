@@ -1,0 +1,10 @@
+# Memory Index — NINEONELABS Renewal
+
+- [Project Architecture](project_architecture.md) — custom MVC, scene structure, bfcache pattern, SEO files, new shared utils
+- [Development Workflow](project_workflow.md) — verification commands, forbidden commands, skill/agent delegation
+- [Works Page Improvements](project_works_improvements.md) — 모두 구현 완료: hover-to-video, 무한스크롤, 필터 모달, scatter 반응형, API 확장 (260424)
+- [260424 신규 패턴](project_today_260424.md) — shiny-cta/char 버튼, no-wizard 폼, SubpageStarfield 공통화, sitemap.php
+- [Spatie Image 설치 가이드](reference_spatie_image.md) — PHP 7.4~8.2 설치·WebP sibling 패턴 (타 프로젝트 재사용)
+- [CHOP mandatory prefix](feedback_chop.md) — all Bash commands must use chop prefix
+- [Never run npm build/watch/install](feedback_npm_build.md) — Vite dev server auto-builds on save
+- [--dangerously-skip-permissions active](feedback_dangerously_skip.md) — VS Code setting (allowDangerouslySkipPermissions), no permission prompts

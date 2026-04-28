@@ -1,0 +1,128 @@
+# Plan: BRAND.md 전면 업데이트
+
+## Context
+
+현재 BRAND.md는 우주 메타포가 브랜드 전면에 나와 있어 "웹에이전시"라는 정체성이 흐릿하다.
+사용자 요청 핵심: **웹에이전시가 먼저, 우주는 그것을 살리는 도구**. 슬로건 `JOIN THE JOURNEY`를
+중심축으로, 누가 봐도 "웹을 만드는 집"이라는 스토리가 선명하게 읽혀야 한다.
+"나인원랩스" 호명 최소화 → "우리(we)" 중심 서술, 추상 금지, 구체적 결과물·기술·과정 위주.
+
+---
+
+## 변경 목표
+
+| 현재 | 변경 후 |
+|---|---|
+| 우주 메타포가 브랜드 아이덴티티처럼 읽힘 | 웹에이전시 정체성 최전면, 우주는 스토리 레이어 |
+| "NineOneLabs is …" 3인칭 서술 다수 | "We build / We design" 1인칭 we 중심 서술 |
+| 추상적 가치 설명 중심 | 구체적 결과물·기술·프로세스 중심 |
+| 슬로건 단순 표기 | 슬로건 활용 맥락·변형·금지사항 디테일 확장 |
+| 콘텐츠 가이드라인 개요 수준 | 섹션별 실제 카피 레퍼런스 포함 |
+
+---
+
+## 파일 경로
+
+- **수정 대상:** `c:\Users\edn_y\renew_nineonelabs\BRAND.md` (전면 재작성)
+
+---
+
+## 새 BRAND.md 구조 및 핵심 내용
+
+### 1. Brand Identity (상단 요약)
+- 1인칭 선언문으로 시작: "We are a digital web agency. We build websites, apps, and brand systems."
+- 우주 컨셉 위치 명시: "The space metaphor is our creative layer — the service is always web."
+- 3줄 이내 압축
+
+### 2. Core Values (실험·도전·증명 — 구체화)
+- 각 가치에 **웹 프로젝트 맥락의 구체 예시** 추가
+  - Experiment: "We prototype interaction systems before we write production code."
+  - Challenge: "We take briefs with undefined scope and deliver defined outcomes."
+  - Proof: "Every launch ships with measurable performance benchmarks."
+
+### 3. The Slogan — JOIN THE JOURNEY (확장)
+- 슬로건 철학: 왜 "JOIN"인가 — 클라이언트와 나란히, 우리가 이끄는 게 아니라 함께 걷는다
+- 활용 맥락 분류:
+  - Hero / CTA: "JOIN THE JOURNEY" (전체 대문자)
+  - 섹션 앵커: "Join The Journey"
+  - 한국어 변형: `함께 여정을 씁니다` / `지금, 여정을 시작하세요`
+  - 금지: 축약·패러프레이징 ("Let's journey together" X)
+- 슬로건이 전달해야 할 3가지 메시지:
+  1. 우리는 웹을 만드는 파트너다 (not vendor)
+  2. 프로젝트는 납품이 아닌 여정의 시작이다
+  3. 클라이언트의 브랜드가 주인공이다
+
+### 4. Brand Story / Narrative (웹에이전시 스토리 명문화)
+- 우주 메타포의 위치 재정의:
+  > "The space metaphor exists to communicate one thing: where you're going has never been built before.
+  > Every brand we launch is a first. We are the team that engineers the vessel."
+- 웹에이전시로서 우리가 하는 일 3단계:
+  1. **Discover** — 브랜드의 현재 좌표를 파악한다 (기획/전략)
+  2. **Build** — 그 여정을 위한 디지털 경험을 설계한다 (디자인/개발)
+  3. **Orbit** — 런칭 이후 지속 운영·성장을 지원한다 (유지보수/이터레이션)
+- Planet NX-2: 클라이언트의 "아직 도달하지 못한 브랜드 잠재력" = 웹이 그것을 실현하는 수단
+
+### 5. Services (구체화 강화)
+- 기존 5개 서비스 유지 + 각 서비스에 **"우리가 이것을 만든다"** 식 구체 산출물 명시
+  - Web Build → "Immersive marketing sites, campaign pages, Three.js interactive experiences"
+  - App Build → "React/Flutter mobile apps, PWA, product dashboards"
+  - Branding → "Logo system, brand guidelines, visual language"
+  - UI/UX → "Wireframes, prototypes, design systems"
+  - Maintenance → "Performance audits, CMS updates, stability SLA"
+- 한국어 설명 유지 (현재 내용 양호)
+
+### 6. Technology Strengths (증명 레이어로 재프레이밍)
+- 헤더 변경: "How We Prove It" 으로 리프레임
+- 각 기술에 **왜 이것이 웹에이전시 차별점인지** 한 줄 추가
+  - Three.js: "We embed immersive 3D directly into the production site — not a separate demo."
+  - GSAP: "Motion is designed, not added. Every animation has a purpose."
+  - TypeScript: "Type-safe frontend code means fewer bugs at launch, faster iterations after."
+
+### 7. Tone of Voice (강화)
+- 기존 원칙 유지 + **금지 문장 패턴** 예시 추가
+  - ❌ "우리는 최고의 웹 경험을 제공합니다" → ✅ "우리가 만든 웹은 사용자가 스크롤을 멈추게 합니다"
+  - ❌ "Innovative digital solutions" → ✅ "Scroll-triggered 3D brand story, built in Three.js"
+  - ❌ "We are passionate about design" → ✅ "We ship design systems that scale across 5 touchpoints"
+- **웹에이전시 특화 카피 톤 추가:**
+  - 기술을 도구가 아닌 결과로 말한다: "Users feel it" not "We use Three.js"
+  - 프로세스를 여정 언어로: "From brief to launch" not "From start to finish"
+
+### 8. Homepage Section Copy Reference (구체 카피 레퍼런스)
+기존 내용 유지 + 각 섹션에 **실제 카피 예시** 추가:
+
+| Section | EN Reference Copy | KR Reference Copy |
+|---|---|---|
+| Intro | "Every great brand needs a launch pad." | "모든 브랜드에는 출발점이 있습니다." |
+| Hero | "JOIN THE JOURNEY" | "함께 여정을 씁니다" |
+| Story | "We don't decorate. We engineer." | "꾸미는 게 아닙니다. 설계합니다." |
+| Who | "You lead. We build the vessel." | "당신의 브랜드가 주인공입니다. 우리는 그 무대를 만듭니다." |
+| Services | "What we ship." | "우리가 만드는 것들" |
+| Contact | "Your journey starts here." | "지금, 여정을 시작하세요." |
+
+### 9. What We Are NOT (강화)
+- 기존 가드레일 유지
+- 추가 항목:
+  - ❌ "우주 테마 포트폴리오 사이트처럼 보이는 에이전시" → ✅ "우주를 언어로 쓰는 웹에이전시"
+  - ❌ "서비스 목록만 나열하는 에이전시" → ✅ "브랜드 여정 전체를 함께 걷는 파트너"
+
+### 10. Glossary (유지 + 웹에이전시 용어 추가)
+- 기존 용어 유지
+- 추가: Brief, Deliverable, Sprint, Handoff, SLA — 우주 언어와 매핑
+  - Brief = "Mission Brief" / Deliverable = "Launch Package" / Sprint = "Orbit Cycle"
+
+---
+
+## 실행 방식
+
+- BRAND.md 전면 재작성 (기존 구조 확장, 섹션 재배치, 내용 구체화)
+- 코드 변경 없음 — 문서 파일 1개만 수정
+- 영문/한국어 혼용 유지 (현재 스타일 그대로)
+
+## 검증
+
+- 완성 후 체크리스트:
+  - [ ] 첫 3문장만 읽어도 "웹에이전시"임을 알 수 있는가
+  - [ ] 우주 단어가 등장할 때마다 웹/디지털 결과물로 착지하는가
+  - [ ] "나인원랩스" 3인칭 호명 최소화, "we" 중심인가
+  - [ ] JOIN THE JOURNEY 슬로건 활용 가이드가 실행 가능한 수준인가
+  - [ ] 추상적 형용사("innovative", "passionate") 없는가

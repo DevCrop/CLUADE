@@ -1,0 +1,119 @@
+import type { Engine } from "../core/Engine.js";
+import type { PageConfig } from "./core.types.js";
+import type {
+  AboutLightState,
+  AboutLightsPort as AboutLightsObjectPort,
+} from "./about.types.js";
+import type {
+  TheatreAuthorBridgeHooks,
+  TheatreObjectPort,
+  TheatreScrubPort,
+  TheatreSequencePort,
+} from "./theatre.types.js";
+
+export interface ContactVec3State {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface ContactTransformState {
+  position: ContactVec3State;
+  rotation: ContactVec3State;
+  scale: ContactVec3State;
+  visible: boolean;
+}
+
+export interface ContactCameraState {
+  position: ContactVec3State;
+  target: ContactVec3State;
+  fov: number;
+}
+
+export interface ContactSceneState {
+  camera: ContactCameraState;
+  light: AboutLightState;
+  earth: ContactTransformState;
+}
+
+export interface ContactTheatrePlaybackRange {
+  start: number;
+  end: number;
+}
+
+export type ContactDomState = "pending" | "ready" | "leaving" | "success";
+export type ContactFlowStage =
+  | "idle"
+  | "intro"
+  | "ready"
+  | "outtro"
+  | "success";
+export type ContactTheatreSheetId = "contact" | "outtro";
+export type ContactSceneSectionKey = "contact";
+
+export type ContactPageConfig = PageConfig<
+  "contact",
+  ContactSceneSectionKey,
+  ContactTheatreSheetId
+>;
+
+export type ContactInitialState = NonNullable<ContactPageConfig["initialState"]> & {
+  aboutLights: AboutLightState;
+  earth: ContactTransformState;
+};
+export type ContactTheatreValue = ContactSceneState;
+export type ContactTheatreProps = ContactSceneState;
+
+export interface ContactCameraTheatreValue {
+  camera: ContactTheatreValue["camera"];
+}
+
+export interface ContactCameraTheatreProps {
+  camera: ContactTheatreProps["camera"];
+}
+
+export type ContactLightsPort = AboutLightsObjectPort;
+export type ContactTheatreBridgeHooks = TheatreAuthorBridgeHooks;
+export type ContactTheatreObject = TheatreObjectPort<
+  ContactTheatreValue,
+  ContactTheatreProps
+>;
+export type ContactTheatreSequence = TheatreSequencePort;
+export type ContactTheatreScrub = TheatreScrubPort<
+  ContactTheatreValue,
+  ContactTheatreProps
+>;
+export interface ContactTheatreSheetBinding {
+  object: ContactTheatreObject;
+  sequence: ContactTheatreSequence;
+  length: number;
+}
+
+export interface ContactSubmitResponse {
+  success: boolean;
+  message: string;
+  receiptId?: number;
+  requestToken?: string;
+}
+
+export interface ContactSuccessFlowRequestDetail {
+  handled: boolean;
+  message: string;
+  resolve: () => void;
+  reject: (reason?: unknown) => void;
+}
+export type ContactTheatreApplyState = (
+  engine: Engine,
+  values: ContactTheatreValue,
+) => void;
+
+export interface ContactTheatreScrubCameraApi {
+  set: (
+    props: ContactCameraTheatreProps["camera"],
+    values: ContactCameraTheatreValue["camera"],
+  ) => void;
+}
+
+export interface ContactTheatreScrubCameraPort {
+  capture: (callback: (api: ContactTheatreScrubCameraApi) => void) => void;
+}

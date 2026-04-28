@@ -1,0 +1,339 @@
+# Plan: Gallery & Proof 섹션 콘텐츠 + Pin 애니메이션
+
+## Context
+
+`no-sub-about-gallery`와 `no-sub-about-proof` 두 섹션은 현재 캔버스 래퍼만 존재하고 텍스트 콘텐츠가 없다. 스크롤 씬 시스템(ScrollSceneRuntime)에도 연결되지 않은 상태. 두 섹션에 브랜드 카피 + pin 스크롤 + 텍스트 reveal 애니메이션을 추가하고, proof 캔버스의 시각적 임팩트를 강화한다.
+
+---
+
+## 변경 파일 목록
+
+| # | 파일 | 작업 |
+|---|------|------|
+| 1 | `views/pages/about/index.php` | 두 섹션에 sticky 컨테이너 + 텍스트 마크업 삽입 |
+| 2 | `resource/scss/pages/_sub.scss` | gallery/proof 블록 재작성 (pin layout + 텍스트 스타일) |
+| 3 | `resource/ts/types/about.types.ts` | `AboutSceneSectionKey`에 `"gallery" \| "proof"` 추가 |
+| 4 | `resource/ts/pages/about/scene/about.scene.ts` | 두 씬 등록, onProgress reveal 콜백, background 상태 추가 |
+| 5 | `resource/ts/pages/about/render/AboutProofRenderer.ts` | 스크롤 progress 연동 + 카메라/속도 드라이브 |
+
+---
+
+## 1. HTML (`views/pages/about/index.php`)
+
+### Gallery 섹션 (현재 line 175–179)
+```html
+<section class="no-sub-about-section no-sub-about-gallery"
+         data-scene="gallery" aria-hidden="true">
+  <div class="no-sub-about-gallery__sticky">
+    <div class="no-sub-about-gallery__content">
+      <h2 class="no-sub-about-gallery__headline f-display-1 is-block-reveal">
+        <span class="mask-target">우리는 당신의 브랜드 개발 디자인<br>여정을 리드한다.</span>
+      </h2>
+      <p class="no-sub-about-gallery__sub f-body-1 --regular is-block-reveal">
+        <span class="mask-target">똑같은 사이트가 아닌, 돋보이는 사이트를 위한다.</span>
+      </p>
+    </div>
+    <div class="no-sub-about-gallery__canvas-wrap">
+      <canvas id="about-gallery-canvas" aria-hidden="true"></canvas>
+    </div>
+  </div>
+</section>
+```
+
+### Proof 섹션 (현재 line 182–186)
+```html
+<section class="no-sub-about-section no-sub-about-proof"
+         data-scene="proof" aria-hidden="true">
+  <div class="no-sub-about-proof__sticky">
+    <div class="no-sub-about-proof__content">
+      <h2 class="no-sub-about-proof__headline f-display-1 is-block-reveal">
+        <span class="mask-target">수많은 작업으로 증명해왔고,<br>앞으로도 그럴 것이다.</span>
+      </h2>
+    </div>
+    <div class="no-sub-about-proof__canvas-wrap">
+      <canvas id="about-proof-canvas"></canvas>
+    </div>
+  </div>
+</section>
+```
+
+---
+
+## 2. SCSS (`resource/scss/pages/_sub.scss`)
+
+기존 `&-gallery` / `&-proof` 블록(line 466–502) 전체 교체.
+
+### Gallery
+```scss
+&-gallery {
+  width: 100%;
+  min-height: 200svh; // 핀 구간
+
+  &__sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    cursor: grab;
+    &:active { cursor: grabbing; }
+  }
+
+  &__content {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: fluid(48, 80) fluid(32, 80);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  &__headline {
+    color: var(--clr-white);
+  }
+
+  &__sub {
+    margin-top: fluid(12, 20);
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  &__canvas-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+```
+
+### Proof
+```scss
+&-proof {
+  width: 100%;
+  min-height: 200svh;
+
+  &__sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  &__content {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: fluid(48, 80) fluid(32, 80);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.64) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  &__headline {
+    color: var(--clr-white);
+  }
+
+  &__canvas-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+```
+
+---
+
+## 3. TypeScript 타입 (`resource/ts/types/about.types.ts`)
+
+`AboutSceneSectionKey` (line 99–106)에 두 키 추가:
+```typescript
+export type AboutSceneSectionKey =
+  | "heroIntro"
+  | "heroSlogan"
+  | "gallery"      // 추가
+  | "proof"        // 추가
+  | "missionVision"
+  | "services"
+  | "awards"
+  | "client"
+  | "contact";
+```
+
+`AboutTheatreSheetId`는 변경 없음 — gallery/proof는 Theatre 3D 카메라 씬 없이 DOM-only reveal만 사용.
+
+---
+
+## 4. Scene Config (`resource/ts/pages/about/scene/about.scene.ts`)
+
+### 4-a. DOM 상태 + reveal 헬퍼 추가
+
+```typescript
+const GALLERY_TEXT_SELECTOR = '.no-sub-about-gallery .is-block-reveal';
+const PROOF_TEXT_SELECTOR = '.no-sub-about-proof .is-block-reveal';
+const SECTION_TEXT_REVEAL_THRESHOLD = 0.18;
+const SECTION_TEXT_HIDE_THRESHOLD = 0.08;
+const SECTION_TEXT_STAGGER_MS = 150;
+
+const aboutGalleryDomState = { visible: false, timers: [] as number[] };
+const aboutProofDomState = { visible: false, timers: [] as number[] };
+
+function syncSectionTextReveal(
+  selector: string,
+  domState: { visible: boolean; timers: number[] },
+  progress: number,
+): void {
+  const shouldShow = progress >= SECTION_TEXT_REVEAL_THRESHOLD;
+  const shouldHide = !shouldShow && progress < SECTION_TEXT_HIDE_THRESHOLD;
+  if (!shouldShow && !shouldHide) return;
+  if (domState.visible === shouldShow) return;
+  domState.visible = shouldShow;
+  domState.timers.forEach((id) => window.clearTimeout(id));
+  domState.timers = [];
+
+  const elements = Array.from(
+    document.querySelectorAll<HTMLElement>(selector)
+  );
+  elements.forEach((el, i) => {
+    const id = window.setTimeout(() => {
+      el.classList.toggle('is-block-reveal-up', shouldShow);
+    }, i * SECTION_TEXT_STAGGER_MS);
+    domState.timers.push(id);
+  });
+}
+
+function disposeSectionTextReveal(
+  selector: string,
+  domState: { visible: boolean; timers: number[] },
+): void {
+  domState.timers.forEach((id) => window.clearTimeout(id));
+  domState.timers = [];
+  domState.visible = false;
+  document.querySelectorAll<HTMLElement>(selector).forEach((el) =>
+    el.classList.remove('is-block-reveal-up')
+  );
+}
+```
+
+### 4-b. 스크롤 씬 셀렉터/옵션/background 추가
+
+```typescript
+// ABOUT_SCROLL_SCENE_SELECTORS에 추가:
+gallery: '.no-sub-about-gallery[data-scene="gallery"]',
+proof: '.no-sub-about-proof[data-scene="proof"]',
+
+// ABOUT_SCROLL_SCENE_OPTIONS에 추가:
+gallery: {
+  ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+  scrollSpanVh: 200,
+  progressLagMs: 280,
+  progressStart: 0.04,
+  progressEnd: 0.96,
+  progressPower: 1.04,
+},
+proof: {
+  ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+  scrollSpanVh: 200,
+  progressLagMs: 280,
+  progressStart: 0.04,
+  progressEnd: 0.96,
+  progressPower: 1.04,
+},
+
+// ABOUT_BACKGROUND_STATES_BY_SCENE_KEY에 추가:
+gallery: { variant: "aboutHeroSlogan" },
+proof: { variant: "aboutHeroSlogan" },
+```
+
+### 4-c. scenes 객체에 추가
+
+```typescript
+gallery: {
+  onProgress: (progress: number): void => {
+    syncSectionTextReveal(GALLERY_TEXT_SELECTOR, aboutGalleryDomState, progress);
+  },
+  onDispose: (): void => {
+    disposeSectionTextReveal(GALLERY_TEXT_SELECTOR, aboutGalleryDomState);
+  },
+},
+proof: {
+  onProgress: (progress: number, proofRenderer?: AboutProofRenderer): void => {
+    syncSectionTextReveal(PROOF_TEXT_SELECTOR, aboutProofDomState, progress);
+    // proofRenderer는 AboutPageRuntime에서 주입 (아래 5번 방식으로 연동)
+  },
+  onDispose: (): void => {
+    disposeSectionTextReveal(PROOF_TEXT_SELECTOR, aboutProofDomState);
+  },
+},
+```
+
+> **Note**: `AboutProofRenderer.setScrollProgress()` 연동은 `AboutPageRuntime`에서 scroll progress 콜백을 구독하는 방식으로 처리 — scene config가 renderer 인스턴스를 직접 받지 않도록 의존성 분리.
+
+---
+
+## 5. AboutProofRenderer 강화 (`resource/ts/pages/about/render/AboutProofRenderer.ts`)
+
+### `setScrollProgress(p: number)` 메서드 추가
+
+스크롤 progress(0–1)를 받아 카메라 위치와 회전 속도를 드라이브:
+
+```typescript
+private _scrollProgress = 0;
+
+setScrollProgress(progress: number): void {
+  this._scrollProgress = Math.max(0, Math.min(1, progress));
+}
+```
+
+### `_tick` 렌더 루프 수정
+
+```typescript
+private readonly _tick = (): void => {
+  if (this._disposed || !this._rendering) return;
+  const p = this._scrollProgress;
+  // 회전 속도: 0.0005 → 0.0014 (progress 따라 가속)
+  const speed = ROTATION_SPEED_Y * (1 + p * 1.8);
+  if (this._group) this._group.rotation.y += speed;
+  // 카메라 위치: Y 3→0, Z 22→16 (zoom+tilt)
+  if (this._camera) {
+    this._camera.position.y = 3 - p * 3;
+    this._camera.position.z = 22 - p * 6;
+    this._camera.lookAt(0, 0, 0);
+  }
+  if (this._renderer && this._scene && this._camera) {
+    this._renderer.render(this._scene, this._camera);
+  }
+  this._rafId = requestAnimationFrame(this._tick);
+};
+```
+
+### AboutPageRuntime에서 proof scroll progress 연동
+
+`AboutPageRuntime.ts`에서 proof 씬 progress를 `_proofRenderer.setScrollProgress()`로 연결.
+`AppManager`가 노출하는 scroll progress 콜백 또는 `ScrollSceneRuntime` 이벤트를 구독해서 처리.
+(구체적 연동 방식은 `AppManager`의 public API에 맞게 조정)
+
+---
+
+## 검증 방법
+
+1. `rtk tsc --noEmit` — 타입 에러 없음 확인 (특히 `AboutSceneSectionKey` 확장 후 `Record<AboutSceneSectionKey, ...>` 사용처)
+2. 브라우저 `http://localhost:8888/about` 에서:
+   - Gallery 섹션 진입 시 섹션이 핀되고 텍스트가 reveal됨
+   - Proof 섹션 진입 시 동일 reveal + 카메라가 zoom/tilt되며 회전 가속
+   - 섹션 벗어나면 텍스트 숨김 (dispose 콜백)
+3. `rtk npm run test` — 기존 테스트 통과 확인

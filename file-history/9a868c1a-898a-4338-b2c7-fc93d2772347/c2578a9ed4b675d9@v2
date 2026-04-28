@@ -1,0 +1,58 @@
+# JOURNEY / 동반자 컨셉 반영 보강 계획
+
+## Context
+
+사용자는 https://www.nineonelabs.co.kr/ 와 gdweb 포트폴리오 사례를 기반으로 NINEONELABS 사이트를 리뉴얼 중이며, 컨셉은 **"JOURNEY — 우리 브랜드 여정에 동참하자"** 이고 NINEONELABS는 **동반자(crew · companion · 조력자)** 로 우주여행 메타포를 활용합니다. 컨셉이 브랜드 시스템 전반에 제대로 착지해 있는지 점검한 결과, 핵심 가이드 5종(`BRAND.md`, `identity.md`, `voice.md`, `vocabulary.md`, `copy-templates.md`)과 홈페이지 카피([views/pages/index.php](views/pages/index.php))는 JOURNEY/동반자 컨셉을 강하게 반영하고 있습니다(JOIN THE JOURNEY 슬로건, hero/who/clients/contact 섹션의 "함께 여정", "YOUR BRAND LEADS. WE BUILD THE ROUTE." 등).
+
+다만 **세일즈·제안 단계에서 쓰이는 두 보조 문서**에서 동반자 컨셉이 옅어집니다.
+
+- [brand/positioning.md](brand/positioning.md): 4개 비교군 중 "Larger Agency" / "Cheaper Freelancer" 두 곳에만 journey 언급. "Template" 과 "Generic Design Studio" 비교에는 동반자/여정 언어 부재.
+- [brand/client-archetypes.md](brand/client-archetypes.md): 3개 아키타입 모두 "Language That Resonates" 목록에 journey · 동반자 · 함께 등의 핵심 어휘가 빠져 있음. 03 Operating만 "orbit" 보유.
+
+홈페이지의 빈 `no-main-portfolio-intro` 섹션([views/pages/index.php:386-387](views/pages/index.php#L386-L387))은 COPY RULE에 "직접적인 카피는 비워둘 수 있다"고 명시되어 있어 **수정 대상 아님**.
+
+## 변경 범위
+
+### 1. [brand/positioning.md](brand/positioning.md)
+
+각 비교 블록의 `### NINEONELABS Position` 또는 `### Copy Angle` 한 줄을 동반자/여정 어휘로 다시 착지. 어휘는 [brand/vocabulary.md](brand/vocabulary.md)의 핵심어(`여정`, `Route`, `Orbit`, `crew`, `조력자`)와 [brand/voice.md:45-58](brand/voice.md#L45-L58)의 Balanced 온도 규칙(여정 + 구체 디지털 단어 동반)을 따른다.
+
+- **Core Position (line 7)**: "We are the crew" 다음에 **여정 메타포** 한 호흡 추가 — 클라이언트가 주인공인 여정을 "함께 만들어가는" crew라는 점을 명시.
+- **Versus Template / Webflow-Only Build (line 79)**: Position 또는 Copy Angle에 "템플릿은 정해진 경로지만, 브랜드의 여정은 매번 다르다" 결의 한 줄을 추가. `route` / `여정` 어휘를 활용하되 `브랜드`/`구조` 같은 구체어로 착지.
+- **Versus Generic Design Studio (line 106)**: Position 또는 Copy Angle에 "디자인을 넘겨주고 끝나지 않고, 운영 궤도까지 함께 간다" 결의 한 줄. `Orbit` 메타포를 `운영` 같은 구체어로 착지(MAINTENANCE 서비스 라인업과 연결).
+
+각 추가 문장은 **Positioning Rules (line 117-122)** 준수: 경쟁사 비방 금지, 항상 구체적 디지털 결과물로 착지.
+
+### 2. [brand/client-archetypes.md](brand/client-archetypes.md)
+
+각 아키타입(01 Launching / 02 Repositioning / 03 Operating)에 다음 두 가지를 보강:
+
+- **`Language That Resonates` 목록에 동반자/여정 어휘 1-2개 추가** — 각 아키타입의 상황에 맞춰 다르게 선택:
+  - 01 Launching → `함께 시작`, `첫 여정`
+  - 02 Repositioning → `다음 여정`, `방향을 다시 잡다`
+  - 03 Operating → `함께 머무르다`, `궤도를 함께 돌다` (orbit과 짝)
+- **신규 섹션 `### Companion Stance` 추가** (각 아키타입당 2-3 bullet): 그 아키타입의 여정 단계에서 NINEONELABS가 **어떤 동반자 역할**을 맡는지 명시. 예: 01은 "선두에서 길을 보여주는 crew", 02는 "기존 경로를 함께 점검하는 navigator", 03은 "궤도를 같이 도는 운영 파트너".
+
+`Avoid` 섹션과 `Archetype Use Rules`는 변경 없음.
+
+### 3. 변경하지 않는 것 (의도적)
+
+- [views/pages/index.php](views/pages/index.php): 모든 카피가 [brand/homepage-flow.md](brand/homepage-flow.md) 의 섹션 잡과 [brand/voice.md](brand/voice.md) 온도 규칙에 정확히 부합. 빈 `no-main-portfolio-intro` 섹션도 의도된 빈 전환 구간(line 383 COPY RULE).
+- [brand/services.md](brand/services.md), [brand/proof-system.md](brand/proof-system.md), [brand/process.md](brand/process.md): voice.md의 **Concrete 온도** 영역. 여정/우주 어휘를 의도적으로 배제하는 것이 규칙. 손대지 않음.
+- 핵심 5종 가이드: 이미 STRONG.
+
+## 핵심 파일
+
+- [brand/positioning.md](brand/positioning.md) — 3개 위치 한 줄씩 보강 (line 7 근처, line 79 근처, line 106 근처)
+- [brand/client-archetypes.md](brand/client-archetypes.md) — 3개 아키타입에 어휘 추가 + Companion Stance 섹션 신규
+- 참조: [brand/vocabulary.md](brand/vocabulary.md) (어휘 사전), [brand/voice.md:45-58](brand/voice.md#L45-L58) (온도 규칙), [brand/identity.md:43-53](brand/identity.md#L43-L53) (조력자/companion 정의)
+
+## 검증 방법
+
+문서 전용 변경이라 빌드/타입체크 영향 없음. 다음 기준으로 사람 검토:
+
+1. **온도 규칙 통과**: 추가된 모든 여정/우주 어휘 다음 호흡에 `웹 / 화면 / 구조 / 운영 / 브랜드` 같은 구체어가 와 있는가? ([brand/voice.md:85](brand/voice.md#L85) 룰)
+2. **동반자 일관성**: positioning.md 4개 비교군 모두에서 NINEONELABS가 "동반자/crew/route를 만드는 사람" 으로 일관되게 묘사되는가?
+3. **아키타입 분리**: 3개 아키타입의 Companion Stance가 서로 충분히 구별되는가? (01 시작 안내자 / 02 재정렬 navigator / 03 운영 파트너)
+4. **review-algorithm 통과**: [brand/review-algorithm.md:109](brand/review-algorithm.md#L109) "metaphor가 등장하면 다음 줄이 evidence/concrete로 착지하는가?" 기준을 모든 신규 문장이 통과하는가?
+5. **금지선 준수**: 경쟁사 비방 없음, 시크릿/크레덴셜 없음, 브랜드 표기 `NINEONELABS` 일관성.

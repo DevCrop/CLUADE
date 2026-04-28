@@ -1,0 +1,20 @@
+# NINEONELABS Renewal Project
+
+## Claude-Only Workflow
+
+- Prefer `chop` for long Bash output. Direct terminal use still needs explicit `chop`, while Claude hook-based rewriting may apply automatically in supported environments.
+- Do not run `npm run build` or `npm run watch`.
+- Use `.claude/rules/` for file-type-specific guidance.
+- Dev server runs at `http://localhost:8888`.
+
+## Shared Repo Rules
+
+- Public pages use closure routes in `routes/web.php` and `render()`.
+- Do not reintroduce Barba.js or SPA navigation contracts.
+- Do not duplicate ownership already in `AppManager`, `PageRuntime`, or `PageTheatreBinder`.
+- Do not hardcode credentials or secrets.
+
+## Verification
+
+- TypeScript: `chop node_modules/.bin/tsc --noEmit`
+- PHP lint: `docker compose exec web php -l <file>`

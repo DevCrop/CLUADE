@@ -1,0 +1,156 @@
+# JetEngine CPU 최적화 플랜
+
+## Context
+
+JetEngine은 로켓 후미 화염을 렌더링하는 SceneObject다.  
+13개 내부 노즐 + 1개 외부 셸로 구성되며, 각각 2–3개의 bloom 레이어를 가져 총 ~29개 bloom mesh가 존재한다.  
+`runUpdate()`가 매 프레임 호출되는데, **불필요한 연산과 중복 write**가 누적되어 CPU 부하가 높다.  
+시각적 결과는 동일하게 유지하면서 hot path를 정리한다.
+
+## 대상 파일
+
+- `resource/ts/objects/rocket/JetEngine.ts` — `runUpdate()` 메서드 (lines 345–388)
+
+---
+
+## 병목 분석
+
+### 1. `b.mesh.position.y = b.yOffset` — 매 프레임 29회 불필요 write
+`yOffset`은 `_buildBlooms()`에서 딱 한 번 세팅되고 이후 **절대 변경되지 않는다**.  
+그럼에도 매 프레임 29번 같은 값을 쓴다 — Three.js 내부에서 dirty flag 갱신까지 발생.
+
+### 2. `camera.quaternion` 프로퍼티 접근 29회 반복
+모든 bloom mesh가 같은 `camera.quaternion`을 복사하는데, 루프 안에서 매번 체인 참조한다.
+
+### 3. bloom `uIntensity` 계산에 중복 곱셈
+```
+b.baseIntensity * this._cfg.innerBloom * throttleScaled * (0.8 + flameLenScaled * 0.5)
+```
+`this._cfg.innerBloom * throttleScaled * (0.8 + flameLenScaled * 0.5)` 부분은 내부 노즐 27개 모두 동일.  
+매 bloom마다 다시 계산하고 있다 (총 ~27회 곱셈 → 2회로 줄임).
+
+### 4. 화면 밖 frustum에서도 full update 실행
+`root.visible` 체크는 있지만 frustum culling이 없다.  
+페이지 전환·스크롤 아웃 시 로켓이 뷰 밖이어도 85+ uniform write가 매 프레임 실행된다.
+
+### 5. parent CylinderGeometry 과다 세그먼트 (선택적)
+`new THREE.CylinderGeometry(0.01, parentR, 1.0, **40, 28**, true)` — 외부 셸이 반투명 additive 소재임을 감안하면 32×20으로 줄여도 육안 차이 없음.
+
+---
+
+## 구현 계획
+
+### Step 1 — `b.mesh.position.y = b.yOffset` 제거
+
+`runUpdate()` 내부 inner 루프(line 361, 368)와 parent 루프(line 379, 386)에서  
+`b.mesh.position.y = b.yOffset` 라인을 삭제한다.  
+대신 `_buildBlooms()`에서 이미 `mesh.position.y = l.y`로 세팅하므로 그대로 유지.
+
+### Step 2 — camera quaternion 로컬 캐싱
+
+`runUpdate()` 상단(line 349 이후)에 `camera.quaternion`을 **루프 전** 한 번만 읽는다:
+
+```typescript
+const camQ = camera.quaternion;
+```
+
+루프 내 `b.mesh.quaternion.copy(camera.quaternion)` → `b.mesh.quaternion.copy(camQ)` 로 교체.
+
+### Step 3 — bloom intensity 공통 인수 사전 계산
+
+inner 루프 진입 **전**:
+```typescript
+const innerBloomScale =
+  this._cfg.innerBloom * throttleScaled * (0.8 + flameLenScaled * 0.5);
+```
+
+루프 내:
+```typescript
+b.mat.uniforms.uIntensity.value = b.baseIntensity * innerBloomScale;
+```
+
+parent 루프 전:
+```typescript
+const parentBloomScale =
+  this._cfg.parentBloom * throttleScaled * (0.7 + flameLenScaled * 0.5);
+```
+
+### Step 4 — Frustum Culling 가드
+
+`runUpdate()` 상단, `_sim.update()` 호출 전에 frustum 체크 추가:
+
+```typescript
+// private 필드로 선언
+private _frustum = new THREE.Frustum();
+private _projScreenMatrix = new THREE.Matrix4();
+```
+
+```typescript
+// runUpdate() 상단
+this._projScreenMatrix.multiplyMatrices(
+  (camera as THREE.PerspectiveCamera).projectionMatrix,
+  camera.matrixWorldInverse
+);
+this._frustum.setFromProjectionMatrix(this._projScreenMatrix);
+const box = new THREE.Box3().setFromObject(root);  // ← 이건 비쌈
+```
+
+> **주의**: `setFromObject()`는 traverse를 돌기 때문에 매 프레임 쓰면 오히려 역효과.  
+> 대신 root의 **world position + 고정 radius**로 sphere check를 사용한다:
+
+```typescript
+private _frustumSphere = new THREE.Sphere();
+private _frustum = new THREE.Frustum();
+private _projScreenMatrix = new THREE.Matrix4();
+```
+
+```typescript
+// runUpdate() 상단 (camera 유효성 확인 이후)
+const cam3 = camera as THREE.PerspectiveCamera;
+this._projScreenMatrix.multiplyMatrices(
+  cam3.projectionMatrix,
+  cam3.matrixWorldInverse,
+);
+this._frustum.setFromProjectionMatrix(this._projScreenMatrix);
+
+root.getWorldPosition(this._frustumSphere.center);
+this._frustumSphere.radius = 1.5; // JetEngine 전체를 감싸는 월드 radius
+if (!this._frustum.intersectsSphere(this._frustumSphere)) return;
+```
+
+radius 1.5는 parent flame 최대 크기 기준 (parentR × 7.0 bloom × root.scale) 여유값.  
+필요 시 config에서 조정 가능하도록 private 상수로 뺀다.
+
+### Step 5 — Parent 지오메트리 세그먼트 축소 (선택적)
+
+line 504:
+```typescript
+// Before
+new THREE.CylinderGeometry(0.01, parentR, 1.0, 40, 28, true)
+// After
+new THREE.CylinderGeometry(0.01, parentR, 1.0, 32, 20, true)
+```
+
+반투명 additive blending 소재 특성상 vertex 수 차이가 보이지 않는다.  
+GPU vertex buffer 크기 약 30% 감소.
+
+---
+
+## 변경 후 효과 (예상)
+
+| 항목 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| bloom position write/frame | ~29회 | 0회 |
+| camera quaternion 프로퍼티 접근 | ~29회 | 1회 |
+| bloom intensity 곱셈 | ~27+2회 | 2회 |
+| frustum 밖 full update | 매 프레임 | 스킵 |
+| parent geo vertex count | ~2,360 | ~1,320 |
+
+---
+
+## 검증
+
+1. `rtk tsc --noEmit` — 타입 에러 없음 확인
+2. `http://localhost:8888` — 메인/어바웃 페이지에서 로켓 화염 시각적으로 동일한지 확인
+3. Chrome DevTools Performance 탭 → before/after 비교 (scripting 시간)
+4. 페이지 전환 시 (about → main) 화염이 frustum 밖에서 update 스킵되는지 console.log로 잠시 확인 후 제거

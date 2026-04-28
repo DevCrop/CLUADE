@@ -1,0 +1,120 @@
+# Claude Code Harness Setup Checklist
+
+One-time setup health check for the Claude Code harness in this project. Code-writing guidelines live in `.claude/BEST_PRACTICES.md`.
+
+---
+
+## 1. CLAUDE.md + AGENTS.md
+
+- [x] `CLAUDE.md` under 30 lines (current: ~26)?
+- [x] `CLAUDE.md` + `AGENTS.md` combined ≤ 200 lines? (Anthropic loads both every session — hard cap.)
+- [x] Does not contain anything Claude can infer from reading the code (file structure, naming conventions, etc.)?
+- [x] File-type rules are separated into `.claude/rules/` with `paths:` frontmatter (lazy load)?
+- [x] Each prohibition is verifiable by lint / tsc / test / grep?
+- [x] Verification commands included (tsc, lint, test, etc.)?
+
+## 2. Rules (`.claude/rules/`)
+
+- [x] Split by file extension? (`php.md`, `frontend.md`, `scss.md`)
+- [x] Each rules file has a `paths:` frontmatter header?
+- [x] Rules contain only things that cannot be inferred from the code?
+
+## 3. Hooks (`.claude/settings.json`)
+
+- [x] Auto-runs tsc after editing a `.ts` file?
+- [x] Hook verified to actually fire by editing a `.ts` file?
+- [x] Frequently used safe commands registered in `allowedTools`?
+
+## 4. Skills (`.claude/skills/`)
+
+- [x] Repeatable workflows packaged as skills?
+- [x] `/new-route` defined (multi-step page creation procedure)?
+- [x] `/audit-harness` defined (rule classification + AI-driven validation)?
+- [x] No skills containing only static facts (those belong in `.claude/rules/`)?
+
+## 5. Subagents (`.claude/agents/`)
+
+- [x] Exploration agents available for read-heavy tasks?
+- [x] Three.js scene exploration delegated to `scene-explorer` agent?
+- [x] PHP structure exploration delegated to `php-explorer` agent?
+
+## 6. Token waste patterns (fix immediately if found)
+
+- [x] No docs/ folder accumulating content Claude can infer from code?
+- [x] CLAUDE.md + AGENTS.md combined ≤ 200 lines?
+- [x] Each rule verifiable by lint / tsc / test / grep — re-run `/audit-harness` quarterly to confirm.
+- [ ] Claude prefixing Bash tool calls with `rtk`? — run `rtk gain` to validate; counter > 0 means yes.
+- [ ] `rtk gain` count increasing across sessions? — re-run periodically; flat counter means rtk is not actually being used.
+
+---
+
+## Current project setup status
+
+| Item | Status |
+| --- | --- |
+| CLAUDE.md concise | ✅ |
+| CLAUDE.md skill invocation examples | ✅ |
+| Rules on-demand | ✅ php / frontend / scss |
+| Hooks (tsc) | ✅ Node.js stdin pattern |
+| Hook verified | ✅ Confirmed firing via Edit tool on .ts file |
+| allowedTools | ✅ rtk / git / tsc / docker / npm test |
+| Skills | ✅ migration / new-route |
+| Subagents | ✅ scene-explorer / php-explorer |
+| docs/ removed + README cleaned | ✅ |
+| spatie/image WEBP optimization | ✅ 1.10.6 (PHP 7.4 compat), ImageProcessor, dockerfile libwebp-dev |
+| RTK applied | ✅ Claude Code PreToolUse hook auto-prefixes Bash via `~/.claude/hooks/rtk-prerewrite.js` (bypass `RTK_DISABLED=1`) |
+| MEMORY.md | ✅ architecture / workflow / rtk / npm / permissions |
+| Test framework | ✅ vitest (19 tests) |
+| --dangerously-skip-permissions | ✅ VS Code setting (allowDangerouslySkipPermissions) |
+| npm build/watch/install forbidden | ✅ `.claude/rules/frontend.md` (single source; AGENTS.md points here) |
+| All AI-read files in English | ✅ |
+
+## Permission setup — `allowDangerouslySkipPermissions`
+
+To prevent Claude Code from asking for permission on every action, enable via VS Code:
+
+1. Open **File → Preferences → Settings** (or `Ctrl+,`)
+2. Search for `claudeCode.allowDangerouslySkipPermissions`
+3. Check the box — this adds "Bypass permissions" to the mode cycle
+
+> **Warning:** This flag auto-approves all tool use: file writes, Bash execution, etc.
+> Use only in trusted projects. Default permission mode is recommended for unfamiliar codebases.
+
+## Why npm build commands are forbidden
+
+`npm run build`, `npm run watch`, and `npm install` are **forbidden during normal development**.
+
+- **Reason:** Vite dev server at `http://localhost:8888` auto-rebuilds the bundle on every file save
+- Running these wastes context and time with no benefit
+- **Exception:** `npm install <package>` — only when explicitly adding a new dependency
+- Single source of truth: `.claude/rules/frontend.md` (auto-loads on `.ts`/`.tsx` edits via `paths:` frontmatter). AGENTS.md points here in one line — do not restate.
+
+## How the tsc PostToolUse hook works
+
+When a `.ts` file is modified via the Edit or Write tool, the PostToolUse hook fires automatically:
+
+```bash
+# Command executed by the hook
+rtk tsc --noEmit
+```
+
+- Hook config: `.claude/settings.json` → `PostToolUse` → matcher: `Edit|Write`
+- If tsc errors are found, the hook returns `exit(1)`, immediately notifying Claude
+- **How to verify:** Edit any `.ts` file with the Edit tool → check hook output for tsc results
+
+## 8. Permission strategy
+
+Three layers, pick the lightest one that still keeps you in the loop.
+
+| Mode | When | How |
+| --- | --- | --- |
+| `allowDangerouslySkipPermissions` | Trusted local repo work (current default) | VS Code setting — already enabled, see §"Permission setup" above |
+| `/permissions` allowlist | Untrusted code, external PR review, shared boxes | Run `/permissions` and approve specific tools (`rtk git *`, `rtk tsc`, etc.) instead of blanket bypass |
+| Default prompt-per-action | First time on a strange branch, when investigating supply-chain risk | No flag — Claude asks before each Bash/MCP call |
+
+Rules of thumb:
+
+- **Never** add a tool to the global allowlist that can write outside the repo (e.g., `rm -rf /`, `aws *`). Keep blast radius local.
+- New MCP server: `claude mcp add <name>` then verify entry in `.claude/settings.json`. Document the why in this file before committing.
+- `gh` CLI is preferred over raw GitHub API — it handles auth, avoids rate limits, and keeps PR/issue work out of the browser. Install with `winget install --id GitHub.cli` if missing.
+- Forbidden flags regardless of mode: `--no-verify`, `--no-gpg-sign`, `git push --force` to `main`. Hooks and signatures are not optional.

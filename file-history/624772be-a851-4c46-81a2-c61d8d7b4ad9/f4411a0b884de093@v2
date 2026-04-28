@@ -1,0 +1,11 @@
+---
+name: --dangerously-skip-permissions 앨리어스 설정됨
+description: 이 환경에서는 claude 명령이 --dangerously-skip-permissions 플래그로 실행됨 — 권한 프롬프트 없음
+type: feedback
+originSessionId: 624772be-a851-4c46-81a2-c61d8d7b4ad9
+---
+`~/.bashrc`에 `alias claude='claude --dangerously-skip-permissions'`가 설정되어 있음.
+
+**Why:** 매번 권한 요청이 워크플로우를 방해함. 사용자가 이 프로젝트를 신뢰하므로 자동 승인.
+
+**How to apply:** 권한 관련 안내나 "이 작업을 수행해도 되나요?" 류의 프롬프트를 기다릴 필요 없음. 모든 도구 사용이 자동 승인됨.

@@ -1,0 +1,297 @@
+import type * as THREE from "three";
+import type {
+  GSAPTimeline,
+  StrictTimelineScroll,
+  TimelinePosition,
+} from "./gsap.types.js";
+import type { WaitForClickOptions } from "./runtime.types.js";
+import type { Engine } from "../core/Engine.js";
+import type {
+  BackgroundTweenProps,
+  ObjectOptionsByKey,
+  PageConfigObjectOptions,
+  SceneLightsTweenProps,
+  SceneSettings,
+  Vector3Optional,
+} from "./object.types.js";
+import type { PostProcessorOptions } from "./engine.types.js";
+import type {
+  PageSceneRuntimePolicy,
+  SceneBackgroundPolicy,
+  SceneProgressOptionsMap,
+  SceneSelectorMap,
+} from "./runtime.types.js";
+
+export interface TimelineControllerLike {
+  setPauseOn(): void;
+  setPauseOff(): void;
+  play(): void;
+  runWaitClick(selector: string, options?: WaitForClickOptions): void;
+  runWaitDelay(ms: number): void;
+  runWaitPromise(promise: Promise<unknown>): void;
+  dispose(): void;
+}
+
+export interface PageThreeConfig {
+  canvasId: string;
+  camera: {
+    fov: number;
+    near: number;
+    far: number;
+    position?: { x: number; y: number; z: number };
+  };
+  cameraTarget: {
+    position?: { x: number; y: number; z: number };
+  };
+  renderer: {
+    antialias: boolean;
+    alpha: boolean;
+    backend: "webgl" | "webgpu";
+    powerPreference: "default" | "high-performance" | "low-power";
+  };
+  pixelRatioMax: number;
+  performance?: {
+    ui?: {
+      attitude?: { maxDpr: number };
+    };
+  };
+  shadowMap?: {
+    enabled: boolean;
+    type: THREE.ShadowMapType;
+  };
+  renderBudget?: {
+    budgetMs: number;
+    mode: "performance" | "consistent";
+    enterSkipFrames: number;
+    exitSkipFrames: number;
+  };
+  scene: {
+    background: number | null;
+    fog: { color: number; near: number; far: number } | null;
+  };
+  postProcessing: PostProcessorOptions;
+}
+
+export interface CameraVars {
+  position?: Vector3Optional;
+  fov?: number;
+  scale?: Vector3Optional;
+}
+
+export interface CameraTargetVars {
+  position?: Vector3Optional;
+}
+
+export interface ObjectVars {
+  position?: Vector3Optional;
+  rotation?: Vector3Optional;
+  scale?: Vector3Optional;
+  opacity?: number;
+}
+
+export type TimelineTargetId =
+  | "camera"
+  | "cameraTarget"
+  | keyof ObjectOptionsByKey;
+
+export type SceneFromState = {
+  camera?: CameraVars;
+  cameraTarget?: CameraTargetVars;
+  background?: BackgroundTweenProps;
+  sceneLights?: SceneLightsTweenProps;
+} & {
+  [K in Exclude<
+    keyof ObjectOptionsByKey,
+    "background" | "sceneLights"
+  >]?: ObjectVars;
+} & Record<string, unknown>;
+
+export interface SceneMeta {
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface SceneTriggerConfig {
+  selector: string;
+  actionSceneKey: string;
+  once?: boolean;
+  lockScroll?: boolean;
+}
+
+export interface TimelineSegment {
+  start: number;
+  end: number;
+}
+
+export interface SceneTweenEntry {
+  target: string;
+  vars: Record<string, unknown>;
+  position?: TimelinePosition;
+}
+
+export type SceneTweenEntryTuple = [
+  target: string,
+  vars: Record<string, unknown>,
+  position?: TimelinePosition,
+];
+
+export interface SceneConfig<F extends SceneFromState = SceneFromState> {
+  from?: F;
+  meta?: SceneMeta;
+  settings?: SceneSettings;
+  shake?: { amplitude: number; frequency: number };
+  tl?: (timeline: StrictTimelineScroll) => StrictTimelineScroll | void;
+  tweens?: (SceneTweenEntry | SceneTweenEntryTuple)[];
+  /** Theatre keyframe start range override. */
+  keyframeStart?: TheatreKeyframePhaseConfig;
+  /** Theatre keyframe end range override. */
+  keyframeEnd?: TheatreKeyframePhaseConfig;
+  onProgress?: (progress: number) => void;
+  onDispose?: () => void;
+  triggers?: SceneTriggerConfig[];
+}
+
+export interface IntroFromStateWithCamera extends SceneFromState {
+  camera: CameraVars;
+}
+
+export interface IntroConfig<
+  F extends IntroFromStateWithCamera = IntroFromStateWithCamera,
+> {
+  waitForDomSelectors?: boolean;
+  set?: SceneFromState;
+  postProcessing?: { bloom?: { enabled: boolean } };
+  from?: F;
+  settings?: SceneSettings;
+  tl: (tl: GSAPTimeline, context?: IntroRunContext) => GSAPTimeline | void;
+}
+
+export interface SceneBoundaryContract {
+  from: string;
+  to: string;
+  requiredTargets?: string[];
+}
+
+export interface PageStateAnchors {
+  sceneStart?: Record<string, SceneFromState>;
+  sceneEnd?: Record<string, SceneFromState>;
+}
+
+export interface TimelineRunContext {
+  controller?: TimelineControllerLike;
+  gsap?: { to: (target: unknown, vars: Record<string, unknown>) => unknown };
+}
+
+export interface IntroRunContext extends TimelineRunContext {
+  loadPromise?: Promise<void>;
+  getActionCallback?: (
+    key: string,
+    vars: Record<string, unknown>,
+  ) => (() => void) | null;
+}
+
+export interface IntroRunOptions {
+  loadPromise: Promise<unknown>;
+  onComplete?: () => void;
+}
+
+export interface EnvCheckResult {
+  shouldInit: boolean;
+  pageType: string;
+  reason?: string;
+}
+
+export interface EnvInitOptions {
+  canvasId: string;
+  root?: ParentNode | null;
+  allowedPageTypes?: ReadonlySet<string>;
+}
+
+export interface OrbitControlsConfig {
+  enabled: boolean;
+  enableDamping?: boolean;
+  dampingFactor?: number;
+  rotateSpeed?: number;
+  zoomSpeed?: number;
+  panSpeed?: number;
+  minDistance?: number;
+  maxDistance?: number;
+  minPolarAngle?: number;
+  maxPolarAngle?: number;
+}
+
+export interface NumericTrackPoint {
+  id?: string;
+  position: number;
+  connectedRight?: boolean;
+  handles?: [number, number, number, number] | number[];
+  type?: "bezier" | "linear" | string;
+  value: number;
+}
+
+export type NumericTrackMap = Record<string, NumericTrackPoint[]>;
+
+export interface TheatreKeyframeRange {
+  start: number;
+  end: number | null;
+}
+
+/** GSAP chain builder context for generated keyframe tracks. */
+export interface KeyframeTracksContext {
+  engine: Engine;
+  duration: number;
+}
+
+export type KeyframeTracksBuilder = (
+  tl: GSAPTimeline,
+  context: KeyframeTracksContext,
+) => void;
+
+export interface TheatreKeyframePhaseConfig {
+  scene?: string;
+  phase?: string;
+  range?: TheatreKeyframeRange;
+  /** Numeric track data or a GSAP builder callback. */
+  tracks: NumericTrackMap | KeyframeTracksBuilder;
+}
+
+/** Serialized theatre phase payload exported from scene config. */
+export interface TheatreKeyframePhasePayload {
+  tracks: NumericTrackMap;
+}
+
+export interface SceneTextRevealCue {
+  at: number;
+  target: string;
+  state: "up";
+}
+
+export interface PageConfig<
+  TPageId extends string = string,
+  TSceneKey extends string = string,
+  TSheetId extends string = string,
+> {
+  pageId: TPageId;
+  scenes: Record<TSceneKey, SceneConfig>;
+  objects: Record<string, boolean>;
+  objectOptions?: PageConfigObjectOptions;
+  three?: PageThreeConfig;
+  initialState?: SceneFromState;
+  introOverlay?: IntroConfig | null;
+  intro?: IntroConfig | null;
+  /** Runs once when scroll timeline bindings are initialized. */
+  onScrollTimelineInit?: (gsap: {
+    set: (target: string, vars: object) => void;
+  }) => void;
+  stateAnchors?: PageStateAnchors;
+  sceneBoundaryContracts?: SceneBoundaryContract[];
+  orbitControls?: OrbitControlsConfig;
+  scrollSceneSelectors?: SceneSelectorMap<TSceneKey>;
+  scrollSceneOptions?: SceneProgressOptionsMap<TSceneKey>;
+  sceneRuntimePolicies?: PageSceneRuntimePolicy<TSceneKey, TSheetId>;
+  backgroundPolicies?: readonly SceneBackgroundPolicy<TSceneKey, TSheetId>[];
+}
+
+export interface ConfigValidationResult {
+  valid: boolean;
+  errors?: string[];
+}

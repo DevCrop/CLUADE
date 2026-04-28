@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * Chip Component
+ *
+ * @var string $variant  'tool' | 'category'
+ * @var string $label    display text
+ * @var string $icon     SimpleIcons slug (tool variant only, optional)
+ * @var string $tag      HTML tag override (default: 'span')
+ * @var bool   $marqueeItem  add data-marquee-item attribute
+ */
+
+$variant     = $variant ?? 'category';
+$label       = $label ?? '';
+$icon        = $icon ?? '';
+$tag         = $tag ?? 'span';
+$marqueeItem = $marqueeItem ?? false;
+?>
+<<?= $tag ?> class="no-chip no-chip--<?= e($variant) ?>"<?= $marqueeItem ? ' data-marquee-item' : '' ?>>
+    <?php if ($variant === 'tool' && $icon !== ''): ?>
+    <span class="no-chip__icon" data-icon="<?= e($icon) ?>" aria-hidden="true"></span>
+    <?php endif; ?>
+    <span class="no-chip__label"><?= e($label) ?></span>
+</<?= $tag ?>>

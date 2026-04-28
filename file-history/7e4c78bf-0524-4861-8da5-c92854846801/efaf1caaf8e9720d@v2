@@ -1,0 +1,719 @@
+import * as THREE from "three";
+import { BACKGROUND_TRANSITION_CONFIG } from "../config/background.config.js";
+import { aboutBackground, mainBackground } from "../core/setup.js";
+import type {
+  BackgroundLookOptions,
+  BackgroundObjectOptions,
+} from "../types/object-visual.types.js";
+import type {
+  BackgroundUniformRecord,
+  BackgroundManagerEntry,
+  BackgroundManagerRuntimePort,
+  BackgroundRuntimeState,
+  BackgroundVariantKey,
+} from "../types/object-runtime.types.js";
+import backgroundTransitionFragmentShader from "../../shaders/background/shared/transition.fragment.glsl?raw";
+import fullscreenVertexShader from "../../shaders/post-processing/additive-blend.vertex.glsl?raw";
+import { ResponsiveRuntime } from "../runtime/ResponsiveRuntime.js";
+import { BackgroundMaterialRuntime } from "../runtime/BackgroundMaterialRuntime.js";
+
+const BACKGROUND_DEFAULT_LOOK: Required<BackgroundLookOptions> = {
+  topColor: 0x102f54,
+  bottomColor: 0x090614,
+  accentColor: 0x33204b,
+  starIntensity: 0.78,
+  starDensity: 0.56,
+  nebulaStrength: 0.38,
+  motionStrength: 0.26,
+  legacyMix: 0,
+};
+const ABOUT_VARIANT_ISOLATED_LOOK: Required<BackgroundLookOptions> = {
+  topColor: 0x101010,
+  bottomColor: 0x000000,
+  accentColor: 0x6a6a6a,
+  starIntensity: 0.08,
+  starDensity: 0.08,
+  nebulaStrength: 0.02,
+  motionStrength: 0.12,
+  legacyMix: 0,
+};
+const BACKGROUND_INITIAL_VARIANT_BY_ID: Readonly<
+  Partial<Record<string, BackgroundVariantKey>>
+> = {
+  [mainBackground]: "intro",
+  [aboutBackground]: "aboutBase",
+};
+const BACKGROUND_KNOWN_VARIANTS = new Set<BackgroundVariantKey>([
+  "intro",
+  "introAction",
+  "aboutBase",
+  "aboutHeroIntro",
+  "aboutHeroSlogan",
+  "aboutWhoIntro",
+  "aboutMissionVision",
+  "hero",
+  "story",
+  "stars",
+  "who",
+  "why",
+  "services",
+  "works",
+  "worksDetail",
+  "worksFinal",
+  "client",
+  "contact",
+  "footer",
+]);
+const BACKGROUND_DEFAULT_RESOLUTION = 1;
+const BACKGROUND_DEFAULT_EXPOSURE = 0.56;
+const BACKGROUND_ANCHOR_X = 0.022;
+const BACKGROUND_ANCHOR_Y = 0.016;
+const BACKGROUND_ANCHOR_DAMPING = 1.15;
+const BACKGROUND_STAR_INTENSITY_MIN = 0;
+const BACKGROUND_STAR_INTENSITY_MAX = 2;
+const BACKGROUND_STAR_DENSITY_MIN = 0;
+const BACKGROUND_STAR_DENSITY_MAX = 1;
+const BACKGROUND_NEBULA_STRENGTH_MIN = 0;
+const BACKGROUND_NEBULA_STRENGTH_MAX = 1.2;
+const BACKGROUND_MOTION_STRENGTH_MIN = 0;
+const BACKGROUND_MOTION_STRENGTH_MAX = 1.2;
+const BACKGROUND_LEGACY_MIX_MIN = 0;
+const BACKGROUND_LEGACY_MIX_MAX = 1;
+const BACKGROUND_HERO_NOISE_TEXTURE_SIZE = 256;
+const COPY_FRAGMENT_SHADER = `
+uniform sampler2D uTexture;
+varying vec2 vUv;
+
+void main() {
+  gl_FragColor = texture2D(uTexture, vUv);
+}
+`;
+
+export class BackgroundManager implements BackgroundManagerRuntimePort {
+  private static readonly _CLASS = "BackgroundManager";
+  private readonly _renderer: THREE.WebGLRenderer;
+  private readonly _scene: THREE.Scene;
+  private readonly _camera: THREE.Camera;
+  private readonly _backgroundScene = new THREE.Scene();
+  private readonly _backgroundCamera = new THREE.OrthographicCamera(
+    -1,
+    1,
+    1,
+    -1,
+    0,
+    1,
+  );
+  private readonly _geometry = new THREE.PlaneGeometry(2, 2);
+  private readonly _entries = new Map<string, BackgroundManagerEntry>();
+  private readonly _anchor = new THREE.Vector2(0.5, 0.5);
+  private readonly _anchorTarget = new THREE.Vector2(0.5, 0.5);
+  private readonly _cameraEuler = new THREE.Euler(0, 0, 0, "YXZ");
+  private readonly _displayRenderTarget: THREE.WebGLRenderTarget;
+  private readonly _variantRenderTarget: THREE.WebGLRenderTarget;
+  private readonly _transitionFromRenderTarget: THREE.WebGLRenderTarget;
+  private readonly _mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
+  private readonly _copyMaterial: THREE.ShaderMaterial;
+  private readonly _transitionMaterial: THREE.ShaderMaterial;
+  private readonly _displacementTexture: THREE.DataTexture;
+  private readonly _heroNoiseTexture: THREE.DataTexture;
+  private readonly _materialRuntime: BackgroundMaterialRuntime;
+  private readonly _initialBackground:
+    | THREE.Color
+    | THREE.Texture
+    | THREE.CubeTexture
+    | null;
+  private _elapsedTime = 0;
+  private _activeEntryId: string | null = null;
+  private readonly _lookScratch: Required<BackgroundLookOptions> = {
+    ...BACKGROUND_DEFAULT_LOOK,
+  };
+  private _hasRenderedFrame = false;
+  private _rendererExposureSnapshot: number | null = null;
+  private _transitionElapsed = 0;
+  private _transitionActive = false;
+  private readonly _lastVisibilityById = new Map<string, boolean>();
+  private _getPerformanceProfile() {
+    return ResponsiveRuntime.getDefault().getSnapshot().performance;
+  }
+
+  constructor(
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+  ) {
+    this._renderer = renderer;
+    this._scene = scene;
+    this._camera = camera;
+    this._initialBackground = this._cloneSceneBackground(scene.background);
+    this._displayRenderTarget = new THREE.WebGLRenderTarget(
+      BACKGROUND_DEFAULT_RESOLUTION,
+      BACKGROUND_DEFAULT_RESOLUTION,
+      {
+        depthBuffer: false,
+        stencilBuffer: false,
+      },
+    );
+    this._variantRenderTarget = new THREE.WebGLRenderTarget(
+      BACKGROUND_DEFAULT_RESOLUTION,
+      BACKGROUND_DEFAULT_RESOLUTION,
+      {
+        depthBuffer: false,
+        stencilBuffer: false,
+      },
+    );
+    this._transitionFromRenderTarget = new THREE.WebGLRenderTarget(
+      BACKGROUND_DEFAULT_RESOLUTION,
+      BACKGROUND_DEFAULT_RESOLUTION,
+      {
+        depthBuffer: false,
+        stencilBuffer: false,
+      },
+    );
+    this._copyMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture: { value: null },
+      },
+      vertexShader: fullscreenVertexShader,
+      fragmentShader: COPY_FRAGMENT_SHADER,
+      depthWrite: false,
+      depthTest: false,
+      transparent: false,
+      toneMapped: false,
+    });
+    this._transitionMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        progress: { value: 0 },
+        width: { value: BACKGROUND_TRANSITION_CONFIG.width },
+        radius: { value: BACKGROUND_TRANSITION_CONFIG.radius },
+        displacementIntensity: {
+          value: BACKGROUND_TRANSITION_CONFIG.displacementIntensity,
+        },
+        texture1: { value: this._transitionFromRenderTarget.texture },
+        texture2: { value: this._variantRenderTarget.texture },
+        displacement: { value: null },
+        resolution: { value: new THREE.Vector4(1, 1, 1, 1) },
+      },
+      vertexShader: fullscreenVertexShader,
+      fragmentShader: backgroundTransitionFragmentShader,
+      depthWrite: false,
+      depthTest: false,
+      transparent: false,
+      toneMapped: false,
+    });
+    this._displacementTexture = this._createDisplacementTexture();
+    this._heroNoiseTexture = this._createNoiseTexture(
+      BACKGROUND_HERO_NOISE_TEXTURE_SIZE,
+    );
+    this._materialRuntime = new BackgroundMaterialRuntime(
+      () => ({
+        width: this._displayRenderTarget.width,
+        height: this._displayRenderTarget.height,
+      }),
+      this._heroNoiseTexture,
+      () => this._getPerformanceProfile().heroRaymarchSteps,
+    );
+    (this._transitionMaterial.uniforms.displacement
+      .value as THREE.DataTexture | null) = this._displacementTexture;
+    this._mesh = new THREE.Mesh(
+      this._geometry,
+      this._materialRuntime.getMaterial("intro"),
+    );
+    this._mesh.frustumCulled = false;
+    this._backgroundScene.add(this._mesh);
+    this.resize(
+      renderer.domElement.clientWidth || BACKGROUND_DEFAULT_RESOLUTION,
+      renderer.domElement.clientHeight || BACKGROUND_DEFAULT_RESOLUTION,
+      renderer.getPixelRatio(),
+    );
+  }
+
+  register(
+    id: string,
+    options: Partial<BackgroundObjectOptions> = {},
+    runtimeState: Partial<BackgroundRuntimeState> = {},
+  ): void {
+    const current = this._entries.get(id);
+    if (current) {
+      this.setOptions(id, options);
+      this.setRuntimeState(id, runtimeState);
+      return;
+    }
+    this._entries.set(id, {
+      id,
+      options: { ...options },
+      runtimeState: { ...runtimeState },
+      shaderTimeOffset: this._elapsedTime,
+    });
+    this._resolveActiveEntryId();
+  }
+
+  resetShaderClock(id: string): void {
+    const entry = this._entries.get(id);
+    if (!entry) return;
+    entry.shaderTimeOffset = this._elapsedTime;
+  }
+
+  unregister(id: string): void {
+    this._entries.delete(id);
+    if (this._activeEntryId !== id) {
+      this._resolveActiveEntryId();
+      return;
+    }
+    this._activeEntryId = null;
+    this._resolveActiveEntryId();
+    if (this._activeEntryId) return;
+    this._restoreSceneBackground();
+    this._restoreRendererExposure();
+  }
+
+  setOptions(id: string, options: Partial<BackgroundObjectOptions>): void {
+    const entry = this._entries.get(id);
+    if (!entry) return;
+    const previousVisible = this._isVisible(entry.options);
+    entry.options = {
+      ...entry.options,
+      ...options,
+      look: this._mergeLook(entry.options.look, options.look),
+    };
+    const nextVisible = this._isVisible(entry.options);
+    if (this._lastVisibilityById.get(id) !== nextVisible) {
+      this._lastVisibilityById.set(id, nextVisible);
+    }
+    this._resolveActiveEntryId();
+  }
+
+  setRuntimeState(id: string, state: Partial<BackgroundRuntimeState>): void {
+    const entry = this._entries.get(id);
+    if (!entry) return;
+    const nextState = {
+      ...entry.runtimeState,
+      ...state,
+    };
+    if ("look" in state) {
+      nextState.look = state.look ? { ...state.look } : undefined;
+    }
+    if ("shaderControls" in state) {
+      nextState.shaderControls = state.shaderControls
+        ? { ...state.shaderControls }
+        : undefined;
+    }
+    entry.runtimeState = nextState;
+  }
+
+  getRuntimeState(id: string): BackgroundRuntimeState {
+    return { ...(this._entries.get(id)?.runtimeState ?? {}) };
+  }
+
+  hasRenderedFrame(): boolean {
+    return this._hasRenderedFrame;
+  }
+
+  startTransition(id: string): void {
+    if (!this._getPerformanceProfile().transitionEnabled) return;
+    if (!this._entries.has(id) || !this._hasRenderedFrame) return;
+    this._copyToTarget(
+      this._displayRenderTarget.texture,
+      this._transitionFromRenderTarget,
+    );
+    this._transitionElapsed = 0;
+    this._transitionActive = true;
+  }
+
+  update(deltaTime: number): void {
+    this._elapsedTime += Number.isFinite(deltaTime)
+      ? Math.max(0, deltaTime)
+      : 0;
+    this._updateAnchor(deltaTime);
+    if (!this._transitionActive) return;
+    this._transitionElapsed = Math.min(
+      BACKGROUND_TRANSITION_CONFIG.duration,
+      this._transitionElapsed + Math.max(0, deltaTime),
+    );
+    if (this._transitionElapsed < BACKGROUND_TRANSITION_CONFIG.duration) return;
+    this._transitionActive = false;
+  }
+
+  render(): void {
+    const entry = this._getActiveEntry();
+    if (!entry) {
+      this._restoreSceneBackground();
+      this._restoreRendererExposure();
+      return;
+    }
+
+    const variant = this._resolveVariant(entry);
+    const material = this._materialRuntime.getMaterial(variant);
+    this._applyUniforms(material, entry, variant);
+    this._applyExposure(entry);
+    this._renderFullscreen(material, this._variantRenderTarget);
+    if (
+      this._transitionActive &&
+      this._getPerformanceProfile().transitionEnabled
+    ) {
+      this._renderTransition();
+    } else {
+      this._copyToTarget(
+        this._variantRenderTarget.texture,
+        this._displayRenderTarget,
+      );
+    }
+    this._hasRenderedFrame = true;
+    if (this._scene.background !== this._displayRenderTarget.texture) {
+      this._scene.background = this._displayRenderTarget.texture;
+    }
+    this._scene.backgroundIntensity = 1;
+  }
+
+  resize(width: number, height: number, pixelRatio = 1): void {
+    const performance = this._getPerformanceProfile();
+    const renderWidth = Math.max(
+      BACKGROUND_DEFAULT_RESOLUTION,
+      Math.round(width * pixelRatio * performance.backgroundResolutionScale),
+    );
+    const renderHeight = Math.max(
+      BACKGROUND_DEFAULT_RESOLUTION,
+      Math.round(height * pixelRatio * performance.backgroundResolutionScale),
+    );
+    this._displayRenderTarget.setSize(renderWidth, renderHeight);
+    this._variantRenderTarget.setSize(renderWidth, renderHeight);
+    this._transitionFromRenderTarget.setSize(renderWidth, renderHeight);
+    this._materialRuntime.resize();
+    const resolution = this._transitionMaterial.uniforms.resolution.value;
+    if (resolution instanceof THREE.Vector4) {
+      resolution.set(renderWidth, renderHeight, 1, 1);
+    }
+  }
+
+  dispose(): void {
+    this._restoreSceneBackground();
+    this._restoreRendererExposure();
+    this._materialRuntime.dispose();
+    this._geometry.dispose();
+    this._displayRenderTarget.dispose();
+    this._variantRenderTarget.dispose();
+    this._transitionFromRenderTarget.dispose();
+    this._copyMaterial.dispose();
+    this._transitionMaterial.dispose();
+    this._displacementTexture.dispose();
+    this._heroNoiseTexture.dispose();
+    this._entries.clear();
+  }
+
+  private _getActiveEntry(): BackgroundManagerEntry | null {
+    this._resolveActiveEntryId();
+    if (!this._activeEntryId) return null;
+    return this._entries.get(this._activeEntryId) ?? null;
+  }
+
+  private _resolveActiveEntryId(): void {
+    const current = this._activeEntryId
+      ? this._entries.get(this._activeEntryId)
+      : null;
+    if (current && this._isVisible(current.options)) return;
+    this._activeEntryId = null;
+    for (const entry of this._entries.values()) {
+      if (!this._isVisible(entry.options)) continue;
+      this._activeEntryId = entry.id;
+      return;
+    }
+  }
+
+  private _applyUniforms(
+    material: THREE.ShaderMaterial,
+    entry: BackgroundManagerEntry,
+    variant: BackgroundVariantKey,
+  ): void {
+    const uniforms = material.uniforms as BackgroundUniformRecord;
+    const performance = this._getPerformanceProfile();
+    const look = this._resolveLook(entry, variant);
+    (uniforms.uTime.value as number) = Math.max(
+      0,
+      this._elapsedTime - entry.shaderTimeOffset,
+    );
+    (uniforms.uAnchor.value as THREE.Vector2).copy(this._anchor);
+    (uniforms.uPointer.value as THREE.Vector2).set(0.5, 0.5);
+    (uniforms.uPointerVelocity.value as THREE.Vector2).set(0, 0);
+    (uniforms.uPointerStrength.value as number) = 0;
+    (uniforms.uPointerActive.value as number) = 0;
+    (uniforms.uTopColor.value as THREE.Color).setHex(look.topColor);
+    (uniforms.uBottomColor.value as THREE.Color).setHex(look.bottomColor);
+    (uniforms.uAccentColor.value as THREE.Color).setHex(look.accentColor);
+    (uniforms.uStarIntensity.value as number) = this._clamp(
+      look.starIntensity,
+      BACKGROUND_STAR_INTENSITY_MIN,
+      BACKGROUND_STAR_INTENSITY_MAX,
+    );
+    (uniforms.uStarDensity.value as number) = this._clamp(
+      look.starDensity,
+      BACKGROUND_STAR_DENSITY_MIN,
+      BACKGROUND_STAR_DENSITY_MAX,
+    );
+    (uniforms.uNebulaStrength.value as number) = this._clamp(
+      look.nebulaStrength,
+      BACKGROUND_NEBULA_STRENGTH_MIN,
+      BACKGROUND_NEBULA_STRENGTH_MAX,
+    );
+    (uniforms.uMotionStrength.value as number) = this._clamp(
+      look.motionStrength,
+      BACKGROUND_MOTION_STRENGTH_MIN,
+      BACKGROUND_MOTION_STRENGTH_MAX,
+    );
+    (uniforms.uLegacyMix.value as number) = this._clamp(
+      look.legacyMix,
+      BACKGROUND_LEGACY_MIX_MIN,
+      BACKGROUND_LEGACY_MIX_MAX,
+    );
+    (uniforms.uHeroDarken.value as number) = this._clamp(
+      entry.runtimeState.shaderControls?.heroDarken ?? 0,
+      0,
+      1,
+    );
+    (uniforms.uStoryDepth.value as number) = this._clamp(
+      entry.runtimeState.shaderControls?.storyDepth ?? 0,
+      0,
+      1,
+    );
+    (uniforms.uHeroRaymarchSteps.value as number) =
+      performance.heroRaymarchSteps;
+  }
+
+  private _resolveLook(
+    entry: BackgroundManagerEntry,
+    variant: BackgroundVariantKey,
+  ): Required<BackgroundLookOptions> {
+    if (this._isAboutVariant(variant)) {
+      return this._copyLookInto(ABOUT_VARIANT_ISOLATED_LOOK);
+    }
+    const runtimeLook = entry.runtimeState.look;
+    if (runtimeLook) {
+      return this._resolveLookFromSource(runtimeLook);
+    }
+    return this._resolveLookFromSource(entry.options.look);
+  }
+
+  private _copyLookInto(
+    source: Required<BackgroundLookOptions>,
+  ): Required<BackgroundLookOptions> {
+    const out = this._lookScratch;
+    out.topColor = source.topColor;
+    out.bottomColor = source.bottomColor;
+    out.accentColor = source.accentColor;
+    out.starIntensity = source.starIntensity;
+    out.starDensity = source.starDensity;
+    out.nebulaStrength = source.nebulaStrength;
+    out.motionStrength = source.motionStrength;
+    out.legacyMix = source.legacyMix;
+    return out;
+  }
+
+  private _resolveLookFromSource(
+    source: BackgroundLookOptions | undefined,
+  ): Required<BackgroundLookOptions> {
+    const out = this._lookScratch;
+    out.topColor = this._resolveFiniteNumber(
+      source?.topColor,
+      BACKGROUND_DEFAULT_LOOK.topColor,
+    );
+    out.bottomColor = this._resolveFiniteNumber(
+      source?.bottomColor,
+      BACKGROUND_DEFAULT_LOOK.bottomColor,
+    );
+    out.accentColor = this._resolveFiniteNumber(
+      source?.accentColor,
+      BACKGROUND_DEFAULT_LOOK.accentColor,
+    );
+    out.starIntensity = this._resolveFiniteNumber(
+      source?.starIntensity,
+      BACKGROUND_DEFAULT_LOOK.starIntensity,
+    );
+    out.starDensity = this._resolveFiniteNumber(
+      source?.starDensity,
+      BACKGROUND_DEFAULT_LOOK.starDensity,
+    );
+    out.nebulaStrength = this._resolveFiniteNumber(
+      source?.nebulaStrength,
+      BACKGROUND_DEFAULT_LOOK.nebulaStrength,
+    );
+    out.motionStrength = this._resolveFiniteNumber(
+      source?.motionStrength,
+      BACKGROUND_DEFAULT_LOOK.motionStrength,
+    );
+    out.legacyMix = this._resolveFiniteNumber(
+      source?.legacyMix,
+      BACKGROUND_DEFAULT_LOOK.legacyMix,
+    );
+    return out;
+  }
+
+  private _resolveFiniteNumber(value: unknown, fallback: number): number {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    return fallback;
+  }
+
+  private _updateAnchor(deltaTime: number): void {
+    this._cameraEuler.setFromQuaternion(this._camera.quaternion);
+    const yaw = THREE.MathUtils.clamp(this._cameraEuler.y, -1, 1);
+    const pitch = THREE.MathUtils.clamp(this._cameraEuler.x, -0.75, 0.75);
+    this._anchorTarget.set(
+      0.5 + yaw * BACKGROUND_ANCHOR_X,
+      0.5 - pitch * BACKGROUND_ANCHOR_Y,
+    );
+    const alpha =
+      1 - Math.exp(-Math.max(0, deltaTime) * BACKGROUND_ANCHOR_DAMPING);
+    this._anchor.lerp(this._anchorTarget, alpha);
+  }
+
+  private _applyExposure(entry: BackgroundManagerEntry): void {
+    const exposure = this._resolveExposure(entry);
+    if (exposure == null) {
+      this._restoreRendererExposure();
+      return;
+    }
+    if (this._rendererExposureSnapshot == null) {
+      this._rendererExposureSnapshot = this._renderer.toneMappingExposure;
+    }
+    this._renderer.toneMappingExposure = exposure;
+  }
+
+  private _resolveExposure(entry: BackgroundManagerEntry): number | null {
+    const runtimeExposure = entry.runtimeState.exposure;
+    if (
+      typeof runtimeExposure === "number" &&
+      Number.isFinite(runtimeExposure)
+    ) {
+      return this._clamp(runtimeExposure, 0.05, 2.0);
+    }
+    const optionExposure = entry.options.exposure;
+    if (typeof optionExposure === "number" && Number.isFinite(optionExposure)) {
+      return this._clamp(optionExposure, 0.05, 2.0);
+    }
+    return BACKGROUND_DEFAULT_EXPOSURE;
+  }
+
+  private _restoreRendererExposure(): void {
+    if (this._rendererExposureSnapshot == null) return;
+    this._renderer.toneMappingExposure = this._rendererExposureSnapshot;
+    this._rendererExposureSnapshot = null;
+  }
+
+  private _restoreSceneBackground(): void {
+    this._scene.background = this._cloneSceneBackground(
+      this._initialBackground,
+    );
+    this._scene.backgroundIntensity = 1;
+  }
+
+  private _renderTransition(): void {
+    this._renderTransitionWithProgress(this._resolveTransitionProgress());
+  }
+
+  private _renderTransitionWithProgress(progress: number): void {
+    (this._transitionMaterial.uniforms.time.value as number) =
+      this._elapsedTime;
+    (this._transitionMaterial.uniforms.progress.value as number) = progress;
+    (this._transitionMaterial.uniforms.texture1.value as THREE.Texture | null) =
+      this._transitionFromRenderTarget.texture;
+    (this._transitionMaterial.uniforms.texture2.value as THREE.Texture | null) =
+      this._variantRenderTarget.texture;
+    this._renderFullscreen(this._transitionMaterial, this._displayRenderTarget);
+  }
+
+  private _resolveTransitionProgress(): number {
+    if (!this._transitionActive) return 1;
+    const normalized = this._clamp(
+      this._transitionElapsed / BACKGROUND_TRANSITION_CONFIG.duration,
+      0,
+      1,
+    );
+    return 1 - Math.pow(1 - normalized, 3);
+  }
+
+  private _copyToTarget(
+    texture: THREE.Texture,
+    target: THREE.WebGLRenderTarget,
+  ): void {
+    (this._copyMaterial.uniforms.uTexture.value as THREE.Texture | null) =
+      texture;
+    this._renderFullscreen(this._copyMaterial, target);
+  }
+
+  private _renderFullscreen(
+    material: THREE.ShaderMaterial,
+    target: THREE.WebGLRenderTarget,
+  ): void {
+    const previousMaterial = this._mesh.material;
+    const previousTarget = this._renderer.getRenderTarget();
+    this._mesh.material = material;
+    this._renderer.setRenderTarget(target);
+    this._renderer.clear();
+    this._renderer.render(this._backgroundScene, this._backgroundCamera);
+    this._renderer.setRenderTarget(previousTarget);
+    this._mesh.material = previousMaterial;
+  }
+
+  private _resolveVariant(entry: BackgroundManagerEntry): BackgroundVariantKey {
+    const variant = entry.runtimeState.variant;
+    if (variant && BACKGROUND_KNOWN_VARIANTS.has(variant)) {
+      return variant;
+    }
+    const initialVariant = BACKGROUND_INITIAL_VARIANT_BY_ID[entry.id];
+    if (initialVariant) return initialVariant;
+    return "story";
+  }
+
+  private _isVisible(options: Partial<BackgroundObjectOptions>): boolean {
+    return options.visible !== false;
+  }
+
+  private _mergeLook(
+    current: BackgroundLookOptions | undefined,
+    next: BackgroundLookOptions | undefined,
+  ): BackgroundLookOptions | undefined {
+    if (!current) return next ? { ...next } : undefined;
+    if (!next) return { ...current };
+    return { ...current, ...next };
+  }
+
+  private _cloneSceneBackground(
+    background: THREE.Color | THREE.Texture | THREE.CubeTexture | null,
+  ): THREE.Color | THREE.Texture | THREE.CubeTexture | null {
+    if (background instanceof THREE.Color) return background.clone();
+    return background;
+  }
+
+  private _createDisplacementTexture(): THREE.DataTexture {
+    return this._createNoiseTexture(
+      BACKGROUND_TRANSITION_CONFIG.displacementTextureSize,
+    );
+  }
+
+  private _createNoiseTexture(size: number): THREE.DataTexture {
+    const data = new Uint8Array(size * size * 4);
+    for (let index = 0; index < data.length; index += 4) {
+      const value = Math.floor(Math.random() * 255);
+      data[index] = value;
+      data[index + 1] = value;
+      data[index + 2] = value;
+      data[index + 3] = 255;
+    }
+    const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  private _clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private _isAboutVariant(variant: BackgroundVariantKey): boolean {
+    return variant.startsWith("about");
+  }
+
+}

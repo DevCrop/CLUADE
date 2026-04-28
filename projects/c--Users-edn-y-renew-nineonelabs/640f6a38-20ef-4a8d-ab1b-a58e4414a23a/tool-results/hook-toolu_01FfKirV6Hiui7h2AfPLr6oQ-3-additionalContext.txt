@@ -1,0 +1,346 @@
+<ide_diagnostics>[
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 14,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 14,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 14,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 14,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 14,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 14,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 14,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 14,
+    "column": 17,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 25,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 35,
+    "column": 1,
+    "message": "MD040/fenced-code-language: Fenced code blocks should have a language specified",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 81,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 88,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 88,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 88,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 88,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 88,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 88,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 88,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 88,
+    "column": 17,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 114,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 115,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 119,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 120,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 124,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 125,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 128,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 129,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 133,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 134,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 138,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 142,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 142,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 142,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 142,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 157,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 160,
+    "column": 1,
+    "message": "MD022/blanks-around-headings: Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 161,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 257,
+    "column": 1,
+    "message": "MD025/single-title/single-h1: Multiple top-level headings in the same document",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 264,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 279,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 279,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 279,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/.claude/BEST_PRACTICES.md",
+    "line": 279,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  }
+]</ide_diagnostics>

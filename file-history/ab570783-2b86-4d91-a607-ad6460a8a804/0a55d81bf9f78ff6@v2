@@ -1,0 +1,120 @@
+# Memory Management Refactor
+
+## Context
+
+메모리 관리 리뷰 결과 세 가지 문제 발견:
+1. **규칙 위반** — TS/PHP/SCSS 맵 파일이 "코드에서 도출 가능한 정보"를 저장 (공식 forbidden 항목)
+2. **Stale 데이터** — `project_workflow.md`가 삭제된 `chop` 커맨드를 참조
+3. **중복** — workflow/map 내용 상당수가 이미 AGENTS.md에 있음
+
+**공식 기준 (출처: Claude Code auto memory 시스템 프롬프트, https://docs.anthropic.com/en/docs/claude-code/memory):**
+> "Code patterns, conventions, architecture, file paths, or project structure — these can be derived by reading the current project state." → 저장 금지
+
+---
+
+## 파일별 처리 방침
+
+### 삭제 / 대폭 압축
+
+#### `project_ts_map.md` → 압축 유지
+현재 94줄짜리 디렉토리 인벤토리 → 소유권 경계 3규칙 + 비자명 예외만 남김.
+
+**남길 것 (비자명, 코드에서 안 보임):**
+- AppManager / PageRuntime / PageTheatreBinder 3-way 경계 정의
+- Works 페이지만 `WorksSceneManager` 독립 렌더러 사용 (예외)
+- 초기화 흐름 1줄 요약
+
+**제거할 것 (코드에서 도출 가능):**
+- 15행짜리 디렉토리 테이블, manager/ 테이블, runtime/ 테이블, pages/ 목록
+
+---
+
+#### `project_php_map.md` → 압축 유지
+현재 130줄 → 비자명 패턴 4개만 남김.
+
+**남길 것:**
+- `render()` 진입점 위치 (`config/helpers.php:30`)
+- 이중 트랙: closure routes(공개) vs physical-path admin (비자명 아키텍처)
+- `imageUpload()` → webp 변환 + 원본 삭제 패턴 (`inc/lib/func.php`)
+- `nb_` 테이블 목록 (스키마 작업 빠른 참조)
+
+**제거할 것:**
+- inc/lib 전체 파일 테이블, src/ 네임스페이스 전체, views/ 컨벤션, admin 구조, API 구조 — `$php-explorer`로 조회 가능
+
+---
+
+#### `project_scss_map.md` → 압축 유지
+현재 120줄 → 규칙 + 함수 시그니처만 남김.
+
+**남길 것:**
+- `var(--token, fallback)` 금지 (non-obvious, 빠지기 쉬운 실수)
+- `fluid()` / `mq()` 시그니처 (공식 문서 없는 내부 함수)
+- Layer 우선순위 (reset < base < ... < state)
+- 브레이크포인트 키 → px 매핑 (반응형 작업 빈도 높음)
+
+**제거할 것:**
+- 컴포넌트 클래스 전체 테이블, :root 토큰 카테고리 테이블 — `$scene-explorer`/grep 가능
+
+---
+
+### 수정
+
+#### `project_workflow.md` → stale 커맨드 교체
+| 현재 (stale) | 수정 |
+|---|---|
+| `chop node_modules/.bin/tsc --noEmit` | `rtk tsc --noEmit` |
+| `chop make migrate-status` | `php src/Database/migrate.php` (존재하지 않는 커맨드 제거) |
+| `npm run test` | `rtk npm run test` |
+| `docker compose exec ...` | `rtk docker compose exec web php -l <file>` |
+
+---
+
+### 유지 (변경 없음)
+
+| 파일 | 이유 |
+|---|---|
+| `project_architecture.md` | bfcache 패턴·소유권 분리·imageProcessor API — 비자명 결정 + Why 포함 |
+| `feedback_rtk.md` | 피드백 규칙, 구조 정상 |
+| `feedback_npm_build.md` | 피드백 규칙, 구조 정상 |
+| `feedback_dangerously_skip.md` | 피드백 규칙, 구조 정상 |
+| `feedback_doc_manager_role.md` | 피드백 규칙, 구조 정상 |
+| `feedback_session_workflow.md` | 피드백 규칙, 구조 정상 |
+
+---
+
+### `MEMORY.md` 인덱스 업데이트
+압축된 파일들의 설명 문구를 실제 내용에 맞게 수정.
+
+---
+
+## 수정 대상 파일
+
+```
+C:\Users\edn_y\.claude\projects\c--Users-edn-y-renew-nineonelabs\memory\
+├── MEMORY.md                   ← 인덱스 설명 문구 업데이트
+├── project_ts_map.md           ← 94줄 → ~20줄 (경계 3규칙만)
+├── project_php_map.md          ← 130줄 → ~30줄 (4개 패턴만)
+├── project_scss_map.md         ← 120줄 → ~30줄 (규칙+시그니처만)
+└── project_workflow.md         ← chop → rtk 교체, 존재하지 않는 커맨드 제거
+```
+
+---
+
+## 적용 원칙 (출처)
+
+| 원칙 | 출처 |
+|---|---|
+| 코드에서 도출 가능한 구조·경로·패턴 → 저장 금지 | Claude Code 시스템 프롬프트 auto memory 섹션 |
+| feedback: 규칙 → Why → How to apply 구조 | Claude Code 시스템 프롬프트 `<types>` |
+| project: 사실/결정 → Why → How to apply 구조 | Claude Code 시스템 프롬프트 `<types>` |
+| MEMORY.md 200줄 한계 (초과분 로드 안 됨) | Claude Code 메모리 공식 문서 |
+| 이미 CLAUDE.md에 있는 내용 → 저장 금지 | Claude Code 시스템 프롬프트 |
+
+---
+
+## 검증
+
+1. 각 파일 편집 후 내용이 "비자명 정보만" 담는지 확인
+2. `MEMORY.md` 총 라인 수 200줄 미만 확인
+3. `project_workflow.md`에 `chop` 문자열 없는지 확인: `grep -n "chop" project_workflow.md`
+4. 압축 후 각 맵 파일이 "이 정보는 $php-explorer/$scene-explorer 없이도 빠른 참조가 필요한가?" 자가 점검

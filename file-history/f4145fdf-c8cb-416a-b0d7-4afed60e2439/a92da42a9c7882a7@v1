@@ -1,0 +1,38 @@
+# CHOP — Token-Optimized Commands
+
+## Golden Rule
+
+**Always prefix commands with `chop`**. If CHOP has a dedicated filter it uses it; otherwise it passes through unchanged — always safe to use.
+
+```bash
+# ✅ Correct (even in chains)
+chop git add . && chop git commit -m "msg" && chop git push
+```
+
+## Commands by Category
+
+```bash
+# Git
+chop git status / log / diff / show / add / commit / push / pull / branch / fetch / stash
+
+# Build & Type Check
+chop tsc                 # TypeScript errors only
+chop npm run <script>    # Compact npm output
+chop npx <cmd>
+
+# Files & Search
+chop ls <path>
+chop grep <pattern>
+
+# Docker
+chop docker ps / images / logs <container>
+
+# Meta
+chop gain                # Token savings stats
+chop gain --history
+chop gain --summary
+```
+
+## When to Use
+
+Wrap any command that produces noisy output. Skip for commands that output only a few lines.

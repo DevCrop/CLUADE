@@ -1,0 +1,182 @@
+import { UI } from "../ui/UI.js";
+import { Aria } from "../utils/Aria.js";
+import { ScrollLock } from "../utils/ScrollLock.js";
+import { DOM_CONFIG } from "../config/dom.config.js";
+import { Drawer } from "./Drawer.js";
+import { Panel } from "./Panel.js";
+import type { HeaderMenuToggleOptions } from "../types/component.types.js";
+
+export class Header extends UI {
+  private _triggerSelector = "[data-drawer-trigger]";
+  private _headerSelector = DOM_CONFIG.keys.header;
+  private _openClass = "is-open";
+  private _boundFlagAttr = "headerToggleBound";
+  private _trigger: HTMLButtonElement | null = null;
+  private _header: HTMLElement | null = null;
+  private _transitioning = false;
+  private _queuedVisible: boolean | null = null;
+  /** 드로어를 연 시점의 Panel 표시 여부 — 닫을 때 원래 숨김이었으면 복구 */
+  private _panelVisibleBeforeDrawer: boolean | null = null;
+
+  private readonly _onTriggerClick = (): void => this._flip();
+  private readonly _onDocumentKeydown = (event: KeyboardEvent): void =>
+    this._onEscape(event);
+  private readonly _onDocumentClick = (event: MouseEvent): void =>
+    this._onOutside(event);
+
+  constructor(options: HeaderMenuToggleOptions = {}) {
+    super({ selector: options.drawerSelector ?? DOM_CONFIG.drawer.selector });
+    this.setOption(options);
+  }
+
+  setOption(options: HeaderMenuToggleOptions = {}): void {
+    if (options.drawerSelector) this.config.selector = options.drawerSelector;
+    if (options.triggerSelector)
+      this._triggerSelector = options.triggerSelector;
+    if (options.headerSelector) this._headerSelector = options.headerSelector;
+    if (options.openClass) this._openClass = options.openClass;
+    if (options.boundFlagAttr) this._boundFlagAttr = options.boundFlagAttr;
+  }
+
+  protected override mount(): void {
+    const drawer = this.getElement();
+    if (!drawer) return;
+    const trigger = document.querySelector<HTMLButtonElement>(
+      this._triggerSelector,
+    );
+    if (!trigger) return;
+    if (trigger.dataset[this._boundFlagAttr] === "true") return;
+    trigger.dataset[this._boundFlagAttr] = "true";
+    this._trigger = trigger;
+    this._header = document.querySelector<HTMLElement>(this._headerSelector);
+    this._visible = drawer.classList.contains(this._openClass);
+    this._syncAria(this._visible);
+    trigger.addEventListener("click", this._onTriggerClick);
+    document.addEventListener("keydown", this._onDocumentKeydown);
+    document.addEventListener("click", this._onDocumentClick);
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    if (this._transitioning) {
+      this._queuedVisible = visible;
+      return;
+    }
+    this._transitioning = true;
+    if (visible) {
+      this._show();
+      return;
+    }
+    this._hide();
+  }
+
+  override getVisibleState(): boolean {
+    return this.getElement()?.classList.contains(this._openClass) ?? false;
+  }
+
+  private _show(): void {
+    const drawer = this.getElement();
+    const trigger = this._trigger;
+    if (!drawer || !trigger) {
+      this._done();
+      return;
+    }
+    drawer.classList.add(this._openClass);
+    trigger.classList.add(this._openClass);
+    this._header?.classList.add(this._openClass);
+    this._syncAria(true);
+    Drawer.attachLock(drawer, ScrollLock.lock());
+    const panel = Panel.getInstance();
+    panel.init();
+    this._panelVisibleBeforeDrawer = panel.getVisibleState();
+    if (this._panelVisibleBeforeDrawer) {
+      panel.setVisibleOff();
+    }
+    Drawer.runOpenTransition(drawer, trigger, this._openClass, undefined, () =>
+      this._done(),
+    );
+  }
+
+  private _hide(): void {
+    const drawer = this.getElement();
+    const trigger = this._trigger;
+    if (!drawer || !trigger) {
+      this._restorePanelAfterDrawerClose();
+      this._done();
+      return;
+    }
+    Drawer.runCloseTransition(
+      drawer,
+      trigger,
+      this._header,
+      this._openClass,
+      () => undefined,
+      () => {
+        this._restorePanelAfterDrawerClose();
+        this._done();
+      },
+    );
+  }
+
+  private _flip(): void {
+    this._setVisibility(!this.getVisibleState());
+  }
+
+  private _onEscape(event: KeyboardEvent): void {
+    if (event.key !== "Escape") return;
+    if (!this.getVisibleState()) return;
+    this.setVisibleOff();
+    this._trigger?.focus();
+  }
+
+  private _onOutside(event: MouseEvent): void {
+    if (!this.getVisibleState()) return;
+    const drawer = this.getElement();
+    const trigger = this._trigger;
+    const target = event.target;
+    if (!(target instanceof Node) || !drawer || !trigger) return;
+    if (drawer.contains(target) || trigger.contains(target)) return;
+    this.setVisibleOff();
+  }
+
+  private _syncAria(isVisible: boolean): void {
+    Aria.setExpanded(this._trigger, isVisible);
+    Aria.setControls(this._trigger, this.getElement()?.id ?? "drawer-panel");
+    Aria.setHidden(this.getElement(), !isVisible);
+    Aria.setExpanded(this._header, isVisible);
+  }
+
+  private _restorePanelAfterDrawerClose(): void {
+    const wasVisible = this._panelVisibleBeforeDrawer;
+    this._panelVisibleBeforeDrawer = null;
+    if (wasVisible === true) {
+      Panel.getInstance().setVisibleOn();
+    }
+  }
+
+  private _done(): void {
+    this._transitioning = false;
+    const queuedVisible = this._queuedVisible;
+    this._queuedVisible = null;
+    if (typeof queuedVisible !== "boolean") return;
+    if (queuedVisible === this.getVisibleState()) return;
+    this._setVisibility(queuedVisible);
+  }
+
+  override dispose(): void {
+    this._trigger?.removeEventListener("click", this._onTriggerClick);
+    document.removeEventListener("keydown", this._onDocumentKeydown);
+    document.removeEventListener("click", this._onDocumentClick);
+    if (this._trigger) delete this._trigger.dataset[this._boundFlagAttr];
+    this._trigger = null;
+    this._header = null;
+    this._queuedVisible = null;
+    this._panelVisibleBeforeDrawer = null;
+    this._transitioning = false;
+    super.dispose();
+  }
+}
+
+
+
+
+

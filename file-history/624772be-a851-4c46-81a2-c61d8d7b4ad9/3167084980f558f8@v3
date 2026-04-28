@@ -1,0 +1,11 @@
+---
+name: CHOP token optimization — mandatory prefix
+description: All Bash commands must use the chop prefix — global hook auto-applies it, but explicit use is still required for direct terminal calls
+type: feedback
+originSessionId: 624772be-a851-4c46-81a2-c61d8d7b4ad9
+---
+Prefix every Bash command with `chop`.
+
+**Why:** Noisy output (git, tsc, docker, npm) wastes context window tokens. CHOP compresses output and improves efficiency.
+
+**How to apply:** `chop git status`, `chop git log`, `chop node_modules/.bin/tsc --noEmit`, etc. Commands that produce only a few lines may skip `chop`, but default to using it when in doubt.

@@ -1,0 +1,464 @@
+# Plan: Gallery + Proof 섹션 미디어·인터랙션 고도화
+
+## Context
+
+두 가지 독립 작업:
+
+1. **Gallery canvas 이미지 교체** — 현재 `InfiniteGalleryRenderer`가 하드코딩된 Unsplash URL을 사용 중. `nb_works.file_attach1` WEBP로 교체하고 고화질 텍스처 설정 적용.
+2. **Proof 섹션 고도화** — 링 회전 속도 로직을 OOP SOLID로 추출, "대기업 + 어워드" 필터링, 영상 있으면 VideoTexture 없으면 `file_attach1` 이미지 사용.
+
+---
+
+## 변경 1 — PHP API (`api/works.php`)
+
+### 1-a. `mapListItem()` — `fileAttach1` 필드 추가
+
+```php
+// return 배열에 추가 (thumbnailImage 바로 다음)
+'fileAttach1' => $this->buildAssetUrl($row['file_attach1'] ?? null) ?? '',
+```
+
+### 1-b. `selectRows()` — `featured` 필터 추가
+
+```php
+// 메서드 시그니처
+private function selectRows(int $offset, int $limit, ?string $category, bool $featured = false): array
+
+// conditions 블록 아래에 추가
+if ($featured) {
+    $conditions[] = "(`is_awarded` = 'Y' OR JSON_CONTAINS(`category`, CAST(1 AS JSON)))";
+}
+```
+
+`is_awarded`는 SELECT 없이 WHERE에만 사용 → SELECT 변경 불필요.
+
+### 1-c. `getList()` 시그니처·위임 업데이트
+
+```php
+public function getList(int $offset, int $limit, ?string $category = null, bool $featured = false): array
+// ...
+$rows = $this->selectRows($normalizedOffset, $normalizedLimit + 1, $category, $featured);
+```
+
+### 1-d. 전역 래퍼 `get_works_list()` 업데이트
+
+```php
+function get_works_list(int $offset, int $limit, ?string $category = null, bool $featured = false): array {
+    return works_data()->getList($offset, $limit, $category, $featured);
+}
+```
+
+### 1-e. 테스트 폴백 제거 (`resolveVideoUrl()` line ~578)
+
+```php
+// 삭제
+return '/resource/video/why_video_1.mp4';
+```
+
+---
+
+## 변경 2 — 라우트 (`routes/web.php`, `/works/list` handler)
+
+```php
+$featured = filter_var($req->query('featured', ''), FILTER_VALIDATE_BOOLEAN);
+$data = get_works_list($offset, $limit, $category, $featured);
+```
+
+---
+
+## 변경 3 — TS 타입 (`resource/ts/types/work.types.ts`)
+
+```ts
+export interface WorkApiItem {
+  no: string;
+  title: string;
+  thumbnailImage: string;
+  thumbnailVideo: string | null;
+  fileAttach1: string;          // 추가
+  category: string;
+  // ... 나머지 동일
+}
+```
+
+---
+
+## 변경 4 — TS API (`resource/ts/api/getWork.ts`)
+
+```ts
+export async function fetchWorksList(
+  offset: number,
+  limit: number,
+  category: string | null,
+  signal?: AbortSignal,
+  featured?: boolean,         // 추가
+): Promise<WorksListResponse> {
+  // ...
+  if (featured) params.set("featured", "true");
+}
+```
+
+---
+
+## 변경 5 — 신규 파일: `resource/ts/pages/about/render/ProofRotationStrategy.ts`
+
+SOLID 적용 — 회전 속도 연산 로직을 렌더러에서 분리.
+
+```ts
+export interface ProofRotationStrategy {
+  feed(scrollProgress: number, scrollDelta: number): void;
+  next(): number; // 속도 반환 + 내부 상태(decay) 갱신
+}
+
+export interface ScrollAcceleratingConfig {
+  baseSpeed: number;
+  progressScale: number;
+  velocityScale: number;
+  decayFactor: number;
+}
+
+export const DEFAULT_SCROLL_ACCELERATING_CONFIG: ScrollAcceleratingConfig = {
+  baseSpeed: 0.0005,
+  progressScale: 1.8,
+  velocityScale: 100,
+  decayFactor: 0.88,
+};
+
+export class ScrollAcceleratingRotation implements ProofRotationStrategy {
+  private _progress = 0;
+  private _velocity = 0;
+  constructor(private readonly _cfg: ScrollAcceleratingConfig) {}
+
+  feed(progress: number, delta: number): void {
+    this._progress = progress;
+    this._velocity += delta;
+  }
+
+  next(): number {
+    this._velocity *= this._cfg.decayFactor;
+    return this._cfg.baseSpeed * (1 + this._progress * this._cfg.progressScale + this._velocity * this._cfg.velocityScale);
+  }
+}
+```
+
+---
+
+## 변경 6 — `AboutProofRenderer.ts` (주요 리팩터)
+
+**파일:** `resource/ts/pages/about/render/AboutProofRenderer.ts`
+
+### 6-a. 상수 변경
+- 삭제: `ROTATION_SPEED_Y` (전략 클래스로 이동)
+- 추가: `const MAX_PROOF_IMAGES = 24;`
+
+### 6-b. 클래스 필드 변경
+- 삭제: `private _scrollDelta = 0`
+- 추가: `private _rotationStrategy: ProofRotationStrategy`
+- 추가: `private _videoElements: HTMLVideoElement[] = []`
+
+### 6-c. 생성자 추가 — 전략 주입 (DIP)
+```ts
+constructor(rotationStrategy?: ProofRotationStrategy) {
+  this._rotationStrategy = rotationStrategy
+    ?? new ScrollAcceleratingRotation(DEFAULT_SCROLL_ACCELERATING_CONFIG);
+}
+```
+
+### 6-d. `setScrollProgress()` 변경
+```ts
+setScrollProgress(progress: number): void {
+  const prev = this._scrollProgress;
+  this._scrollProgress = Math.max(0, Math.min(1, progress));
+  this._rotationStrategy.feed(this._scrollProgress, Math.abs(this._scrollProgress - prev));
+}
+```
+
+### 6-e. `init()` — featured fetch + 미디어 분기
+
+fetch: `fetchWorksList(0, MAX_PROOF_IMAGES, null, undefined, true)` (featured=true)
+
+미디어 우선순위 (카드당):
+1. `thumbnailVideo` 있으면 → `_createVideoElement()` + `THREE.VideoTexture`
+2. `fileAttach1` 있으면 → `TextureLoader`
+3. `thumbnailImage` 있으면 → `TextureLoader`
+4. 없으면 → fallback color
+
+```ts
+private _createVideoElement(url: string): HTMLVideoElement {
+  const video = document.createElement('video');
+  video.src = url;
+  video.loop = true;
+  video.muted = true;
+  video.playsInline = true;
+  video.crossOrigin = 'anonymous';
+  void video.play();
+  this._videoElements.push(video);
+  return video;
+}
+```
+
+VideoTexture 설정:
+```ts
+const vTex = new THREE.VideoTexture(videoEl);
+vTex.minFilter = THREE.LinearFilter;
+vTex.magFilter = THREE.LinearFilter;
+vTex.generateMipmaps = false;
+```
+
+### 6-f. `_tick()` 변경 — 전략으로 속도 위임
+```ts
+// 삭제 (3줄):
+this._scrollDelta *= 0.88;
+const velocityBoost = this._scrollDelta * 100;
+const speed = ROTATION_SPEED_Y * (1 + p * 1.8 + velocityBoost);
+
+// 추가:
+const speed = this._rotationStrategy.next();
+```
+
+### 6-g. `dispose()` — 비디오 정리 추가
+```ts
+this._videoElements.forEach((v) => { v.pause(); v.src = ''; v.load(); });
+this._videoElements = [];
+```
+
+---
+
+## 변경 7 — `InfiniteGalleryRenderer.ts` (갤러리 이미지 교체 + 고화질)
+
+**파일:** `resource/ts/pages/about/render/InfiniteGalleryRenderer.ts`
+
+### 7-a. 상수 변경
+- 삭제: `GALLERY_IMAGES` (Unsplash 하드코딩)
+- 추가: `const MAX_GALLERY_IMAGES = 24;`
+
+### 7-b. import 추가
+```ts
+import { fetchWorksList } from "../../../api/getWork.js";
+import type { WorkApiItem } from "../../../types/work.types.js";
+```
+
+### 7-c. `init()` — 동적 fetch로 교체
+```ts
+let imageUrls: string[] = [];
+try {
+  const response = await fetchWorksList(0, MAX_GALLERY_IMAGES, null);
+  imageUrls = response.items
+    .map((item: WorkApiItem) => item.fileAttach1 || item.thumbnailImage)
+    .filter((url) => url.length > 0)
+    .slice(0, MAX_GALLERY_IMAGES);
+} catch {
+  // fallback: 빈 배열 → 기본 색상 플레인
+}
+if (this._disposed) return;
+const loader = new THREE.TextureLoader();
+const textures = await Promise.all(imageUrls.map((url) => loadTexture(loader, url, renderer)));
+```
+
+### 7-d. `loadTexture()` — 고화질 설정 + renderer 파라미터 추가
+```ts
+function loadTexture(
+  loader: THREE.TextureLoader,
+  url: string,
+  renderer: THREE.WebGLRenderer,
+): Promise<THREE.Texture | null> {
+  return new Promise((resolve) => {
+    loader.load(url, (texture) => {
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      resolve(texture);
+    }, undefined, () => resolve(null));
+  });
+}
+```
+
+---
+
+## 수정 파일 목록
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `api/works.php` | `fileAttach1` 필드 노출, `featured` 필터, 테스트 폴백 제거 |
+| `routes/web.php` | `featured` 쿼리 파라미터 파싱 |
+| `resource/ts/types/work.types.ts` | `WorkApiItem.fileAttach1: string` 추가 |
+| `resource/ts/api/getWork.ts` | `featured?` 파라미터 추가 |
+| **NEW** `resource/ts/pages/about/render/ProofRotationStrategy.ts` | 인터페이스 + `ScrollAcceleratingRotation` |
+| `resource/ts/pages/about/render/AboutProofRenderer.ts` | 전략 주입, featured fetch, VideoTexture, fileAttach1 |
+| `resource/ts/pages/about/render/InfiniteGalleryRenderer.ts` | API fetch, fileAttach1 사용, 고화질 텍스처 |
+
+---
+
+## Verification
+
+1. `rtk tsc --noEmit` — TS 오류 없음
+2. `rtk docker compose exec web php -l api/works.php` — PHP 문법 오류 없음
+3. 브라우저 `http://localhost:8888/about`:
+   - gallery 섹션: Unsplash 대신 실제 works 이미지(file_attach1) 표시
+   - proof 섹션: 스크롤 시 링 회전 점점 빨라짐, 영상 있는 카드는 VideoTexture 재생
+   - 콘솔 오류 없음
+1. 텍스트를 화면 세로 가운데로 이동
+2. 스크롤 시 텍스트 안 보이다가 나타나는 애니메이션 (기존 `is-block-reveal` 패턴 유지, 위치만 변경)
+3. 갤러리가 텍스트 reveal과 동시에 움직이기 시작
+4. 인터랙션 종료 후 한 번 더 스크롤해도 섹션이 고정되는 UX 버퍼 추가
+
+현재 상태:
+- 텍스트: `justify-content: flex-end` (뷰포트 하단)
+- 갤러리: 완전 독립 동작 (3초 idle 후 auto-play, page scroll과 무관)
+- 섹션: `min-height: 200svh` → scrollSpanVh=200 이후 바로 다음 섹션으로 이탈
+
+---
+
+## 변경 1 — SCSS (`resource/scss/pages/_sub.scss`, lines 509-557)
+
+### 1-a. 텍스트 가운데 정렬
+```scss
+// 변경 전
+&__content {
+  justify-content: flex-end;
+  padding: fluid(48, 80) fluid(32, 80);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, transparent 60%);
+}
+
+// 변경 후
+&__content {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: fluid(48, 80) fluid(32, 80);
+  background: radial-gradient(ellipse 90% 55% at 50% 50%, rgba(0, 0, 0, 0.55) 0%, transparent 100%);
+}
+```
+→ `text-align: center`를 `__headline`, `__sub`에서 상속받도록 content에서 선언.
+
+### 1-b. 스크롤 홀드 버퍼 (100svh 추가)
+```scss
+// 변경 전
+&-gallery {
+  min-height: 200svh;
+}
+// 변경 후
+&-gallery {
+  min-height: 300svh;
+}
+```
+→ `scrollSpanVh: 200`은 유지 → 200svh에서 progress 1.0 도달 → 잔여 100svh 동안 sticky 상태 유지 (갤러리 계속 동작, 사용자는 한 번 더 스크롤해야 이탈).
+
+---
+
+## 변경 2 — `about.scene.ts` (gallery callback 추가)
+**File:** `resource/ts/pages/about/scene/about.scene.ts`
+
+`registerProofProgressCallback` 패턴을 그대로 복제.
+
+```ts
+// 190번 줄 근처, _proofProgressCallback 선언부 바로 아래에 추가
+let _galleryProgressCallback: ((p: number) => void) | null = null;
+
+export function registerGalleryProgressCallback(fn: (p: number) => void): void {
+  _galleryProgressCallback = fn;
+}
+```
+
+gallery scene handler에서 callback 호출 (lines 484-491):
+```ts
+gallery: {
+  onProgress: (progress: number): void => {
+    syncSectionTextReveal(GALLERY_TEXT_SELECTOR, aboutGalleryDomState, progress);
+    _galleryProgressCallback?.(progress);   // 추가
+  },
+  onDispose: (): void => {
+    disposeSectionTextReveal(GALLERY_TEXT_SELECTOR, aboutGalleryDomState);
+    _galleryProgressCallback?.(0);          // 추가
+  },
+},
+```
+
+---
+
+## 변경 3 — `InfiniteGalleryRenderer.ts` (`setScrollProgress` 추가)
+**File:** `resource/ts/pages/about/render/InfiniteGalleryRenderer.ts`
+
+### 3-a. 상수 추가 (constants 블록 끝, 27번 줄 근처)
+```ts
+const GALLERY_ENABLE_THRESHOLD = 0.18; // matches SECTION_TEXT_REVEAL_THRESHOLD
+```
+
+### 3-b. private 필드 추가 (class 필드 선언부, 188번 줄 근처)
+```ts
+private _galleryEnabled = false;
+```
+
+### 3-c. `setScrollProgress` public 메서드 추가 (dispose() 바로 위)
+```ts
+setScrollProgress(p: number): void {
+  const shouldEnable = p >= GALLERY_ENABLE_THRESHOLD;
+  if (this._galleryEnabled === shouldEnable) return;
+  this._galleryEnabled = shouldEnable;
+  if (!shouldEnable) {
+    this._isAutoPlaying = false;
+    this._scrollVelocity = 0;
+  } else {
+    this._lastInteractionMs = 0; // 즉시 auto-play (IDLE_THRESHOLD_MS 경과 조건 충족)
+  }
+}
+```
+
+### 3-d. `_tickAutoPlay` 수정 (lines 457-466)
+`_galleryEnabled`가 false면 auto-play 강제 off:
+```ts
+private _tickAutoPlay(): void {
+  if (this._disposed) {
+    if (this._autoPlayIntervalId !== null) {
+      clearInterval(this._autoPlayIntervalId);
+      this._autoPlayIntervalId = null;
+    }
+    return;
+  }
+  if (!this._galleryEnabled) {           // 추가
+    this._isAutoPlaying = false;          // 추가
+    return;                               // 추가
+  }
+  this._isAutoPlaying = performance.now() - this._lastInteractionMs > IDLE_THRESHOLD_MS;
+}
+```
+
+---
+
+## 변경 4 — `AboutPageRuntime.ts` (갤러리 callback 연결)
+**File:** `resource/ts/pages/about/runtime/AboutPageRuntime.ts`
+
+### 4-a. import 추가
+```ts
+import { aboutConfig, registerProofProgressCallback, registerGalleryProgressCallback } from "../scene/about.scene.js";
+```
+
+### 4-b. gallery renderer 초기화 후 callback 등록 (lines 45-49)
+```ts
+if (galleryCanvas instanceof HTMLCanvasElement) {
+  this._galleryRenderer?.dispose();
+  this._galleryRenderer = new InfiniteGalleryRenderer();
+  await this._galleryRenderer.init(galleryCanvas);
+  const galleryRenderer = this._galleryRenderer;               // 추가
+  registerGalleryProgressCallback((p) => galleryRenderer.setScrollProgress(p)); // 추가
+}
+```
+
+---
+
+## 수정 파일 목록
+| 파일 | 변경 내용 |
+|------|-----------|
+| `resource/scss/pages/_sub.scss` | 텍스트 가운데, 배경 radial gradient, min-height 300svh |
+| `resource/ts/pages/about/scene/about.scene.ts` | gallery progress callback 등록/호출 |
+| `resource/ts/pages/about/render/InfiniteGalleryRenderer.ts` | `setScrollProgress()`, `_galleryEnabled` 가드 |
+| `resource/ts/pages/about/runtime/AboutPageRuntime.ts` | import + callback 연결 |
+
+---
+
+## Verification
+1. `rtk tsc --noEmit` — TS 오류 없음
+2. `http://localhost:8888/about` 브라우저 확인:
+   - gallery 섹션 진입 전: 텍스트 없음, 갤러리 정지
+   - 스크롤 progress 18%: 텍스트 가운데 fade-in + 갤러리 자동 움직임 시작
+   - progress ~1.0 이후: 100svh 버퍼 동안 섹션 유지 → 추가 스크롤 후 이탈

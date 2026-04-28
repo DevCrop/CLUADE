@@ -1,0 +1,36 @@
+# NINEONELABS Renewal Project
+
+## Claude-Only Workflow
+
+- Prefer `chop` for long Bash output. Direct terminal use still needs explicit `chop`, while Claude hook-based rewriting may apply automatically in supported environments.
+- **Never run `npm run build`, `npm run watch`, or `npm install`** — Vite dev server auto-rebuilds on every file save. No benefit, only wasted time and context.
+- Only `npm install <package>` is allowed when explicitly adding a new dependency.
+- Use `.claude/rules/` for file-type-specific guidance.
+- Dev server runs at `http://localhost:8888`.
+
+## Shared Repo Rules
+
+- Public pages use closure routes in `routes/web.php` and `render()`.
+- Do not reintroduce Barba.js or SPA navigation contracts.
+- Do not duplicate ownership already in `AppManager`, `PageRuntime`, or `PageTheatreBinder`.
+- Do not hardcode credentials or secrets.
+
+## Skills
+
+- DB schema changes → `/migration <description>`
+- New public page → `/new-route <description>`
+- Explore Three.js scene structure → use `scene-explorer` agent
+- Explore PHP routing/views/schema → use `php-explorer` agent
+
+## Brand & Content
+
+- Branding, copy, storytelling, section names, headlines, or CTAs → read `/BRAND.md` first, then only the relevant `brand/*.md` files.
+- Official display name: `NINEONELABS`; technical lowercase: `nineonelabs`; Korean: `나인원랩스`. Never use mixed camel case naming.
+- Keep the space concept as metaphor only. Always land on concrete WEB · APP · BRANDING · UI/UX · MAINTENANCE outcomes.
+- For homepage copy, use `brand/homepage-flow.md` and `brand/review-algorithm.md` before editing.
+
+## Verification
+
+- TypeScript: `chop node_modules/.bin/tsc --noEmit`
+- PHP lint: `docker compose exec web php -l <file>`
+- Tests: `npm run test`

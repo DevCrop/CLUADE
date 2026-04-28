@@ -1,0 +1,492 @@
+import contactState from "../../../../json/contact.json";
+import type { Engine } from "../../../core/Engine.js";
+import { TheatrePlaybackService } from "../../../lib/theatre/TheatrePlaybackService.js";
+import { TheatreProjectSession } from "../../../lib/theatre/TheatreProjectSession.js";
+import { TheatreSequenceSession } from "../../../lib/theatre/TheatreSequenceSession.js";
+import { TheatreSheetSession } from "../../../lib/theatre/TheatreSheetSession.js";
+import { TheatreStateStorageService } from "../../../lib/theatre/TheatreStateStorageService.js";
+import { Logger } from "../../../utils/Logger.js";
+import type {
+  ContactTheatreObject,
+  ContactTheatrePlaybackRange,
+  ContactTheatreProps,
+  ContactTheatreSequence,
+  ContactTheatreSheetBinding,
+  ContactTheatreSheetId,
+  ContactTheatreValue,
+} from "../../../types/contact.types.js";
+import type { GsapGlobal, WindowWithGsap } from "../../../types/gsap.types.js";
+import { ContactSceneRig } from "./ContactSceneRig.js";
+import {
+  CONTACT_THEATRE_AUTOPLAY_EASE,
+  CONTACT_INTRO_AUTOPLAY_DURATION_MS,
+  CONTACT_INTRO_AUTOPLAY_SHEET_ID,
+  CONTACT_OUTTRO_AUTOPLAY_DURATION_MS,
+  CONTACT_OUTTRO_AUTOPLAY_SHEET_ID,
+  CONTACT_THEATRE_OBJECT_ID,
+  CONTACT_THEATRE_PLAYBACK_RANGES,
+  CONTACT_THEATRE_PROJECT_ID,
+  CONTACT_THEATRE_SHEET_IDS,
+  CONTACT_THEATRE_STORAGE_OPTIONS,
+  sanitizeContactTheatreState,
+  resolveContactAuthorMode,
+} from "./ContactTheatreConfig.js";
+
+const CLASS = "ContactTheatreRuntime";
+
+function readContactRecord(value: unknown): Record<string, unknown> | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function mergeContactTheatreStateSources(
+  fileState: Record<string, unknown> | null,
+  savedState: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (!fileState) return savedState;
+  if (!savedState) return fileState;
+  const fileSheetsById = readContactRecord(fileState.sheetsById) ?? {};
+  const savedSheetsById = readContactRecord(savedState.sheetsById) ?? {};
+  return {
+    ...fileState,
+    ...savedState,
+    sheetsById: {
+      ...fileSheetsById,
+      ...savedSheetsById,
+    },
+  };
+}
+
+function readContactTheatreFileState(): Record<string, unknown> | null {
+  const rawState = contactState as Record<string, unknown>;
+  return sanitizeContactTheatreState(rawState);
+}
+
+function readSavedContactTheatreState(): Record<string, unknown> | null {
+  return TheatreStateStorageService.read({
+    ...CONTACT_THEATRE_STORAGE_OPTIONS,
+    sanitize: sanitizeContactTheatreState,
+    validate: (state) => state != null,
+  });
+}
+
+function resolveContactTheatreStateSource(): Record<string, unknown> | null {
+  const fileState = readContactTheatreFileState();
+  TheatreStateStorageService.seedFromFileState(
+    fileState,
+    CONTACT_THEATRE_STORAGE_OPTIONS,
+  );
+  if (!resolveContactAuthorMode()) {
+    return fileState ?? (contactState as Record<string, unknown>);
+  }
+  return mergeContactTheatreStateSources(
+    fileState,
+    readSavedContactTheatreState(),
+  );
+}
+
+class ContactTheatreRuntime {
+  private static _instance: ContactTheatreRuntime | null = null;
+
+  private readonly _rig = new ContactSceneRig();
+  private readonly _stateSource = resolveContactTheatreStateSource();
+  private readonly _project = TheatreProjectSession.open<
+    ContactTheatreValue,
+    ContactTheatreProps
+  >(CONTACT_THEATRE_PROJECT_ID, {
+    state: this._stateSource ?? undefined,
+  });
+  private readonly _objectBySheetId = new Map<
+    ContactTheatreSheetId,
+    ContactTheatreObject
+  >();
+  private readonly _sequenceBySheetId = new Map<
+    ContactTheatreSheetId,
+    ContactTheatreSequence
+  >();
+  private readonly _lengthBySheetId = new Map<ContactTheatreSheetId, number>();
+
+  private constructor() {
+    CONTACT_THEATRE_SHEET_IDS.forEach((sheetId) => {
+      const sheet = TheatreSheetSession.open(this._project, sheetId);
+      const object = sheet.object(
+        CONTACT_THEATRE_OBJECT_ID,
+        this._rig.createDefaultValue(),
+        { reconfigure: true },
+      );
+      const sequence = TheatreSequenceSession.get(sheet);
+      this._objectBySheetId.set(sheetId, object);
+      this._sequenceBySheetId.set(sheetId, sequence);
+      this._lengthBySheetId.set(
+        sheetId,
+        this._resolveSheetLength(sheetId, sequence),
+      );
+    });
+  }
+
+  static getInstance(): ContactTheatreRuntime {
+    if (ContactTheatreRuntime._instance) {
+      return ContactTheatreRuntime._instance;
+    }
+    ContactTheatreRuntime._instance = new ContactTheatreRuntime();
+    return ContactTheatreRuntime._instance;
+  }
+
+  readState(
+    sheetId: ContactTheatreSheetId,
+    position = 0,
+  ): ContactTheatreValue {
+    const binding = this._resolveSheetBinding(sheetId);
+    if (!binding) {
+      return this._rig.createDefaultValue();
+    }
+    const previousPosition = binding.sequence.position;
+    try {
+      binding.sequence.position = this._clampPosition(position, binding.length);
+      return this._rig.readObjectValue(binding.object.value);
+    } finally {
+      binding.sequence.position = previousPosition;
+    }
+  }
+
+  applyBootState(engine: Engine): void {
+    this._syncSheetState(engine, CONTACT_INTRO_AUTOPLAY_SHEET_ID, 0);
+  }
+
+  async startIntroAutoplay(engine: Engine): Promise<void> {
+    await this._startSheetAutoplayForDuration(
+      engine,
+      CONTACT_INTRO_AUTOPLAY_SHEET_ID,
+      CONTACT_INTRO_AUTOPLAY_DURATION_MS,
+    );
+  }
+
+  async startOuttroAutoplay(engine: Engine): Promise<void> {
+    await this._startSheetAutoplayForDuration(
+      engine,
+      CONTACT_OUTTRO_AUTOPLAY_SHEET_ID,
+      CONTACT_OUTTRO_AUTOPLAY_DURATION_MS,
+    );
+  }
+
+  private async _startSheetAutoplayForDuration(
+    engine: Engine,
+    sheetId: ContactTheatreSheetId,
+    durationMs: number,
+  ): Promise<void> {
+    const binding = this._resolveSheetBinding(sheetId);
+    if (!binding) {
+      this._syncSheetToEnd(engine, sheetId);
+      return;
+    }
+    const playbackRange = this._resolvePlaybackRange(sheetId, binding.length);
+    if (playbackRange.end <= playbackRange.start) {
+      Logger.warn(CLASS, "_startSheetAutoplayForDuration", "Invalid duration playback range.", {
+        sheetId,
+        playbackRange,
+        durationMs,
+      });
+      this._syncSheetToEnd(engine, sheetId);
+      return;
+    }
+    const rate = this._resolvePlaybackRateForDuration(playbackRange, durationMs);
+    Logger.info(
+      CLASS,
+      "_startSheetAutoplayForDuration",
+      "Starting duration-based sheet autoplay.",
+      {
+        sheetId,
+        playbackRange,
+        durationMs,
+        rate,
+        ease: CONTACT_THEATRE_AUTOPLAY_EASE,
+      },
+    );
+    await this._playSheetAutoplay(
+      engine,
+      sheetId,
+      binding,
+      playbackRange,
+      durationMs,
+    );
+  }
+
+  private async _playSheetAutoplay(
+    engine: Engine,
+    sheetId: ContactTheatreSheetId,
+    binding: ContactTheatreSheetBinding,
+    playbackRange: ContactTheatrePlaybackRange,
+    durationMs: number,
+  ): Promise<void> {
+    binding.sequence.pause();
+    binding.sequence.position = playbackRange.start;
+    const disposePlayback = TheatrePlaybackService.bindValues(
+      binding.object,
+      (values) => {
+        this._rig.apply(engine, values);
+      },
+    );
+    this._rig.apply(engine, binding.object.value);
+    try {
+      const gsap = this._getGsap();
+      if (gsap) {
+        await this._playSheetAutoplayWithGsap(
+          engine,
+          binding,
+          playbackRange,
+          durationMs,
+          gsap,
+        );
+      } else {
+        const rate = this._resolvePlaybackRateForDuration(
+          playbackRange,
+          durationMs,
+        );
+        await this._playSheetAutoplayWithSequence(binding, playbackRange, rate);
+      }
+      Logger.info(CLASS, "_playSheetAutoplay", "Sheet autoplay finished.", {
+        sheetId,
+        playbackRange,
+        durationMs,
+        ease: CONTACT_THEATRE_AUTOPLAY_EASE,
+      });
+    } finally {
+      binding.sequence.pause();
+      disposePlayback();
+    }
+    this._syncSheetState(engine, sheetId, playbackRange.end);
+  }
+
+  private _playSheetAutoplayWithSequence(
+    binding: ContactTheatreSheetBinding,
+    playbackRange: ContactTheatrePlaybackRange,
+    rate: number,
+  ): Promise<void> {
+    return binding.sequence
+      .play({
+      range: [playbackRange.start, playbackRange.end],
+      rate,
+      })
+      .then(() => undefined);
+  }
+
+  private _playSheetAutoplayWithGsap(
+    engine: Engine,
+    binding: ContactTheatreSheetBinding,
+    playbackRange: ContactTheatrePlaybackRange,
+    durationMs: number,
+    gsap: GsapGlobal,
+  ): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const state = { position: playbackRange.start };
+      gsap.killTweensOf?.(state);
+      gsap.to(state, {
+        position: playbackRange.end,
+        duration: durationMs / 1000,
+        ease: CONTACT_THEATRE_AUTOPLAY_EASE,
+        onUpdate: () => {
+          binding.sequence.position = state.position;
+          this._rig.apply(engine, binding.object.value);
+        },
+        onComplete: () => {
+          binding.sequence.position = playbackRange.end;
+          this._rig.apply(engine, binding.object.value);
+          resolve();
+        },
+      });
+    });
+  }
+
+  private _getGsap(): GsapGlobal | null {
+    return ((window as WindowWithGsap).gsap ?? null) as GsapGlobal | null;
+  }
+
+  private _syncSheetToEnd(engine: Engine, sheetId: ContactTheatreSheetId): void {
+    const binding = this._resolveSheetBinding(sheetId);
+    const length = binding?.length ?? 0;
+    const playbackRange = this._resolvePlaybackRange(sheetId, length);
+    this._syncSheetState(engine, sheetId, playbackRange.end);
+  }
+
+  private _syncSheetState(
+    engine: Engine,
+    sheetId: ContactTheatreSheetId,
+    position: number,
+  ): void {
+    this._rig.apply(engine, this.readState(sheetId, position));
+  }
+
+  private _resolveSheetBinding(
+    sheetId: ContactTheatreSheetId,
+  ): ContactTheatreSheetBinding | null {
+    const object = this._objectBySheetId.get(sheetId) ?? null;
+    const sequence = this._sequenceBySheetId.get(sheetId) ?? null;
+    const length = this._lengthBySheetId.get(sheetId) ?? 0;
+    if (!object || !sequence) {
+      return null;
+    }
+    return {
+      object,
+      sequence,
+      length,
+    };
+  }
+
+  private _resolvePlaybackRange(
+    sheetId: ContactTheatreSheetId,
+    length: number,
+  ): ContactTheatrePlaybackRange {
+    const configuredRange = CONTACT_THEATRE_PLAYBACK_RANGES[sheetId] ?? null;
+    if (configuredRange) {
+      return {
+        start: this._clampPosition(configuredRange.start, length),
+        end: this._clampPosition(configuredRange.end, length),
+      };
+    }
+    const keyedRange = this._resolveTrackPlaybackRange(sheetId, length);
+    if (keyedRange) {
+      return keyedRange;
+    }
+    return {
+      start: 0,
+      end: Number.isFinite(length) && length > 0 ? length : 0,
+    };
+  }
+
+  private _resolveTrackPlaybackRange(
+    sheetId: ContactTheatreSheetId,
+    sheetLength: number,
+  ): ContactTheatrePlaybackRange | null {
+    const tracksByObject = this._readSheetTracksByObject(sheetId);
+    const objectTracks = tracksByObject?.[CONTACT_THEATRE_OBJECT_ID];
+    if (!objectTracks || typeof objectTracks !== "object") return null;
+    const trackData = (objectTracks as Record<string, unknown>).trackData;
+    if (!trackData || typeof trackData !== "object") return null;
+
+    let minPosition = Number.POSITIVE_INFINITY;
+    let maxPosition = Number.NEGATIVE_INFINITY;
+
+    Object.values(trackData as Record<string, unknown>).forEach((trackState) => {
+      if (!trackState || typeof trackState !== "object") return;
+      const keyframes = (trackState as Record<string, unknown>).keyframes;
+      if (!Array.isArray(keyframes)) return;
+      const positions = keyframes
+        .map((keyframe) => {
+          if (!keyframe || typeof keyframe !== "object") return null;
+          const position = (keyframe as Record<string, unknown>).position;
+          return typeof position === "number" ? position : null;
+        })
+        .filter(
+          (position): position is number =>
+            typeof position === "number" && Number.isFinite(position),
+        );
+      if (positions.length < 2) return;
+      minPosition = Math.min(minPosition, ...positions);
+      maxPosition = Math.max(maxPosition, ...positions);
+    });
+
+    if (!Number.isFinite(minPosition) || !Number.isFinite(maxPosition)) {
+      return null;
+    }
+    if (maxPosition <= minPosition) return null;
+
+    return {
+      start: this._clampPosition(minPosition, sheetLength),
+      end: this._clampPosition(maxPosition, sheetLength),
+    };
+  }
+
+  private _readSheetTracksByObject(
+    sheetId: ContactTheatreSheetId,
+  ): Record<string, unknown> | null {
+    const sheetsById = readContactRecord(this._stateSource?.sheetsById);
+    if (!sheetsById) return null;
+    const sheetState = readContactRecord(sheetsById[sheetId]);
+    if (!sheetState) return null;
+    const sequence = readContactRecord(sheetState.sequence);
+    if (!sequence) return null;
+    return readContactRecord(sequence.tracksByObject);
+  }
+
+  private _resolveSheetLength(
+    sheetId: ContactTheatreSheetId,
+    sequence: ContactTheatreSequence,
+  ): number {
+    const directLength =
+      typeof sequence.length === "number" ? sequence.length : null;
+    if (
+      directLength != null &&
+      Number.isFinite(directLength) &&
+      directLength > 0
+    ) {
+      return directLength;
+    }
+    const stateLength = this._readSheetLengthFromState(sheetId);
+    if (stateLength > 0) {
+      return stateLength;
+    }
+    return 0;
+  }
+
+  private _resolvePlaybackRateForDuration(
+    playbackRange: ContactTheatrePlaybackRange,
+    durationMs: number,
+  ): number {
+    const durationSeconds = durationMs / 1000;
+    const span = playbackRange.end - playbackRange.start;
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+      return 1;
+    }
+    if (!Number.isFinite(span) || span <= 0) {
+      return 1;
+    }
+    return span / durationSeconds;
+  }
+
+  private _readSheetLengthFromState(sheetId: ContactTheatreSheetId): number {
+    const sheetsById = readContactRecord(this._stateSource?.sheetsById);
+    if (!sheetsById) return 0;
+    const sheetState = readContactRecord(sheetsById[sheetId]);
+    if (!sheetState) return 0;
+    const sequence = readContactRecord(sheetState.sequence);
+    if (!sequence) return 0;
+    const length = sequence.length;
+    if (typeof length !== "number") return 0;
+    if (!Number.isFinite(length) || length <= 0) return 0;
+    return length;
+  }
+
+  private _clampPosition(value: number, max: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(max, value));
+  }
+}
+
+function getContactTheatreRuntime(): ContactTheatreRuntime {
+  return ContactTheatreRuntime.getInstance();
+}
+
+export function readContactTheatreState(
+  sheetId: ContactTheatreSheetId,
+  position = 0,
+): ContactTheatreValue {
+  return getContactTheatreRuntime().readState(sheetId, position);
+}
+
+export function applyContactTheatreBootState(engine: Engine): void {
+  getContactTheatreRuntime().applyBootState(engine);
+}
+
+export function startContactTheatreIntroAutoplay(
+  engine: Engine,
+): Promise<void> {
+  return getContactTheatreRuntime().startIntroAutoplay(engine);
+}
+
+export function startContactTheatreOuttroAutoplay(
+  engine: Engine,
+): Promise<void> {
+  return getContactTheatreRuntime().startOuttroAutoplay(engine);
+}

@@ -1,0 +1,760 @@
+import type {
+  BackgroundObjectOptions,
+  CloudPlaneObjectOptions,
+  TransitionVeilObjectOptions,
+} from "./object-visual.types.js";
+import type {
+  BaseObjectOptions,
+  Vector3Optional,
+} from "./object-common.types.js";
+
+export interface SharedCloudTextureEntry {
+  texture: import("three").Texture;
+  refs: number;
+}
+
+export type {
+  BackgroundEnvironmentOptions,
+  BackgroundLookOptions,
+  BackgroundObjectOptions,
+  BackgroundPlaneOptions,
+  BackgroundShaderOptions,
+  BackgroundShaderTextureOptions,
+  CloudPlaneObjectOptions,
+  CloudPlaneShaderOptions,
+  CloudPlaneShaderTextureOptions,
+  TransitionVeilObjectOptions,
+  TransitionVeilPlaneOptions,
+  TransitionVeilShaderOptions,
+  TransitionVeilShaderTextureOptions,
+} from "./object-visual.types.js";
+export type {
+  BaseObjectOptions,
+  ObjectBloomEffect,
+  ObjectEffects,
+  ResponsiveNumberRange,
+  ResponsiveNumberValue,
+  TransformObjectOptions,
+  Vector2Optional,
+  Vector3Optional,
+} from "./object-common.types.js";
+
+type TransformTweenWithRotation = {
+  position?: Vector3Optional;
+  rotation?: Vector3Optional;
+  scale?: Vector3Optional;
+};
+
+export type ObjectTweenProps<T> = TransformTweenWithRotation & Partial<T>;
+
+export interface CameraTweenProps {
+  fov?: number;
+  near?: number;
+  far?: number;
+  position?: Vector3Optional;
+  scale?: Vector3Optional;
+}
+
+export interface CameraTargetTweenProps {
+  position?: Vector3Optional;
+}
+
+export type RocketTweenProps = ObjectTweenProps<
+  Pick<RocketObjectOptions, never>
+>;
+
+export type CloudsTweenProps = ObjectTweenProps<
+  Pick<CloudsObjectOptions, never>
+>;
+
+export type CloudSceneTweenProps = ObjectTweenProps<
+  Pick<CloudSceneObjectOptions, never>
+>;
+
+export type WindowTweenProps = ObjectTweenProps<
+  Pick<WindowObjectOptions, "visible">
+>;
+
+export type EarthTweenProps = ObjectTweenProps<
+  Pick<
+    EarthObjectOptions,
+    | "rotationSpeedY"
+    | "cloudsRotationSpeedY"
+    | "atmOpacity"
+    | "atmPowFactor"
+    | "atmMultiplier"
+    | "terminatorSoftness"
+    | "nightFloor"
+    | "cloudNightOpacity"
+  >
+>;
+
+export type GroundTweenProps = ObjectTweenProps<
+  Pick<GroundObjectOptions, never>
+>;
+
+export type PlanetTweenProps = ObjectTweenProps<
+  Pick<
+    PlanetObjectOptions,
+    | "visible"
+    | "atmosphereOpacity"
+    | "atmospherePowFactor"
+    | "atmosphereMultiplier"
+    | "roughness"
+    | "metalness"
+  >
+>;
+export type AstronautTweenProps = ObjectTweenProps<
+  Pick<AstronautObjectOptions, "visible">
+>;
+export type TerrianTweenProps = ObjectTweenProps<Record<string, unknown>>;
+export interface SceneLightsTweenProps {
+  ground?: {
+    position?: Vector3Optional;
+    rotation?: Vector3Optional;
+    scale?: Vector3Optional;
+  };
+  flightProgress?: number;
+  intensity?: number;
+  groundLight?: number;
+  rocketFillLight?: number;
+  rocketRimLightLeft?: number;
+  rocketRimLightRight?: number;
+
+  [key: string]: unknown;
+}
+
+export interface AboutLightsTweenProps {
+  rig?: {
+    position?: Vector3Optional;
+    rotation?: Vector3Optional;
+    scale?: Vector3Optional;
+  };
+  travelProgress?: number;
+  intensity?: number;
+  ambientLight?: number;
+  keyLight?: number;
+  fillLight?: number;
+  rimLight?: number;
+
+  [key: string]: unknown;
+}
+
+export type BackgroundTweenProps = ObjectTweenProps<
+  Pick<BackgroundObjectOptions, "exposure" | "look">
+>;
+
+export type CloudPlaneTweenProps = ObjectTweenProps<
+  Pick<CloudPlaneObjectOptions, "chapter" | "transition">
+> & {
+  visible?: boolean;
+};
+
+export type TransitionVeilTweenProps = ObjectTweenProps<
+  Pick<TransitionVeilObjectOptions, "progress" | "active">
+> & {
+  visible?: boolean;
+};
+
+export type SceneLightPreset = Partial<SceneLightsTweenProps>;
+export type AboutLightPreset = Partial<AboutLightsTweenProps>;
+
+export interface SceneLightsTransformState {
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+  scale: { x: number; y: number; z: number };
+  visible: boolean;
+}
+
+export interface SceneLightsStateSnapshot {
+  visible: boolean;
+  intensity: number;
+  flightProgress: number;
+  groundLight: number;
+  rocketFillLight: number;
+  rocketRimLightLeft: number;
+  rocketRimLightRight: number;
+  ground: SceneLightsTransformState;
+}
+
+export interface SceneLightsPort {
+  setState(state: SceneLightsStateSnapshot): void;
+  getState(): SceneLightsStateSnapshot;
+}
+
+export type AboutLightsTransformState = SceneLightsTransformState;
+
+export interface AboutLightsStateSnapshot {
+  visible: boolean;
+  intensity: number;
+  travelProgress: number;
+  ambientLight: number;
+  keyLight: number;
+  fillLight: number;
+  rimLight: number;
+  rig: AboutLightsTransformState;
+}
+
+export interface AboutLightsPort {
+  setState(state: AboutLightsStateSnapshot): void;
+  getState(): AboutLightsStateSnapshot;
+}
+
+export interface SceneLightProfileStop {
+  progress: number;
+  values: SceneLightPreset;
+}
+
+export interface AboutLightProfileStop {
+  progress: number;
+  values: AboutLightPreset;
+}
+
+export type WorldScaleObjectId = Extract<
+  keyof ObjectOptionsByKey,
+  "ground" | "planet"
+>;
+
+export interface TimelineTweenPropsMap {
+  camera: CameraTweenProps;
+  cameraTarget: CameraTargetTweenProps;
+  rocket: RocketTweenProps;
+  jetEngine: JetEngineTweenProps;
+  gravityBalls: GravityBallsTweenProps;
+  clouds: CloudsTweenProps;
+  cloudScene: CloudSceneTweenProps;
+  earth: EarthTweenProps;
+  window: WindowTweenProps;
+  ground: GroundTweenProps;
+  planet: PlanetTweenProps;
+  astronaut: AstronautTweenProps;
+  terrian: TerrianTweenProps;
+  sceneLights: SceneLightsTweenProps;
+  aboutLights: AboutLightsTweenProps;
+  mainBackground: BackgroundTweenProps;
+  aboutBackground: BackgroundTweenProps;
+  cloud: CloudPlaneTweenProps;
+  cloud2: CloudPlaneTweenProps;
+  cloud3: CloudPlaneTweenProps;
+  cloud4: CloudPlaneTweenProps;
+  cloud5: CloudPlaneTweenProps;
+  cloud6: CloudPlaneTweenProps;
+  sceneTransitionVeil: TransitionVeilTweenProps;
+}
+
+function buildSceneLightsTweenableKeys(): string[] {
+  return [
+    "visible",
+    "ground",
+    "flightProgress",
+    "intensity",
+    "groundLight",
+    "rocketFillLight",
+    "rocketRimLightLeft",
+    "rocketRimLightRight",
+  ];
+}
+
+export const TWEEKABLE_KEYS_BY_ID: Record<string, readonly string[]> = {
+  cameraTarget: ["position"],
+  rocket: ["position", "rotation", "visible", "flame"],
+  jetEngine: [
+    "position",
+    "rotation",
+    "scale",
+    "visible",
+    "intensity",
+    "length",
+    "nozzleRadius",
+    "nozzleGap",
+    "noise",
+    "bloom",
+  ],
+  clouds: ["position", "scale", "visible"],
+  cloudScene: ["position", "scale", "visible"],
+  window: ["position", "rotation", "scale", "visible"],
+  earth: [
+    "position",
+    "rotation",
+    "scale",
+    "visible",
+    "rotationSpeedY",
+    "cloudsRotationSpeedY",
+    "atmOpacity",
+    "atmPowFactor",
+    "atmMultiplier",
+    "terminatorSoftness",
+    "nightFloor",
+    "cloudNightOpacity",
+  ],
+  ground: ["position", "rotation", "scale", "visible"],
+  planet: ["position", "rotation", "scale", "visible"],
+  astronaut: ["position", "rotation", "scale", "visible"],
+  gravityBalls: ["position", "rotation", "scale", "visible"],
+  terrian: ["position", "rotation", "scale", "visible"],
+  sceneLights: buildSceneLightsTweenableKeys(),
+  aboutLights: [
+    "visible",
+    "rig",
+    "travelProgress",
+    "intensity",
+    "ambientLight",
+    "keyLight",
+    "fillLight",
+    "rimLight",
+  ],
+
+  mainBackground: [
+    "position",
+    "rotation",
+    "scale",
+    "visible",
+    "exposure",
+    "look",
+  ],
+  aboutBackground: [
+    "position",
+    "rotation",
+    "scale",
+    "visible",
+    "exposure",
+    "look",
+  ],
+  cloud: ["position", "rotation", "scale", "visible", "chapter", "transition"],
+  cloud2: ["position", "rotation", "scale", "visible", "chapter", "transition"],
+  cloud3: ["position", "rotation", "scale", "visible", "chapter", "transition"],
+  cloud4: ["position", "rotation", "scale", "visible", "chapter", "transition"],
+  cloud5: ["position", "rotation", "scale", "visible", "chapter", "transition"],
+  cloud6: ["position", "rotation", "scale", "visible", "chapter", "transition"],
+  sceneTransitionVeil: ["position", "rotation", "scale", "visible", "progress", "active"],
+};
+
+export const CREATION_ONLY_KEYS_BY_ID: Record<string, readonly string[]> = {
+  clouds: ["cloudCount", "planeSize", "textureUrl"],
+  cloudScene: ["cloudCount", "planeSize", "textureUrl"],
+  window: ["modelUrl"],
+  earth: [
+    "radius",
+    "segments",
+    "dayTextureUrl",
+    "bumpTextureUrl",
+    "specularTextureUrl",
+    "cloudsAlphaTextureUrl",
+    "bumpScale",
+    "cloudOpacity",
+    "cloudScale",
+    "atmosphereScale",
+    "axialTiltDeg",
+  ],
+  ground: ["modelUrl", "panelLights", "meshShadow", "shader"],
+  planet: [
+    "radius",
+    "widthSegments",
+    "heightSegments",
+    "color",
+    "roughness",
+    "metalness",
+  ],
+  astronaut: ["modelUrl"],
+  gravityBalls: ["attachTo", "offset"],
+  terrian: ["modelUrl", "meshShadow", "aboutFalloff"],
+  rocket: ["modelUrl"],
+  jetEngine: ["attachTo", "offset", "innerColor", "outerColor"],
+  sceneLights: ["lights", "profileStops"],
+  aboutLights: ["lights", "profileStops"],
+  mainBackground: ["plane", "environments"],
+  aboutBackground: ["plane", "environments"],
+  cloud: ["label", "plane", "shader"],
+  cloud2: ["label", "plane", "shader"],
+  cloud3: ["label", "plane", "shader"],
+  cloud4: ["label", "plane", "shader"],
+  cloud5: ["label", "plane", "shader"],
+  cloud6: ["label", "plane", "shader"],
+  sceneTransitionVeil: ["plane", "shader"],
+};
+
+export const CLOUDS_SETTINGS_DEFAULTS = {
+  cloudCount: 0,
+  spreadX: 0,
+  spreadY: 0,
+  spreadZ: 0,
+  cloudZMin: 0,
+  cloudZMax: 0,
+  planeSize: 0,
+  textureUrl: "",
+  brightnessScale: 0,
+  saturation: 0,
+  depthAlphaPower: 20,
+  edgeSoftness: 0.35,
+  flowSpeed: 0,
+} as const;
+
+export const CLOUD_SCENE_SETTINGS_DEFAULTS = {
+  cloudCount: 0,
+  spreadX: 0,
+  spreadY: 0,
+  spreadZ: 0,
+  cloudZMin: 0,
+  cloudZMax: 0,
+  planeSize: 0,
+  textureUrl: "",
+  brightnessScale: 0,
+  saturation: 0,
+  depthAlphaPower: 20,
+  edgeSoftness: 0.35,
+  flowSpeed: 0,
+} as const;
+
+type CloudsCoreOptions = Partial<{
+  [K in keyof typeof CLOUDS_SETTINGS_DEFAULTS]: (typeof CLOUDS_SETTINGS_DEFAULTS)[K] extends string
+    ? string
+    : number;
+}>;
+
+export type CloudsObjectOptions = CloudsCoreOptions & BaseObjectOptions;
+
+type CloudSceneCoreOptions = Partial<{
+  [K in keyof typeof CLOUD_SCENE_SETTINGS_DEFAULTS]: (typeof CLOUD_SCENE_SETTINGS_DEFAULTS)[K] extends string
+    ? string
+    : number;
+}>;
+
+export type CloudSceneObjectOptions = CloudSceneCoreOptions & BaseObjectOptions;
+
+export interface RocketObjectOptions extends BaseObjectOptions {
+  modelUrl?: string;
+  emissiveIntensity?: number;
+  emissiveColor?: number;
+  flame?: RocketFlameOptions;
+}
+
+export type RGB = [number, number, number];
+
+export interface JetEngineObjectOptions extends BaseObjectOptions {
+  /** Scene object id to parent under (e.g. `"rocket"`). Uses animation root. */
+  attachTo?: string;
+  offset?: Vector3Optional;
+  /** Nozzle radius; affects mesh layout (rebuild). */
+  nozzleRadius?: number;
+  /** Grid spacing multiplier (same on X/Z). */
+  nozzleGap?: number;
+  /** Core plume length; outer shell scales from this (fixed ratio). */
+  length?: number;
+  /** Overall brightness / idle level for the combustion sim. */
+  intensity?: number;
+  /** Single dial: scales inner/parent noise + turbulence in shaders. */
+  noise?: number;
+  /** Core flame tint; tip is derived darker in shader prepass. */
+  innerColor?: RGB;
+  /** Outer plume tint. */
+  outerColor?: RGB;
+  /** Bloom multiplier (inner + outer glow). */
+  bloom?: number;
+}
+
+export type JetEngineTweenProps = ObjectTweenProps<
+  Pick<
+    JetEngineObjectOptions,
+    | "intensity"
+    | "length"
+    | "nozzleRadius"
+    | "nozzleGap"
+    | "noise"
+    | "bloom"
+    | "visible"
+  >
+>;
+
+export interface GravityBallsObjectOptions extends BaseObjectOptions {
+  attachTo?: string;
+  spawnOffset?: Vector3Optional;
+  floorLevel?: number;
+  floorDimensions?: number;
+  radius?: number;
+  colors?: string[];
+  dotsPerInterval?: number;
+  physicsScale?: number;
+  textureUrl?: string;
+  spawnIntervalMs?: number;
+  particleLifeMs?: number;
+  maxScale?: number;
+  peakOpacity?: number;
+}
+
+export type GravityBallsTweenProps = ObjectTweenProps<Record<string, never>>;
+
+export interface RocketFlameOptions {
+  visible?: boolean;
+  offset?: Vector3Optional;
+  rotation?: Vector3Optional;
+  scale?: Vector3Optional;
+  opacity?: number;
+  renderOrder?: number;
+  speed?: number;
+  wave?: number;
+  anchorName?: string;
+  anchorNameIncludes?: string[];
+}
+
+export interface RocketFlameStateSnapshot {
+  visible: boolean;
+  offset: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+  scale: { x: number; y: number; z: number };
+  opacity: number;
+  renderOrder: number;
+  speed: number;
+  wave: number;
+}
+
+export interface RocketPort {
+  setFlameState(state: RocketFlameStateSnapshot): void;
+  getFlameState(): RocketFlameStateSnapshot;
+}
+
+
+export interface GroundObjectOptions extends BaseObjectOptions {
+  modelUrl?: string;
+  meshShadow?: { cast?: boolean; receive?: boolean };
+  shader?: GroundShaderOptions;
+  panelLights?: Array<{
+    id: string;
+    match?: string | string[];
+    type?: "point";
+    intensity?: number;
+    color?: number;
+    distance?: number;
+    decay?: number;
+    position?: { x?: number; y?: number; z?: number };
+  }>;
+}
+
+export interface GroundShaderRuntime {
+  page?: number;
+  scrollProgress?: number;
+  transition?: number;
+  transitionDirection?: number;
+  chapter?: number;
+}
+
+export interface GroundShaderColorOptions {
+  transition?: number;
+  light?: number;
+  dark?: number;
+}
+
+export interface GroundShaderOptions {
+  enabled?: boolean;
+  noiseTextureUrl?: string;
+  mouseTextureSize?: number;
+  colors?: GroundShaderColorOptions;
+  runtime?: GroundShaderRuntime;
+}
+
+export interface PlanetObjectOptions extends BaseObjectOptions {
+  radius?: number;
+  widthSegments?: number;
+  heightSegments?: number;
+  color?: number;
+  dayTextureUrl?: string;
+  bumpTextureUrl?: string;
+  bumpScale?: number;
+  roughness?: number;
+  metalness?: number;
+  atmosphereScale?: number;
+  atmosphereOpacity?: number;
+  atmospherePowFactor?: number;
+  atmosphereMultiplier?: number;
+  atmosphereColor?: RGB;
+  visible?: boolean;
+}
+
+export interface AstronautObjectOptions extends BaseObjectOptions {
+  modelUrl?: string;
+  visible?: boolean;
+  attachments?: ReadonlyArray<{
+    id: string;
+    position?: Vector3Optional;
+  }>;
+}
+
+export interface TerrianObjectOptions extends BaseObjectOptions {
+  modelUrl?: string;
+  meshShadow?: { cast?: boolean; receive?: boolean };
+  aboutFalloff?: {
+    enabled?: boolean;
+    centerYOffset?: number;
+    innerRadius?: number;
+    outerRadius?: number;
+    brightness?: number;
+    darkness?: number;
+    blendPower?: number;
+  };
+}
+
+export interface SceneLightFollowCameraOptions {
+  enabled?: boolean;
+
+  positionOffset?: { x?: number; y?: number; z?: number };
+
+  targetOffset?: { x?: number; y?: number; z?: number };
+
+  rotateWithCamera?: boolean;
+}
+
+export interface SceneLightsObjectOptions extends BaseObjectOptions {
+  flightProgress?: number;
+  intensity?: number;
+  profileStops?: SceneLightProfileStop[];
+  lights?: Array<{
+    id: string;
+    type: "directional" | "ambient" | "point" | "spot" | "hemisphere";
+    intensity?: number;
+    color?: number;
+    skyColor?: number;
+    groundColor?: number;
+    affectsEarth?: boolean;
+    affectsRocket?: boolean;
+    position?: { x?: number; y?: number; z?: number };
+      target?: { x?: number; y?: number; z?: number };
+      angle?: number;
+      penumbra?: number;
+      distance?: number;
+      decay?: number;
+      castShadow?: boolean;
+      shadow?: {
+        mapSize?: number;
+        bias?: number;
+      normalBias?: number;
+      radius?: number;
+    };
+    followCamera?: boolean | SceneLightFollowCameraOptions;
+  }>;
+}
+
+export interface AboutLightsObjectOptions extends BaseObjectOptions {
+  travelProgress?: number;
+  intensity?: number;
+  profileStops?: AboutLightProfileStop[];
+  lights?: Array<{
+    id: string;
+    type: "directional" | "ambient" | "point" | "spot" | "hemisphere";
+    intensity?: number;
+    color?: number;
+    skyColor?: number;
+    groundColor?: number;
+    affectsEarth?: boolean;
+    affectsRocket?: boolean;
+    position?: { x?: number; y?: number; z?: number };
+    target?: { x?: number; y?: number; z?: number };
+    angle?: number;
+    penumbra?: number;
+    castShadow?: boolean;
+    shadow?: {
+      mapSize?: number;
+      bias?: number;
+      normalBias?: number;
+      radius?: number;
+    };
+    followCamera?: boolean | SceneLightFollowCameraOptions;
+    followObjectId?: string;
+    followObjectTargetId?: string;
+    followObjectPositionOffset?: { x?: number; y?: number; z?: number };
+    followObjectTargetOffset?: { x?: number; y?: number; z?: number };
+    followObjectRotateWithObject?: boolean;
+    emitter?: {
+      enabled?: boolean;
+      radius?: number;
+      color?: number;
+      opacity?: number;
+      haloScale?: number;
+      haloOpacity?: number;
+    };
+    distance?: number;
+    decay?: number;
+  }>;
+}
+
+export interface WindowObjectOptions extends BaseObjectOptions {
+  modelUrl?: string;
+  visible?: boolean;
+}
+
+export interface EarthObjectOptions extends BaseObjectOptions {
+  radius?: number;
+  segments?: number;
+  dayTextureUrl?: string;
+  bumpTextureUrl?: string;
+  specularTextureUrl?: string;
+  rotationSpeedY?: number;
+  cloudsAlphaTextureUrl?: string;
+  cloudsRotationSpeedY?: number;
+  bumpScale?: number;
+  cloudOpacity?: number;
+  cloudScale?: number;
+  atmosphereScale?: number;
+  axialTiltDeg?: number;
+
+  atmOpacity?: number;
+  atmPowFactor?: number;
+  atmMultiplier?: number;
+
+  terminatorSoftness?: number;
+
+  nightFloor?: number;
+
+  cloudNightOpacity?: number;
+}
+
+
+export interface ObjectOptionsByKey {
+  clouds: CloudsObjectOptions;
+  cloudScene: CloudSceneObjectOptions;
+  earth: EarthObjectOptions;
+  rocket: RocketObjectOptions;
+  jetEngine: JetEngineObjectOptions;
+  gravityBalls: GravityBallsObjectOptions;
+  mainBackground: BackgroundObjectOptions;
+  aboutBackground: BackgroundObjectOptions;
+  cloud: CloudPlaneObjectOptions;
+  cloud2: CloudPlaneObjectOptions;
+  cloud3: CloudPlaneObjectOptions;
+  cloud4: CloudPlaneObjectOptions;
+  cloud5: CloudPlaneObjectOptions;
+  cloud6: CloudPlaneObjectOptions;
+  sceneTransitionVeil: TransitionVeilObjectOptions;
+  ground: GroundObjectOptions;
+  planet: PlanetObjectOptions;
+  astronaut: AstronautObjectOptions;
+  terrian: TerrianObjectOptions;
+  window: WindowObjectOptions;
+  sceneLights: SceneLightsObjectOptions;
+  aboutLights: AboutLightsObjectOptions;
+}
+
+export type PageConfigObjectOptions = Partial<ObjectOptionsByKey>;
+
+export type ObjectId = keyof ObjectOptionsByKey;
+export type ObjectTimelineVars = Record<string, unknown>;
+export type InitialObjectTimelineState = Partial<
+  Record<ObjectId, ObjectTimelineVars>
+>;
+
+export type SceneSettings = {
+  clouds?: Required<CloudsObjectOptions>;
+  rocket?: RocketObjectOptions;
+  jetEngine?: JetEngineObjectOptions;
+  mainBackground?: BackgroundObjectOptions;
+  aboutBackground?: BackgroundObjectOptions;
+  cloud?: CloudPlaneObjectOptions;
+  cloud2?: CloudPlaneObjectOptions;
+  cloud3?: CloudPlaneObjectOptions;
+  cloud4?: CloudPlaneObjectOptions;
+  cloud5?: CloudPlaneObjectOptions;
+  cloud6?: CloudPlaneObjectOptions;
+  ground?: GroundObjectOptions;
+  planet?: PlanetObjectOptions;
+  astronaut?: AstronautObjectOptions;
+  sceneLights?: SceneLightsObjectOptions;
+  aboutLights?: AboutLightsObjectOptions;
+};

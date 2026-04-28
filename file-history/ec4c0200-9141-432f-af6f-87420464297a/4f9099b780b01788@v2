@@ -1,0 +1,42 @@
+# PreCompact hook: snapshot project memory + active plans via hard-links.
+# Disk cost is effectively zero on NTFS. Falls back to copy if hard-link is unsupported.
+
+$ErrorActionPreference = 'SilentlyContinue'
+
+$sessionId = 'unknown'
+try {
+    $raw = [Console]::In.ReadToEnd()
+    if ($raw) {
+        $obj = $raw | ConvertFrom-Json
+        if ($obj.session_id) { $sessionId = $obj.session_id }
+    }
+} catch {}
+
+$ts   = Get-Date -Format 'yyyyMMdd-HHmmss'
+$snap = "D:\.claude\backups\precompact-$ts-$sessionId"
+New-Item -ItemType Directory -Force -Path $snap | Out-Null
+
+function Add-Snapshot {
+    param([string]$Source, [string]$DestDir)
+    if (-not (Test-Path $Source)) { return }
+    New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
+    Get-ChildItem $Source -Filter '*.md' -File -ErrorAction SilentlyContinue | ForEach-Object {
+        $dest = Join-Path $DestDir $_.Name
+        try {
+            New-Item -ItemType HardLink -Path $dest -Target $_.FullName -ErrorAction Stop | Out-Null
+        } catch {
+            Copy-Item -Path $_.FullName -Destination $dest -Force
+        }
+    }
+}
+
+# Memory: per-project memory dirs
+Get-ChildItem 'D:\.claude\projects' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+    $memDir = Join-Path $_.FullName 'memory'
+    Add-Snapshot -Source $memDir -DestDir (Join-Path $snap "memory_$($_.Name)")
+}
+
+# Plans: active plan files
+Add-Snapshot -Source 'D:\.claude\plans' -DestDir (Join-Path $snap 'plans')
+
+exit 0

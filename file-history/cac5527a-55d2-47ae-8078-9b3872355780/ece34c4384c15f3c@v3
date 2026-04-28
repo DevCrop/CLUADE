@@ -1,0 +1,552 @@
+import * as THREE from "three";
+import { fetchWorksList } from "../../../api/getWork.js";
+import type { WorkApiItem } from "../../../types/work.types.js";
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const DEPTH_RANGE = 50;
+const HALF_RANGE = DEPTH_RANGE / 2;
+const VISIBLE_COUNT = 12;
+const MAX_HORIZONTAL_OFFSET = 8;
+const MAX_VERTICAL_OFFSET = 8;
+
+const SCROLL_DAMPING = 0.95;
+const AUTO_PLAY_ACCEL = 0.3;
+const IDLE_THRESHOLD_MS = 3000;
+const MAX_SCROLL_VEL = 20.0;
+const SCROLL_SPEED = 1.0;
+const MAX_DELTA = 0.1;
+
+const FADE_IN_START = 0.05;
+const FADE_IN_END = 0.25;
+const FADE_OUT_START = 0.4;
+const FADE_OUT_END = 0.43;
+const BLUR_IN_START = 0.0;
+const BLUR_IN_END = 0.1;
+const BLUR_OUT_START = 0.4;
+const BLUR_OUT_END = 0.43;
+const MAX_BLUR = 8.0;
+const GALLERY_ENABLE_THRESHOLD = 0.18;
+const MAX_GALLERY_IMAGES = 24;
+
+// ─── GLSL shaders (exact copy from source component) ───────────────────────
+
+const VERTEX_SHADER = /* glsl */ `
+  uniform float scrollForce;
+  uniform float time;
+  uniform float isHovered;
+  varying vec2 vUv;
+  varying vec3 vNormal;
+
+  void main() {
+    vUv = uv;
+    vNormal = normal;
+
+    vec3 pos = position;
+
+    float curveIntensity = scrollForce * 0.3;
+    float distanceFromCenter = length(pos.xy);
+    float curve = distanceFromCenter * distanceFromCenter * curveIntensity;
+
+    float ripple1 = sin(pos.x * 2.0 + scrollForce * 3.0) * 0.02;
+    float ripple2 = sin(pos.y * 2.5 + scrollForce * 2.0) * 0.015;
+    float clothEffect = (ripple1 + ripple2) * abs(curveIntensity) * 2.0;
+
+    float flagWave = 0.0;
+    if (isHovered > 0.5) {
+      float wavePhase = pos.x * 3.0 + time * 8.0;
+      float waveAmplitude = sin(wavePhase) * 0.1;
+      float dampening = smoothstep(-0.5, 0.5, pos.x);
+      flagWave = waveAmplitude * dampening;
+      float secondaryWave = sin(pos.x * 5.0 + time * 12.0) * 0.03 * dampening;
+      flagWave += secondaryWave;
+    }
+
+    pos.z -= (curve + clothEffect + flagWave);
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+`;
+
+const FRAGMENT_SHADER = /* glsl */ `
+  uniform sampler2D map;
+  uniform float opacity;
+  uniform float blurAmount;
+  uniform float scrollForce;
+  varying vec2 vUv;
+  varying vec3 vNormal;
+
+  void main() {
+    vec4 color = texture2D(map, vUv);
+
+    if (blurAmount > 0.0) {
+      vec2 texelSize = 1.0 / vec2(textureSize(map, 0));
+      vec4 blurred = vec4(0.0);
+      float total = 0.0;
+
+      for (float x = -2.0; x <= 2.0; x += 1.0) {
+        for (float y = -2.0; y <= 2.0; y += 1.0) {
+          vec2 offset = vec2(x, y) * texelSize * blurAmount;
+          float weight = 1.0 / (1.0 + length(vec2(x, y)));
+          blurred += texture2D(map, vUv + offset) * weight;
+          total += weight;
+        }
+      }
+      color = blurred / total;
+    }
+
+    float curveHighlight = abs(scrollForce) * 0.05;
+    color.rgb += vec3(curveHighlight * 0.1);
+
+    gl_FragColor = vec4(color.rgb, color.a * opacity);
+  }
+`;
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function loadTexture(
+  loader: THREE.TextureLoader,
+  url: string,
+  renderer: THREE.WebGLRenderer,
+): Promise<THREE.Texture | null> {
+  return new Promise((resolve) => {
+    loader.load(
+      url,
+      (texture) => {
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = true;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        resolve(texture);
+      },
+      undefined,
+      () => resolve(null),
+    );
+  });
+}
+
+function computeOpacity(n: number): number {
+  if (n < FADE_IN_START) return 0;
+  if (n < FADE_IN_END) return (n - FADE_IN_START) / (FADE_IN_END - FADE_IN_START);
+  if (n < FADE_OUT_START) return 1;
+  if (n < FADE_OUT_END) return 1 - (n - FADE_OUT_START) / (FADE_OUT_END - FADE_OUT_START);
+  return 0;
+}
+
+function computeBlur(n: number): number {
+  if (n < BLUR_IN_START) return MAX_BLUR;
+  if (n < BLUR_IN_END) return MAX_BLUR * (1 - (n - BLUR_IN_START) / (BLUR_IN_END - BLUR_IN_START));
+  if (n < BLUR_OUT_START) return 0;
+  if (n < BLUR_OUT_END) return MAX_BLUR * ((n - BLUR_OUT_START) / (BLUR_OUT_END - BLUR_OUT_START));
+  return MAX_BLUR;
+}
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+interface PlaneData {
+  index: number;
+  z: number;
+  imageIndex: number;
+  x: number;
+  y: number;
+}
+
+interface PlaneRecord {
+  mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
+  data: PlaneData;
+}
+
+// ─── Class ──────────────────────────────────────────────────────────────────
+
+export class InfiniteGalleryRenderer {
+  private _renderer: THREE.WebGLRenderer | null = null;
+  private _scene: THREE.Scene | null = null;
+  private _camera: THREE.PerspectiveCamera | null = null;
+  private _clock: THREE.Clock | null = null;
+  private _raycaster: THREE.Raycaster | null = null;
+  private _canvas: HTMLCanvasElement | null = null;
+
+  private _planes: PlaneRecord[] = [];
+  private _meshList: THREE.Object3D[] = [];
+  private _textures: (THREE.Texture | null)[] = [];
+  private _geometries: THREE.BufferGeometry[] = [];
+  private _materials: THREE.ShaderMaterial[] = [];
+
+  private _rafId: number | null = null;
+  private _rendering = false;
+  private _disposed = false;
+
+  private _resizeObserver: ResizeObserver | null = null;
+  private _intersectionObserver: IntersectionObserver | null = null;
+
+  private _scrollVelocity = 0;
+  private _lastInteractionMs = 0;
+  private _isAutoPlaying = false;
+  private _galleryEnabled = false;
+  private _imageCount = 0;
+  private _autoPlayIntervalId: ReturnType<typeof setInterval> | null = null;
+  private _hoveredIndex = -1;
+  private _touchLastY = 0;
+
+  private readonly _pointerNDC = new THREE.Vector2();
+
+  private readonly _onWheel: (e: WheelEvent) => void;
+  private readonly _onKeyDown: (e: KeyboardEvent) => void;
+  private readonly _onTouchStart: (e: TouchEvent) => void;
+  private readonly _onTouchMove: (e: TouchEvent) => void;
+  private readonly _onPointerMove: (e: PointerEvent) => void;
+  private readonly _onPointerLeave: (e: PointerEvent) => void;
+
+  constructor() {
+    this._onWheel = (e) => {
+      e.preventDefault();
+      this._recordInteraction();
+      this._scrollVelocity += e.deltaY * 0.01 * SCROLL_SPEED;
+      this._scrollVelocity = Math.max(-MAX_SCROLL_VEL, Math.min(MAX_SCROLL_VEL, this._scrollVelocity));
+    };
+    this._onKeyDown = (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        this._recordInteraction();
+        this._scrollVelocity += 2 * SCROLL_SPEED;
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        this._recordInteraction();
+        this._scrollVelocity -= 2 * SCROLL_SPEED;
+      }
+    };
+    this._onTouchStart = (e) => {
+      if (e.touches[0]) this._touchLastY = e.touches[0].clientY;
+      this._recordInteraction();
+    };
+    this._onTouchMove = (e) => {
+      e.preventDefault();
+      if (!e.touches[0]) return;
+      const y = e.touches[0].clientY;
+      const delta = this._touchLastY - y;
+      this._touchLastY = y;
+      this._recordInteraction();
+      this._scrollVelocity += delta * 0.03 * SCROLL_SPEED;
+      this._scrollVelocity = Math.max(-MAX_SCROLL_VEL, Math.min(MAX_SCROLL_VEL, this._scrollVelocity));
+    };
+    this._onPointerMove = (e) => {
+      const canvas = this._canvas;
+      const camera = this._camera;
+      const raycaster = this._raycaster;
+      if (!canvas || !camera || !raycaster) return;
+      const rect = canvas.getBoundingClientRect();
+      this._pointerNDC.set(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(this._pointerNDC, camera);
+      const intersects = raycaster.intersectObjects(this._meshList, false);
+      if (intersects.length > 0) {
+        const hit = intersects[0]?.object;
+        this._hoveredIndex = this._planes.findIndex((r) => r.mesh === hit);
+      } else {
+        this._hoveredIndex = -1;
+      }
+    };
+    this._onPointerLeave = (_e) => {
+      this._hoveredIndex = -1;
+    };
+  }
+
+  async init(canvas: HTMLCanvasElement): Promise<void> {
+    this._canvas = canvas;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearAlpha(0);
+    this._renderer = renderer;
+
+    const scene = new THREE.Scene();
+    this._scene = scene;
+
+    const w = Math.max(canvas.clientWidth, 1);
+    const h = Math.max(canvas.clientHeight, 1);
+    const camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 200);
+    camera.position.set(0, 0, 0);
+    this._camera = camera;
+
+    this._clock = new THREE.Clock();
+    this._raycaster = new THREE.Raycaster();
+
+    let imageUrls: string[] = [];
+    try {
+      const response = await fetchWorksList(0, MAX_GALLERY_IMAGES, null);
+      imageUrls = response.items
+        .map((item: WorkApiItem) => item.fileAttach1 || item.thumbnailImage)
+        .filter((url) => url.length > 0)
+        .slice(0, MAX_GALLERY_IMAGES);
+    } catch {
+      // fallback: no images → _buildPlanes handles empty array
+    }
+    if (this._disposed) return;
+
+    const loader = new THREE.TextureLoader();
+    const textures = await Promise.all(imageUrls.map((url) => loadTexture(loader, url, renderer)));
+    if (this._disposed) return;
+
+    this._imageCount = textures.length;
+    this._textures = textures;
+    this._buildPlanes(textures);
+    this._syncSize();
+    this._observeResize();
+    this._observeVisibility();
+    this._attachInputListeners();
+
+    this._autoPlayIntervalId = setInterval(() => this._tickAutoPlay(), 100);
+  }
+
+  setScrollProgress(p: number): void {
+    const shouldEnable = p >= GALLERY_ENABLE_THRESHOLD;
+    if (this._galleryEnabled === shouldEnable) return;
+    this._galleryEnabled = shouldEnable;
+    if (!shouldEnable) {
+      this._isAutoPlaying = false;
+      this._scrollVelocity = 0;
+    } else {
+      this._lastInteractionMs = 0;
+    }
+  }
+
+  dispose(): void {
+    this._disposed = true;
+    this._stopRaf();
+
+    if (this._autoPlayIntervalId !== null) {
+      clearInterval(this._autoPlayIntervalId);
+      this._autoPlayIntervalId = null;
+    }
+
+    if (this._canvas) this._detachInputListeners();
+
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
+    this._intersectionObserver?.disconnect();
+    this._intersectionObserver = null;
+
+    this._geometries.forEach((g) => g.dispose());
+    this._geometries = [];
+    this._materials.forEach((m) => m.dispose());
+    this._materials = [];
+    this._textures.forEach((t) => t?.dispose());
+    this._textures = [];
+
+    this._renderer?.dispose();
+    this._renderer?.forceContextLoss();
+    this._renderer = null;
+    this._scene = null;
+    this._camera = null;
+    this._clock = null;
+    this._raycaster = null;
+    this._canvas = null;
+    this._planes = [];
+    this._meshList = [];
+  }
+
+  private _buildPlanes(textures: (THREE.Texture | null)[]): void {
+    const count = textures.length;
+    if (count === 0) return;
+    const scene = this._scene!;
+
+    for (let i = 0; i < VISIBLE_COUNT; i++) {
+      // Spatial spread matching the original golden-angle distribution
+      const hAngle = (i * 2.618) % (Math.PI * 2);
+      const vAngle = (i * 1.618 + Math.PI / 3) % (Math.PI * 2);
+      const hRadius = (i % 3) * 1.2;
+      const vRadius = ((i + 1) % 4) * 0.8;
+      const x = (Math.sin(hAngle) * hRadius * MAX_HORIZONTAL_OFFSET) / 3;
+      const y = (Math.cos(vAngle) * vRadius * MAX_VERTICAL_OFFSET) / 4;
+      const z = (DEPTH_RANGE / VISIBLE_COUNT) * i;
+      const imageIndex = i % count;
+
+      const geo = new THREE.PlaneGeometry(1, 1, 32, 32);
+      this._geometries.push(geo);
+
+      const mat = new THREE.ShaderMaterial({
+        transparent: true,
+        uniforms: {
+          map: { value: textures[imageIndex] ?? null },
+          opacity: { value: 0.0 },
+          blurAmount: { value: 0.0 },
+          scrollForce: { value: 0.0 },
+          time: { value: 0.0 },
+          isHovered: { value: 0.0 },
+        },
+        vertexShader: VERTEX_SHADER,
+        fragmentShader: FRAGMENT_SHADER,
+      });
+      this._materials.push(mat);
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z - HALF_RANGE);
+      this._applyTextureScale(mesh, textures[imageIndex] ?? null);
+
+      scene.add(mesh);
+      this._planes.push({ mesh, data: { index: i, z, imageIndex, x, y } });
+      this._meshList.push(mesh);
+    }
+  }
+
+  private _applyTextureScale(
+    mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>,
+    tex: THREE.Texture | null,
+  ): void {
+    const img = tex?.image as { width?: number; height?: number } | undefined;
+    if (img?.width && img.height) {
+      const aspect: number = img.width / img.height;
+      mesh.scale.set(aspect > 1 ? 2 * aspect : 2, aspect > 1 ? 2 : 2 / aspect, 1);
+    } else {
+      mesh.scale.set(2, 2, 1);
+    }
+  }
+
+  private readonly _tick = (): void => {
+    if (this._disposed || !this._rendering) return;
+    this._rafId = requestAnimationFrame(this._tick);
+
+    const clock = this._clock!;
+    const renderer = this._renderer!;
+    const scene = this._scene!;
+    const camera = this._camera!;
+    const count = this._imageCount;
+    if (count === 0) {
+      renderer.render(scene, camera);
+      this._rafId = requestAnimationFrame(this._tick);
+      return;
+    }
+
+    const delta = Math.min(clock.getDelta(), MAX_DELTA);
+    const elapsedTime = clock.elapsedTime;
+
+    // Frame-rate-independent exponential damping
+    this._scrollVelocity *= Math.pow(SCROLL_DAMPING, delta * 60);
+    if (Math.abs(this._scrollVelocity) < 0.0001) this._scrollVelocity = 0;
+
+    if (this._isAutoPlaying) {
+      this._scrollVelocity += AUTO_PLAY_ACCEL * delta;
+      if (this._scrollVelocity > MAX_SCROLL_VEL) this._scrollVelocity = MAX_SCROLL_VEL;
+    }
+
+    const scrollForceUniform = Math.min(Math.abs(this._scrollVelocity) * 0.1, 1);
+
+    for (const record of this._planes) {
+      const { mesh, data } = record;
+      const mat = mesh.material;
+
+      data.z += this._scrollVelocity * delta * 10;
+
+      if (data.z >= DEPTH_RANGE) {
+        data.z -= DEPTH_RANGE;
+        data.imageIndex = (data.imageIndex + 1) % count;
+        mat.uniforms["map"].value = this._textures[data.imageIndex] ?? null;
+        this._applyTextureScale(mesh, this._textures[data.imageIndex] ?? null);
+      } else if (data.z < 0) {
+        data.z += DEPTH_RANGE;
+        data.imageIndex = ((data.imageIndex - 1) % count + count) % count;
+        mat.uniforms["map"].value = this._textures[data.imageIndex] ?? null;
+        this._applyTextureScale(mesh, this._textures[data.imageIndex] ?? null);
+      }
+
+      mesh.position.z = data.z - HALF_RANGE;
+
+      const n = data.z / DEPTH_RANGE;
+      mat.uniforms["opacity"].value = computeOpacity(n);
+      mat.uniforms["blurAmount"].value = computeBlur(n);
+      mat.uniforms["scrollForce"].value = scrollForceUniform;
+      mat.uniforms["time"].value = elapsedTime;
+      mat.uniforms["isHovered"].value = data.index === this._hoveredIndex ? 1.0 : 0.0;
+    }
+
+    renderer.render(scene, camera);
+  };
+
+  private _startRaf(): void {
+    if (this._rafId !== null || this._disposed) return;
+    this._rendering = true;
+    this._rafId = requestAnimationFrame(this._tick);
+  }
+
+  private _stopRaf(): void {
+    this._rendering = false;
+    if (this._rafId !== null) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+  }
+
+  private _recordInteraction(): void {
+    this._lastInteractionMs = performance.now();
+    this._isAutoPlaying = false;
+  }
+
+  private _tickAutoPlay(): void {
+    if (this._disposed) {
+      if (this._autoPlayIntervalId !== null) {
+        clearInterval(this._autoPlayIntervalId);
+        this._autoPlayIntervalId = null;
+      }
+      return;
+    }
+    if (!this._galleryEnabled) {
+      this._isAutoPlaying = false;
+      return;
+    }
+    this._isAutoPlaying = performance.now() - this._lastInteractionMs > IDLE_THRESHOLD_MS;
+  }
+
+  private _syncSize(): void {
+    const canvas = this._canvas;
+    const renderer = this._renderer;
+    const camera = this._camera;
+    if (!canvas || !renderer || !camera) return;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (w <= 0 || h <= 0) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
+  private _observeResize(): void {
+    if (!this._canvas) return;
+    this._resizeObserver = new ResizeObserver(() => this._syncSize());
+    this._resizeObserver.observe(this._canvas);
+  }
+
+  private _observeVisibility(): void {
+    if (!this._canvas) return;
+    this._intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          this._startRaf();
+        } else {
+          this._stopRaf();
+        }
+      },
+      { threshold: 0 },
+    );
+    this._intersectionObserver.observe(this._canvas);
+  }
+
+  private _attachInputListeners(): void {
+    const canvas = this._canvas!;
+    canvas.addEventListener("wheel", this._onWheel, { passive: false });
+    canvas.addEventListener("touchstart", this._onTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", this._onTouchMove, { passive: false });
+    canvas.addEventListener("pointermove", this._onPointerMove);
+    canvas.addEventListener("pointerleave", this._onPointerLeave);
+    window.addEventListener("keydown", this._onKeyDown);
+  }
+
+  private _detachInputListeners(): void {
+    const canvas = this._canvas!;
+    canvas.removeEventListener("wheel", this._onWheel);
+    canvas.removeEventListener("touchstart", this._onTouchStart);
+    canvas.removeEventListener("touchmove", this._onTouchMove);
+    canvas.removeEventListener("pointermove", this._onPointerMove);
+    canvas.removeEventListener("pointerleave", this._onPointerLeave);
+    window.removeEventListener("keydown", this._onKeyDown);
+  }
+}

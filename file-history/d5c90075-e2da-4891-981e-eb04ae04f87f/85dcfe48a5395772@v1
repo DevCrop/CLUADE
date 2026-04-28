@@ -1,0 +1,98 @@
+<?php
+$posts = $posts ?? [];
+$paginationTotal = (int) ($paginationTotal ?? 1);
+$paginationCurrent = (int) ($paginationCurrent ?? 1);
+$paginationQueryParams = is_array($paginationQueryParams ?? null) ? $paginationQueryParams : [];
+$categoryItems = $categoryItems ?? [];
+$searchQuery = (string) ($searchQuery ?? '');
+$listRouteName = (string) ($listRouteName ?? 'inside.insight');
+$listUrl = route($listRouteName, [], false);
+$activeCategoryNo = $activeCategoryNo ?? null;
+
+section('content');
+?>
+<?= include_view('components.sub-visual', [
+    'title' => 'INSIGHT',
+    'lines' => [
+        '더 나은 디지털 경험을 만들기 위한 나인원랩스의 생각과 실험을 만나보세요.',
+    ],
+]) ?>
+
+<section class="no-sub-insight">
+    <div class="no-container-2xl">
+        <div class="no-sub-insight__inner">
+            <div class="no-filter-bar">
+                <?= include_view('components.category', [
+                    'items' => $categoryItems,
+                ]) ?>
+                <form class="no-filter-bar__search" method="get" action="<?= e($listUrl) ?>" role="search">
+                    <?php if ($activeCategoryNo !== null && (int) $activeCategoryNo > 0) : ?>
+                    <input type="hidden" name="category" value="<?= (int) $activeCategoryNo ?>">
+                    <?php endif; ?>
+                    <?= include_view('components.search-bar', [
+                        'id' => 'search-bar-insight',
+                        'name' => 'q',
+                        'placeholder' => '검색어를 입력해주세요.',
+                        'show_label' => false,
+                        'value' => $searchQuery,
+                        'with_submit' => true,
+                    ]) ?>
+                </form>
+            </div>
+            <div class="--cnt">
+                <ul class="no-sub-gallery-list">
+                    <?php foreach ($posts as $row) :
+                        $viewUrl = route('inside.insight.view', ['no' => (string) ($row['no'] ?? '')], false);
+                        $thumb = inside_board_thumb_url($row['thumb_image'] ?? null);
+                        $badge = inside_board_notice_label($row);
+                        $dateDisp = inside_board_format_date($row['regdate'] ?? null);
+                        $dateAttr = inside_board_datetime_attr($row['regdate'] ?? null);
+                        $title = (string) ($row['title'] ?? '');
+                        ?>
+                    <li class="no-sub-gallery-item">
+                        <a href="<?= e($viewUrl) ?>" class="no-sub-gallery-list-item__link">
+                            <div class="no-sub-gallery-item__img-wrap">
+                                <?= include_view('components.button.corner-markup', ['class' => 'no-sub-gallery__corner']) ?>
+                                <div class="no-sub-gallery-item__img-inner">
+                                    <figure class="no-sub-gallery-item__img">
+                                        <?= render_uploaded_image($thumb, $title !== '' ? $title : '썸네일', '', 'lazy') ?>
+                                    </figure>
+                                </div>
+                            </div>
+                            <div class="no-sub-gallery-item__body">
+                                <div class="no-sub-gallery-item__head">
+                                    <div class="--badge"><?= e($badge) ?></div>
+                                    <?php if ($dateAttr !== '') : ?>
+                                    <time datetime="<?= e($dateAttr) ?>" class="--time"><?= e($dateDisp) ?></time>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="no-sub-gallery-item__title">
+                                    <h3 class="f-heading-4 --bold"><?= e($title) ?></h3>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                    <?php endforeach; ?>
+                    <?php if (count($posts) === 0) : ?>
+                    <li class="no-sub-gallery-item no-sub-gallery-item--empty">
+                        <p class="f-body-3">등록된 글이 없습니다.</p>
+                    </li>
+                    <?php endif; ?>
+                </ul>
+                <div class="no-view-more">
+                    <?= include_view('components.pagination', [
+                        'total' => max(1, $paginationTotal),
+                        'current' => max(1, min($paginationTotal, $paginationCurrent)),
+                        'queryParams' => $paginationQueryParams,
+                    ]) ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<?php end_section() ?>
+
+<?php section('portal') ?>
+<?php end_section() ?>

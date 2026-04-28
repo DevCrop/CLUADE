@@ -1,0 +1,322 @@
+# TS_FLOW
+
+Last audited: 2026-04-03
+Audit scope: `resource/ts/**/*.ts`, `resource/json/*.json`, page runtime entry paths
+
+## 1. Entry
+
+### Browser startup
+
+- Frontend entry is [`resource/ts/app.ts`](/c:/Users/edn_y/260330/resource/ts/app.ts).
+- Startup order is:
+  1. wait for DOM readiness or idle slot
+  2. call `AppManager.init()`
+  3. `AppManager.init()` delegates to `AppBootstrap.init()`
+  4. `AppBootstrap.init()` initializes core runtimes and runs the initial page
+
+### Bootstrap owner
+
+- Bootstrap boundary: [`resource/ts/core/AppBootstrap.ts`](/c:/Users/edn_y/260330/resource/ts/core/AppBootstrap.ts)
+- Current bootstrap responsibilities:
+  - initialize `ResponsiveRuntime`
+  - initialize `LenisRuntime`
+  - lazy-create `PageRuntime`
+  - resolve the initial `main[data-page]` container
+  - call `PageRuntime.runPage(initialContainer)`
+
+## 2. Shared Page Runtime
+
+### Page runtime owner
+
+- Shared page runtime: [`resource/ts/runtime/PageRuntime.ts`](/c:/Users/edn_y/260330/resource/ts/runtime/PageRuntime.ts)
+- `PageRuntime` is the public-page lifecycle boundary for:
+  - shared UI initialization
+  - shared UI disposal
+  - page controller handoff
+  - container-aware shared DOM features
+
+### Shared DOM/UI boot
+
+`PageRuntime` initializes these app-global or shared runtimes before page-specific Three logic:
+
+- `Header`
+- `Drawer`
+- `Dropdown`
+- `WorkModal`
+- `CustomCursor`
+- `MagneticCornerTracker`
+- `TextReveal`
+- `BlockReveal`
+- `ContactFormValidation`
+- `ContactWizard`
+- `QaManager`
+- `PinnedRevealRuntime`
+- `Marquee`
+- feature card canvas runtime
+- subpage starfield runtime
+
+## 3. Page Strategy Resolution
+
+### Resolver
+
+- Resolver: [`resource/ts/controller/PageController.ts`](/c:/Users/edn_y/260330/resource/ts/controller/PageController.ts)
+- Page type is read from the current page root.
+- Strategy selection is now:
+  - `main` -> `ManagedPageStrategy(mainConfig)`
+  - `about` -> `ManagedPageStrategy(aboutConfig)`
+  - `contact` -> `ManagedPageStrategy(contactConfig)`
+  - `works` -> lazy `WorksPageRuntime`
+  - modal/detail/legal/static pages -> no-op or DOM-only strategy
+
+### Current split
+
+- `main`, `about`, `contact`
+  - config-driven
+  - managed by `AppManager`
+  - theatre-aware through `PageTheatreBinder`
+- `works`
+  - intentionally separate
+  - handled by `resource/ts/pages/works/runtime/WorksPageRuntime.ts`
+
+## 4. Managed Page Flow
+
+### Managed page owner
+
+- Orchestrator: [`resource/ts/manager/AppManager.ts`](/c:/Users/edn_y/260330/resource/ts/manager/AppManager.ts)
+- `AppManager` is the runtime owner for the config-driven pages:
+  - `main`
+  - `about`
+  - `contact`
+
+### Managed page startup
+
+Effective flow:
+
+1. `PageController`
+2. `ManagedPageStrategy`
+3. `AppManager.run(pageConfig, root)`
+4. `AppEngineRuntime.init(...)`
+5. `Engine.init()`
+6. `ObjectSetup.init(...)`
+7. `AppStartupRuntime.start(...)`
+8. theatre boot state apply if needed
+9. orbit setup if enabled
+10. page-specific intro or scroll flow
+
+### Managed page configuration sources
+
+- `main` page config:
+  - [`resource/ts/pages/main/scene/main.scene.ts`](/c:/Users/edn_y/260330/resource/ts/pages/main/scene/main.scene.ts)
+- `about` page config:
+  - [`resource/ts/pages/about/scene/about.scene.ts`](/c:/Users/edn_y/260330/resource/ts/pages/about/scene/about.scene.ts)
+- `contact` page config:
+  - [`resource/ts/pages/contact/scene/contact.scene.ts`](/c:/Users/edn_y/260330/resource/ts/pages/contact/scene/contact.scene.ts)
+
+## 5. Theatre Binding Flow
+
+### Binder boundary
+
+- Lazy theatre boundary: [`resource/ts/core/PageTheatreBinder.ts`](/c:/Users/edn_y/260330/resource/ts/core/PageTheatreBinder.ts)
+- The binder resolves the page-specific theatre adapter only when the page needs it.
+
+### Current adapter map
+
+- `main`
+  - `applyBootStateIfNeeded`
+  - preview start/stop
+  - intro-action autoplay phases
+  - after-intro autoplay
+  - scroll scene sync port
+- `about`
+  - preview start/stop
+  - intro autoplay
+  - optional after-intro autoplay
+  - scroll scene sync port
+- `contact`
+  - boot state apply
+  - intro autoplay
+  - outtro autoplay
+
+### Savefile sources
+
+- Current authored state sources:
+  - [`resource/json/main.json`](/c:/Users/edn_y/260330/resource/json/main.json)
+  - [`resource/json/about.json`](/c:/Users/edn_y/260330/resource/json/about.json)
+  - [`resource/json/contact.json`](/c:/Users/edn_y/260330/resource/json/contact.json)
+  - [`resource/json/works.json`](/c:/Users/edn_y/260330/resource/json/works.json)
+
+## 6. Main Flow
+
+### Main runtime
+
+- `main` is the scroll-driven cinematic page.
+- `AppManager` owns:
+  - engine and object boot
+  - theatre boot state
+  - intro and intro-action sequencing
+  - scroll scene sync
+  - background sync
+  - scene effect sync
+  - UI visibility handoff
+
+### Main scene sync
+
+Main scroll flow is:
+
+1. `ScrollSceneRuntime`
+2. `PageTheatreBinder.syncScene(...)`
+3. `MainTheatreRuntime` scene port
+4. `MainSceneRig`
+5. `Engine.setState(...)`
+6. `ScenePolicyRuntime`
+7. background, veil, HUD, and page UI policies
+
+## 7. About Flow
+
+### About runtime
+
+- `about` is also a managed page.
+- It does not share `main`'s intro-action click path.
+- It uses a timed intro autoplay and then scroll sync.
+
+### About intro flow
+
+1. page boot
+2. `PageTheatreBinder.startIntroIfNeeded(...)`
+3. about intro sheet autoplay
+4. `IntroController` runs DOM reveal ordering for about UI
+5. `AppManager` hands off to scroll sync
+6. `heroSlogan` becomes the first live scroll section
+
+## 8. Contact Flow
+
+### Contact ownership
+
+- `contact` is now a managed page, not a detached special runtime.
+- `AppManager` owns both theatre flow and DOM stage flow.
+- Contact stage source of truth is:
+  - `idle`
+  - `intro`
+  - `ready`
+  - `outtro`
+  - `success`
+
+### Contact intro flow
+
+1. page boot
+2. contact theatre boot state apply
+3. `PageTheatreBinder.startIntroIfNeeded(...)`
+4. contact intro sheet autoplay
+5. `AppManager` changes DOM state from `pending` to `ready`
+6. wizard UI reveals with shared reveal utilities
+
+### Contact success flow
+
+1. `ContactWizard` submits data
+2. success event is dispatched to `AppManager`
+3. `AppManager` moves DOM state to `leaving`
+4. current form DOM exits with block/text reveal-down
+5. `PageTheatreBinder.startAfterIntroIfNeeded(...)`
+6. contact outtro sheet autoplay
+7. `AppManager` moves DOM state to `success`
+8. success DOM reveals
+
+### Contact scene content
+
+- Current contact Three scene is configured in [`contact.scene.ts`](/c:/Users/edn_y/260330/resource/ts/pages/contact/scene/contact.scene.ts)
+- Current authored contact objects:
+  - `camera`
+  - `aboutLights`
+  - `earth`
+- Current background object:
+  - `aboutBackground`
+
+## 9. Works Flow
+
+### Works is separate on purpose
+
+- `works` does not route through `AppManager`.
+- `works` keeps its own page runtime boundary.
+
+### Works runtime chain
+
+1. `PageController`
+2. lazy import `WorksPageRuntime`
+3. works DOM resolve
+4. works background/init coordination
+5. grid or scatter mode ownership
+6. works-only UI, fetch, drag, and detail state ownership
+
+### Works runtime ownership
+
+- DOM and state owner:
+  - [`resource/ts/pages/works/runtime/WorksPageRuntime.ts`](/c:/Users/edn_y/260330/resource/ts/pages/works/runtime/WorksPageRuntime.ts)
+- scatter canvas owner:
+  - [`resource/ts/pages/works/render/WorksSceneManager.ts`](/c:/Users/edn_y/260330/resource/ts/pages/works/render/WorksSceneManager.ts)
+- works intro/background helpers:
+  - `resource/ts/pages/works/runtime/*`
+
+## 10. Engine and Scene Flow
+
+### Engine kernel
+
+- Engine kernel: [`resource/ts/core/Engine.ts`](/c:/Users/edn_y/260330/resource/ts/core/Engine.ts)
+- Engine owns:
+  - renderer
+  - scene
+  - camera
+  - camera target
+  - background manager
+  - animation loop
+  - model loading
+
+### Scene object flow
+
+1. `ObjectSetup`
+2. object factory registry
+3. `Scene.addObject(...)`
+4. `SceneObject.runObject()`
+5. `SceneObject.runUpdate(delta)`
+
+## 11. Background Flow
+
+### Current stack
+
+- `Background` scene object
+- `BackgroundManager`
+- `BackgroundController`
+- `BackgroundMaterialRuntime`
+
+### Policy flow
+
+1. page scene definition declares background policy
+2. `ScenePolicyRuntime` resolves active scene/sheet state
+3. `BackgroundController.sync(...)`
+4. `BackgroundManager.setOptions(...)`
+5. shader variant and look update
+
+## 12. Disposal Flow
+
+### Global shutdown
+
+- `AppManager.disposeBootstrap()`
+- `AppBootstrap.dispose()`
+- `LenisRuntime.dispose()`
+- `PageRuntime.dispose()`
+- `TimelineRuntime.clear()`
+
+### Per-page shutdown
+
+- `PageRuntime.disposeController()`
+- page strategy `dispose()`
+- `AppManager.dispose()` or `WorksPageRuntime.dispose()`
+- shared UI cleanup
+- reveal runtime cleanup
+- page-local Three cleanup
+
+## 13. Non-goals
+
+- This file describes current runtime execution flow.
+- It does not define coding style.
+- It does not replace the repo-wide contract in [`ROLE.MD`](/c:/Users/edn_y/260330/ROLE.MD).
+- It does not replace TypeScript ownership rules in [`TS_CORE.md`](/c:/Users/edn_y/260330/TS_CORE.md).

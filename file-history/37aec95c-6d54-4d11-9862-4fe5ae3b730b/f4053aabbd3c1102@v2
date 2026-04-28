@@ -1,0 +1,178 @@
+# GravityBalls → TypeScript SceneObject 포팅 플랜
+
+## Context
+
+CoffeeScript로 작성된 GravityBalls 파티클 시스템을 프로젝트의 `SceneObject` 아키텍처로 포팅한다.
+원본은 독립 렌더러/씬/카메라를 사용하고 마우스 추적 + 클릭 토글을 포함했다.
+변경 조건: 마우스 추적 제거, 클릭 토글 제거, 스폰 위치를 로켓 하단 노즐(JetEngine 어태치 포인트와 동일 위치)로 고정.
+
+**가시성 정책**: 페이지/섹션과 무관하게 로켓이 씬에 존재하면 항상 렌더. 별도 scroll 바인딩 없음.
+
+**확장 계획 (미구현)**: 추후 이미지 스프라이트 적용 예정. 현재는 `CircleGeometry + MeshBasicMaterial`로 구현하고, 스프라이트 교체 시 `_buildMesh()` 메서드만 바꿀 수 있도록 mesh 생성 로직을 분리해 둔다.
+
+## 좌표계 스케일 변환 근거
+
+| 원본 | 프로젝트 | 비율 |
+|---|---|---|
+| camera z = 600 | 프로젝트 씬 소형 스케일 (~1:1) | 1/60 |
+| radius = 3 | radius = 0.05 | 1/60 |
+| floorLevel = -100 | floorLevel = -2.5 | 1/40 |
+| vx/vy/vz, gravity | × 0.017 | ~1/60 |
+
+물리 스케일은 `object.config.ts`의 `physicsScale` 옵션으로 노출해 튜닝 가능하게 한다.
+
+---
+
+## 생성 파일
+
+### `resource/ts/objects/main/GravityBalls.ts`
+
+**구조 (SceneObject 패턴 준수):**
+```
+export class GravityBalls extends SceneObject<Record<string, never>>
+```
+
+**인터페이스:**
+```typescript
+interface SphereInfo {
+  ID: number; color: string; radius: number; radiusStart: number;
+  radiusDeincrement: number; startX: number; startY: number; startZ: number;
+  vx: number; vxMult: number; vy: number; vyMult: number;
+  vz: number; vzMult: number; bounced: boolean;
+  gravity: number; startGravity: number; sphere: THREE.Mesh;
+}
+interface GravityBallsObjectOptions {
+  attachTo?: string;          // 로켓 ID ("rocket")
+  spawnOffset?: XYZ;          // 노즐 오프셋 { x:0, y:-0.34, z:0 }
+  floorLevel?: number;        // 바닥 y 좌표 (-2.5)
+  floorDimensions?: number;   // 바닥 범위 (25)
+  radius?: number;            // 볼 반지름 (0.05)
+  colors?: string[];          // 색상 배열
+  dotsPerInterval?: number;   // 틱당 스폰 수 (5)
+  physicsScale?: number;      // 속도/중력 스케일 (0.017)
+}
+```
+
+**프라이빗 상태:**
+```
+_spheresInfo: Map<number, SphereInfo>
+_sphereIndex: number
+_accumMs: number          // 15ms 인터벌 누산기
+_spawnPoint: THREE.Vector3
+_options: Partial<GravityBallsObjectOptions>
+_floorMesh: THREE.Mesh | null
+```
+
+**메서드 구현:**
+
+`setOptions(props)` — 옵션 merge, `this` 반환  
+
+`runObject()` — void (sync)
+- `ctx.scene`에 반투명 바닥 메시 추가 (원본과 동일, `depthWrite: false`)
+- `_spawnPoint` 초기화
+
+`runUpdate(delta: number)` — 매 프레임 호출
+1. `_accumMs += delta * 1000`
+2. `_accumMs >= 15` 이면 `_tick()` 실행 후 `_accumMs -= 15`
+3. 모든 살아있는 구체를 카메라 quaternion으로 빌보드 처리:
+   `sphere.quaternion.copy(ctx.camera.quaternion)`
+
+`_tick()` — 원본 `init()` 로직
+1. 스폰 포인트 갱신: `ctx.getObject(attachTo)?.getWorldPosition(_spawnPoint)` + offset
+2. `dotsPerInterval`회 `_initDot()` 호출
+3. 모든 `_spheresInfo` 항목에 `_drawDot()` 호출
+
+`_initDot()` — 원본 `initDot()` 100% 포팅
+- `THREE.CircleGeometry(radius, 20)` + `THREE.MeshBasicMaterial({ color })`
+- 속도 값에 `physicsScale` 적용
+- `ctx.scene.add(sphere)`
+
+`_drawDot(info)` — 원본 `drawDot()` 100% 포팅
+- scale/position 업데이트
+- 바닥 충돌 + 바운스 로직
+- scale ≤ 0.1 이면 scene remove + Map delete
+
+`applyVisibility(visible)` — override (Scene이 호출)
+```typescript
+protected override applyVisibility(visible: boolean) {
+  this._floorMesh && (this._floorMesh.visible = visible);
+  this._spheresInfo.forEach(info => { info.sphere.visible = visible; });
+}
+```
+
+`dispose()` — scene에서 floor + 모든 sphere 제거, geometry/material dispose
+
+---
+
+## 수정 파일 (4개)
+
+### 1. `resource/ts/core/setup.ts`
+```typescript
+// 기존 export const jetEngine = "jetEngine"; 아래에 추가
+export const gravityBalls = "gravityBalls";
+```
+
+### 2. `resource/ts/app/ObjectSetup.ts`
+`createDefaultRegistry()` 내부에 추가:
+```typescript
+import { GravityBalls } from "../objects/main/GravityBalls.js";
+// registry에:
+[gravityBalls]: createSetOptionsSpec(gravityBalls, () => new GravityBalls()),
+```
+
+### 3. `resource/ts/config/object.config.ts`
+```typescript
+gravityBalls: {
+  visible: true,
+  attachTo: "rocket",
+  spawnOffset: { x: 0, y: -0.34, z: 0 },
+  floorLevel: -2.5,
+  floorDimensions: 25,
+  radius: 0.05,
+  colors: ['#bada55', '#bada55', '#bada55', '#bada55'],
+  dotsPerInterval: 5,
+  physicsScale: 0.017,
+},
+```
+
+### 4. `resource/ts/pages/main/scene/main.scene.ts`
+`objects` export에 추가:
+```typescript
+import { gravityBalls } from "../../../core/setup.js";
+// objects map에:
+[gravityBalls]: true,
+```
+
+---
+
+## 원본 → TS 충실도 매핑
+
+| 원본 기능 | 구현 방식 |
+|---|---|
+| `setActors()` | `runObject()` 내 바닥 메시 생성 |
+| `setLighting()` | 제거 (엔진이 씬 조명 관리) |
+| `setStage()` | 제거 (엔진이 renderer/scene/camera 소유) |
+| `animate()` + `render()` | `runUpdate(delta)` |
+| `resize()` | 제거 (엔진이 처리) |
+| `mouseMove()` | 제거 (조건 4) |
+| `click` 토글 | 제거 (조건 3) |
+| `init()` — 15ms interval | `_tick()` — delta 누산으로 동일 주기 |
+| `initDot()` | `_initDot()` — 100% 포팅 |
+| `drawDot()` | `_drawDot()` — 100% 포팅 |
+| `random(min, max)` | private `_random(min, max)` |
+| `rotateRadians()` | 미사용이므로 제거 |
+
+---
+
+## 검증
+
+```bash
+rtk tsc --noEmit                    # TS 오류 0개 확인
+rtk npm run test                    # 기존 Vitest suite 통과 확인
+```
+
+브라우저 localhost:8888:
+- 메인 페이지 로드 후 로켓 노즐 위치에서 형광 노란색(`#bada55`) 원이 분출
+- 원이 중력으로 낙하, 바닥 충돌 후 튀어오름, 축소하며 사라짐
+- 마우스 이동 무반응 확인
+- 클릭 무반응 확인

@@ -1,0 +1,134 @@
+<?php
+
+/** @var \Menu\Menu $menu */
+$menu = app()->get('menu');
+/** @var array $siteinfo */
+$siteinfo = app()->get('siteinfo');
+$footerLocale = locale();
+?>
+
+<footer id="main-footer" class="no-footer">
+    <div class="no-footer__inner">
+        <div class="no-container-xl">
+            <div class="no-footer__top">
+                <div class="no-footer__logo">
+                    <a href="<?= e(localized_path('/')) ?>">
+                        <img src="<?= base_path('/resource/images/logo/logo_color.svg') ?>"
+                            alt="<?= e($siteinfo['title'] ?? 'EverCura') ?>">
+                    </a>
+                </div>
+                <div class="no-footer__cta">
+                    <a href="<?= e(localized_path('/request-a-meeting')) ?>" class="no-footer__cta-btn no-line-btn">
+                        <span class="no-line-btn__text"><?= e(__('cta.request_meeting')) ?></span>
+                        <span class="no-line-btn__icon" aria-hidden="true">
+                            <i class="fa-regular fa-chevron-right"></i>
+                        </span>
+                    </a>
+                    <button type="button" class="no-footer__cta-btn no-line-btn" data-brochure-modal-open>
+                        <span class="no-line-btn__text"><?= e(__('cta.download_brochure')) ?></span>
+                        <span class="no-line-btn__icon" aria-hidden="true">
+                            <i class="fa-regular fa-chevron-right"></i>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="no-footer__mid">
+                <div class="no-footer__links">
+                    <?php
+                    $mainLinks = [];
+                    if ($menu) {
+                        foreach ($menu->rootItems() as $root) {
+                            if (!$root->isVisible()) continue;
+                            $mainLinks[] = ['label' => $root->label(), 'url' => $root->url()];
+                            if (count($mainLinks) >= 3) break;
+                        }
+                    }
+                    if (empty($mainLinks)) {
+                        $mainLinks = [
+                            ['label' => __('nav.brands'), 'url' => localized_path('/brands')],
+                            ['label' => __('nav.channel_partners'), 'url' => localized_path('/channel-partners')],
+                            ['label' => __('nav.pricing'), 'url' => localized_path('/pricing')],
+                        ];
+                    }
+                    foreach ($mainLinks as $item): ?>
+                    <a href="<?= e($item['url']) ?>" class="no-footer__main-link"><?= e($item['label']) ?></a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <?php
+            $familySiteLinks = __('footer.family_site_links');
+            $familySiteLinks = is_array($familySiteLinks) ? $familySiteLinks : [];
+            $familySiteLinks = array_values(array_filter($familySiteLinks, static function ($row) {
+                if (!is_array($row)) {
+                    return false;
+                }
+                $url = isset($row['url']) ? trim((string) $row['url']) : '';
+                $label = isset($row['label']) ? trim((string) $row['label']) : '';
+
+                return $url !== '' && $label !== '';
+            }));
+            if ($familySiteLinks === []) {
+                $familySiteLinks = [
+                    [
+                        'label' => (string) ($siteinfo['title'] ?? 'EverCura'),
+                        'url' => localized_path('/'),
+                    ],
+                ];
+            }
+            ?>
+            <div class="no-footer__bottom">
+                <div class="no-footer__legal">
+                    <a href="<?= e(route('legal.privacy')) ?>"
+                        class="no-footer__legal-link"><?= e(__('footer.privacy_policy')) ?></a>
+                    <div class="no-footer__lang" role="group" aria-label="<?= e(__('a11y.lang_switch')) ?>">
+                        <a href="<?= e(locale_url('ko')) ?>"
+                            class="no-footer__lang-opt <?= $footerLocale === 'ko' ? 'is-active' : '' ?>" hreflang="ko"
+                            lang="ko" aria-label="한국어">KR</a>
+                        <span class="no-footer__lang-sep" aria-hidden="true">|</span>
+                        <a href="<?= e(locale_url('en')) ?>"
+                            class="no-footer__lang-opt <?= $footerLocale === 'en' ? 'is-active' : '' ?>" hreflang="en"
+                            lang="en" aria-label="English">EN</a>
+                    </div>
+                </div>
+                <div class="no-footer__family">
+                    <button type="button" class="no-footer__family-btn" aria-expanded="false" aria-haspopup="true">
+                        <span><?= e(__('footer.family_site_heading')) ?></span>
+                        <i class="fa-regular fa-plus" aria-hidden="true"></i>
+                    </button>
+                    <ul class="no-footer__family-list">
+                        <?php foreach ($familySiteLinks as $fam):
+                            $famUrlRaw = isset($fam['url']) ? (string) $fam['url'] : '';
+                            $famHref = safe_url($famUrlRaw);
+                            $famExternal = $famUrlRaw !== '' && preg_match('#^https?://#i', $famUrlRaw);
+                            ?>
+                        <li class="no-footer__family-item">
+                            <a href="<?= e($famHref) ?>" class="no-footer__family-link"<?= $famExternal ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?= e($fam['label']) ?></a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="no-footer__copy">
+                <span>© 2026 <?= e($siteinfo['footer_name'] ?? 'EverCura') ?> All Rights Reserved.</span>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<?php
+// FOOTER 위치 태그 렌더링 (location = 3)
+try {
+    $conn = DB::getInstance();
+    $tagStmt = $conn->prepare("SELECT tag_content FROM nb_site_tags WHERE location = 3 AND is_active = 1 ORDER BY id ASC");
+    $tagStmt->execute();
+    $footerTags = $tagStmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($footerTags as $tag) {
+        echo $tag['tag_content'] . "\n";
+    }
+} catch (Exception $e) {
+    // 태그 조회 실패 시 무시
+}
+?>

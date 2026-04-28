@@ -1,0 +1,200 @@
+# Plan: GNB 호버 시 Rect 인디케이터 + 텍스트 이동 효과
+
+## Context
+드로어 GNB 링크(`.no-drawer__gnb-link`)에 호버 시, 텍스트 밝아지는 효과 외에 추가로 `.no-loop-filter-rect` 인디케이터가 텍스트 왼쪽에 뿅 생성되고, 텍스트가 rect 너비만큼 오른쪽으로 이동하는 효과 구현. `is-active` 상태에서는 초기부터 rect가 보이는 상태를 유지.
+
+---
+
+## 변경 파일 5개
+
+### 1. `views/components/drawer.php`
+
+두 곳의 `<a class="no-drawer__gnb-link">` 안에 `<span class="no-drawer__gnb-label">` **바로 앞**에 rect span 삽입.
+
+**With-sub 변형 (line 78 앞):**
+```html
+<span class="no-loop-filter-rect no-drawer__gnb-rect" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+<span class="no-drawer__gnb-label"><?= e($label) ?></span>
+```
+
+**Without-sub 변형 (line 97 앞):**
+```html
+<span class="no-loop-filter-rect no-drawer__gnb-rect" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+<span class="no-drawer__gnb-label"><?= e($label) ?></span>
+```
+
+---
+
+### 2. `resource/scss/layouts/_drawer.scss`
+
+`&__gnb-link` 블록(line 282) **바로 뒤**에 추가:
+
+```scss
+// GNB 호버 rect 인디케이터 — GSAP이 transform 전부 소유 (CSS transform 금지)
+&__gnb-rect {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  // yPercent: -50 는 GSAP이 마운트 시 적용 — CSS transform 쓰면 충돌
+  pointer-events: none;
+}
+```
+
+> ⚠️ `position: absolute` → flex flow 밖으로 빠짐. 세로 정렬은 GSAP `yPercent: -50`이 담당. CSS `transform`은 **절대 쓰지 말 것** (GSAP 덮어씀).
+
+---
+
+### 3. `resource/ts/config/component.config.ts`
+
+`DRAWER_CLASSES` 블록(line 492) **바로 뒤**에 추가:
+
+```typescript
+export const DRAWER_GNB_RECT = {
+  rectSelector: ".no-drawer__gnb-rect",
+  labelSelector: ".no-drawer__gnb-label",
+  initOpacity: 0,
+  initScale: 0.5,
+  transformOrigin: "left center",
+  enterDuration: 0.38,
+  enterEase: "power3.out",
+  leaveDuration: 0.26,
+  leaveEase: "power2.in",
+} as const;
+```
+
+---
+
+### 4. `resource/ts/types/component.types.ts`
+
+파일 끝에 추가:
+
+```typescript
+export interface GnbRectBinding {
+  link: HTMLElement;
+  rect: HTMLElement;
+  label: HTMLElement;
+  onEnter: EventListener;
+  onLeave: EventListener;
+}
+```
+
+---
+
+### 5. `resource/ts/ui/Drawer.ts`
+
+**a) import 추가** (line 9 `DRAWER_CLASSES` import에 함께):
+```typescript
+import {
+  MASKING_ANIM,
+  DRAWER_ANIM,
+  DRAWER_CLASSES,
+  DRAWER_GNB_RECT,
+} from "../config/component.config.js";
+import type { MagneticCornerGsap, GnbRectBinding } from "../types/component.types.js";
+```
+
+**b) 클래스 필드 추가** (line 39 `_magneticCorner` 아래):
+```typescript
+private _gnbRectCleanups: Array<() => void> = [];
+```
+
+**c) `mount()` 에서 호출** (line 100 `_mountMagneticCorner` 호출 뒤):
+```typescript
+this._initGnbRects(root);
+```
+
+**d) 메서드 추가** (`_mountMagneticCorner` 메서드 뒤, line 121 이후):
+```typescript
+private _initGnbRects(root: HTMLElement): void {
+  const gsap = getGsap();
+  if (!gsap) return;
+
+  const links = Array.from(
+    root.querySelectorAll<HTMLElement>(DOM_CONFIG.drawer.gnbLinkSelector),
+  );
+
+  for (const link of links) {
+    const rectEl = link.querySelector<HTMLElement>(DRAWER_GNB_RECT.rectSelector);
+    const labelEl = link.querySelector<HTMLElement>(DRAWER_GNB_RECT.labelSelector);
+    if (!rectEl || !labelEl) continue;
+
+    // GSAP이 transform 전체 소유 (yPercent로 수직 정렬)
+    gsap.set(rectEl, {
+      opacity: DRAWER_GNB_RECT.initOpacity,
+      scale: DRAWER_GNB_RECT.initScale,
+      transformOrigin: DRAWER_GNB_RECT.transformOrigin,
+      yPercent: -50,
+    });
+    gsap.set(labelEl, { x: 0 });
+
+    if (link.classList.contains(DRAWER_CLASSES.linkActive)) {
+      const w = rectEl.getBoundingClientRect().width;
+      const gap = this._readLinkGap(link);
+      gsap.set(rectEl, { opacity: 1, scale: 1 });
+      gsap.set(labelEl, { x: w + gap });
+    }
+
+    const onEnter = (): void => {
+      const g = getGsap();
+      if (!g) return;
+      const w = rectEl.getBoundingClientRect().width;
+      const gap = this._readLinkGap(link);
+      g.to(rectEl, { opacity: 1, scale: 1, duration: DRAWER_GNB_RECT.enterDuration, ease: DRAWER_GNB_RECT.enterEase, overwrite: "auto" });
+      g.to(labelEl, { x: w + gap, duration: DRAWER_GNB_RECT.enterDuration, ease: DRAWER_GNB_RECT.enterEase, overwrite: "auto" });
+    };
+
+    const onLeave = (): void => {
+      if (link.classList.contains(DRAWER_CLASSES.linkActive)) return;
+      const g = getGsap();
+      if (!g) return;
+      g.to(rectEl, { opacity: DRAWER_GNB_RECT.initOpacity, scale: DRAWER_GNB_RECT.initScale, duration: DRAWER_GNB_RECT.leaveDuration, ease: DRAWER_GNB_RECT.leaveEase, overwrite: "auto" });
+      g.to(labelEl, { x: 0, duration: DRAWER_GNB_RECT.leaveDuration, ease: DRAWER_GNB_RECT.leaveEase, overwrite: "auto" });
+    };
+
+    link.addEventListener("mouseenter", onEnter);
+    link.addEventListener("mouseleave", onLeave);
+
+    this._gnbRectCleanups.push((): void => {
+      link.removeEventListener("mouseenter", onEnter);
+      link.removeEventListener("mouseleave", onLeave);
+      const g = getGsap();
+      if (g) {
+        g.killTweensOf([rectEl, labelEl]);
+        g.set(labelEl, { x: 0 });
+        g.set(rectEl, { opacity: 0, scale: DRAWER_GNB_RECT.initScale, yPercent: -50 });
+      }
+    });
+  }
+}
+
+private _readLinkGap(link: HTMLElement): number {
+  const raw = window.getComputedStyle(link).columnGap;
+  const parsed = parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+```
+
+**e) `dispose()` 확장** (line 372, `super.dispose()` 앞):
+```typescript
+for (const cleanup of this._gnbRectCleanups) cleanup();
+this._gnbRectCleanups = [];
+```
+
+---
+
+## 핵심 설계 결정
+
+| 항목 | 결정 |
+|------|------|
+| 세로 정렬 | CSS `top: 50%` + GSAP `yPercent: -50` (CSS transform 금지) |
+| gap 측정 | `getComputedStyle(link).columnGap` — 매 hover마다 읽어 fluid `--gutter-sm` 반영 |
+| rect 너비 측정 | `getBoundingClientRect().width` — 매 mouseenter마다 재측정 (resize 대응) |
+| active 초기화 | `gsap.set()` — 트랜지션 없이 즉시 visible 상태 |
+| mouseleave 조건 | `classList.contains('is-active')` live-check로 active 링크는 leave 시 초기화 안 함 |
+
+## 검증
+
+1. 브라우저에서 드로어 열고 GNB 링크 호버 → rect 뿅 생성 + 텍스트 우측 이동 확인
+2. 현재 활성 페이지 링크에서 rect가 처음부터 보이는지 확인
+3. 빠른 연속 호버/리브 시 tween 충돌 없는지 확인 (`overwrite: "auto"`)
+4. TypeScript: `chop node_modules/.bin/tsc --noEmit`

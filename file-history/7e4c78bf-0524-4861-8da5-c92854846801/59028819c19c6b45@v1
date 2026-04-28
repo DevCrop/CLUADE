@@ -1,0 +1,1732 @@
+import { Engine } from "../core/Engine.js";
+import { EnvSetup } from "../app/EnvSetup.js";
+import {
+  pageAbout,
+  pageContact,
+  pageMain,
+  mainBackground,
+  sceneTransitionVeil,
+} from "../core/setup.js";
+import { AppBootstrap } from "../core/AppBootstrap.js";
+import { AppOrbitRuntime } from "../runtime/AppOrbitRuntime.js";
+import { TimelineRuntime } from "../runtime/TimelineRuntime.js";
+import { ScrollSceneRuntime } from "../runtime/ScrollSceneRuntime.js";
+import { PageBootRuntime } from "../runtime/PageBootRuntime.js";
+import { PageTheatreBinder } from "../core/PageTheatreBinder.js";
+import type { GsapGlobal, WindowWithGsap } from "../types/gsap.types.js";
+import type {
+  AboutPageConfig,
+  AboutSceneSectionKey,
+  AboutTheatreSheetId,
+  AboutUiPhase,
+} from "../types/about.types.js";
+import type {
+  ContactDomState,
+  ContactFlowStage,
+  ContactPageConfig,
+  ContactSuccessFlowRequestDetail,
+} from "../types/contact.types.js";
+import type {
+  MainPageConfig,
+  MainSceneSectionKey,
+  MainTheatreSheetId,
+} from "../types/main.types.js";
+import type {
+  AppPageConfig,
+  DomStyleAdapter,
+  DomVisibilityState,
+  AppEngineRuntimeContext,
+  AppStartupRuntimeResult,
+  SceneBackgroundPolicy,
+} from "../types/runtime.types.js";
+import type { TransitionVeilRuntimePort } from "../types/object-runtime.types.js";
+import { SceneSheetEffectRuntime } from "../runtime/SceneSheetEffectRuntime.js";
+import { ScrollLock } from "../utils/ScrollLock.js";
+import { Helpers } from "../utils/Helpers.js";
+import { SceneTransitionRuntime } from "../runtime/SceneTransitionRuntime.js";
+import { ScenePolicyRuntime } from "../runtime/ScenePolicyRuntime.js";
+import { IntroFlowRuntime } from "../runtime/IntroFlowRuntime.js";
+import { IntroHandoffRuntime } from "../runtime/IntroHandoffRuntime.js";
+import { AppEngineRuntime } from "../runtime/AppEngineRuntime.js";
+import { AppStartupRuntime } from "../runtime/AppStartupRuntime.js";
+import { BlockReveal } from "../animation/BlockReveal.js";
+import { TextReveal } from "../animation/TextReveal.js";
+import { HudPanel } from "../ui/HudPanel.js";
+import { Panel } from "../ui/Panel.js";
+import { ResponsiveRuntime } from "../runtime/ResponsiveRuntime.js";
+import { Aria } from "../utils/Aria.js";
+import { IntroOverlay } from "../ui/IntroOverlay.js";
+import { Logger } from "../utils/Logger.js";
+import { BLOCK_HIDDEN_CLASS, INIT_DOM_CLASSES, MASKING } from "../config/dom.config.js";
+import { ABOUT_THEATRE_SHEET_IDS } from "../pages/about/theatre/AboutTheatreConfig.js";
+import {
+  CONTACT_THEATRE_CONTENT_SELECTOR,
+  CONTACT_THEATRE_DOM_EXIT_DELAY_MS,
+  CONTACT_THEATRE_DOM_STATE_ATTRIBUTE,
+  CONTACT_THEATRE_DOM_STATE_LEAVING,
+  CONTACT_THEATRE_DOM_STATE_PENDING,
+  CONTACT_THEATRE_DOM_STATE_READY,
+  CONTACT_THEATRE_DOM_STATE_SUCCESS,
+  CONTACT_THEATRE_FORM_SHELL_SELECTOR,
+  CONTACT_THEATRE_SUCCESS_DEFAULT_MESSAGE,
+  CONTACT_THEATRE_SUCCESS_FLOW_REQUEST_EVENT,
+  CONTACT_THEATRE_SUCCESS_MESSAGE_SELECTOR,
+  CONTACT_THEATRE_SUCCESS_SELECTOR,
+} from "../pages/contact/theatre/ContactTheatreConfig.js";
+import { IntroController } from "../controller/IntroController.js";
+import { IntroManager } from "./IntroManager.js";
+import {
+  ABOUT_HERO_SLOGAN,
+  MAIN_WHY_SHOWCASE,
+} from "../config/component.config.js";
+
+const HERO_SECTION_SELECTOR = ".no-main-hero";
+const ABOUT_HERO_INTRO_ACTION_SELECTOR = "[data-about-hero-intro-action]";
+const CONTACT_REVEAL_BLOCK_SELECTORS = [
+  ".no-contact-flow .no-wizard-sidebar",
+  ".no-contact-flow .no-wizard-main",
+  ".no-contact-flow .no-contact-flow__feedback",
+] as const;
+const CONTACT_SUCCESS_TEXT_SELECTOR =
+  ".no-contact-flow__success-inner > .no-contact-flow__title, .no-contact-flow__success-inner > .no-contact-flow__description";
+const CONTACT_SUCCESS_BLOCK_SELECTOR = ".no-contact-flow__success-inner";
+const CONTACT_REVEAL_STAGGER_MS = 70;
+
+class AppManagerDomRuntime {
+  private readonly _queryOne: <TElement extends Element>(selector: string) => TElement | null;
+  private _aboutHeroSloganKeywordViewport: HTMLElement | null = null;
+  private _aboutHeroSloganKeywordTrack: HTMLElement | null = null;
+  private _aboutHeroSloganKeywordStep = 0;
+  private _mainWhyShowcaseStage: HTMLElement | null = null;
+  private _mainWhyShowcaseTitleLayers: HTMLElement[] = [];
+  private _mainWhyShowcaseRing: HTMLElement | null = null;
+  private _mainWhyShowcaseCards: HTMLElement[] = [];
+  private _aboutUiPhase: AboutUiPhase = "idle";
+
+  constructor(
+    queryOne: <TElement extends Element>(selector: string) => TElement | null,
+  ) {
+    this._queryOne = queryOne;
+  }
+
+  setHeroHandoffVisible(visible: boolean): void {
+    const heroSection = this._queryOne<HTMLElement>(HERO_SECTION_SELECTOR);
+    if (!heroSection) return;
+    heroSection.dataset.handoffVisible = visible ? "true" : "false";
+  }
+
+  setAboutUiPhase(phase: AboutUiPhase): void {
+    if (this._aboutUiPhase === phase) return;
+    this._aboutUiPhase = phase;
+    this._applyAboutUiVisibility();
+  }
+
+  setAboutScenePlanesVisible(
+    pageConfig: AboutPageConfig,
+    visible: boolean,
+  ): void {
+    const elements = this._collectAboutScenePlaneElements(pageConfig);
+    if (elements.length === 0) return;
+    elements.forEach((element) => {
+      element.style.opacity = visible ? "1" : "0";
+      element.style.transform = visible
+        ? "translate3d(0, 0, 0)"
+        : "translate3d(0, 24px, 0)";
+      element.style.pointerEvents = visible ? "" : "none";
+      Aria.setHidden(element, !visible);
+    });
+  }
+
+  async revealAboutScenePlanes(
+    pageConfig: AboutPageConfig,
+    gsap: GsapGlobal | null,
+  ): Promise<void> {
+    const elements = this._collectAboutScenePlaneElements(pageConfig);
+    if (elements.length === 0) return;
+    if (!gsap) {
+      this.setAboutScenePlanesVisible(pageConfig, true);
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      elements.forEach((element) => {
+        Aria.setHidden(element, false);
+        element.style.pointerEvents = "";
+      });
+      gsap.to(elements, {
+        opacity: 1,
+        y: 0,
+        duration: 0.72,
+        stagger: 0.06,
+        ease: "power3.out",
+        onComplete: () => resolve(),
+      });
+    });
+  }
+
+  waitForAboutHeroIntroClick(pageConfig: AboutPageConfig): Promise<void> {
+    const triggerSelector = pageConfig.scrollSceneSelectors?.heroIntro;
+    if (!triggerSelector) return Promise.resolve();
+    const section = this._queryOne<HTMLElement>(triggerSelector);
+    if (!section) return Promise.resolve();
+    const trigger =
+      section.querySelector<HTMLButtonElement>(ABOUT_HERO_INTRO_ACTION_SELECTOR);
+    if (!trigger) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const onClick = (): void => {
+        trigger.removeEventListener("click", onClick);
+        resolve();
+      };
+      trigger.addEventListener("click", onClick, { once: true });
+    });
+  }
+
+  scrollToAboutSceneProgress(
+    pageConfig: AboutPageConfig,
+    sceneKey: AboutSceneSectionKey,
+    progress = 0,
+  ): void {
+    const selector = pageConfig.scrollSceneSelectors?.[sceneKey];
+    if (!selector) return;
+    const element = this._queryOne<HTMLElement>(selector);
+    if (!element) return;
+
+    const rect = element.getBoundingClientRect();
+    const top = window.scrollY + rect.top + rect.height * Helpers.clamp01(progress);
+    window.scrollTo({ top, behavior: "auto" });
+  }
+
+  disposeSceneIndicator(): void {
+    this._aboutHeroSloganKeywordViewport = null;
+    this._aboutHeroSloganKeywordTrack = null;
+    this._aboutHeroSloganKeywordStep = 0;
+    this._mainWhyShowcaseStage = null;
+    this._mainWhyShowcaseTitleLayers = [];
+    this._mainWhyShowcaseRing = null;
+    this._mainWhyShowcaseCards = [];
+  }
+
+  syncAboutUiScene(_sceneKey: AboutSceneSectionKey | null): void {
+    this._applyAboutUiVisibility();
+  }
+
+  syncAboutHeroSloganKeyword(
+    sceneKey: AboutSceneSectionKey,
+    progress: number,
+    gsap: GsapGlobal | null,
+  ): void {
+    const viewport = this._resolveAboutHeroSloganKeywordViewport();
+    const track = this._resolveAboutHeroSloganKeywordTrack();
+    if (!viewport || !track) return;
+
+    if (!viewport.style.width) {
+      this._initAboutHeroSloganKeywordViewportWidth(viewport, track);
+    }
+
+    const nextStep = this._resolveAboutHeroSloganKeywordStep(sceneKey, progress);
+    const shouldAnimate = sceneKey === "heroSlogan";
+    if (
+      this._aboutHeroSloganKeywordStep === nextStep &&
+      shouldAnimate &&
+      viewport.style.width.length > 0
+    ) {
+      return;
+    }
+
+    this._aboutHeroSloganKeywordStep = nextStep;
+    this._applyAboutHeroSloganKeywordStep(
+      viewport,
+      track,
+      nextStep,
+      shouldAnimate,
+      gsap,
+    );
+  }
+
+  syncMainWhyShowcase(
+    sceneKey: MainSceneSectionKey,
+    progress: number,
+  ): void {
+    const stage = this._resolveMainWhyShowcaseStage();
+    const titleLayers = this._resolveMainWhyShowcaseTitleLayers();
+    const ring = this._resolveMainWhyShowcaseRing();
+    const cards = this._resolveMainWhyShowcaseCards();
+    if (!stage || !ring || cards.length === 0) return;
+
+    const showcaseProgress = this._resolveMainWhyShowcaseProgress(
+      sceneKey,
+      progress,
+    );
+    this._applyMainWhyShowcaseState(titleLayers, ring, cards, showcaseProgress);
+  }
+
+  private _collectAboutScenePlaneElements(
+    pageConfig: AboutPageConfig,
+  ): HTMLElement[] {
+    const selectorValues = Object.values(pageConfig.scrollSceneSelectors ?? {});
+    const dedupedSelectors = Array.from(
+      new Set(selectorValues.filter((selector): selector is string => !!selector)),
+    );
+    return dedupedSelectors
+      .map((selector) => this._queryOne<HTMLElement>(selector))
+      .filter((element): element is HTMLElement => element != null);
+  }
+
+  private _resolveAboutHeroSloganKeywordTrack(): HTMLElement | null {
+    if (this._aboutHeroSloganKeywordTrack?.isConnected) {
+      return this._aboutHeroSloganKeywordTrack;
+    }
+    this._aboutHeroSloganKeywordTrack = this._queryOne<HTMLElement>(
+      ABOUT_HERO_SLOGAN.trackSelector,
+    );
+    return this._aboutHeroSloganKeywordTrack;
+  }
+
+  private _resolveMainWhyShowcaseProgress(
+    sceneKey: MainSceneSectionKey,
+    progress: number,
+  ): number {
+    if (sceneKey === "whyus") {
+      return Helpers.clamp01(progress);
+    }
+
+    const sceneOrder: readonly MainSceneSectionKey[] = [
+      "intro",
+      "hero",
+      "story",
+      "who",
+      "whyus",
+      "services",
+      "works",
+      "worksDetail",
+      "worksFinal",
+      "client",
+      "contact",
+    ];
+    const currentIndex = sceneOrder.indexOf(sceneKey);
+    const whyIndex = sceneOrder.indexOf("whyus");
+    if (currentIndex > whyIndex) {
+      return 1;
+    }
+    return 0;
+  }
+
+  private _resolveAboutHeroSloganKeywordViewport(): HTMLElement | null {
+    if (this._aboutHeroSloganKeywordViewport?.isConnected) {
+      return this._aboutHeroSloganKeywordViewport;
+    }
+    this._aboutHeroSloganKeywordViewport = this._queryOne<HTMLElement>(
+      ABOUT_HERO_SLOGAN.viewportSelector,
+    );
+    return this._aboutHeroSloganKeywordViewport;
+  }
+
+  private _resolveAboutHeroSloganKeywordStep(
+    sceneKey: AboutSceneSectionKey,
+    progress: number,
+  ): number {
+    if (sceneKey !== "heroSlogan") return 0;
+    const keywordCount = Math.max(ABOUT_HERO_SLOGAN.keywordCount, 1);
+    const clampedProgress = Helpers.clamp01(progress);
+    const windowedProgress = this._resolveAboutHeroSloganKeywordProgress(
+      clampedProgress,
+    );
+    return Math.min(
+      Math.floor(windowedProgress * keywordCount),
+      keywordCount - 1,
+    );
+  }
+
+  private _resolveAboutHeroSloganKeywordProgress(progress: number): number {
+    const start = Helpers.clamp01(ABOUT_HERO_SLOGAN.progressWindowStart);
+    const end = Helpers.clamp01(ABOUT_HERO_SLOGAN.progressWindowEnd);
+    if (end <= start) return progress;
+    if (progress <= start) return 0;
+    if (progress >= end) return 1;
+    return (progress - start) / (end - start);
+  }
+
+  private _initAboutHeroSloganKeywordViewportWidth(
+    viewport: HTMLElement,
+    track: HTMLElement,
+  ): void {
+    const keywords = this._resolveAboutHeroSloganKeywordElements(track);
+    const maxWidth = keywords.reduce((acc, kw) => {
+      return Math.max(acc, kw.scrollWidth, kw.getBoundingClientRect().width, 1);
+    }, 1);
+    viewport.style.width = `${maxWidth}px`;
+  }
+
+  private _applyAboutHeroSloganKeywordStep(
+    viewport: HTMLElement,
+    track: HTMLElement,
+    step: number,
+    shouldAnimate: boolean,
+    gsap: GsapGlobal | null,
+  ): void {
+    const keywordHeight = this._resolveAboutHeroSloganKeywordHeight(track, step);
+    const keywordWidth = this._resolveAboutHeroSloganKeywordWidth(track, step);
+    const keywords = this._resolveAboutHeroSloganKeywordElements(track);
+    const y = -(keywordHeight * step);
+    if (!shouldAnimate || !gsap) {
+      track.style.transform = `translate3d(0, ${y}px, 0)`;
+      viewport.style.width = `${keywordWidth}px`;
+      this._applyAboutHeroSloganKeywordVisualState(keywords, step);
+      return;
+    }
+    gsap.killTweensOf?.(track);
+    gsap.killTweensOf?.(viewport);
+    gsap.to(track, {
+      y,
+      duration: ABOUT_HERO_SLOGAN.duration,
+      ease: ABOUT_HERO_SLOGAN.ease,
+      overwrite: true,
+    });
+    gsap.to(viewport, {
+      width: keywordWidth,
+      duration: ABOUT_HERO_SLOGAN.duration,
+      ease: ABOUT_HERO_SLOGAN.ease,
+      overwrite: true,
+    });
+    this._animateAboutHeroSloganKeywordVisualState(keywords, step, gsap);
+  }
+
+  private _resolveAboutHeroSloganKeywordHeight(
+    track: HTMLElement,
+    step: number,
+  ): number {
+    const keyword = this._resolveAboutHeroSloganKeywordElement(track, step);
+    if (!keyword) return 0;
+    return Math.max(keyword.getBoundingClientRect().height, 1);
+  }
+
+  private _resolveAboutHeroSloganKeywordWidth(
+    track: HTMLElement,
+    step: number,
+  ): number {
+    const keyword = this._resolveAboutHeroSloganKeywordElement(track, step);
+    if (!keyword) return 0;
+    return Math.max(keyword.scrollWidth, keyword.getBoundingClientRect().width, 1);
+  }
+
+  private _resolveAboutHeroSloganKeywordElement(
+    track: HTMLElement,
+    step: number,
+  ): HTMLElement | null {
+    const keywords = this._resolveAboutHeroSloganKeywordElements(track);
+    return keywords[step] ?? keywords[0] ?? null;
+  }
+
+  private _resolveAboutHeroSloganKeywordElements(track: HTMLElement): HTMLElement[] {
+    return Array.from(
+      track.querySelectorAll<HTMLElement>(ABOUT_HERO_SLOGAN.keywordSelector),
+    );
+  }
+
+  private _resolveMainWhyShowcaseStage(): HTMLElement | null {
+    if (this._mainWhyShowcaseStage?.isConnected) {
+      return this._mainWhyShowcaseStage;
+    }
+    this._mainWhyShowcaseStage = this._queryOne<HTMLElement>(
+      MAIN_WHY_SHOWCASE.stageSelector,
+    );
+    return this._mainWhyShowcaseStage;
+  }
+
+  private _resolveMainWhyShowcaseTitleLayers(): HTMLElement[] {
+    const hasConnectedLayers =
+      this._mainWhyShowcaseTitleLayers.length > 0 &&
+      this._mainWhyShowcaseTitleLayers.every((layer) => layer.isConnected);
+    if (hasConnectedLayers) {
+      return this._mainWhyShowcaseTitleLayers;
+    }
+    const stage = this._resolveMainWhyShowcaseStage();
+    if (!stage) {
+      this._mainWhyShowcaseTitleLayers = [];
+      return this._mainWhyShowcaseTitleLayers;
+    }
+    this._mainWhyShowcaseTitleLayers = Array.from(
+      stage.querySelectorAll<HTMLElement>(MAIN_WHY_SHOWCASE.titleSelector),
+    );
+    return this._mainWhyShowcaseTitleLayers;
+  }
+
+  private _resolveMainWhyShowcaseRing(): HTMLElement | null {
+    if (this._mainWhyShowcaseRing?.isConnected) {
+      return this._mainWhyShowcaseRing;
+    }
+    this._mainWhyShowcaseRing = this._queryOne<HTMLElement>(
+      MAIN_WHY_SHOWCASE.ringSelector,
+    );
+    return this._mainWhyShowcaseRing;
+  }
+
+  private _resolveMainWhyShowcaseCards(): HTMLElement[] {
+    const hasConnectedCards =
+      this._mainWhyShowcaseCards.length > 0 &&
+      this._mainWhyShowcaseCards.every((card) => card.isConnected);
+    if (hasConnectedCards) {
+      return this._mainWhyShowcaseCards;
+    }
+    const stage = this._resolveMainWhyShowcaseStage();
+    if (!stage) {
+      this._mainWhyShowcaseCards = [];
+      return this._mainWhyShowcaseCards;
+    }
+    this._mainWhyShowcaseCards = Array.from(
+      stage.querySelectorAll<HTMLElement>(MAIN_WHY_SHOWCASE.cardSelector),
+    );
+    return this._mainWhyShowcaseCards;
+  }
+
+  private _applyMainWhyShowcaseState(
+    titleLayers: readonly HTMLElement[],
+    ring: HTMLElement,
+    cards: readonly HTMLElement[],
+    progress: number,
+  ): void {
+    const cardCount = Math.max(cards.length, 1);
+    const spawnProgress = this._easeOutCubic(
+      Helpers.remap01(progress, 0, MAIN_WHY_SHOWCASE.spawnEnd),
+    );
+    const mergeProgress = this._easeInOutCubic(
+      Helpers.remap01(
+        progress,
+        MAIN_WHY_SHOWCASE.cardRevealWindowEnd,
+        MAIN_WHY_SHOWCASE.mergeEnd,
+      ),
+    );
+    const scatterProgress = this._easeOutCubic(
+      Helpers.remap01(
+        progress,
+        MAIN_WHY_SHOWCASE.mergeEnd,
+        MAIN_WHY_SHOWCASE.scatterEnd,
+      ),
+    );
+
+    const titleRevealOpacity = Helpers.lerp(
+      MAIN_WHY_SHOWCASE.titleOpacityStart,
+      MAIN_WHY_SHOWCASE.titleOpacityEnd,
+      spawnProgress,
+    );
+    const titleOpacity = Helpers.lerp(
+      titleRevealOpacity,
+      MAIN_WHY_SHOWCASE.titleExitOpacity,
+      scatterProgress,
+    );
+    const titlePeakScale = Helpers.lerp(
+      MAIN_WHY_SHOWCASE.titleScaleStart,
+      MAIN_WHY_SHOWCASE.titleScalePeak,
+      Math.max(spawnProgress, mergeProgress),
+    );
+    const titleScale = Helpers.lerp(
+      titlePeakScale,
+      MAIN_WHY_SHOWCASE.titleScaleEnd,
+      scatterProgress,
+    );
+    const titleY = Helpers.lerp(
+      MAIN_WHY_SHOWCASE.titleYOffsetPx,
+      0,
+      spawnProgress,
+    ) + Helpers.lerp(0, MAIN_WHY_SHOWCASE.titleExitYOffsetPx, scatterProgress);
+
+    const titleTransform = `translate3d(0, ${titleY}px, 0) scale(${titleScale})`;
+    titleLayers.forEach((titleLayer) => {
+      titleLayer.style.opacity = String(titleOpacity);
+      titleLayer.style.transform = titleTransform;
+    });
+
+    const ringOpacity =
+      MAIN_WHY_SHOWCASE.ringOpacityMax * Math.max(spawnProgress, mergeProgress);
+    const ringScale = Helpers.lerp(
+      MAIN_WHY_SHOWCASE.ringScaleStart,
+      MAIN_WHY_SHOWCASE.ringScaleEnd,
+      Math.max(spawnProgress, scatterProgress),
+    );
+    ring.style.opacity = String(ringOpacity);
+    ring.style.transform = `translate3d(-50%, -50%, 0) scale(${ringScale})`;
+
+    cards.forEach((card, index) => {
+      const pose = MAIN_WHY_SHOWCASE.cardPoses[index];
+      if (!pose) return;
+      const revealStart =
+        Helpers.lerp(
+          MAIN_WHY_SHOWCASE.cardRevealWindowStart,
+          MAIN_WHY_SHOWCASE.cardRevealWindowEnd,
+          index / cardCount,
+        );
+      const revealEnd =
+        Helpers.lerp(
+          MAIN_WHY_SHOWCASE.cardRevealWindowStart,
+          MAIN_WHY_SHOWCASE.cardRevealWindowEnd,
+          (index + 1) / cardCount,
+        );
+      const cardRevealProgress = this._easeOutCubic(
+        Helpers.remap01(progress, revealStart, revealEnd),
+      );
+      const orbitX =
+        Math.cos(Helpers.degToRad(pose.orbitAngleDeg)) * pose.orbitRadiusVmin;
+      const orbitY =
+        Math.sin(Helpers.degToRad(pose.orbitAngleDeg)) *
+        pose.orbitRadiusVmin *
+        MAIN_WHY_SHOWCASE.orbitVerticalScale;
+      const orbitRotate = pose.orbitRotateDeg;
+      const revealScale =
+        pose.scale *
+        this._easeOutBack(
+          cardRevealProgress,
+          MAIN_WHY_SHOWCASE.cardRevealOvershoot,
+        );
+
+      const mergedX = Helpers.lerp(orbitX, pose.stackXvmin, mergeProgress);
+      const mergedY = Helpers.lerp(orbitY, pose.stackYvmin, mergeProgress);
+      const mergedRotate = Helpers.lerp(
+        orbitRotate,
+        pose.stackRotateDeg,
+        mergeProgress,
+      );
+      const mergedScale = Helpers.lerp(
+        revealScale,
+        pose.scale * MAIN_WHY_SHOWCASE.cardMergeScaleFactor,
+        mergeProgress,
+      );
+
+      const x = Helpers.lerp(mergedX, pose.scatterXvmin, scatterProgress);
+      const y = Helpers.lerp(mergedY, pose.scatterYvmin, scatterProgress);
+      const rotate = Helpers.lerp(
+        mergedRotate,
+        pose.scatterRotateDeg,
+        scatterProgress,
+      );
+      const scale = Helpers.lerp(
+        mergedScale,
+        pose.scale * MAIN_WHY_SHOWCASE.cardScatterScaleFactor,
+        scatterProgress,
+      );
+      const opacity = Helpers.lerp(
+        Helpers.lerp(
+          MAIN_WHY_SHOWCASE.cardOpacityStart,
+          MAIN_WHY_SHOWCASE.cardOpacityEnd,
+          cardRevealProgress,
+        ),
+        MAIN_WHY_SHOWCASE.cardScatterOpacity,
+        scatterProgress,
+      );
+
+      card.style.setProperty("--about-who-card-x", `${x}vmin`);
+      card.style.setProperty("--about-who-card-y", `${y}vmin`);
+      card.style.setProperty("--about-who-card-rotate", `${rotate}deg`);
+      card.style.setProperty("--about-who-card-scale", String(scale));
+      card.style.setProperty("--about-who-card-opacity", String(opacity));
+      card.style.setProperty("--about-who-card-z", String(pose.zIndex));
+    });
+  }
+
+  private _easeOutCubic(value: number): number {
+    const clampedValue = Helpers.clamp01(value);
+    return 1 - Math.pow(1 - clampedValue, 3);
+  }
+
+  private _easeOutBack(value: number, overshoot: number): number {
+    const clampedValue = Helpers.clamp01(value);
+    const nextValue = clampedValue - 1;
+    return (
+      1 +
+      (overshoot + 1) * Math.pow(nextValue, 3) +
+      overshoot * Math.pow(nextValue, 2)
+    );
+  }
+
+  private _easeInOutCubic(value: number): number {
+    const clampedValue = Helpers.clamp01(value);
+    if (clampedValue < 0.5) {
+      return 4 * clampedValue * clampedValue * clampedValue;
+    }
+    const nextValue = -2 * clampedValue + 2;
+    return 1 - Math.pow(nextValue, 3) / 2;
+  }
+
+  private _applyAboutHeroSloganKeywordVisualState(
+    keywords: readonly HTMLElement[],
+    activeStep: number,
+  ): void {
+    keywords.forEach((keyword, index) => {
+      const isActive = index === activeStep;
+      keyword.style.opacity = String(
+        isActive
+          ? ABOUT_HERO_SLOGAN.activeOpacity
+          : ABOUT_HERO_SLOGAN.inactiveOpacity,
+      );
+      keyword.style.textShadow = isActive
+        ? ABOUT_HERO_SLOGAN.activeTextShadow
+        : ABOUT_HERO_SLOGAN.inactiveTextShadow;
+    });
+  }
+
+  private _animateAboutHeroSloganKeywordVisualState(
+    keywords: readonly HTMLElement[],
+    activeStep: number,
+    gsap: GsapGlobal,
+  ): void {
+    keywords.forEach((keyword, index) => {
+      const isActive = index === activeStep;
+      gsap.killTweensOf?.(keyword);
+      gsap.to(keyword, {
+        opacity: isActive
+          ? ABOUT_HERO_SLOGAN.activeOpacity
+          : ABOUT_HERO_SLOGAN.inactiveOpacity,
+        textShadow: isActive
+          ? ABOUT_HERO_SLOGAN.activeTextShadow
+          : ABOUT_HERO_SLOGAN.inactiveTextShadow,
+        duration: ABOUT_HERO_SLOGAN.duration,
+        ease: ABOUT_HERO_SLOGAN.ease,
+        overwrite: true,
+      });
+    });
+  }
+
+  private _applyAboutUiVisibility(): void {
+    const shouldShow = this._shouldShowAboutUi();
+    Panel.getInstance()[shouldShow ? "setVisibleOn" : "setVisibleOff"]();
+  }
+
+  private _shouldShowAboutUi(): boolean {
+    return this._aboutUiPhase === "scroll";
+  }
+
+}
+
+export class AppManager {
+  private static readonly _CLASS = "AppManager";
+  private _root: ParentNode | null = null;
+  private _pageConfig: AppPageConfig | null = null;
+  private _engineContext: AppEngineRuntimeContext | null = null;
+  private _engine: Engine | null = null;
+  private _debugPanelDispose: (() => void) | null = null;
+  private _didRunInitialDomInit = false;
+  private readonly _appEngineRuntime = new AppEngineRuntime();
+  private readonly _appStartupRuntime = new AppStartupRuntime();
+  private readonly _orbitRuntime = new AppOrbitRuntime();
+  private readonly _scrollSceneRuntime = new ScrollSceneRuntime();
+  private readonly _pageBootRuntime = new PageBootRuntime();
+  private readonly _pageTheatreBinder = new PageTheatreBinder();
+  private readonly _sceneTransitionRuntime = new SceneTransitionRuntime();
+  private readonly _scenePolicyRuntime = new ScenePolicyRuntime(
+    this._sceneTransitionRuntime,
+  );
+  private readonly _introFlowRuntime = new IntroFlowRuntime();
+  private readonly _introHandoffRuntime = new IntroHandoffRuntime();
+  private readonly _domRuntime = new AppManagerDomRuntime(
+    this._queryOne.bind(this),
+  );
+  private readonly _onContactSuccessFlowRequest = (event: Event): void => {
+    this._handleContactSuccessFlowRequest(event);
+  };
+  private readonly _introController = new IntroController({
+    dom: this._domRuntime,
+    introFlowRuntime: this._introFlowRuntime,
+    introHandoffRuntime: this._introHandoffRuntime,
+    sceneTransitionRuntime: this._sceneTransitionRuntime,
+    getRoot: () => this._root,
+    getEngine: () => this._engine,
+    getGsap: () => this._getGsap(),
+    resolveTransitionVeil: this._resolveTransitionVeil.bind(this),
+    runAfterLoad: this._runAfterLoad.bind(this),
+    syncContactDomState: this._syncContactDomState.bind(this),
+    runContactIntroSequence: this._runContactIntroSequence.bind(this),
+    startPagePreviewIfNeeded: this._startPagePreviewIfNeeded.bind(this),
+    startPageTheatreIntro: async (engine) =>
+      this._pageTheatreBinder.startIntroIfNeeded(engine),
+    startPageTheatreAfterIntro: async (engine) =>
+      this._pageTheatreBinder.startAfterIntroIfNeeded(engine),
+    startMainIntroActionPhaseOne: async (engine) =>
+      this._pageTheatreBinder.startIntroActionPhaseOneIfNeeded(engine),
+    startMainIntroActionPhaseTwo: async (engine) =>
+      this._pageTheatreBinder.startIntroActionPhaseTwoIfNeeded(engine),
+    syncMainSceneState: this._syncMainSceneState.bind(this),
+    syncAboutSceneState: this._syncAboutSceneState.bind(this),
+    syncMainIntroBackground: this._syncIntroBackground.bind(this),
+    startMainScrollSyncAfterIntro: this._startMainScrollSyncAfterIntro.bind(this),
+    startAboutScrollSyncAfterIntro: this._startAboutScrollSyncAfterIntro.bind(this),
+    onMainIntroDomRevealComplete:
+      this._handleMainIntroDomRevealComplete.bind(this),
+    onMainIntroTransitionStateChange: (active) => {
+      this._isIntroHandoffVeilTransitioning = active;
+    },
+  });
+  private readonly _introManager = new IntroManager({
+    controller: this._introController,
+    runAfterLoad: this._runAfterLoad.bind(this),
+    startPagePreviewIfNeeded: this._startPagePreviewIfNeeded.bind(this),
+  });
+  private readonly _mainSceneSheetEffectRuntime = new SceneSheetEffectRuntime<
+    MainSceneSectionKey,
+    string
+  >();
+  private readonly _aboutSceneSheetEffectRuntime = new SceneSheetEffectRuntime<
+    AboutSceneSectionKey,
+    string
+  >();
+  private _isTheatreAuthorMode = false;
+  private _isIntroHandoffVeilTransitioning = false;
+  private _isMainIntroDomRevealComplete = false;
+  private _contactFlowStage: ContactFlowStage = "idle";
+  private _contactFlowQueue: Promise<void> = Promise.resolve();
+  private _contactIntroTask: Promise<void> | null = null;
+  private _contactMotionTimerIds: number[] = [];
+  private readonly _lastSceneKeyByPageId = new Map<string, string | null>();
+  private readonly _lastSheetLogKeyByPageId = new Map<string, string | null>();
+  async run(pageConfig: AppPageConfig, root?: ParentNode | null): Promise<void> {
+    this._root = root ?? null;
+    this._scrollSceneRuntime.setRoot(this._root);
+    this._pageConfig = pageConfig;
+    this._pageTheatreBinder.setPageId(pageConfig.pageId);
+    this._bindContactSuccessFlowIfNeeded(pageConfig);
+    try {
+      if (!this._canRun(pageConfig, root)) {
+        this._recoverRunFailure();
+        return;
+      }
+      if (!(await this._initEngineAndSetups(pageConfig, root))) {
+        this._recoverRunFailure();
+        return;
+      }
+      if (!this._engine || !this._engineContext?.objectSetup) {
+        this._recoverRunFailure();
+        return;
+      }
+
+      const gsap = this._getGsap();
+      this._runInitialDomInit(pageConfig, gsap);
+      const objectSetupPromise = this._engineContext.objectSetup.init(
+        this._engine,
+        pageConfig,
+      );
+      await this._introManager.run(pageConfig, objectSetupPromise, gsap);
+    } catch (error) {
+      this.dispose();
+      this._recoverRunFailure();
+      console.warn("[AppManager.run] Page runtime initialization failed.", error);
+      throw error;
+    }
+  }
+
+  async init(pageConfig: AppPageConfig, root?: ParentNode | null): Promise<void> {
+    await this.run(pageConfig, root);
+  }
+
+  static async init(): Promise<void> {
+    await AppBootstrap.init();
+  }
+
+  static disposeBootstrap(): void {
+    AppBootstrap.dispose();
+  }
+
+  dispose(): void {
+    this._unbindContactSuccessFlow();
+    this._debugPanelDispose?.();
+    this._debugPanelDispose = null;
+    this._domRuntime.setAboutUiPhase("idle");
+    this._domRuntime.syncAboutUiScene(null);
+    this._domRuntime.disposeSceneIndicator();
+    this._appEngineRuntime.dispose(this._engineContext);
+    this._orbitRuntime.dispose();
+    this._scrollSceneRuntime.dispose();
+    this._scrollSceneRuntime.setRoot(null);
+    this._mainSceneSheetEffectRuntime.dispose();
+    this._aboutSceneSheetEffectRuntime.dispose();
+    this._pageTheatreBinder.dispose();
+    this._introFlowRuntime.dispose();
+    this._disposeActiveScenes();
+    this._syncContactDomState(null);
+    this._resetContactFlow();
+    ScrollLock.unlock();
+    this._engineContext = null;
+    this._engine = null;
+    this._pageConfig = null;
+    this._root = null;
+    this._didRunInitialDomInit = false;
+    this._isTheatreAuthorMode = false;
+    this._lastSceneKeyByPageId.clear();
+    this._lastSheetLogKeyByPageId.clear();
+    TimelineRuntime.clear();
+  }
+
+  private _runInitialDomInit(
+    pageConfig: AppPageConfig,
+    gsap: GsapGlobal | null,
+  ): void {
+    if (this._didRunInitialDomInit) return;
+    pageConfig.onScrollTimelineInit?.(gsap ?? this._createDomInitAdapter());
+    this._didRunInitialDomInit = true;
+  }
+
+  private _recoverRunFailure(): void {
+    IntroOverlay.hide();
+    ScrollLock.unlock();
+    Panel.getInstance().setVisibleOff();
+    HudPanel.getInstance().setVisibleOff();
+  }
+
+  private _bindContactSuccessFlowIfNeeded(pageConfig: AppPageConfig): void {
+    this._unbindContactSuccessFlow();
+    this._resetContactFlow();
+    if (pageConfig.pageId !== pageContact) return;
+    this._prepareContactDomMotion();
+    window.addEventListener(
+      CONTACT_THEATRE_SUCCESS_FLOW_REQUEST_EVENT,
+      this._onContactSuccessFlowRequest,
+    );
+    this._syncContactSuccessMessage(CONTACT_THEATRE_SUCCESS_DEFAULT_MESSAGE);
+  }
+
+  private _unbindContactSuccessFlow(): void {
+    window.removeEventListener(
+      CONTACT_THEATRE_SUCCESS_FLOW_REQUEST_EVENT,
+      this._onContactSuccessFlowRequest,
+    );
+  }
+
+  private _handleContactSuccessFlowRequest(event: Event): void {
+    if (this._pageConfig?.pageId !== pageContact) return;
+    if (!(event instanceof CustomEvent)) return;
+    const detail = event.detail as ContactSuccessFlowRequestDetail | undefined;
+    if (!detail) return;
+    detail.handled = true;
+    void this._runContactSuccessFlow(detail);
+  }
+
+  private async _runContactSuccessFlow(
+    detail: ContactSuccessFlowRequestDetail,
+  ): Promise<void> {
+    try {
+      await (this._contactIntroTask ?? Promise.resolve());
+      await this._enqueueContactFlow(async () => {
+        if (this._contactFlowStage === "success") return;
+        if (this._contactFlowStage !== "ready") {
+          throw new Error(
+            `Invalid contact flow stage for success transition: ${this._contactFlowStage}`,
+          );
+        }
+        this._contactFlowStage = "outtro";
+        this._syncContactDomState(CONTACT_THEATRE_DOM_STATE_LEAVING);
+        await this._wait(CONTACT_THEATRE_DOM_EXIT_DELAY_MS);
+        await this._playContactTheatreStep(
+          this._engine,
+          () => this._pageTheatreBinder.startAfterIntroIfNeeded(this._engine!),
+        );
+        this._syncContactSuccessMessage(detail.message);
+        this._contactFlowStage = "success";
+        this._syncContactDomState(CONTACT_THEATRE_DOM_STATE_SUCCESS);
+      });
+      detail.resolve();
+    } catch (error) {
+      this._contactFlowStage = "ready";
+      this._syncContactDomState(CONTACT_THEATRE_DOM_STATE_READY);
+      detail.reject(error);
+    }
+  }
+
+  private async _runContactIntroSequence(engine: Engine): Promise<void> {
+    if (
+      this._contactFlowStage === "ready" ||
+      this._contactFlowStage === "outtro" ||
+      this._contactFlowStage === "success"
+    ) {
+      return;
+    }
+    if (this._contactIntroTask) {
+      await this._contactIntroTask;
+      return;
+    }
+
+    this._contactIntroTask = this._enqueueContactFlow(async () => {
+      if (this._contactFlowStage !== "idle") return;
+      this._contactFlowStage = "intro";
+      this._syncContactDomState(CONTACT_THEATRE_DOM_STATE_PENDING);
+      try {
+        await this._playContactTheatreStep(
+          engine,
+          () => this._pageTheatreBinder.startIntroIfNeeded(engine),
+        );
+      } catch (error) {
+        this._contactFlowStage = "idle";
+        this._syncContactDomState(null);
+        throw error;
+      }
+      this._contactFlowStage = "ready";
+      this._syncContactDomState(CONTACT_THEATRE_DOM_STATE_READY);
+    }).finally(() => {
+      this._contactIntroTask = null;
+    });
+
+    await this._contactIntroTask;
+  }
+
+  private async _playContactTheatreStep(
+    engine: Engine | null,
+    play: () => Promise<void>,
+  ): Promise<void> {
+    if (!engine) return;
+    this._orbitRuntime.pause();
+    try {
+      await play();
+    } finally {
+      this._orbitRuntime.resume(engine);
+    }
+  }
+
+  private _enqueueContactFlow(task: () => Promise<void>): Promise<void> {
+    const scheduledTask = this._contactFlowQueue.then(task, task);
+    this._contactFlowQueue = scheduledTask.then(
+      () => undefined,
+      () => undefined,
+    );
+    return scheduledTask;
+  }
+
+  private _resetContactFlow(): void {
+    this._contactFlowStage = "idle";
+    this._contactFlowQueue = Promise.resolve();
+    this._contactIntroTask = null;
+    this._clearContactMotionTimers();
+  }
+
+  private _syncContactDomState(state: ContactDomState | null): void {
+    if (state == null) {
+      document.documentElement.removeAttribute(CONTACT_THEATRE_DOM_STATE_ATTRIBUTE);
+    } else {
+      document.documentElement.setAttribute(CONTACT_THEATRE_DOM_STATE_ATTRIBUTE, state);
+    }
+    this._syncContactDomVisibility(state);
+    this._syncContactDomMotion(state);
+  }
+
+  private _syncContactDomVisibility(state: ContactDomState | null): void {
+    const formShell = this._queryOne<HTMLElement>(
+      CONTACT_THEATRE_FORM_SHELL_SELECTOR,
+    );
+    const successSection = this._queryOne<HTMLElement>(
+      CONTACT_THEATRE_SUCCESS_SELECTOR,
+    );
+    if (formShell) {
+      const isFormHidden = state === CONTACT_THEATRE_DOM_STATE_SUCCESS;
+      formShell.setAttribute("aria-hidden", isFormHidden ? "true" : "false");
+    }
+    if (successSection) {
+      const isSuccessVisible = state === CONTACT_THEATRE_DOM_STATE_SUCCESS;
+      successSection.setAttribute(
+        "aria-hidden",
+        isSuccessVisible ? "false" : "true",
+      );
+    }
+  }
+
+  private _prepareContactDomMotion(): void {
+    const blocks = this._resolveContactRevealBlocks();
+    blocks.forEach((block) => {
+      block.classList.remove("is-block-reveal-down");
+    });
+    BlockReveal.prepare(blocks);
+    BlockReveal.prepare(this._resolveContactSuccessBlocks());
+
+    const successTextNodes = this._resolveContactSuccessTextNodes();
+    successTextNodes.forEach((node) => {
+      node.classList.add(MASKING.wrapTargetClass);
+    });
+    TextReveal.wrap(`.${MASKING.wrapTargetClass}`, this._root ?? document);
+    TextReveal.prepare(successTextNodes);
+    TextReveal.setVisibleOff(successTextNodes);
+  }
+
+  private _syncContactDomMotion(state: ContactDomState | null): void {
+    this._clearContactMotionTimers();
+    const blocks = this._resolveContactRevealBlocks();
+    const successBlocks = this._resolveContactSuccessBlocks();
+    const successTextNodes = this._resolveContactSuccessTextNodes();
+    if (state === CONTACT_THEATRE_DOM_STATE_READY) {
+      this._setContactBlocksDown(successBlocks);
+      TextReveal.setVisibleOff(successTextNodes);
+      this._staggerContactBlocks(blocks, true);
+      return;
+    }
+    if (state === CONTACT_THEATRE_DOM_STATE_LEAVING) {
+      this._staggerContactBlocks([...blocks].reverse(), false);
+      TextReveal.setVisibleOff(successTextNodes);
+      return;
+    }
+    if (state === CONTACT_THEATRE_DOM_STATE_SUCCESS) {
+      successBlocks.forEach((block) => {
+        block.classList.remove("is-block-reveal-down");
+        BlockReveal.reveal(block);
+      });
+      this._staggerContactText(successTextNodes, true);
+      return;
+    }
+    if (state === CONTACT_THEATRE_DOM_STATE_PENDING) {
+      this._hideContactBlocksImmediately(blocks);
+      this._hideContactBlocksImmediately(successBlocks);
+      TextReveal.setVisibleOff(successTextNodes);
+      return;
+    }
+    this._hideContactBlocksImmediately(blocks);
+    this._hideContactBlocksImmediately(successBlocks);
+    TextReveal.setVisibleOff(successTextNodes);
+  }
+
+  private _resolveContactRevealBlocks(): HTMLElement[] {
+    return CONTACT_REVEAL_BLOCK_SELECTORS.flatMap((selector) =>
+      this._queryAll<HTMLElement>(selector),
+    );
+  }
+
+  private _resolveContactSuccessTextNodes(): HTMLElement[] {
+    return this._queryAll<HTMLElement>(CONTACT_SUCCESS_TEXT_SELECTOR);
+  }
+
+  private _resolveContactSuccessBlocks(): HTMLElement[] {
+    return this._queryAll<HTMLElement>(CONTACT_SUCCESS_BLOCK_SELECTOR);
+  }
+
+  private _staggerContactBlocks(
+    blocks: readonly HTMLElement[],
+    visible: boolean,
+  ): void {
+    blocks.forEach((block, index) => {
+      const timerId = window.setTimeout(() => {
+        if (visible) {
+          block.classList.remove("is-block-reveal-down");
+          BlockReveal.reveal(block);
+          return;
+        }
+        block.classList.add(INIT_DOM_CLASSES.blockBase);
+        block.classList.remove(INIT_DOM_CLASSES.blockUp);
+        block.classList.remove(BLOCK_HIDDEN_CLASS, INIT_DOM_CLASSES.boxHidden);
+        void block.getBoundingClientRect();
+        block.classList.add("is-block-reveal-down");
+      }, index * CONTACT_REVEAL_STAGGER_MS);
+      this._contactMotionTimerIds.push(timerId);
+    });
+  }
+
+  private _hideContactBlocksImmediately(blocks: readonly HTMLElement[]): void {
+    blocks.forEach((block) => {
+      block.classList.remove(INIT_DOM_CLASSES.blockUp, "is-block-reveal-down");
+      block.classList.add(INIT_DOM_CLASSES.blockBase, INIT_DOM_CLASSES.boxHidden);
+    });
+  }
+
+  private _setContactBlocksDown(blocks: readonly HTMLElement[]): void {
+    blocks.forEach((block) => {
+      block.classList.add(INIT_DOM_CLASSES.blockBase);
+      block.classList.remove(INIT_DOM_CLASSES.blockUp);
+      block.classList.remove(BLOCK_HIDDEN_CLASS, INIT_DOM_CLASSES.boxHidden);
+      void block.getBoundingClientRect();
+      block.classList.add("is-block-reveal-down");
+    });
+  }
+
+  private _staggerContactText(
+    nodes: readonly HTMLElement[],
+    visible: boolean,
+  ): void {
+    nodes.forEach((node, index) => {
+      const timerId = window.setTimeout(() => {
+        if (visible) {
+          TextReveal.setVisibleOn(node);
+          return;
+        }
+        TextReveal.setVisibleOff(node);
+      }, index * CONTACT_REVEAL_STAGGER_MS);
+      this._contactMotionTimerIds.push(timerId);
+    });
+  }
+
+  private _clearContactMotionTimers(): void {
+    this._contactMotionTimerIds.forEach((timerId) => {
+      window.clearTimeout(timerId);
+    });
+    this._contactMotionTimerIds = [];
+  }
+
+  private _syncContactSuccessMessage(message: string): void {
+    const content = this._queryOne<HTMLElement>(CONTACT_THEATRE_CONTENT_SELECTOR);
+    const messageNode = content?.querySelector<HTMLElement>(
+      CONTACT_THEATRE_SUCCESS_MESSAGE_SELECTOR,
+    );
+    if (!messageNode) return;
+    messageNode.textContent =
+      message.trim() === ""
+        ? CONTACT_THEATRE_SUCCESS_DEFAULT_MESSAGE
+        : message;
+  }
+
+  private _createDomInitAdapter(): DomStyleAdapter {
+    return {
+      set: (target: string, vars: object): void => {
+        const nodes = this._queryAll<HTMLElement>(target);
+        if (nodes.length === 0) return;
+        const entries = Object.entries(vars as Record<string, unknown>);
+        if (entries.length === 0) return;
+        nodes.forEach((node) => {
+          entries.forEach(([key, value]) => {
+            if (value == null) return;
+            if (key === "autoAlpha") {
+              this._applyDomVisibilityState(node, {
+                visible: Number.isFinite(Number(value)) && Number(value) > 0,
+                opacity: Number(value),
+              });
+              return;
+            }
+            node.style.setProperty(this._toCssPropertyName(key), String(value));
+          });
+        });
+      },
+    };
+  }
+
+  private _toCssPropertyName(key: string): string {
+    return key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
+  }
+
+  private _canRun(pageConfig: AppPageConfig, root?: ParentNode | null): boolean {
+    const three = pageConfig.three;
+    if (!three) return false;
+    const env = EnvSetup.shouldInit({ canvasId: three.canvasId, root });
+    return env.shouldInit;
+  }
+
+  private async _initEngineAndSetups(
+    pageConfig: AppPageConfig,
+    root?: ParentNode | null,
+  ): Promise<boolean> {
+    const canvasElement = this._resolveCanvasElement(root, pageConfig.three?.canvasId);
+    this._engineContext = await this._appEngineRuntime.init({
+      pageConfig,
+      root,
+      canvasElement,
+    });
+    if (!this._engineContext) return false;
+    this._engine = this._engineContext.engine;
+    return true;
+  }
+
+  private _resolveCanvasElement(
+    root: ParentNode | null | undefined,
+    canvasId: string | undefined,
+  ): HTMLCanvasElement | null {
+    if (!canvasId) return null;
+    if (!root) {
+      return document.getElementById(canvasId) as HTMLCanvasElement | null;
+    }
+    if (root instanceof HTMLCanvasElement && root.id === canvasId) {
+      return root;
+    }
+    return root.querySelector<HTMLCanvasElement>(`#${canvasId}`);
+  }
+
+  private _getGsap(): GsapGlobal | null {
+    if (typeof window === "undefined") return null;
+    return ((window as WindowWithGsap).gsap ?? null) as GsapGlobal | null;
+  }
+
+  private async _runAfterLoad(
+    pageConfig: AppPageConfig,
+    objectSetupPromise: Promise<void>,
+    options?: { deferScrollSync?: boolean },
+  ): Promise<void> {
+    if (!this._engine || !this._engineContext?.shaderManager) return;
+
+    const startupResult = await this._appStartupRuntime.start({
+      engine: this._engine,
+      engineContext: this._engineContext,
+      pageConfig,
+      objectSetupPromise,
+      onBootStateApply: async () => {
+        await this._pageTheatreBinder.applyBootStateIfNeeded(this._engine!);
+      },
+      pageBootRuntime: this._pageBootRuntime,
+      onOrbitSetup: () => this._setupOrbitControls(pageConfig),
+      onShaderUpdate: (deltaTime) => {
+        this._engineContext?.shaderManager.update(deltaTime);
+      },
+      onOrbitUpdate: () => {
+        this._orbitRuntime.update();
+      },
+      onScrollSyncStart:
+        options?.deferScrollSync === true
+          ? undefined
+          : () => {
+              this._startScrollSync(pageConfig);
+            },
+    });
+    this._applyStartupResult(startupResult);
+    if (options?.deferScrollSync === true && pageConfig.pageId === pageMain) {
+      await this._syncInitialIntroSceneState(pageConfig);
+    }
+  }
+
+  private _applyStartupResult(result: AppStartupRuntimeResult): void {
+    this._debugPanelDispose?.();
+    this._debugPanelDispose = result.debugPanelDispose;
+  }
+
+  private async _syncInitialIntroSceneState(
+    pageConfig: MainPageConfig,
+  ): Promise<void> {
+    this._isMainIntroDomRevealComplete = false;
+    await this._syncMainSceneState(pageConfig, "intro", 0);
+  }
+
+  private _syncIntroBackground(
+    pageConfig: MainPageConfig,
+    sheetId: MainTheatreSheetId,
+    progress: number,
+  ): void {
+    const backgroundPolicy = this._resolveBackgroundPolicy<
+      MainSceneSectionKey,
+      MainTheatreSheetId
+    >(pageConfig);
+    if (!backgroundPolicy) {
+      console.warn("[AppManager._syncIntroBackground] Background policy is missing during intro flow.", {
+        sheetId,
+        progress,
+      });
+      return;
+    }
+    this._engineContext?.backgroundController.sync(
+      "intro",
+      progress,
+      sheetId,
+      backgroundPolicy,
+    );
+  }
+
+  private async _startPagePreviewIfNeeded(): Promise<void> {
+    if (!this._engine) return;
+    await this._pageTheatreBinder.startPreviewIfNeeded(this._engine);
+  }
+
+  private _handleMainIntroDomRevealComplete(): void {
+    this._isMainIntroDomRevealComplete = true;
+    Panel.getInstance().setVisibleOn();
+  }
+
+  private async _setupOrbitControls(pageConfig: AppPageConfig): Promise<void> {
+    if (!this._engine) return;
+    await this._orbitRuntime.init(
+      this._engine,
+      pageConfig,
+      () => this._setTheatreAuthorMode(true),
+      () => this._setTheatreAuthorMode(false),
+    );
+  }
+
+  private _startScrollSync(pageConfig: AppPageConfig): void {
+    this._scrollSceneRuntime.dispose();
+    if (pageConfig.pageId === pageMain) {
+      this._startMainScrollSync(pageConfig);
+      return;
+    }
+    if (pageConfig.pageId !== pageAbout) {
+      return;
+    }
+    this._startAboutScrollSync(pageConfig);
+  }
+
+  private _startMainScrollSync(pageConfig: MainPageConfig): void {
+    this._domRuntime.setAboutUiPhase("idle");
+    this._domRuntime.syncAboutUiScene(null);
+    const selectorMap = pageConfig.scrollSceneSelectors;
+    if (!selectorMap) return;
+    this._scrollSceneRuntime.start(
+      selectorMap,
+      this._createMainSceneProgressHandler(pageConfig),
+      pageConfig.scrollSceneOptions,
+    );
+  }
+
+  private _startMainScrollSyncAfterIntro(pageConfig: MainPageConfig): void {
+    this._domRuntime.setAboutUiPhase("idle");
+    this._domRuntime.syncAboutUiScene(null);
+    const selectorMap = pageConfig.scrollSceneSelectors;
+    if (!selectorMap) return;
+    const { intro: _introSelector, ...afterIntroSelectorMap } = selectorMap;
+    const optionsMap = pageConfig.scrollSceneOptions ?? {};
+    const { intro: _introOptions, ...afterIntroOptionsMap } = optionsMap;
+    this._scrollSceneRuntime.start(
+      afterIntroSelectorMap,
+      this._createMainSceneProgressHandler(pageConfig),
+      afterIntroOptionsMap,
+    );
+  }
+
+  private _startAboutScrollSync(pageConfig: AboutPageConfig): void {
+    const selectorMap = pageConfig.scrollSceneSelectors;
+    if (!selectorMap) return;
+    this._domRuntime.setAboutUiPhase("scroll");
+    this._scrollSceneRuntime.start(
+      selectorMap,
+      this._createAboutSceneProgressHandler(pageConfig),
+      pageConfig.scrollSceneOptions,
+    );
+  }
+
+  private _startAboutScrollSyncAfterIntro(pageConfig: AboutPageConfig): void {
+    const selectorMap = pageConfig.scrollSceneSelectors;
+    if (!selectorMap) return;
+    this._domRuntime.setAboutUiPhase("scroll");
+    this._domRuntime.syncAboutUiScene(null);
+    const {
+      heroIntro: _heroIntroSelector,
+      ...afterIntroSelectorMap
+    } = selectorMap;
+    const optionsMap = pageConfig.scrollSceneOptions ?? {};
+    const {
+      heroIntro: _heroIntroOptions,
+      ...afterIntroOptionsMap
+    } = optionsMap;
+    this._scrollSceneRuntime.start(
+      afterIntroSelectorMap,
+      this._createAboutSceneProgressHandler(pageConfig),
+      afterIntroOptionsMap,
+      { skipInitialSync: true },
+    );
+  }
+
+  private async _syncMainSceneState(
+    pageConfig: MainPageConfig,
+    sceneKey: MainSceneSectionKey,
+    progress: number,
+  ): Promise<void> {
+    if (!this._engine) return;
+    await new Promise<void>((resolve) => {
+      this._pageTheatreBinder.syncScene(
+        this._engine!,
+        sceneKey,
+        progress,
+        (sheetId) => {
+          this._handleMainSceneSync(
+            {
+              sceneKey,
+              progress,
+              sheetId: sheetId as MainTheatreSheetId | null,
+            },
+            pageConfig,
+          );
+          resolve();
+        },
+      );
+    });
+  }
+
+  private async _syncAboutSceneState(
+    pageConfig: AboutPageConfig,
+    sceneKey: AboutSceneSectionKey,
+    progress: number,
+  ): Promise<void> {
+    if (!this._engine) return;
+    await new Promise<void>((resolve) => {
+      this._pageTheatreBinder.syncScene(
+        this._engine!,
+        sceneKey,
+        progress,
+        (sheetId) => {
+          this._handleAboutSceneSync(
+            {
+              sceneKey,
+              progress,
+              sheetId: sheetId as AboutTheatreSheetId | null,
+            },
+            pageConfig,
+          );
+          resolve();
+        },
+      );
+    });
+  }
+
+  private _createMainSceneProgressHandler(
+    pageConfig: MainPageConfig,
+  ): (sceneKey: MainSceneSectionKey, progress: number) => void {
+    return (sceneKey, progress) => {
+      if (!this._engine) return;
+      this._pageTheatreBinder.syncScene(
+        this._engine,
+        sceneKey,
+        progress,
+        (sheetId) => {
+          this._handleMainSceneSync(
+            {
+              sceneKey,
+              progress,
+              sheetId: sheetId as MainTheatreSheetId | null,
+            },
+            pageConfig,
+          );
+        },
+      );
+    };
+  }
+
+  private _createAboutSceneProgressHandler(
+    pageConfig: AboutPageConfig,
+  ): (sceneKey: AboutSceneSectionKey, progress: number) => void {
+    return (sceneKey, progress) => {
+      if (!this._engine) return;
+      this._pageTheatreBinder.syncScene(
+        this._engine,
+        sceneKey,
+        progress,
+        (sheetId) => {
+          this._handleAboutSceneSync(
+            {
+              sceneKey,
+              progress,
+              sheetId: sheetId as AboutTheatreSheetId | null,
+            },
+            pageConfig,
+          );
+        },
+      );
+    };
+  }
+
+  private _handleMainSceneSync(
+    state: {
+      sceneKey: MainSceneSectionKey;
+      progress: number;
+      sheetId: MainTheatreSheetId | null;
+    },
+    pageConfig: MainPageConfig,
+  ): void {
+    this._syncMainSceneLifecycle(state.sceneKey, pageConfig);
+    this._scenePolicyRuntime.syncScene(state, {
+      root: this._root,
+      engine: this._engine,
+      isTheatreAuthorMode: this._isTheatreAuthorMode,
+      skipVeilPolicies: this._isIntroHandoffVeilTransitioning,
+      pageRuntimePolicies: pageConfig.sceneRuntimePolicies,
+      backgroundPolicy: this._resolveBackgroundPolicy(pageConfig),
+      backgroundController: this._engineContext?.backgroundController,
+      sceneSheetEffectRuntime: this._mainSceneSheetEffectRuntime,
+      resolveTransitionVeil: this._resolveTransitionVeil.bind(this),
+    });
+    this._syncStoryShaderDepth(state);
+    this._syncHudPanelByScene(state);
+    this._domRuntime.syncMainWhyShowcase(state.sceneKey, state.progress);
+    pageConfig.scenes[state.sceneKey]?.onProgress?.(state.progress);
+  }
+
+  private _handleAboutSceneSync(
+    state: {
+      sceneKey: AboutSceneSectionKey;
+      progress: number;
+      sheetId: AboutTheatreSheetId | null;
+    },
+    pageConfig: AboutPageConfig,
+  ): void {
+    this._syncSceneLifecycle(pageAbout, state.sceneKey, pageConfig);
+    this._logAboutSheetChange(state);
+    this._domRuntime.syncAboutHeroSloganKeyword(
+      state.sceneKey,
+      state.progress,
+      this._getGsap(),
+    );
+    this._domRuntime.syncAboutUiScene(state.sceneKey);
+    this._scenePolicyRuntime.syncScene(state, {
+      root: this._root,
+      engine: this._engine,
+      isTheatreAuthorMode: this._isTheatreAuthorMode,
+      pageRuntimePolicies: pageConfig.sceneRuntimePolicies,
+      backgroundPolicy: this._resolveBackgroundPolicy(pageConfig),
+      backgroundController: this._engineContext?.backgroundController,
+      sceneSheetEffectRuntime: this._aboutSceneSheetEffectRuntime,
+    });
+    pageConfig.scenes[state.sceneKey]?.onProgress?.(state.progress);
+  }
+
+  private _logAboutSheetChange(state: {
+    sceneKey: AboutSceneSectionKey;
+    progress: number;
+    sheetId: AboutTheatreSheetId | null;
+  }): void {
+    const nextLogKey = `${state.sceneKey}:${state.sheetId ?? "none"}`;
+    const previousLogKey = this._lastSheetLogKeyByPageId.get(pageAbout) ?? null;
+    if (previousLogKey === nextLogKey) return;
+
+    this._lastSheetLogKeyByPageId.set(pageAbout, nextLogKey);
+
+    const order =
+      state.sheetId == null ? null : ABOUT_THEATRE_SHEET_IDS.indexOf(state.sheetId) + 1;
+    const orderLabel =
+      order == null || order <= 0
+        ? "unmapped"
+        : `${order}/${ABOUT_THEATRE_SHEET_IDS.length}`;
+
+    Logger.info(
+      AppManager._CLASS,
+      "_logAboutSheetChange",
+      `About sheet changed -> ${state.sheetId ?? "none"} (${orderLabel})`,
+      {
+        sceneKey: state.sceneKey,
+        sheetId: state.sheetId,
+        order,
+        totalSheets: ABOUT_THEATRE_SHEET_IDS.length,
+        progress: Number(state.progress.toFixed(4)),
+      },
+    );
+  }
+
+  private _syncMainSceneLifecycle(
+    sceneKey: MainSceneSectionKey,
+    pageConfig: MainPageConfig,
+  ): void {
+    this._syncSceneLifecycle(pageMain, sceneKey, pageConfig);
+  }
+
+  private _syncSceneLifecycle<TSceneKey extends string>(
+    pageId: typeof pageMain | typeof pageAbout,
+    sceneKey: TSceneKey,
+    pageConfig: { scenes: Partial<Record<TSceneKey, { onDispose?: () => void }>> },
+  ): void {
+    const previousSceneKey = this._lastSceneKeyByPageId.get(pageId) ?? null;
+    if (previousSceneKey === sceneKey) return;
+    if (previousSceneKey) {
+      pageConfig.scenes[previousSceneKey as TSceneKey]?.onDispose?.();
+    }
+    this._lastSceneKeyByPageId.set(pageId, sceneKey);
+  }
+
+  private _disposeActiveScenes(): void {
+    if (!this._pageConfig) return;
+    const activeSceneKey = this._lastSceneKeyByPageId.get(this._pageConfig.pageId);
+    if (!activeSceneKey) return;
+    this._pageConfig.scenes[activeSceneKey as keyof typeof this._pageConfig.scenes]?.onDispose?.();
+  }
+
+  private _setTheatreAuthorMode(enabled: boolean): void {
+    if (this._isTheatreAuthorMode === enabled) return;
+    this._isTheatreAuthorMode = enabled;
+    this._engineContext?.backgroundController.setTransitionEnabled(!enabled);
+    if (!enabled) return;
+    this._scenePolicyRuntime.resetPolicies(
+      this._pageConfig?.sceneRuntimePolicies,
+      this._resolveTransitionVeil.bind(this),
+      this._root,
+    );
+  }
+
+  private _resolveTransitionVeil(
+    objectId = sceneTransitionVeil,
+  ): TransitionVeilRuntimePort | null {
+    return (this._engine?.getSceneObjectById(objectId) ??
+      null) as TransitionVeilRuntimePort | null;
+  }
+
+  private _resolveBackgroundPolicy<
+    TSceneKey extends string,
+    TSheetId extends string,
+  >(pageConfig: AppPageConfig): SceneBackgroundPolicy<TSceneKey, TSheetId> | null {
+    return (pageConfig.backgroundPolicies?.[0] ??
+      null) as SceneBackgroundPolicy<TSceneKey, TSheetId> | null;
+  }
+
+  private _applyDomVisibilityState(
+    element: HTMLElement,
+    state: DomVisibilityState,
+  ): void {
+    if (state.opacity != null) {
+      element.style.opacity = String(Helpers.clamp01(state.opacity));
+    }
+    Aria.setVisibility(element, state.visible);
+  }
+
+  private _syncStoryShaderDepth(state: {
+    sceneKey: MainSceneSectionKey;
+    progress: number;
+    sheetId: MainTheatreSheetId | null;
+  }): void {
+    const heroDarken =
+      state.sceneKey === "hero"
+        ? Helpers.clamp01(state.progress)
+        : 0;
+    const heroDepth =
+      state.sceneKey === "hero"
+        ? Helpers.clamp01(state.progress)
+        : 0;
+    const storyDepth =
+      state.sceneKey === "story"
+        ? Helpers.clamp01(state.progress)
+        : 0;
+    this._engine?.getBackgroundManager()?.setRuntimeState(mainBackground, {
+      shaderControls: {
+        heroDarken,
+        storyDepth: Math.max(heroDepth, storyDepth),
+      },
+    });
+  }
+
+  private _syncHudPanelByScene(state: {
+    sceneKey: MainSceneSectionKey;
+    progress: number;
+    sheetId: MainTheatreSheetId | null;
+  }): void {
+    const hudPanel = HudPanel.getInstance();
+    const shouldShowHudPanel =
+      state.sceneKey === "hero" || state.sceneKey === "story";
+
+    const isMobileSm =
+      ResponsiveRuntime.getDefault().getSnapshot().viewportWidth <= 544;
+
+    if (!isMobileSm) {
+      const uiPanel = Panel.getInstance();
+      const shouldShowUiPanel =
+        (state.sheetId === "intro" && this._isMainIntroDomRevealComplete) ||
+        state.sheetId === "introAction" ||
+        state.sheetId === "hero" ||
+        state.sheetId === "story" ||
+        state.sheetId === "worksFinal" ||
+        ((state.sheetId == null) &&
+          ((state.sceneKey === "intro" && this._isMainIntroDomRevealComplete) ||
+            state.sceneKey === "hero" ||
+            state.sceneKey === "story" ||
+            state.sceneKey === "worksFinal"));
+      if (shouldShowUiPanel) uiPanel.setVisibleOn();
+      else uiPanel.setVisibleOff();
+    }
+
+    hudPanel.syncFlightProgress(state.sceneKey, state.progress, state.sheetId);
+    if (shouldShowHudPanel) {
+      hudPanel.setVisibleOn();
+      return;
+    }
+    hudPanel.setVisibleOff();
+  }
+
+  private _toFiniteNumber(value: unknown, fallback: number): number {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  }
+
+  private async _wait(durationMs: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, durationMs);
+    });
+  }
+
+  private _queryAll<TElement extends Element>(selector: string): TElement[] {
+    const scopedRoot = this._root;
+    if (!scopedRoot) {
+      return Array.from(document.querySelectorAll<TElement>(selector));
+    }
+    return Array.from(scopedRoot.querySelectorAll<TElement>(selector));
+  }
+
+  private _queryOne<TElement extends Element>(selector: string): TElement | null {
+    const scopedRoot = this._root;
+    if (!scopedRoot) {
+      return document.querySelector<TElement>(selector);
+    }
+    return scopedRoot.querySelector<TElement>(selector);
+  }
+}

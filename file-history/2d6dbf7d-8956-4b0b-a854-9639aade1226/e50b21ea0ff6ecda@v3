@@ -1,0 +1,37 @@
+# NINEONELABS Renewal Project
+
+<!-- File-type specific rules load on demand from .claude/rules/ -->
+
+## Stack
+
+- **Frontend**: TypeScript, SCSS, Three.js, Vite, Swiper
+- **Backend**: PHP 7.4, Custom MVC, MySQL 8.0, Apache (Docker)
+
+## Workflow Rules
+
+- Do NOT run `npm run build` or `npm run watch` — dev server reflects changes on save automatically
+- Dev server runs at [http://localhost:8888](http://localhost:8888)
+
+## Architecture
+
+- Public pages: closure routes in `routes/web.php` + `render()` — not controller-class MVC
+- Do not reintroduce Barba.js or any SPA navigation contract
+- Do not duplicate ownership already in `AppManager` / `PageRuntime` / `PageTheatreBinder`
+
+## Security
+
+- No hardcoded credentials (DB host/user/pass, API keys) in code — use env vars
+
+## Verification
+
+After TypeScript changes:
+
+```bash
+chop node_modules/.bin/tsc --noEmit
+```
+
+After PHP changes (Docker required):
+
+```bash
+docker compose exec web php -l <file>
+```

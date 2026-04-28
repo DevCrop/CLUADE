@@ -1,0 +1,28 @@
+{
+  "autoUpdatesChannel": "latest",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "\"C:/Users/edn_y/AppData/Local/Programs/chop/chop.exe\" hook",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "rtk hook claude"
+          }
+        ]
+      }
+    ]
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "effortLevel": "high",
+  "model": "sonnet"
+}

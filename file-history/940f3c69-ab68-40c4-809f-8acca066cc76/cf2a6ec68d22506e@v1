@@ -1,0 +1,28 @@
+---
+paths:
+  - "**/*.scss"
+---
+
+# SCSS Rules
+
+- Use BEM pattern for class naming
+- Source: `resource/scss/` → compiled output: `resource/dist/`
+- Do NOT run build commands — dev server reflects changes on save automatically
+
+## Token Contract
+
+- Reusable tokens → `resource/scss/abstract/` or `base/_root.scss`
+- Use `var(--clr-*)`, `var(--duration-*)` etc. in consumers — no raw hex when semantic token exists upstream
+- Admin CSS (`admin/resource/css/`) is separate — do not import from public SCSS entry
+
+## Reset / Init Contract
+
+`_init.scss`가 다음을 전역 적용함 — 컴포넌트/페이지 SCSS에서 단독 중복 선언 금지:
+- `margin: 0` → `*` selector로 이미 0
+- `padding: 0` → `*` selector로 이미 0
+- `list-style: none` → `ul, ol, li`에 이미 없음
+- `padding-left: 0` / `padding-right: 0` 등 단일 축 0도 동일하게 금지
+  (단, 직상위 규칙에서 해당 축에 non-zero 값이 선언되어 있으면 예외)
+
+`@include font("...")` mixin은 `font-size`, `line-height`, `letter-spacing`을 모두 출력함.
+mixin 호출 직후 동일 값으로 개별 재선언하지 않는다.

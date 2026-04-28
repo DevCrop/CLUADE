@@ -1,0 +1,79 @@
+# Plan: Works Scatter Intro — Sync Light Props to Main Page
+
+## Context
+
+Works scatter 인트로의 Theatre.js 라이트 애니메이션이 메인 페이지 인트로와 다른 값을 사용하고 있다.  
+메인 페이지는 intensity 13→5, groundLight 18.42, rocketFillLight 5.68→15 등 극적인 조명 연출을 하는 반면, works.json 인트로는 intensity 1.2→3, groundLight 4, rocketFillLight 0, rocketRimLightLeft 56.86 등 전혀 다른 값이다.  
+목표: `resource/json/works.json` 의 인트로 sceneLights 키프레임을 `resource/json/main.json` 의 첫 번째 시트 값과 100% 동일(값 + position 타이밍)하게 맞춘다.
+
+---
+
+## Critical Files
+
+| 파일 | 역할 |
+|------|------|
+| `resource/json/works.json` | 수정 대상 — Theatre 인트로 키프레임 |
+| `resource/json/main.json` | 참조 소스 — 복사할 라이트 값 |
+| `resource/ts/config/scene-light.config.ts` | 기본값 정의 (변경 없음) |
+| `resource/ts/pages/works/theatre/WorksTheatreRuntime.ts` | normalizeWorksSceneLightsState — 변경 없음 |
+
+---
+
+## Changes (resource/json/works.json only)
+
+### 1. Static Override — `sceneLights` 블록 (lines 326–352)
+
+현재 값 (명시적 오버라이드 다수):
+```json
+"sceneLights": {
+  "visible": true, "intensity": 2, "flightProgress": 0,
+  "groundLight": 1, "rocketFillLight": 5.68,
+  "ground": { "rotation": { "x": 40, "y": -1, "z": 69 }, ... },
+  "rocketRimLightRight": -2.28, "rocketRimLightLeft": 16.86
+}
+```
+
+변경 후 (main.json 와 동일):
+```json
+"sceneLights": {
+  "ground": { "rotation": { "x": 8 } }
+}
+```
+
+---
+
+### 2. Keyframe 트랙 — 8개 트랙 수정
+
+main.json 소스 키프레임 값 (position 0 → 3.833):
+
+| 트랙 ID | debugName | pos 0 값 | pos 3.833 값 |
+|---------|-----------|----------|--------------|
+| `J9h2IgvGtQ` | sceneLights.intensity | **13** | **5** |
+| `oOW0pWeoqk` | sceneLights.groundLight | **18.42** | *(단일 키프레임)* |
+| `d43gSLOAY2` | sceneLights.rocketFillLight | **5.68** | **15** |
+| `QNj-sCurA8` | sceneLights.rocketRimLightLeft | **16.86** | **2** |
+| `N3H9YyORkv` | sceneLights.rocketRimLightRight | **-2.280000000000001** | **0** |
+| `14mFXxDfEz` | sceneLights.ground.rotation.x | **73** | **0** |
+| `NKZ3u-EkDS` | sceneLights.ground.rotation.y | **0** | *(단일 키프레임)* |
+| `0UMf4BZDQd` | sceneLights.ground.rotation.z | **0** | *(단일 키프레임)* |
+| `VOxZdvxlX0` | sceneLights.visible | true | *(변경 없음)* |
+
+**각 트랙에 적용할 편집 규칙:**
+- pos 0 keyframe: value를 위 표 값으로 교체 (ID 유지, handles `[0.5, 1, 0.5, 0]` 유지)
+- 두 번째 keyframe이 있는 경우: position `5.2` → `3.833`, value를 위 표 값으로 교체
+- 단일 키프레임 트랙 (groundLight, rotation.y, rotation.z): 두 번째 keyframe(pos 5.2) 제거
+
+---
+
+## TypeScript 변경 없음
+
+- `normalizeWorksSceneLightsState` 는 이미 모든 필드를 MAIN_SCENE_LIGHT_STATE_DEFAULTS fallback으로 처리함
+- THEATRE=1 모드에서도 JSON 값이 직접 반영되므로 TS 변경 불필요
+
+---
+
+## Verification
+
+1. `rtk tsc --noEmit` — 타입 에러 없음 확인
+2. THEATRE=1 모드(`?THEATRE=1`)로 works 페이지 접속 → 인트로 재생 시 라이트 값이 main.json과 동일한지 확인
+3. 일반 모드에서도 인트로 조명 연출 확인 (intensity 13에서 시작 → 5로 감소)

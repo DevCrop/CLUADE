@@ -1,0 +1,255 @@
+﻿
+import type {
+  RevealObserveOptions,
+  TextRevealOptions,
+  TextRevealInitOptions,
+} from "../types/component.types.js";
+import { DOM_CONFIG, MASKING } from "../config/dom.config.js";
+import { ObserveManager } from "../manager/ObserveManager.js";
+import { Animation } from "./Animation.js";
+
+const BR_PATTERN = /<br\s*\/?>/gi;
+const MASKING_DISABLED_CLASS = "is-text-reveal-disabled";
+
+export class TextReveal extends Animation {
+  private static readonly MASK_READY_CLASS = "is-mask-ready";
+  private static _observeFrameId: number | null = null;
+  private static readonly _observeManager = new ObserveManager();
+
+  static riseUp(
+    target: string | Element | Element[],
+    options: TextRevealOptions = {},
+  ): void {
+    const revealClass = options.revealClass ?? MASKING.inviewClass;
+    const elements = TextReveal.resolveManagedElements(target).filter(
+      (element): element is HTMLElement =>
+        element instanceof HTMLElement && !element.classList.contains(revealClass),
+    );
+    if (elements.length === 0) return;
+    elements.forEach((element) => {
+      element.classList.remove(MASKING.downClass);
+      element.classList.remove(MASKING.hiddenClass);
+      element.classList.add(revealClass);
+    });
+  }
+
+  static setVisibleOn(
+    target: string | Element | Element[],
+    options: TextRevealOptions = {},
+  ): void {
+    TextReveal.riseUp(target, options);
+  }
+
+  static setVisibleOff(
+    target: string | Element | Element[],
+    options: TextRevealOptions = {},
+  ): void {
+    const revealClass = options.revealClass ?? MASKING.inviewClass;
+    const elements = TextReveal.resolveManagedElements(target).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
+    if (elements.length === 0) return;
+    elements.forEach((element) => {
+      element.classList.remove(revealClass, MASKING.visibleClass);
+      element.classList.remove(MASKING.hiddenClass);
+      element.classList.remove(MASKING.downClass);
+      void element.getBoundingClientRect();
+      element.classList.add(MASKING.downClass);
+    });
+  }
+
+  static prepare(
+    target: string | Element | Element[],
+    options: TextRevealOptions = {},
+  ): Element[] {
+    const revealClass = options.revealClass ?? MASKING.inviewClass;
+    const elements = TextReveal.resolveManagedElements(target).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
+    if (elements.length === 0) return [];
+    elements.forEach((element) => {
+      element.classList.remove(
+        revealClass,
+        MASKING.visibleClass,
+        MASKING.downClass,
+      );
+    });
+    return elements;
+  }
+
+  static observe(
+    target: string | Element | Element[],
+    options: RevealObserveOptions = {},
+  ): void {
+    if (typeof document === "undefined") return;
+    const revealClass = options.inviewClass ?? MASKING.inviewClass;
+    const targets = TextReveal._resolveObserveTargets(target, options);
+    if (targets.length === 0) return;
+    const onEnter =
+      options.onEnter ??
+      ((element: Element) =>
+        TextReveal.riseUp(element, { revealClass }));
+    TextReveal._observeFrameId = window.requestAnimationFrame(() => {
+      TextReveal._observeFrameId = window.requestAnimationFrame(() => {
+        TextReveal._observeFrameId = null;
+        TextReveal._observeManager.observe(
+          targets,
+          {
+            onEnter,
+            onLeave: options.onLeave,
+          },
+          options,
+        );
+      });
+    });
+  }
+
+  static override resolveElements(
+    target: string | Element | Element[],
+  ): Element[] {
+    if (target == null) return [];
+    const resolve = (el: Element | null | undefined): Element[] => {
+      if (el == null || typeof el.matches !== "function") return [];
+      if (el.matches(MASKING.selector)) return [el];
+      return [el, ...Array.from(el.querySelectorAll<Element>(MASKING.selector))];
+    };
+
+    if (typeof target === "string") {
+      const list = document.querySelectorAll(target);
+      return Array.from(list).flatMap(resolve);
+    }
+    const arr = super.resolveElements(target);
+    return arr.flatMap(resolve);
+  }
+
+  static wrap(
+    selector = `.${MASKING.wrapTargetClass}`,
+    root?: ParentNode | null,
+  ): void {
+    if (typeof document === "undefined") return;
+    const wrapperClass = MASKING.selector.slice(1);
+    const scope = root ?? document;
+    const elements = scope.querySelectorAll<HTMLElement>(selector);
+    elements.forEach((el) => {
+      if (el.querySelector(MASKING.selector)) {
+        el.classList.add(TextReveal.MASK_READY_CLASS);
+        return;
+      }
+      const hasBr = el.querySelector("br") !== null;
+      if (hasBr) {
+        TextReveal.wrapMultiLine(el, wrapperClass);
+      } else {
+        TextReveal.wrapSingleLine(el, wrapperClass);
+      }
+      el.classList.add(TextReveal.MASK_READY_CLASS);
+    });
+  }
+
+  private static wrapSingleLine(el: HTMLElement, wrapperClass: string): void {
+    const outer = document.createElement("span");
+    outer.className = wrapperClass;
+    const inner = document.createElement("span");
+    inner.className = MASKING.lineClass;
+    while (el.firstChild) inner.appendChild(el.firstChild);
+    outer.appendChild(inner);
+    el.appendChild(outer);
+  }
+
+  private static wrapMultiLine(el: HTMLElement, wrapperClass: string): void {
+    const segments = el.innerHTML
+      .split(BR_PATTERN)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    el.innerHTML = "";
+    segments.forEach((segmentHtml) => {
+      const outer = document.createElement("span");
+      outer.className = wrapperClass;
+      const inner = document.createElement("span");
+      inner.className = MASKING.lineClass;
+      inner.innerHTML = segmentHtml;
+      outer.appendChild(inner);
+      el.appendChild(outer);
+    });
+  }
+
+  
+
+
+
+  static init(options: TextRevealInitOptions = {}): void {
+    if (typeof document === "undefined") return;
+
+    TextReveal.dispose();
+
+    TextReveal.wrap(`.${MASKING.wrapTargetClass}`, options.root);
+    if (!MASKING.enabled) {
+      document.documentElement.classList.add(MASKING_DISABLED_CLASS);
+      return;
+    }
+    document.documentElement.classList.remove(MASKING_DISABLED_CLASS);
+
+    const selector = options.selector ?? MASKING.selector;
+    const excludeSelectors =
+      options.excludeSelectors ?? DOM_CONFIG.maskingExcludeSelectors ?? [];
+    const inviewClass = options.inviewClass ?? MASKING.inviewClass;
+    const targets = TextReveal.resolveTargets(
+      selector,
+      excludeSelectors,
+      options.root,
+    );
+    if (targets.length === 0) return;
+    TextReveal.prepare(targets, { revealClass: inviewClass });
+    TextReveal.observe(targets, { ...options, inviewClass });
+  }
+
+  static dispose(): void {
+    if (TextReveal._observeFrameId != null) {
+      window.cancelAnimationFrame(TextReveal._observeFrameId);
+      TextReveal._observeFrameId = null;
+    }
+    TextReveal._observeManager.dispose();
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.remove(MASKING_DISABLED_CLASS);
+    }
+  }
+
+  private static resolveTargets(
+    selector: string,
+    excludeSelectors: string[],
+    root?: ParentNode | null,
+  ): Element[] {
+    const scope = root ?? document;
+    const all = Array.from(scope.querySelectorAll(selector));
+    const excludeRoots = excludeSelectors
+      .map((sel) => scope.querySelector(sel))
+      .filter((el): el is Element => el != null);
+    const scoped =
+      excludeRoots.length === 0
+        ? all
+        : all.filter((el) =>
+      excludeRoots.every((root) => !root.contains(el)),
+    );
+    return [...new Set(scoped)];
+  }
+
+  private static resolveManagedElements(
+    target: string | Element | Element[],
+  ): Element[] {
+    if (typeof document === "undefined") return [];
+    if (!MASKING.enabled) return [];
+    if (target == null) return [];
+    return TextReveal.resolveElements(target);
+  }
+
+  private static _resolveObserveTargets(
+    target: string | Element | Element[],
+    options: RevealObserveOptions,
+  ): Element[] {
+    if (typeof target !== "string") {
+      return TextReveal.resolveManagedElements(target);
+    }
+    const excludeSelectors =
+      options.excludeSelectors ?? DOM_CONFIG.maskingExcludeSelectors ?? [];
+    return TextReveal.resolveTargets(target, excludeSelectors, options.root);
+  }
+}

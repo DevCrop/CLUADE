@@ -1,0 +1,133 @@
+﻿import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import type {
+  AstronautObjectOptions,
+  AstronautTweenProps,
+} from "../../types/object.types.js";
+import { Helpers } from "../../utils/Helpers.js";
+
+export class Astronaut extends SceneObject<AstronautTweenProps> {
+  private _model: THREE.Group | null = null;
+  private _mixers: THREE.AnimationMixer[] = [];
+  private _options: Partial<AstronautObjectOptions> = {};
+  private _attachments = new Map<string, THREE.Object3D>();
+
+  setOptions(props: Partial<AstronautObjectOptions> | undefined): this {
+    if (props != null) this._options = { ...this._options, ...props };
+    return this;
+  }
+
+  override getAnimationTarget(): THREE.Object3D | null {
+    return this.getTimelineRoot();
+  }
+
+  override getTweenApplyMode(): "gsapOnly" {
+    return "gsapOnly";
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options;
+  }
+
+  protected override applyVisibility(visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (root) root.visible = visible;
+  }
+
+  override async runObject(): Promise<void> {
+    const ctx = this._context;
+    if (!ctx) return;
+
+    const o = this._options;
+    const modelUrl = o.modelUrl;
+    if (!modelUrl) return;
+
+    const root = this.ensureTimelineRoot("astronautRoot");
+    if (root) {
+      Helpers.applyTransform(root, o);
+    }
+
+    const path = this.resolveAssetPath(modelUrl);
+    try {
+      const gltfResult = ctx.loadModelWithAnimation
+        ? await ctx.loadModelWithAnimation(path)
+        : { model: await ctx.loadModel(path), mixers: [] };
+      const group = gltfResult.model as THREE.Group | null;
+      if (!group) return;
+      group.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        child.castShadow = true;
+        child.receiveShadow = true;
+      });
+      this._model = group;
+      this._mixers = gltfResult.mixers ?? [];
+      this.attachToTimelineRoot(group, "astronautRoot");
+      this._buildAttachments(group);
+      this._applyOptionVisibility();
+    } catch (error) {
+    }
+  }
+
+  override runUpdate(delta: number): void {
+    if (this._mixers.length === 0) return;
+    for (const mixer of this._mixers) {
+      mixer.update(delta * 0.1);
+    }
+  }
+
+  override dispose(): void {
+    this._disposeAttachments();
+    this._mixers.forEach((mixer) => {
+      mixer.stopAllAction();
+      if (this._model) mixer.uncacheRoot(this._model);
+    });
+    this._mixers = [];
+    if (this._model) {
+      this._model.traverse((child) => {
+        if (!(child as THREE.Mesh).isMesh) return;
+        const mesh = child as THREE.Mesh;
+        mesh.geometry?.dispose();
+        const mats = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+        for (const m of mats) (m as THREE.Material)?.dispose?.();
+      });
+    }
+    this._model = null;
+    super.dispose();
+  }
+
+  private _buildAttachments(group: THREE.Group): void {
+    this._disposeAttachments();
+    const attachments = Array.isArray(this._options.attachments)
+      ? this._options.attachments
+      : [];
+    const registerObject = this._context?.registerObject;
+    if (typeof registerObject !== "function") return;
+
+    for (const attachment of attachments) {
+      if (!attachment?.id) continue;
+      const anchor = new THREE.Object3D();
+      anchor.name = attachment.id;
+      anchor.position.set(
+        attachment.position?.x ?? 0,
+        attachment.position?.y ?? 0,
+        attachment.position?.z ?? 0,
+      );
+      group.add(anchor);
+      this._attachments.set(attachment.id, anchor);
+      registerObject(attachment.id, anchor);
+    }
+  }
+
+  private _disposeAttachments(): void {
+    const unregisterObject = this._context?.unregisterObject;
+    for (const [id, anchor] of this._attachments.entries()) {
+      if (anchor.parent) anchor.parent.remove(anchor);
+      if (typeof unregisterObject === "function") {
+        unregisterObject(id);
+      }
+    }
+    this._attachments.clear();
+  }
+}

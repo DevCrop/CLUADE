@@ -1,0 +1,522 @@
+import type { PageThreeConfig } from "../../../types/core.types.js";
+import type { AboutInitialState } from "../../../types/about.types.js";
+import * as THREE from "three";
+import { getDefaultThreeConfig } from "../../../config/base.config.js";
+import {
+  aboutLights,
+  aboutBackground,
+  astronaut,
+  earth,
+  gravityBalls,
+  jetEngine,
+  rocket,
+  terrian,
+} from "../../../core/setup.js";
+import {
+  ABOUT_DEFAULT_SCENE_STATE,
+  cloneAboutSceneState,
+} from "../theatre/AboutSceneState.js";
+import type {
+  AboutPageConfig,
+  AboutSceneSectionKey,
+  AboutTheatreSheetId,
+} from "../../../types/about.types.js";
+import type {
+  PageSceneRuntimePolicy,
+  SceneBackgroundPolicy,
+  SceneProgressOptionsMap,
+  SceneSelectorMap,
+} from "../../../types/runtime.types.js";
+import { TextReveal } from "../../../animation/TextReveal.js";
+import { runIntroDomTimeline } from "../../../runtime/IntroLoadingRuntime.js";
+import {
+  BACKGROUND_APP_DOM as APP_MANAGER_DOM,
+  CONTACT_HEAD_TRANSITION,
+} from "../../../config/transition.config.js";
+import {
+  resolveAboutAuthorMode,
+  resolveAboutPreviewMode,
+} from "../theatre/AboutTheatreConfig.js";
+
+const aboutIntroOverlay = { tl: runIntroDomTimeline };
+let didRunAboutDomInit = false;
+const ABOUT_IS_AUTHOR_MODE = resolveAboutAuthorMode();
+const ABOUT_IS_THEATRE_PREVIEW_MODE = resolveAboutPreviewMode();
+const ABOUT_HERO_SLOGAN_SELECTOR =
+  '.no-sub-about-hero-slogan[data-scene="heroSlogan"]';
+const ABOUT_HERO_SLOGAN_ALPHA_MIN = 0.24;
+const ABOUT_HERO_SLOGAN_ALPHA_MAX = 0.88;
+const ABOUT_HERO_SLOGAN_ALPHA_SPAN =
+  ABOUT_HERO_SLOGAN_ALPHA_MAX - ABOUT_HERO_SLOGAN_ALPHA_MIN;
+const ABOUT_HERO_SLOGAN_ALPHA_PROPERTY = "--hero-slogan-surface-alpha";
+const ABOUT_JOURNEY_SURFACE_SELECTOR = ".no-sub-about-journey-surface";
+const ABOUT_JOURNEY_SURFACE_ALPHA_MIN = 0.24;
+const ABOUT_JOURNEY_SURFACE_ALPHA_MAX = 0.72;
+const ABOUT_JOURNEY_SURFACE_ALPHA_PROPERTY = "--about-journey-surface-alpha";
+const ABOUT_JOURNEY_SURFACE_SEGMENT_SPAN =
+  (ABOUT_JOURNEY_SURFACE_ALPHA_MAX - ABOUT_JOURNEY_SURFACE_ALPHA_MIN) / 3;
+const ABOUT_CONTACT_SECTION_SELECTOR = '.no-main-contact[data-scene="contact"]';
+const ABOUT_CONTACT_HEAD_SELECTOR = ".no-main-contact__head";
+const ABOUT_CONTACT_ACTIONS_SELECTOR = ".no-main-contact__actions";
+let aboutHeroSloganElement: HTMLElement | null = null;
+let aboutJourneySurfaceElement: HTMLElement | null = null;
+const aboutSceneDomState = {
+  isContactHeadVisible: false,
+  contactHeadTimers: [] as number[],
+};
+
+const aboutBaselineSceneState = cloneAboutSceneState(ABOUT_DEFAULT_SCENE_STATE);
+const defaultThree = getDefaultThreeConfig();
+
+function getAboutHeroSloganElement(): HTMLElement | null {
+  if (aboutHeroSloganElement?.isConnected) {
+    return aboutHeroSloganElement;
+  }
+  aboutHeroSloganElement = document.querySelector<HTMLElement>(
+    ABOUT_HERO_SLOGAN_SELECTOR,
+  );
+  return aboutHeroSloganElement;
+}
+
+function getAboutJourneySurfaceElement(): HTMLElement | null {
+  if (aboutJourneySurfaceElement?.isConnected) {
+    return aboutJourneySurfaceElement;
+  }
+  aboutJourneySurfaceElement = document.querySelector<HTMLElement>(
+    ABOUT_JOURNEY_SURFACE_SELECTOR,
+  );
+  return aboutJourneySurfaceElement;
+}
+
+function setAboutHeroSloganSurfaceAlpha(progress: number): void {
+  const element = getAboutHeroSloganElement();
+  if (!element) return;
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const alpha =
+    ABOUT_HERO_SLOGAN_ALPHA_MIN +
+    ABOUT_HERO_SLOGAN_ALPHA_SPAN * clampedProgress;
+  element.style.setProperty(ABOUT_HERO_SLOGAN_ALPHA_PROPERTY, alpha.toFixed(4));
+}
+
+function resetAboutHeroSloganSurfaceAlpha(): void {
+  const element = getAboutHeroSloganElement();
+  if (!element) return;
+  element.style.setProperty(
+    ABOUT_HERO_SLOGAN_ALPHA_PROPERTY,
+    String(ABOUT_HERO_SLOGAN_ALPHA_MIN),
+  );
+}
+
+function setAboutJourneySurfaceAlpha(alpha: number): void {
+  const element = getAboutJourneySurfaceElement();
+  if (!element) return;
+  element.style.setProperty(ABOUT_JOURNEY_SURFACE_ALPHA_PROPERTY, alpha.toFixed(4));
+}
+
+function syncAboutMissionVisionSurfaceAlpha(progress: number): void {
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const alpha =
+    ABOUT_JOURNEY_SURFACE_ALPHA_MIN +
+    ABOUT_JOURNEY_SURFACE_SEGMENT_SPAN * clampedProgress;
+  setAboutJourneySurfaceAlpha(alpha);
+}
+
+function syncAboutServicesSurfaceAlpha(progress: number): void {
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const alpha =
+    ABOUT_JOURNEY_SURFACE_ALPHA_MIN +
+    ABOUT_JOURNEY_SURFACE_SEGMENT_SPAN +
+    ABOUT_JOURNEY_SURFACE_SEGMENT_SPAN * clampedProgress;
+  setAboutJourneySurfaceAlpha(alpha);
+}
+
+function syncAboutAwardsSurfaceAlpha(progress: number): void {
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const alpha =
+    ABOUT_JOURNEY_SURFACE_ALPHA_MIN +
+    ABOUT_JOURNEY_SURFACE_SEGMENT_SPAN * 2 +
+    ABOUT_JOURNEY_SURFACE_SEGMENT_SPAN * clampedProgress;
+  setAboutJourneySurfaceAlpha(alpha);
+}
+
+function resetAboutJourneySurfaceAlpha(): void {
+  setAboutJourneySurfaceAlpha(ABOUT_JOURNEY_SURFACE_ALPHA_MIN);
+}
+
+function clearTimers(timerIds: number[]): number[] {
+  timerIds.forEach((timerId) => {
+    window.clearTimeout(timerId);
+  });
+  return [];
+}
+
+
+function syncAboutContactHead(progress: number): void {
+  const section = document.querySelector<HTMLElement>(ABOUT_CONTACT_SECTION_SELECTOR);
+  const head = document.querySelector<HTMLElement>(ABOUT_CONTACT_HEAD_SELECTOR);
+  const actions = document.querySelector<HTMLElement>(ABOUT_CONTACT_ACTIONS_SELECTOR);
+  if (!section || !head || !actions) return;
+
+  const textItems = Array.from(head.querySelectorAll<HTMLElement>(".mask-target"));
+  const shouldShow = progress >= CONTACT_HEAD_TRANSITION.revealStart;
+
+  if (aboutSceneDomState.isContactHeadVisible === shouldShow) return;
+  aboutSceneDomState.isContactHeadVisible = shouldShow;
+  aboutSceneDomState.contactHeadTimers = clearTimers(
+    aboutSceneDomState.contactHeadTimers,
+  );
+
+  if (shouldShow) {
+    section.dataset.active = "true";
+    head.dataset.active = "true";
+    actions.dataset.active = "true";
+    TextReveal.setVisibleOff(textItems);
+    textItems.forEach((item, index) => {
+      const timerId = window.setTimeout(() => {
+        TextReveal.setVisibleOn(item);
+      }, index * CONTACT_HEAD_TRANSITION.revealStagger * 1000);
+      aboutSceneDomState.contactHeadTimers.push(timerId);
+    });
+    return;
+  }
+
+  textItems.forEach((item) => {
+    TextReveal.setVisibleOff(item);
+  });
+  section.dataset.active = "false";
+  head.dataset.active = "false";
+  actions.dataset.active = "false";
+}
+
+function disposeAboutContactHead(): void {
+  const section = document.querySelector<HTMLElement>(ABOUT_CONTACT_SECTION_SELECTOR);
+  const head = document.querySelector<HTMLElement>(ABOUT_CONTACT_HEAD_SELECTOR);
+  const actions = document.querySelector<HTMLElement>(ABOUT_CONTACT_ACTIONS_SELECTOR);
+  if (!section || !head || !actions) return;
+
+  aboutSceneDomState.isContactHeadVisible = false;
+  aboutSceneDomState.contactHeadTimers = clearTimers(
+    aboutSceneDomState.contactHeadTimers,
+  );
+  section.dataset.active = "false";
+  head.dataset.active = "false";
+  actions.dataset.active = "false";
+
+  const textItems = Array.from(head.querySelectorAll<HTMLElement>(".mask-target"));
+  textItems.forEach((item) => TextReveal.setVisibleOff(item));
+}
+
+function createAboutInitialState(
+  sceneState: typeof ABOUT_DEFAULT_SCENE_STATE,
+): AboutInitialState {
+  return {
+    camera: {
+      position: { ...sceneState.camera.position },
+      fov: sceneState.camera.fov,
+    },
+    cameraTarget: {
+      position: { ...sceneState.camera.target },
+    },
+    aboutLights: { ...sceneState.light },
+    terrian: { ...sceneState.terrian },
+  };
+}
+
+function createAboutObjectRegistry<TObjectId extends string>(
+  ids: readonly TObjectId[],
+): Record<TObjectId, true> {
+  return ids.reduce<Record<TObjectId, true>>(
+    (registry, id) => {
+      registry[id] = true;
+      return registry;
+    },
+    {} as Record<TObjectId, true>,
+  );
+}
+
+const aboutInitialState = createAboutInitialState(aboutBaselineSceneState);
+
+export const three: PageThreeConfig = {
+  ...defaultThree,
+  scene: { ...defaultThree.scene, fog: null },
+  camera: {
+    ...defaultThree.camera,
+    position: { ...aboutBaselineSceneState.camera.position },
+    fov: aboutBaselineSceneState.camera.fov,
+  },
+  cameraTarget: {
+    position: { ...aboutBaselineSceneState.camera.target },
+  },
+  shadowMap: {
+    enabled: true,
+    type: THREE.PCFSoftShadowMap,
+  },
+  postProcessing: { ...defaultThree.postProcessing },
+};
+
+const ABOUT_SCROLL_SCENE_SELECTORS: SceneSelectorMap<AboutSceneSectionKey> = {
+  heroIntro: '.no-sub-about-hero-intro[data-scene="heroIntro"]',
+  heroSlogan: '.no-sub-about-hero-slogan[data-scene="heroSlogan"]',
+  who: '.no-sub-about-who[data-scene="who"]',
+  missionVision: '.no-sub-about-mission-vision[data-scene="missionVision"]',
+  services: '.no-sub-about-services[data-scene="services"]',
+  awards: '.no-sub-about-awards[data-scene="awards"]',
+  client: '.no-sub-about-client[data-scene="client"]',
+  contact: '.no-main-contact[data-scene="contact"]',
+} as const;
+
+const ABOUT_TOP_ANCHORED_SCENE_OPTION = {
+  activationMode: "sectionTop",
+  activationOffsetRatio: 0,
+  progressMode: "top",
+} as const;
+
+const ABOUT_SCROLL_SCENE_OPTIONS: SceneProgressOptionsMap<AboutSceneSectionKey> =
+  {
+    heroIntro: {
+      ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+      scrollSpanVh: 220,
+      progressLagMs: 260,
+      progressStart: 0.04,
+      progressEnd: 0.96,
+      progressPower: 1.02,
+    },
+    heroSlogan: {
+      ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+      scrollSpanVh: 340,
+      progressLagMs: 300,
+      progressStart: 0.04,
+      progressEnd: 0.96,
+      progressPower: 1.06,
+    },
+    who: {
+      ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+      scrollSpanVh: 460,
+      progressLagMs: 300,
+      progressStart: 0.04,
+      progressEnd: 0.96,
+      progressPower: 1.08,
+    },
+    missionVision: {
+      ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+      scrollSpanVh: 160,
+      progressLagMs: 320,
+      progressStart: 0.03,
+      progressEnd: 0.94,
+      progressPower: 1.1,
+    },
+    services: {
+      ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+      scrollSpanVh: 180,
+      progressLagMs: 340,
+      progressStart: 0.03,
+      progressEnd: 0.93,
+      progressPower: 1.1,
+    },
+    awards: {
+      ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+      scrollSpanVh: 110,
+      progressLagMs: 300,
+      progressStart: 0.04,
+      progressEnd: 0.96,
+      progressPower: 1.06,
+    },
+    client: {
+      ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+      scrollSpanVh: 280,
+      progressLagMs: 320,
+      progressStart: 0.03,
+      progressEnd: 0.94,
+      progressPower: 1.08,
+    },
+    contact: {
+      ...ABOUT_TOP_ANCHORED_SCENE_OPTION,
+      scrollSpanVh: 320,
+      progressLagMs: 340,
+      progressStart: 0.08,
+      progressEnd: 0.96,
+      progressPower: 1.08,
+    },
+  } as const;
+
+const ABOUT_BACKGROUND_DEFAULT_STATE = {
+  variant: "aboutBase",
+} as const;
+
+const ABOUT_BACKGROUND_STATES_BY_SCENE_KEY = {
+  heroIntro: {
+    variant: "aboutHeroIntro",
+  },
+  heroSlogan: {
+    variant: "aboutHeroSlogan",
+  },
+  who: {
+    variant: "aboutWhoIntro",
+  },
+  missionVision: {
+    variant: "aboutMissionVision",
+  },
+  services: {
+    variant: "aboutHeroSlogan",
+  },
+  awards: {
+    variant: "aboutHeroSlogan",
+  },
+  client: {
+    variant: "aboutHeroSlogan",
+  },
+  contact: {
+    variant: "aboutHeroSlogan",
+  },
+} as const;
+
+const ABOUT_BACKGROUND_POLICIES: readonly SceneBackgroundPolicy<
+  AboutSceneSectionKey,
+  AboutTheatreSheetId
+>[] = [
+  {
+    backgroundId: aboutBackground,
+    defaultState: ABOUT_BACKGROUND_DEFAULT_STATE,
+    statesBySceneKey: ABOUT_BACKGROUND_STATES_BY_SCENE_KEY,
+  },
+] as const;
+
+const ABOUT_SCENE_RUNTIME_POLICIES: PageSceneRuntimePolicy<
+  AboutSceneSectionKey,
+  AboutTheatreSheetId
+> = {
+  domTargets: {
+    mainOverlay: APP_MANAGER_DOM.worksOverlaySelector,
+  },
+  overlays: [
+    {
+      targetKey: "mainOverlay",
+      windows: [
+        {
+          sceneKey: "client",
+          sheetId: "client",
+          start: 0.82,
+          end: 0.98,
+          from: 0,
+          to: 1,
+          easing: "easeInOutCubic",
+        },
+        {
+          sceneKey: "contact",
+          sheetId: "contact",
+          start: 0,
+          end: 0.18,
+          from: 1,
+          to: 0,
+          easing: "easeInOutCubic",
+        },
+      ],
+    },
+  ],
+};
+
+export const scenes = {
+  heroIntro: {},
+  heroSlogan: {
+    onProgress: (progress: number): void => {
+      setAboutHeroSloganSurfaceAlpha(progress);
+    },
+    onDispose: (): void => {
+      resetAboutHeroSloganSurfaceAlpha();
+    },
+  },
+  who: {},
+  missionVision: {
+    onProgress: (progress: number): void => {
+      syncAboutMissionVisionSurfaceAlpha(progress);
+    },
+    onDispose: (): void => {
+      resetAboutJourneySurfaceAlpha();
+    },
+  },
+  services: {
+    onProgress: (progress: number): void => {
+      syncAboutServicesSurfaceAlpha(progress);
+    },
+    onDispose: (): void => {
+      resetAboutJourneySurfaceAlpha();
+    },
+  },
+  awards: {
+    onProgress: (progress: number): void => {
+      syncAboutAwardsSurfaceAlpha(progress);
+    },
+    onDispose: (): void => {
+      resetAboutJourneySurfaceAlpha();
+    },
+  },
+  client: {},
+  contact: {
+    onProgress: (progress: number): void => {
+      syncAboutContactHead(progress);
+    },
+    onDispose: (): void => {
+      disposeAboutContactHead();
+    },
+  },
+} as const;
+
+// jetEngine.runObject parents to `rocket` via attachTo; rocket must load first.
+const ABOUT_OBJECT_IDS = [
+  aboutBackground,
+  astronaut,
+  earth,
+  rocket,
+  jetEngine,
+  gravityBalls,
+  aboutLights,
+  terrian,
+] as const;
+
+export const objects = createAboutObjectRegistry(ABOUT_OBJECT_IDS);
+
+const onScrollTimelineInit: NonNullable<
+  AboutPageConfig["onScrollTimelineInit"]
+> = (gsap): void => {
+  if (didRunAboutDomInit) return;
+  if (ABOUT_IS_AUTHOR_MODE || ABOUT_IS_THEATRE_PREVIEW_MODE) {
+    gsap.set("#intro", {
+      autoAlpha: 0,
+      pointerEvents: "none",
+    });
+  }
+  didRunAboutDomInit = true;
+};
+
+export const aboutConfig: AboutPageConfig = {
+  pageId: "about",
+  three,
+  initialState: aboutInitialState,
+  objectOptions: {
+    rocket: {
+      flame: {
+        visible: true,
+      },
+    },
+  },
+  introOverlay: ABOUT_IS_AUTHOR_MODE ? null : aboutIntroOverlay,
+  scenes,
+  objects,
+  scrollSceneSelectors: ABOUT_SCROLL_SCENE_SELECTORS,
+  scrollSceneOptions: ABOUT_SCROLL_SCENE_OPTIONS,
+  sceneRuntimePolicies: ABOUT_SCENE_RUNTIME_POLICIES,
+  backgroundPolicies: ABOUT_BACKGROUND_POLICIES,
+  orbitControls: {
+    enabled: true,
+    enableDamping: true,
+    dampingFactor: 0.08,
+    rotateSpeed: 0.7,
+    zoomSpeed: 0.8,
+    panSpeed: 0.6,
+    minDistance: 0.01,
+    maxDistance: 80,
+    minPolarAngle: 0.1,
+    maxPolarAngle: Math.PI - 0.1,
+  },
+  onScrollTimelineInit,
+};

@@ -1,0 +1,770 @@
+﻿import aboutState from "../../../../json/about.json";
+import type { Engine } from "../../../core/Engine.js";
+import { TheatreProjectSession } from "../../../lib/theatre/TheatreProjectSession.js";
+import { TheatreSheetSession } from "../../../lib/theatre/TheatreSheetSession.js";
+import { TheatreStateStorageService } from "../../../lib/theatre/TheatreStateStorageService.js";
+import type {
+  AboutResolvedTheatrePlaybackStep,
+  AboutSceneProgressState,
+  AboutSceneProgressRange,
+  AboutSceneSectionKey,
+  AboutTheatreObject,
+  AboutTheatrePlaybackRange,
+  AboutTheatrePlaybackStep,
+  AboutTheatreProps,
+  AboutTheatreSheetId,
+  AboutTheatreValue,
+} from "../../../types/about.types.js";
+import type {
+  TheatreProjectPort,
+  TheatreSequencePort,
+} from "../../../types/theatre.types.js";
+import type { PageSceneSyncPort } from "../../../types/runtime.types.js";
+import {
+  ABOUT_DEFAULT_SCENE_STATE,
+  cloneAboutSceneState,
+  mergeAboutSceneState,
+  mergeAboutTheatreValue,
+  pickAboutTheatreValue,
+} from "./AboutSceneState.js";
+import { AboutSceneRig } from "./AboutSceneRig.js";
+import { Logger } from "../../../utils/Logger.js";
+import {
+  ABOUT_AFTER_INTRO_AUTOPLAY_ENABLED,
+  ABOUT_AFTER_INTRO_AUTOPLAY_RATE,
+  ABOUT_AFTER_INTRO_AUTOPLAY_SHEET_ID,
+  ABOUT_INTRO_AUTOPLAY_RATE,
+  ABOUT_INTRO_AUTOPLAY_SHEET_ID,
+  ABOUT_SCENE_THEATRE_STEPS,
+  ABOUT_THEATRE_OBJECT_ID,
+  ABOUT_THEATRE_PROJECT_ID,
+  ABOUT_THEATRE_SHEET_IDS,
+  ABOUT_THEATRE_STORAGE_OPTIONS,
+  ABOUT_PREVIEW_RATE,
+  resolveAboutAuthorMode,
+  resolveAboutPreviewMode,
+} from "./AboutTheatreConfig.js";
+import { AboutTheatreAutoplayRuntime } from "./AboutTheatreAutoplayRuntime.js";
+
+const LEGACY_ABOUT_SHEET_ID_MAP = {
+  servicesIntro: "missionVision",
+  servicesDesc: "services",
+  clientIntro: "client",
+  clientEnd: "contact",
+} as const satisfies Readonly<Record<string, AboutTheatreSheetId>>;
+type LegacyAboutSheetId = keyof typeof LEGACY_ABOUT_SHEET_ID_MAP;
+const CLASS = "AboutTheatreRuntime";
+const DEBUG_SCENE_KEYS: readonly AboutSceneSectionKey[] = ["contact"];
+const DEBUG_SHEET_IDS: readonly AboutTheatreSheetId[] = ["contact"];
+const DEBUG_PROGRESS_BUCKETS = 20;
+const debugResolveLogKeyByScene = new Map<AboutSceneSectionKey, string>();
+const debugSyncLogKeyByScene = new Map<AboutSceneSectionKey, string>();
+
+function resolveDebugProgressBucket(progress: number): number {
+  return Math.max(
+    0,
+    Math.min(
+      DEBUG_PROGRESS_BUCKETS,
+      Math.round(Math.max(0, Math.min(1, progress)) * DEBUG_PROGRESS_BUCKETS),
+    ),
+  );
+}
+
+function shouldLogDebugBucket(
+  map: Map<AboutSceneSectionKey, string>,
+  sceneKey: AboutSceneSectionKey,
+  phase: string,
+  progress: number,
+  sheetId?: AboutTheatreSheetId | null,
+): boolean {
+  const bucket = resolveDebugProgressBucket(progress);
+  const nextKey = `${phase}:${sheetId ?? "none"}:${bucket}`;
+  const previousKey = map.get(sceneKey) ?? null;
+  if (previousKey === nextKey) return false;
+  map.set(sceneKey, nextKey);
+  return true;
+}
+
+function normalizeAboutTheatreState(
+  savedState: Record<string, unknown>,
+): Record<string, unknown> {
+  const migratedState = migrateLegacyAboutTheatreState(savedState);
+  const sheetsById = readAboutRecord(migratedState.sheetsById);
+  const cameraSheet = readAboutRecord(sheetsById?.heroIntro);
+  const sequence = readAboutRecord(cameraSheet?.sequence);
+  const staticOverrides = readAboutRecord(sequence?.staticOverrides);
+  const objectsByKey = readAboutRecord(staticOverrides?.byObject);
+  const cameraObject = readAboutRecord(objectsByKey?.[ABOUT_THEATRE_OBJECT_ID]);
+
+  if (cameraObject) {
+    const mergedValues = mergeAboutSceneState(
+      cameraObject as Partial<typeof ABOUT_DEFAULT_SCENE_STATE>,
+    );
+    Object.assign(cameraObject, pickAboutTheatreValue(mergedValues));
+  }
+
+  const projectDefinition = readAboutRecord(
+    migratedState.definitionVersion != null ? migratedState : null,
+  );
+  if (!projectDefinition || !projectDefinition.addressesBySheetId) {
+    return migratedState;
+  }
+  return {
+    ...migratedState,
+    projectId: ABOUT_THEATRE_PROJECT_ID,
+  };
+}
+
+function migrateLegacyAboutTheatreState(
+  savedState: Record<string, unknown>,
+): Record<string, unknown> {
+  const sheetsById = readAboutRecord(savedState.sheetsById);
+  if (!sheetsById) {
+    return savedState;
+  }
+  const nextSheetsById: Record<string, unknown> = {};
+  let didChange = false;
+
+  Object.entries(sheetsById).forEach(([sheetId, sheetState]) => {
+    const mappedSheetId =
+      LEGACY_ABOUT_SHEET_ID_MAP[sheetId as LegacyAboutSheetId] ?? sheetId;
+    if (mappedSheetId !== sheetId) {
+      didChange = true;
+    }
+    if ((ABOUT_THEATRE_SHEET_IDS as readonly string[]).includes(mappedSheetId)) {
+      nextSheetsById[mappedSheetId] = sheetState;
+      return;
+    }
+    didChange = true;
+  });
+
+  if (!didChange) {
+    return savedState;
+  }
+
+  return {
+    ...savedState,
+    sheetsById: nextSheetsById,
+  };
+}
+
+function readAboutRecord(value: unknown): Record<string, unknown> | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function mergeAboutTheatreStateSources(
+  fileState: Record<string, unknown> | null,
+  savedState: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (!fileState) return savedState;
+  if (!savedState) return fileState;
+  const fileSheetsById = readAboutRecord(fileState.sheetsById) ?? {};
+  const savedSheetsById = readAboutRecord(savedState.sheetsById) ?? {};
+  return {
+    ...fileState,
+    ...savedState,
+    sheetsById: {
+      ...fileSheetsById,
+      ...savedSheetsById,
+    },
+  };
+}
+
+class AboutTheatreRuntime {
+  private static _instance: AboutTheatreRuntime | null = null;
+
+  private readonly _rig = new AboutSceneRig();
+  private readonly _stateSource: Record<string, unknown>;
+  private readonly _project: TheatreProjectPort<
+    AboutTheatreValue,
+    AboutTheatreProps
+  >;
+  private readonly _objectBySheetId = new Map<
+    AboutTheatreSheetId,
+    AboutTheatreObject
+  >();
+  private readonly _sequenceBySheetId = new Map<
+    AboutTheatreSheetId,
+    TheatreSequencePort
+  >();
+  private readonly _lengthBySheetId = new Map<AboutTheatreSheetId, number>();
+  private readonly _playbackRangeBySheetId = new Map<
+    AboutTheatreSheetId,
+    AboutTheatrePlaybackRange
+  >();
+  private readonly _autoplayRuntime: AboutTheatreAutoplayRuntime;
+  private constructor() {
+    this._autoplayRuntime = new AboutTheatreAutoplayRuntime(
+      (engine, values) => this._rig.apply(engine, mergeAboutTheatreValue(values)),
+    );
+    this._stateSource = resolveAboutTheatreStateSource();
+    this._project = TheatreProjectSession.open<
+      AboutTheatreValue,
+      AboutTheatreProps
+    >(ABOUT_THEATRE_PROJECT_ID, { state: this._stateSource });
+    ABOUT_THEATRE_SHEET_IDS.forEach((sheetId) => {
+      const sheet = TheatreSheetSession.open(this._project, sheetId);
+      const object = sheet.object(
+        ABOUT_THEATRE_OBJECT_ID,
+        pickAboutTheatreValue(mergeAboutSceneState()),
+        {
+          reconfigure: true,
+        },
+      );
+      const sequenceLength = this._resolveSheetLength(sheetId, sheet.sequence);
+      const playbackRange = this._resolvePreviewRange(sheetId, sequenceLength);
+      this._objectBySheetId.set(sheetId, object);
+      this._sequenceBySheetId.set(sheetId, sheet.sequence);
+      this._lengthBySheetId.set(sheetId, sequenceLength);
+      if (playbackRange) {
+        this._playbackRangeBySheetId.set(sheetId, playbackRange);
+      }
+      if (DEBUG_SHEET_IDS.includes(sheetId)) {
+        Logger.info(CLASS, "constructor", `Initialized ${sheetId} theatre sheet.`, {
+          sheetId,
+          sequenceLength,
+          playbackRange,
+          hasPreviewRange: playbackRange != null,
+        });
+      }
+    });
+  }
+
+  static getInstance(): AboutTheatreRuntime {
+    if (AboutTheatreRuntime._instance) return AboutTheatreRuntime._instance;
+    AboutTheatreRuntime._instance = new AboutTheatreRuntime();
+    return AboutTheatreRuntime._instance;
+  }
+
+  readState(sheetId: AboutTheatreSheetId, position = 0): AboutTheatreValue {
+    const sequence = this._sequenceBySheetId.get(sheetId);
+    const object = this._objectBySheetId.get(sheetId);
+    if (!sequence || !object)
+      return pickAboutTheatreValue(cloneAboutSceneState(ABOUT_DEFAULT_SCENE_STATE));
+    const previousPosition = sequence.position;
+    sequence.position = this._clampPosition(
+      position,
+      this._lengthBySheetId.get(sheetId) ?? 0,
+    );
+    const state = mergeAboutTheatreValue(object.value);
+    sequence.position = previousPosition;
+    return pickAboutTheatreValue(state);
+  }
+
+  resolveSceneProgressState(
+    sceneKey: AboutSceneSectionKey,
+    progress: number,
+  ): AboutSceneProgressState | null {
+    const resolvedSteps = this._resolveSceneSteps(sceneKey)
+      .map((step) => this._resolveStep(step))
+      .filter((step): step is AboutResolvedTheatrePlaybackStep => step != null);
+    if (resolvedSteps.length === 0) {
+      if (DEBUG_SCENE_KEYS.includes(sceneKey)) {
+        Logger.warn(CLASS, "resolveSceneProgressState", "No theatre steps resolved.", {
+          sceneKey,
+          progress,
+        });
+      }
+      return null;
+    }
+    const clampedProgress = this._clampPosition(progress, 1);
+    for (const step of resolvedSteps) {
+      if (!this._isProgressWithinRange(clampedProgress, step.progressRange)) {
+        continue;
+      }
+      const nextState = {
+        sheetId: step.sheetId,
+        localProgress: this._resolveLocalProgress(
+          clampedProgress,
+          step.progressRange,
+        ),
+      };
+      if (
+        DEBUG_SCENE_KEYS.includes(sceneKey) &&
+        shouldLogDebugBucket(
+          debugResolveLogKeyByScene,
+          sceneKey,
+          "resolve",
+          progress,
+          nextState.sheetId,
+        )
+      ) {
+        Logger.info(
+          CLASS,
+          "resolveSceneProgressState",
+          `Resolved theatre progress for ${sceneKey}.`,
+          {
+            sceneKey,
+            progress,
+            clampedProgress,
+            resolvedStep: step,
+            nextState,
+          },
+        );
+      }
+      return nextState;
+    }
+    if (
+      DEBUG_SCENE_KEYS.includes(sceneKey) &&
+      shouldLogDebugBucket(
+        debugResolveLogKeyByScene,
+        sceneKey,
+        "resolve-miss",
+        progress,
+      )
+    ) {
+      Logger.warn(
+        CLASS,
+        "resolveSceneProgressState",
+        "Resolved steps exist but none matched current progress.",
+        {
+          sceneKey,
+          progress,
+          clampedProgress,
+          resolvedSteps,
+        },
+      );
+    }
+    return null;
+  }
+
+  resolveSceneState(
+    sceneKey: AboutSceneSectionKey,
+    progress: number,
+  ): AboutTheatreValue | null {
+    const state = this.resolveSceneProgressState(sceneKey, progress);
+    if (!state) return null;
+    const range = this._resolvePlaybackRange(
+      state.sheetId,
+      this._lengthBySheetId.get(state.sheetId) ?? 0,
+    );
+    const position =
+      range.start +
+      (range.end - range.start) * this._clampPosition(state.localProgress, 1);
+    return this.readState(state.sheetId, position);
+  }
+
+  startPreview(engine: Engine): Promise<void> {
+    return this._autoplayRuntime.startPreview(
+      engine,
+      ABOUT_THEATRE_SHEET_IDS,
+      (sheetId) => this._resolveSheetBinding(sheetId),
+      (sheetId, length) => this._resolvePreviewRange(sheetId, length),
+      ABOUT_PREVIEW_RATE,
+    );
+  }
+
+  stopPreview(): void {
+    this._autoplayRuntime.stopPreview(this._sequenceBySheetId.values());
+  }
+
+  startAfterIntroAutoplay(engine: Engine): Promise<void> {
+    if (!ABOUT_AFTER_INTRO_AUTOPLAY_ENABLED) {
+      return Promise.resolve();
+    }
+    return this._startSheetAutoplay(
+      engine,
+      ABOUT_AFTER_INTRO_AUTOPLAY_SHEET_ID,
+      ABOUT_AFTER_INTRO_AUTOPLAY_RATE,
+    );
+  }
+
+  startIntroAutoplay(engine: Engine): Promise<void> {
+    return this._startSheetAutoplay(
+      engine,
+      ABOUT_INTRO_AUTOPLAY_SHEET_ID,
+      ABOUT_INTRO_AUTOPLAY_RATE,
+    );
+  }
+
+  private _startSheetAutoplay(
+    engine: Engine,
+    sheetId: AboutTheatreSheetId,
+    rate: number,
+  ): Promise<void> {
+    return this._autoplayRuntime.startSheetAutoplay(engine, {
+      sheetId,
+      resolveBinding: (sheetId) => this._resolveSheetBinding(sheetId),
+      resolveRange: (sheetId, length) =>
+        this._resolvePlaybackRange(sheetId, length),
+      rate,
+      fallbackSync: (targetEngine) => {
+        const length = this._lengthBySheetId.get(sheetId) ?? 0;
+        const playbackRange = this._resolvePlaybackRange(sheetId, length);
+        this._syncSheetState(targetEngine, sheetId, playbackRange.end);
+      },
+      completeSync: (targetEngine, position) => {
+        this._syncSheetState(targetEngine, sheetId, position);
+      },
+    });
+  }
+
+  syncSceneToEngine(
+    engine: Engine,
+    sceneKey: AboutSceneSectionKey,
+    progress: number,
+  ): AboutSceneProgressState | null {
+    const resolvedState = this.resolveSceneState(sceneKey, progress);
+    const progressState = this.resolveSceneProgressState(sceneKey, progress);
+    if (
+      DEBUG_SCENE_KEYS.includes(sceneKey) &&
+      shouldLogDebugBucket(
+        debugSyncLogKeyByScene,
+        sceneKey,
+        "sync",
+        progress,
+        progressState?.sheetId ?? null,
+      )
+    ) {
+      const range =
+        progressState == null
+          ? null
+          : this._resolvePlaybackRange(
+              progressState.sheetId,
+              this._lengthBySheetId.get(progressState.sheetId) ?? 0,
+            );
+      const position =
+        progressState == null || range == null
+          ? null
+          : range.start +
+            (range.end - range.start) * this._clampPosition(progressState.localProgress, 1);
+      Logger.info(CLASS, "syncSceneToEngine", `Applying about theatre scene ${sceneKey}.`, {
+        sceneKey,
+        progress,
+        progressState,
+        range,
+        position,
+        camera: resolvedState?.camera ?? null,
+      });
+    }
+    this._rig.apply(
+      engine,
+      mergeAboutTheatreValue(resolvedState ?? pickAboutTheatreValue(ABOUT_DEFAULT_SCENE_STATE)),
+    );
+    return progressState;
+  }
+
+  private _resolvePlaybackRange(
+    sheetId: AboutTheatreSheetId,
+    length: number,
+  ): AboutTheatrePlaybackRange {
+    const configuredRange = this._playbackRangeBySheetId.get(sheetId) ?? null;
+    if (configuredRange) {
+      return {
+        start: this._clampPosition(configuredRange.start, length),
+        end: this._clampPosition(configuredRange.end, length),
+      };
+    }
+    return {
+      start: 0,
+      end: Number.isFinite(length) && length > 0 ? length : 0,
+    };
+  }
+
+  private _resolveSheetLength(
+    sheetId: AboutTheatreSheetId,
+    sequence: TheatreSequencePort,
+  ): number {
+    const directLength =
+      typeof sequence.length === "number" ? sequence.length : null;
+    if (
+      directLength != null &&
+      Number.isFinite(directLength) &&
+      directLength > 0
+    ) {
+      return directLength;
+    }
+    const stateLength = this._readSheetLengthFromState(sheetId);
+    if (stateLength > 0) return stateLength;
+    return 0;
+  }
+
+  private _resolveSceneSteps(
+    sceneKey: AboutSceneSectionKey,
+  ): readonly AboutTheatrePlaybackStep[] {
+    return ABOUT_SCENE_THEATRE_STEPS[sceneKey] ?? [];
+  }
+
+  private _resolveStep(
+    step: AboutTheatrePlaybackStep,
+  ): AboutResolvedTheatrePlaybackStep | null {
+    const sequence = this._sequenceBySheetId.get(step.sheetId);
+    if (!sequence) return null;
+    const length = this._lengthBySheetId.get(step.sheetId) ?? 0;
+    return {
+      sheetId: step.sheetId,
+      range: this._resolveConfiguredPlaybackRange(
+        step.playbackRange,
+        step.sheetId,
+        length,
+      ),
+      progressRange: this._resolveProgressRange(step.progressRange),
+    };
+  }
+
+  private _resolveConfiguredPlaybackRange(
+    configuredRange: AboutTheatrePlaybackRange | undefined,
+    sheetId: AboutTheatreSheetId,
+    length: number,
+  ): AboutTheatrePlaybackRange {
+    if (!configuredRange) {
+      return this._resolvePlaybackRange(sheetId, length);
+    }
+    return {
+      start: this._clampPosition(configuredRange.start, length),
+      end: this._clampPosition(configuredRange.end, length),
+    };
+  }
+
+  private _resolveProgressRange(
+    progressRange: AboutSceneProgressRange | undefined,
+  ): AboutSceneProgressRange {
+    if (!progressRange) {
+      return { start: 0, end: 1 };
+    }
+    const start = this._clampPosition(progressRange.start, 1);
+    const end = this._clampPosition(progressRange.end, 1);
+    if (end <= start) {
+      return { start, end: 1 };
+    }
+    return { start, end };
+  }
+
+  private _isProgressWithinRange(
+    progress: number,
+    range: AboutSceneProgressRange,
+  ): boolean {
+    if (progress < range.start) return false;
+    if (progress > range.end && range.end < 1) return false;
+    return true;
+  }
+
+  private _resolveLocalProgress(
+    progress: number,
+    range: AboutSceneProgressRange,
+  ): number {
+    const span = Math.max(range.end - range.start, Number.EPSILON);
+    return this._clampPosition((progress - range.start) / span, 1);
+  }
+
+  private _readSheetLengthFromState(sheetId: AboutTheatreSheetId): number {
+    const sheetsById = readAboutRecord(this._stateSource.sheetsById);
+    if (!sheetsById) return 0;
+    const sheetState = readAboutRecord(sheetsById[sheetId]);
+    if (!sheetState) return 0;
+    const sequence = readAboutRecord(sheetState.sequence);
+    if (!sequence) return 0;
+    const length = sequence.length;
+    if (typeof length !== "number" || !Number.isFinite(length) || length <= 0) {
+      return 0;
+    }
+    return length;
+  }
+
+  private _clampPosition(position: number, length: number): number {
+    if (!Number.isFinite(length) || length <= 0) return 0;
+    if (!Number.isFinite(position)) return 0;
+    if (position <= 0) return 0;
+    if (position >= length) return length;
+    return position;
+  }
+
+  private _syncSheetState(
+    engine: Engine,
+    sheetId: AboutTheatreSheetId,
+    position: number,
+  ): void {
+    this._rig.apply(engine, mergeAboutTheatreValue(this.readState(sheetId, position)));
+  }
+
+  private _resolvePreviewRange(
+    sheetId: AboutTheatreSheetId,
+    sheetLength: number,
+  ): AboutTheatrePlaybackRange | null {
+    const tracksByObject = this._readSheetTracksByObject(sheetId);
+    const objectTracks = tracksByObject?.[ABOUT_THEATRE_OBJECT_ID];
+    if (!objectTracks || typeof objectTracks !== "object") return null;
+    const trackData = (objectTracks as Record<string, unknown>).trackData;
+    if (!trackData || typeof trackData !== "object") return null;
+    let minPosition = Number.POSITIVE_INFINITY;
+    let maxPosition = Number.NEGATIVE_INFINITY;
+    Object.values(trackData as Record<string, unknown>).forEach(
+      (trackState) => {
+        if (!trackState || typeof trackState !== "object") return;
+        const keyframes = (trackState as Record<string, unknown>).keyframes;
+        if (!Array.isArray(keyframes)) return;
+        const positionedKeyframes = keyframes
+          .map((keyframe) => {
+            if (!keyframe || typeof keyframe !== "object") return null;
+            const position = (keyframe as Record<string, unknown>).position;
+            return typeof position === "number" ? position : null;
+          })
+          .filter(
+            (position): position is number =>
+              typeof position === "number" && Number.isFinite(position),
+          );
+        if (positionedKeyframes.length < 2) return;
+        minPosition = Math.min(minPosition, ...positionedKeyframes);
+        maxPosition = Math.max(maxPosition, ...positionedKeyframes);
+      },
+    );
+    if (!Number.isFinite(minPosition) || !Number.isFinite(maxPosition)) {
+      return null;
+    }
+    if (maxPosition <= minPosition) {
+      return null;
+    }
+    return {
+      start: this._clampPosition(minPosition, sheetLength),
+      end: this._clampPosition(maxPosition, sheetLength),
+    };
+  }
+
+  private _readSheetTracksByObject(
+    sheetId: AboutTheatreSheetId,
+  ): Record<string, unknown> | null {
+    const sheetsById = readAboutRecord(this._stateSource.sheetsById);
+    if (!sheetsById) return null;
+    const sheetState = readAboutRecord(sheetsById[sheetId]);
+    if (!sheetState) return null;
+    const sequence = readAboutRecord(sheetState.sequence);
+    if (!sequence) return null;
+    const tracksByObject = readAboutRecord(sequence.tracksByObject);
+    if (!tracksByObject) return null;
+    return tracksByObject;
+  }
+
+  private _resolveSheetBinding(sheetId: AboutTheatreSheetId): {
+    object: AboutTheatreObject;
+    sequence: TheatreSequencePort;
+    length: number;
+  } | null {
+    const object = this._objectBySheetId.get(sheetId);
+    const sequence = this._sequenceBySheetId.get(sheetId);
+    if (!object || !sequence) return null;
+    return {
+      object,
+      sequence,
+      length: this._lengthBySheetId.get(sheetId) ?? 0,
+    };
+  }
+}
+
+function getAboutTheatreRuntime(): AboutTheatreRuntime {
+  return AboutTheatreRuntime.getInstance();
+}
+
+function resolveAboutTheatreStateSource(): Record<string, unknown> {
+  const fileState = readAboutTheatreFileState();
+  TheatreStateStorageService.seedFromFileState(
+    fileState,
+    ABOUT_THEATRE_STORAGE_OPTIONS,
+  );
+  if (!resolveAboutAuthorMode()) {
+    return fileState ?? (aboutState as Record<string, unknown>);
+  }
+  const savedState = readSavedAuthorState();
+  const mergedState = mergeAboutTheatreStateSources(fileState, savedState);
+  if (mergedState) return mergedState;
+  return aboutState as Record<string, unknown>;
+}
+
+function readAboutTheatreFileState(): Record<string, unknown> | null {
+  const state = aboutState as Record<string, unknown>;
+  if (!isReadableAboutTheatreState(state)) return null;
+  return normalizeAboutTheatreState(state);
+}
+
+function readSavedAuthorState(): Record<string, unknown> | null {
+  return TheatreStateStorageService.read({
+    ...ABOUT_THEATRE_STORAGE_OPTIONS,
+    normalize: normalizeAboutTheatreState,
+    validate: isReadableAboutTheatreState,
+  });
+}
+
+export function readAboutTheatreState(
+  sheetId: AboutTheatreSheetId,
+  position = 0,
+): AboutTheatreValue {
+  return getAboutTheatreRuntime().readState(sheetId, position);
+}
+
+export function resolveAboutTheatreSceneProgressState(
+  sceneKey: AboutSceneSectionKey,
+  progress: number,
+): AboutSceneProgressState | null {
+  return getAboutTheatreRuntime().resolveSceneProgressState(sceneKey, progress);
+}
+
+export function resolveAboutTheatreSceneState(
+  sceneKey: AboutSceneSectionKey,
+  progress: number,
+): AboutTheatreValue | null {
+  return getAboutTheatreRuntime().resolveSceneState(sceneKey, progress);
+}
+
+export function syncAboutTheatreSceneToEngine(
+  engine: Engine,
+  sceneKey: AboutSceneSectionKey,
+  progress: number,
+): AboutSceneProgressState | null {
+  const runtime = getAboutTheatreRuntime();
+  return runtime.syncSceneToEngine(engine, sceneKey, progress);
+}
+
+export function createAboutTheatreSceneSyncPort(): PageSceneSyncPort<
+  AboutSceneSectionKey,
+  AboutTheatreSheetId
+> {
+  return {
+    apply: (engine, sceneKey, progress) => {
+      const progressState = syncAboutTheatreSceneToEngine(
+        engine,
+        sceneKey,
+        progress,
+      );
+      return progressState?.sheetId ?? null;
+    },
+  };
+}
+
+export function isAboutTheatrePreviewMode(): boolean {
+  return resolveAboutPreviewMode();
+}
+
+export function startAboutTheatrePreview(engine: Engine): Promise<void> {
+  return getAboutTheatreRuntime().startPreview(engine);
+}
+
+export function startAboutTheatreAfterIntroAutoplay(
+  engine: Engine,
+): Promise<void> {
+  return getAboutTheatreRuntime().startAfterIntroAutoplay(engine);
+}
+
+export function startAboutTheatreIntroAutoplay(engine: Engine): Promise<void> {
+  return getAboutTheatreRuntime().startIntroAutoplay(engine);
+}
+
+export function stopAboutTheatrePreview(): void {
+  getAboutTheatreRuntime().stopPreview();
+}
+
+function isReadableAboutTheatreState(
+  value: Record<string, unknown> | null,
+): value is Record<string, unknown> {
+  if (!value) return false;
+  const sheetsById = value.sheetsById;
+  if (
+    sheetsById == null ||
+    typeof sheetsById !== "object" ||
+    Array.isArray(sheetsById)
+  ) {
+    return false;
+  }
+  return true;
+}

@@ -1,0 +1,52 @@
+<?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only.' . PHP_EOL); }
+
+ini_set('memory_limit', '512M');
+
+$isDryRun = in_array('--dry-run', $argv ?? [], true);
+
+// GD 변환 가능한 최대 픽셀 수 (16MP 초과는 GD 세그폴트 위험)
+const MAX_PIXELS = 16_000_000;
+
+$dir = __DIR__;
+while ($dir !== dirname($dir)) {
+    if (is_file($dir . '/vendor/autoload.php')) { $projectRoot = $dir; break; }
+    $dir = dirname($dir);
+}
+if (!isset($projectRoot)) { fwrite(STDERR, 'ERROR: project root not found' . PHP_EOL); exit(1); }
+
+require_once $projectRoot . '/vendor/autoload.php';
+use Core\ImageProcessor;
+
+$uploadsDir = $projectRoot . '/uploads';
+if (!is_dir($uploadsDir)) { fwrite(STDERR, 'ERROR: uploads/ not found at: ' . $uploadsDir . PHP_EOL); exit(1); }
+
+$convertible = ['jpg', 'jpeg', 'png', 'gif'];
+$created = $skipped = $failed = $tooLarge = $total = 0;
+
+$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($uploadsDir, FilesystemIterator::SKIP_DOTS));
+foreach ($it as $f) {
+    if (!$f->isFile()) continue;
+    $ext = strtolower($f->getExtension());
+    if (!in_array($ext, $convertible, true)) continue;
+    $abs  = str_replace('\\', '/', $f->getRealPath());
+    $webp = (string) preg_replace('/\.[^.]+$/', '.webp', $abs);
+    $total++;
+    if (is_file($webp)) { echo "[skip]    $abs\n"; $skipped++; continue; }
+
+    // 초대형 이미지 skip — GD는 픽셀수 * 4바이트를 RAM에 올리므로 세그폴트 방지
+    $size = @getimagesize($abs);
+    if (is_array($size) && isset($size[0], $size[1]) && ($size[0] * $size[1]) > MAX_PIXELS) {
+        fwrite(STDERR, "[too-large] {$size[0]}x{$size[1]} $abs\n");
+        $tooLarge++;
+        continue;
+    }
+
+    if ($isDryRun) { echo "[dry-run] would create: $webp\n"; $created++; continue; }
+    if (ImageProcessor::makeWebpSibling($abs)) { echo "[created] $webp\n"; $created++; }
+    else { fwrite(STDERR, "[FAILED]  $abs\n"); $failed++; }
+}
+
+echo "\n--- Summary ---\n";
+echo "Total convertible : $total\nCreated : $created\nSkipped : $skipped\nToo large (skipped): $tooLarge\nFailed  : $failed\n";
+exit($failed > 0 ? 1 : 0);

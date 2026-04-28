@@ -1,0 +1,378 @@
+<?php
+/**
+ * POST /cors-test/api/run.php
+ *
+ * UI 의 thin proxy 디스패처. 시크릿을 브라우저에 노출하지 않으려고 모든
+ * 서버측 매트릭스 케이스는 여기를 통해 실행한다.
+ *
+ * Body (JSON): { "case": "<id>", "params": { ... } }
+ *
+ * 인증: X-Admin-Token. 세션 미사용.
+ *
+ * 표준 응답 data 스키마:
+ *   { case, expected, actual, verdict, request, response, timing_ms, headers, note }
+ */
+
+require __DIR__ . '/../lib/bootstrap.php';
+requireMethod('POST');
+requireRole(['ADMIN', 'USER', 'BOTH']);
+guardAdminToken();
+
+$raw = readRawBody();
+// form-encoded 래퍼 지원 (WAF 우회: d=<base64(json)>)
+if (isset($_POST['d'])) {
+    $raw = (string) base64_decode($_POST['d'], true);
+} elseif (str_starts_with($raw, 'd=')) {
+    parse_str($raw, $pv);
+    $raw = isset($pv['d']) ? (string) base64_decode($pv['d'], true) : $raw;
+}
+$j   = json_decode($raw, true);
+if (!is_array($j) || empty($j['case'])) {
+    respondError(400, 'bad_case');
+}
+$case   = (string)$j['case'];
+$params = is_array($j['params'] ?? null) ? $j['params'] : [];
+
+$start = microtime(true);
+[$result, $note] = runCase($case, $params);
+$elapsed = (int) round((microtime(true) - $start) * 1000);
+
+$verdict = $result['verdict'] ?? null;
+auditAppend('run.case', [
+    'case'      => $case,
+    'verdict'   => $verdict,
+    'timing_ms' => $elapsed,
+]);
+
+respondOk([
+    'case'      => $case,
+    'expected'  => $result['expected'] ?? null,
+    'actual'    => $result['actual']   ?? null,
+    'verdict'   => $verdict,
+    'request'   => $result['request']  ?? null,
+    'response'  => $result['response'] ?? null,
+    'headers'   => $result['headers']  ?? null,
+    'timing_ms' => $elapsed,
+    'note'      => $note,
+]);
+
+
+/**
+ * case 핸들러 디스패처.
+ * 반환: [ ['expected'=>..., 'actual'=>..., 'verdict'=>..., 'request'=>..., 'response'=>..., 'headers'=>...], note_string ]
+ */
+function runCase(string $case, array $p): array {
+    switch ($case) {
+
+        case 'whoami_self': {
+            // 직접 인-프로세스로 self info를 만든다 (HTTP 라운드트립 회피).
+            $info = [
+                'host'        => THIS_HOST,
+                'role'        => ROLE,
+                'kill_switch' => (bool) KILL_SWITCH,
+                'fingerprint' => secretFingerprint(SYNC_SECRET),
+            ];
+            return [[
+                'expected' => ['ok' => true, 'fingerprint_set' => true],
+                'actual'   => ['ok' => true, 'data' => $info],
+                'verdict'  => '✅',
+            ], 'self info'];
+        }
+
+        case 'whoami_peer': {
+            $r = peerCall('GET', '/api/whoami.php', []);
+            $fp = $r['json']['data']['fingerprint'] ?? null;
+            $verdict = $r['ok'] && $fp === secretFingerprint(SYNC_SECRET) ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 200, 'fingerprint' => secretFingerprint(SYNC_SECRET)],
+                'actual'   => ['status' => $r['status'], 'fingerprint' => $fp, 'host' => $r['json']['data']['host'] ?? null],
+                'verdict'  => $verdict,
+                'request'  => $r['request'],
+                'response' => $r['json'],
+            ], $verdict === '✅' ? 'fingerprint match — secret in sync' : 'fingerprint mismatch — secret NOT in sync'];
+        }
+
+        case 'ping_peer': {
+            $body = ['nonce' => bin2hex(random_bytes(8)), 'client_ts' => time()];
+            $r = peerCall('POST', '/api/ping.php', $body);
+            $verdict = $r['ok'] && ($r['json']['data']['pong'] ?? false) === true ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 200, 'pong' => true],
+                'actual'   => ['status' => $r['status'], 'pong' => $r['json']['data']['pong'] ?? null, 'rtt_ms' => $r['timing_ms']],
+                'verdict'  => $verdict,
+                'request'  => $r['request'],
+                'response' => $r['json'],
+            ], $r['error'] ?: 'normal HMAC roundtrip'];
+        }
+
+        case 'ping_bad_ts': {
+            // 11분 전 timestamp 로 강제 → stale_timestamp 401 기대
+            $body = ['nonce' => bin2hex(random_bytes(8)), 'client_ts' => time()];
+            $r = peerCallRaw('POST', '/api/ping.php', $body, ['ts_override' => time() - 660]);
+            $err = $r['json']['error'] ?? null;
+            $verdict = $r['status'] === 401 && $err === 'stale_timestamp' ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 401, 'error' => 'stale_timestamp'],
+                'actual'   => ['status' => $r['status'], 'error' => $err],
+                'verdict'  => $verdict,
+                'request'  => $r['request'],
+                'response' => $r['json'],
+            ], 'intentional bad ts'];
+        }
+
+        case 'ping_bad_sig': {
+            $body = ['nonce' => bin2hex(random_bytes(8)), 'client_ts' => time()];
+            $r = peerCallRaw('POST', '/api/ping.php', $body, ['sig_override' => str_repeat('0', 64)]);
+            $err = $r['json']['error'] ?? null;
+            $verdict = $r['status'] === 401 && $err === 'bad_signature' ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 401, 'error' => 'bad_signature'],
+                'actual'   => ['status' => $r['status'], 'error' => $err],
+                'verdict'  => $verdict,
+                'request'  => $r['request'],
+                'response' => $r['json'],
+            ], 'intentional bad sig'];
+        }
+
+        case 'ping_no_auth': {
+            $body = ['nonce' => bin2hex(random_bytes(8)), 'client_ts' => time()];
+            $r = peerCallRaw('POST', '/api/ping.php', $body, ['skip_auth' => true]);
+            $err = $r['json']['error'] ?? null;
+            $verdict = $r['status'] === 401 && $err === 'missing_auth' ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 401, 'error' => 'missing_auth'],
+                'actual'   => ['status' => $r['status'], 'error' => $err],
+                'verdict'  => $verdict,
+                'request'  => $r['request'],
+                'response' => $r['json'],
+            ], 'intentional missing auth headers'];
+        }
+
+        case 'options_peer': {
+            $r = peerCallRaw('OPTIONS', '/api/ping.php', [], ['skip_auth' => true]);
+            $verdict = $r['status'] === 405 ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 405],
+                'actual'   => ['status' => $r['status']],
+                'verdict'  => $verdict,
+                'request'  => $r['request'],
+                'response' => $r['json'],
+            ], 'CORS preflight rejection by design'];
+        }
+
+        case 'cors_probe_peer': {
+            $r = peerCall('GET', '/api/cors-probe.php', []);
+            $verdict = $r['ok'] ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 200],
+                'actual'   => ['status' => $r['status']],
+                'verdict'  => $verdict,
+                'request'  => $r['request'],
+                'response' => $r['json'],
+            ], 'server-to-server probe (NOT brower); brower direct must be blocked — see UI direct cases'];
+        }
+
+        case 'list_peer': {
+            $verify = !empty($p['verify']);
+            $tail   = (int)($p['tail'] ?? 50);
+            $r = peerCall('GET', '/api/list.php?tail=' . $tail . ($verify ? '&verify=1' : ''), []);
+            $verdict = $r['ok'] ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 200],
+                'actual'   => ['status' => $r['status'], 'files' => count($r['json']['data']['files'] ?? [])],
+                'verdict'  => $verdict,
+                'request'  => $r['request'],
+                'response' => $r['json'],
+            ], 'peer ledger'];
+        }
+
+        case 'list_self': {
+            // 자기 list 를 직접 호출 (HMAC 안 거치고 in-process 로)
+            $entries = auditTail((int)($p['tail'] ?? 50));
+            $files = [];
+            $glob = glob(STORAGE_DIR . '/*') ?: [];
+            foreach ($glob as $f) {
+                if (!is_file($f)) continue;
+                $files[] = ['name' => basename($f), 'size' => filesize($f), 'mtime' => filemtime($f)];
+            }
+            return [[
+                'expected' => ['ok' => true],
+                'actual'   => ['files' => count($files), 'entries' => count($entries)],
+                'verdict'  => '✅',
+                'response' => ['files' => $files, 'entries' => array_slice($entries, -10)],
+            ], 'self ledger'];
+        }
+
+        case 'integrity': {
+            // 양쪽 list?verify=1 비교
+            $self = [];
+            $glob = glob(STORAGE_DIR . '/*') ?: [];
+            foreach ($glob as $f) {
+                if (!is_file($f)) continue;
+                $self[basename($f)] = sha256OfFile($f);
+            }
+            $r = peerCall('GET', '/api/list.php?verify=1&tail=1', []);
+            $peerFiles = $r['json']['data']['files'] ?? [];
+            $peer = [];
+            foreach ($peerFiles as $pf) {
+                if (isset($pf['name'], $pf['sha256'])) $peer[$pf['name']] = $pf['sha256'];
+            }
+            $names = array_unique(array_merge(array_keys($self), array_keys($peer)));
+            $rows = [];
+            $allMatch = true;
+            foreach ($names as $n) {
+                $a = $self[$n] ?? null;
+                $b = $peer[$n] ?? null;
+                $match = $a !== null && $b !== null && $a === $b;
+                if (!$match) $allMatch = false;
+                $rows[] = ['name' => $n, 'self' => $a, 'peer' => $b, 'match' => $match];
+            }
+            $verdict = $allMatch && count($rows) > 0 ? '✅' : (count($rows) === 0 ? '⚠' : '❌');
+            return [[
+                'expected' => ['all_match' => true],
+                'actual'   => ['files' => count($rows), 'all_match' => $allMatch, 'rows' => $rows],
+                'verdict'  => $verdict,
+                'response' => $r['json'],
+            ], 'sha256 cross-host integrity'];
+        }
+
+        case 'asset_token_issue': {
+            $name = (string)($p['name'] ?? '');
+            $base = safeBasename($name);
+            if ($base === null) {
+                return [['expected'=>['ok'=>true],'actual'=>['error'=>'bad_name'],'verdict'=>'❌'], 'bad name'];
+            }
+            $ttl = max(10, min(3600, (int)($p['ttl'] ?? 300)));
+            $tok = assetTokenIssue($base, $ttl);
+            // self URL과 peer URL 둘 다 만들어 UI 가 cross-origin <img> 테스트하게
+            $selfUrl = '/cors-test/api/asset.php?name=' . rawurlencode($base) . '&token=' . $tok;
+            $peerUrl = rtrim(PEER_BASE_URL, '/') . '/api/asset.php?name=' . rawurlencode($base) . '&token=' . $tok;
+            return [[
+                'expected' => ['ok' => true],
+                'actual'   => ['name' => $base, 'ttl' => $ttl, 'self_url' => $selfUrl, 'peer_url' => $peerUrl, 'token' => $tok],
+                'verdict'  => '✅',
+            ], 'token issued (peer can verify because SYNC_SECRET shared)'];
+        }
+
+        case 'peer_push': {
+            // 이미 storage 에 있는 파일을 peer.receive 로 push
+            $name = (string)($p['name'] ?? '');
+            $base = safeBasename($name);
+            $path = $base !== null ? STORAGE_DIR . '/' . $base : null;
+            if ($base === null || !$path || !is_file($path)) {
+                return [['expected'=>['ok'=>true],'actual'=>['error'=>'not_found'],'verdict'=>'❌'], 'storage file not found'];
+            }
+            $bytes = file_get_contents($path);
+            $sha = hash('sha256', $bytes);
+            $mime = detectMime($path);
+            $r = peerCall('POST', '/api/receive.php', [
+                'orig'   => $base,
+                'name'   => $base,
+                'size'   => strlen($bytes),
+                'mime'   => $mime,
+                'sha256' => $sha,
+                'b64'    => base64_encode($bytes),
+            ]);
+            $verdict = $r['ok'] ? '✅' : '❌';
+            return [[
+                'expected' => ['status' => 200, 'sha256' => $sha],
+                'actual'   => ['status' => $r['status'], 'sha256' => $r['json']['data']['sha256'] ?? null],
+                'verdict'  => $verdict,
+                'request'  => array_merge($r['request'], ['body_summary' => ['name'=>$base, 'size'=>strlen($bytes), 'mime'=>$mime]]),
+                'response' => $r['json'],
+            ], $r['error'] ?: 'peer push'];
+        }
+
+        default:
+            return [[
+                'expected' => null,
+                'actual'   => null,
+                'verdict'  => '❌',
+            ], "unknown case: $case"];
+    }
+}
+
+
+/**
+ * peerCall 의 raw 변형 — 의도적으로 잘못된 ts/sig/headers 를 보내는 케이스용.
+ * options:
+ *   - 'ts_override'  => int   (timestamp 강제값)
+ *   - 'sig_override' => string (signature 강제값)
+ *   - 'skip_auth'    => bool   (ts/sig 헤더 자체 누락)
+ */
+function peerCallRaw(string $method, string $relPath, array $body, array $options): array {
+    $method = strtoupper($method);
+    $base   = rtrim(PEER_BASE_URL, '/');
+    $url    = $base . '/' . ltrim($relPath, '/');
+    $u = parse_url($url);
+    if ($u === false || empty($u['host'])) {
+        return ['ok'=>false, 'status'=>0, 'json'=>null, 'raw'=>'',
+                'request'=>['url'=>$url, 'path'=>'', 'headers'=>[], 'body'=>''],
+                'timing_ms'=>0, 'error'=>'bad_peer_url'];
+    }
+    $path = ($u['path'] ?? '/') . (isset($u['query']) ? '?' . $u['query'] : '');
+    $bodyJson = ($method === 'GET' || $method === 'OPTIONS') ? '' : json_encode($body, JSON_UNESCAPED_SLASHES);
+    if ($bodyJson === false) $bodyJson = '';
+
+    $headers = [
+        'Content-Type: application/json; charset=utf-8',
+        'Accept: application/json',
+        'User-Agent: cors-test/1.0',
+        'X-Cors-Test-Host: ' . (defined('THIS_HOST') ? THIS_HOST : ''),
+    ];
+    $skipAuth = !empty($options['skip_auth']);
+    if (!$skipAuth) {
+        $ts  = isset($options['ts_override']) ? (string)$options['ts_override'] : (string)time();
+        $sig = isset($options['sig_override'])
+            ? (string)$options['sig_override']
+            : hmacSign(SYNC_SECRET, $ts, $method, $path, $bodyJson);
+        $headers[] = 'X-Cors-Test-Ts: '  . $ts;
+        $headers[] = 'X-Cors-Test-Sig: ' . $sig;
+    }
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => $url,
+        CURLOPT_CUSTOMREQUEST  => $method,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => $headers,
+        CURLOPT_TIMEOUT        => 30,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ]);
+    if ($bodyJson !== '') {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $bodyJson);
+    }
+    $start = microtime(true);
+    $raw = curl_exec($ch);
+    $elapsed = (int) round((microtime(true) - $start) * 1000);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch) ?: null;
+    curl_close($ch);
+
+    $json = null;
+    if (is_string($raw) && $raw !== '') {
+        $d = json_decode($raw, true);
+        if (is_array($d)) $json = $d;
+    }
+    if (!is_string($raw)) $raw = '';
+
+    return [
+        'ok'        => $err === null && $status >= 200 && $status < 300,
+        'status'    => $status,
+        'json'      => $json,
+        'raw'       => $raw,
+        'request'   => [
+            'url'     => $url,
+            'path'    => $path,
+            'method'  => $method,
+            'headers' => $headers,
+            'body'    => $bodyJson === '' ? null : json_decode($bodyJson, true),
+            'options' => array_keys($options),
+        ],
+        'timing_ms' => $elapsed,
+        'error'     => $err,
+    ];
+}

@@ -1,0 +1,1000 @@
+<?php
+
+/**
+ * 한국어 — 키 구조는 lang/en.php 와 동일하게 유지
+ */
+return [
+    'nav' => [
+        'brands' => 'Brands',
+        'channel_partners' => 'Channel partners',
+        'pricing' => 'pricing',
+    ],
+    'cta' => [
+        'request_meeting' => '전문가 상담 신청하기',
+        'download_brochure' => '회사소개서 다운로드',
+    ],
+    'a11y' => [
+        'lang_switch' => '언어 선택',
+        'sitemap' => '사이트 메뉴 열기',
+        'sitemap_nav' => '사이트맵 내비게이션',
+        'close' => '닫기',
+        'floating_inquiry' => '미팅 문의',
+        'scroll_top' => '맨 위로',
+    ],
+    'footer' => [
+        'privacy_policy' => '개인정보처리방침',
+        'marketing_terms' => '마케팅 이용약관',
+        'cookie_settings' => 'Cookie settings',
+        'family_site_heading' => 'Family Site',
+        /** 외부 패밀리 사이트 — [['label' => '표시명', 'url' => 'https://...'], ...] 비어 있으면 푸터에서 블록 미표시 */
+        'family_site_links' => [
+            ['label' => '로지스팟', 'url' => 'https://www.logi-spot.com/'],
+            ['label' => '고려택배', 'url' => 'https://www.klogis.com/'],
+        ],
+    ],
+    'common' => [],
+    'components' => [
+        'brochure_modal' => [
+            'title' => '회사소개서 다운로드',
+            'email_label' => '이메일',
+            'email_placeholder' => 'name@company.com',
+            'phone_label' => '휴대전화 번호',
+            'phone_placeholder' => '010-1234-5678',
+            'required_abbr_title' => '필수',
+            'consent_main' => '에버큐라로부터 마케팅 정보 수신에 동의합니다.',
+            'consent_meta_prefix' => '마케팅 수신 동의는 언제든지 철회할 수 있습니다. 에버큐라 웹사이트 및 안내는 ',
+            'consent_meta_suffix' => '에 따릅니다.',
+            'submit' => 'EverCura_brochure',
+            'js' => [
+                'notice_title' => '알림',
+                'marketing_required' => '마케팅 수신에 동의해 주세요.',
+                'phone_required' => '휴대전화 번호를 입력해 주세요.',
+                'file_not_ready' => '브로셔 파일을 준비할 수 없습니다.',
+                'saved_start_download' => '요청이 저장되었습니다. 확인을 누르면 다운로드가 시작됩니다.',
+                'network_error' => '네트워크 오류가 발생했습니다.',
+            ],
+        ],
+    ],
+    'pages' => [
+        'index' => [
+            'hero' => [
+                // [내용 수정] EN: 'K—Beauty/Wellness,<br> shipped like software' — 슬로건 구조 누락 + BR 없음. EN 구조 기준으로 교체
+                'title' => 'K-Beauty/Wellness를<br> 글로벌 시장에 \'동기화\'하다.',
+                'lead' => '에버큐라는 제품 선별부터 현지 배송까지, 브랜드가 해외 시장에 안착하는 데 필요한 모든 과정을 연결합니다. <br>이제 복잡한 과정 없이 가장 빠르고 안정적으로 글로벌 고객을 만나보세요.',
+                'cta' => '전문가 상담 신청하기',
+                'tile_brand_title' => '브랜드/제조사 솔루션 보기',
+                'tile_brand_sub' => '글로벌 시장 진출과 폭발적 성장을 원하신다면',
+                'tile_retailer_title' => '채널 파트너 솔루션 보기',
+                'tile_retailer_sub' => '검증된 제품 수급과 안정적인 공급망이 필요하다면',
+            ],
+            'about' => [
+                'kicker' => 'About EverCura : 유통의 한계를 허무는 디지털 하이브리드 파트너',
+                'heading' => '압도적인 속도와 스케일,<br>검증된 무역 인프라로 증명합니다.',
+                'intro' => '단순한 중개나 유통에 머물지 않습니다.<br>에버큐라는 제조사와 글로벌 시장 사이의 벽을 허무는 디지털 무역 플랫폼을 지향하며,<br>전체 밸류체인을 직접 운영하여 유통의 모든 과정을 책임집니다.',
+
+                'stats' => [
+                    ['suffix' => '+', 'count' => '200', 'decimals' => null, 'duration' => '3200', 'label' => '공급망 네트워크', 'desc' => '엄격한 기준으로 선별된<br>K-뷰티 및 웰니스 제조 파트너'],
+                    ['suffix' => '', 'count' => '15000', 'decimals' => null, 'duration' => '3200', 'label' => '팔레트 적재 용량', 'desc' => '대규모 물량을 소화하는<br>전용 풀필먼트 센터 운영'],
+                    ['suffix' => '%', 'count' => '99.9', 'decimals' => '1', 'duration' => '3200', 'label' => '운영 정확도', 'desc' => 'FEFO 시스템 기반의 철저한<br>유통기한 및 로트 관리'],
+                    ['suffix' => '%', 'count' => '98', 'decimals' => null, 'duration' => '3200', 'label' => '장기 파트너십 매출', 'desc' => '장기 계약 기반의 안정적이고<br>지속 가능한 수익 구조'],
+                ],
+            ],
+            'services' => [
+                'kicker' => 'Target Categories for Emerging Markets',
+                'heading' => '직접 소싱하고 정교하게 큐레이션한<br>에버큐라의 엄선된 제품 라인업',
+                'panels' => [
+                    ['title' => '코스메틱'],
+                    ['title' => '건강기능식품/<br>이너뷰티'],
+                    ['title' => '퍼스널케어'],
+                    ['title' => '뷰티 디바이스'],
+                    ['title' => '웰니스 F&B'],
+                ],
+            ],
+            'process' => [
+                'kicker' => '글로벌 진출을 성공으로 이끄는 핵심 역량',
+                'heading' => '지속 가능한 성장을 완성하는 <br> 에버큐라 End-to-End 솔루션',
+                'intro' => '하나의 통합된 시스템으로 작동하는 네 가지 핵심 전문성<br>— 단순한 첫 배송을 넘어, 지속 가능하고 반복적인 수익 모델을 창출합니다.',
+                'cards' => [
+                    [
+                        'step' => '01',
+                        'icon' => 'mvqzoznj',
+                        'title' => '포트폴리오 & 큐레이션',
+                        'sub' => '데이터 기반의 히어로 제품 발굴',
+                        // [BR 추가] EN 기준: 'Demand-driven SKU selection and<br>margin-led portfolio design.'
+                        'desc' => '현지 수요 중심의 SKU 선정과<br>수익성을 극대화한 포트폴리오 설계',
+                    ],
+                    [
+                        'step' => '02',
+                        'icon' => 'wyljvnhx',
+                        'title' => '마케팅',
+                        'sub' => '매출 전환 중심의 성장 전략',
+                        // [BR 추가] EN 기준: 'Launch assets, pricing,<br>and campaigns optimized for sales<br>— not awareness.' (BR 2개)
+                        'desc' => '단순 인지도를 넘어 실제 판매 실적으로<br>직결되는 콘텐츠와 캠페인 최적화',
+                    ],
+                    [
+                        'step' => '03',
+                        'icon' => 'belclitb',
+                        'title' => '물류 & 풀필먼트',
+                        'sub' => '안정적인 대규모 통합 물류',
+                        // [BR 추가] EN 기준: 'FEFO-compliant warehousing,<br>lot tracking, and on-time fulfillment.'
+                        'desc' => 'FEFO 기반의 체계적인 창고 관리와<br>Lot Tracking 및 정시 배송 보장',
+                    ],
+                    [
+                        'step' => '04',
+                        'icon' => 'bztwpqlk',
+                        'title' => '인허가 & 통관',
+                        'sub' => '장벽 없는 글로벌 시장 진입',
+                        'desc' => '현지 규제 대응부터 수입 통관까지,<br>모든 복잡한 행정 프로세스 해결',
+                    ],
+                ],
+            ],
+            'solution' => [
+                'kicker' => 'Our Solutions',
+                'heading' => '브랜드와 채널 파트너를 위한 양방향 최적화 솔루션',
+                'intro' => '검증된 베스트셀러 소싱부터 브랜드의 시장 잠재력 검증까지,<br>에버큐라의 데이터 기반 인프라가 비즈니스의 성공을 확정합니다.',
+                'view_more' => '더 보기',
+                'brand' => [
+                    'title' => 'For Brands & Manufacturers',
+                    'bullets' => ['에버큐라 공식 스토어(쇼피) 입점 및 매출 극대화', '60~90일 내 시장 적합성 확보 및 가시적인 매출 성장 견인'],
+                    'features' => ['공식 스토어 입점 및 인프라 구축', '광고 기반의 매출 증대 및 컨버전 데이터 확보', '글로벌 확장을 위한 검증된 성과 리포트 제공'],
+                    'feature_icons' => ['wbliiszf', 'psrsekxp', 'raxyqlxo'],
+                ],
+                'retailer' => [
+                    'title' => 'For the Channel Partners',
+                    'bullets' => ['효율적인 소싱과 지속 가능한 성장', '복잡한 조달 과정과 공급사 관리의 비효율 제거'],
+                    'features' => ['사전 검증된 히어로(Hero) SKU 공급', '멀티 브랜드 발주(PO) 및 선적 통합 관리', '재발주 시점 알림 및 수요 예측 데이터 제공'],
+                    'feature_icons' => ['azfuzezy', 'vqkbajkd', 'xnwfqftu'],
+                ],
+            ],
+            'logi' => [
+                'kicker' => 'Logistics Excellence',
+                'heading' => '헬스·웰니스 특화 인프라 :<br>KGSP 인증 기반의 전문 관리',
+                'intro' => '온도와 습도에 민감한 헬스 & 웰니스 제품에 특화된 보관 및 풀필먼트 환경을 제공합니다.<br>글로벌 공급망 전반에서 99.95%의 정확도와 완벽한 제품 무결성을 보장합니다.',
+                'map_alt' => '경기도 화성·안성 물류 거점 지도',
+                'hwaseong' => [
+                    'aria' => '화성 풀필먼트 센터',
+                    'tooltip' => '화성 풀필먼트 센터',
+                    'title' => '화성 풀필먼트 센터',
+                    'rows' => [
+                        ['label' => '총 면적: ', 'value' => '23,000 ㎡'],
+                        ['label' => '보관 용량: ', 'value' => '12,000 Pallets'],
+                        // [항목 추가] EN에 'Rack Capacity' 행이 있으나 KO에 누락 — EN 기준으로 추가
+                        ['label' => '랙 용량: ', 'value' => '1,535 Pallets'],
+                        ['label' => '인증 현황: ', 'value' => 'KGSP Certified (Since 2012)'],
+                    ],
+                ],
+                'anseong' => [
+                    'aria' => '안성 물류 허브',
+                    'tooltip' => '안성 물류 허브',
+                    'title' => '안성 물류 허브',
+                    'rows' => [
+                        ['label' => '총 면적: ', 'value' => '50,466 ㎡'],
+                        ['label' => '보관 용량: ', 'value' => '5,700 Pallets'],
+                        ['label' => '인증 현황: ', 'value' => 'KGSP Certified (Since 2024)'],
+                    ],
+                ],
+                'features' => [
+                    // [BR 추가] EN 기준: 'ensure maximum <br>product freshness and minimize expiration risks.'
+                    ['title' => 'FEFO 재고 관리', 'desc' => "유통기한 기반 선입선출로<br>재고 손실 최소화 및 신선도 보장"],
+                    // [BR 추가] EN 기준: 'maintain the stability <br>and integrity of sensitive health & wellness product lines.'
+                    ['title' => '항온·항습 환경 제어', 'desc' => "온·습도에 민감한 제품의<br>성분 안정성과 무결성 유지"],
+                    // [BR 추가] EN 기준: 'batch numbers and <br>expiration dates throughout the fulfillment cycle.'
+                    ['title' => "실시간 Lot & 유통기한 추적", 'desc' => "배치(Batch) 번호 단위의<br>실시간 이력 추적 및 가시성 제공"],
+                    // [BR 추가] EN 기준: 'multi-brand PO <br>and shipment consolidation.'
+                    ['title' => '글로벌 통합 선적', 'desc' => "다수 브랜드의 물량 통합으로<br>국제 물류 비용 최적화"],
+                ],
+            ],
+        ],
+        'brands' => [
+            'sub_visual' => [
+                'title' => '브랜드',
+                'headline' => '단순 수출을 넘어,<br>글로벌 시장 장악을 위한 비즈니스 루프의 완성',
+                'description' => '단순한 시장 진입에 머물지 마십시오. 에버큐라는 정교한 무역 인프라와 실질적인 데이터를 제공하여, <br>브랜드가 완전한 통제권 아래 운영 리스크 없이 시장을 장악할 수 있도록 지원합니다.',
+                'cta_text' => '전문가 상담 신청하기',
+                'cta_href' => '/request-a-meeting',
+            ],
+            'who_serve' => [
+                'kicker' => 'Strategic Focus',
+                'heading' => 'Who We Serve & What We Scale',
+            ],
+            'cta_view_pricing' => '전체 요금표 보기',
+            'pricing_card_heading_ideal' => '추천 기업',
+            'pricing_card_heading_deliverables' => '핵심 성과',
+            'focus_cards' => [
+                [
+                    'title' => '규제 및 행정 절차',
+                    'problem' => 'LOA, CFS, COA, MSDS, 성분 검토 및 등록 절차는 <br> 프로젝트 지연의 주범입니다.',
+                    // [BR 추가] EN 기준: 'We compress chaos into a 60-day plan<br>with bottleneck priority and execution.'
+                    'solution' => '60일 로드맵 수립: 병목 구간 우선순위 설계를 통해<br>행정 소요 시간을 60일 이내로 압축합니다.',
+                ],
+                [
+                    'title' => '판매 불확실성',
+                    'problem' => '추측에 의존한 SKU 선정은 <br> 예산 낭비로 이어집니다.',
+                    // [BR 추가] EN 기준: 'We shortlist up to 5 valid SKUs,<br>then test to find 1-2 winners.'
+                    'solution' => '데이터 검증: 후보 SKU 5종에 대한 마켓 테스트로<br>확정적인 <strong>Winner SKU</strong> 도출',
+                ],
+                [
+                    'title' => '매출로 연결되지 않는 현지화',
+                    'problem' => '단순 번역은 구매를 일으키지 못합니다. <br> 썸네일, PDP, 소구점은 현지 구매 패턴에 맞춰야 합니다.',
+                    'solution' => '전환 최적화: 정확성을 넘어 전환율(CVR) 중심의<br>상세페이지 및 콘텐츠 설계',
+                ],
+                [
+                    'title' => '운영 리스크',
+                    // [BR 제거] EN: 'Labeling, packing rules, shipping flow, customs booking, CS scripts—ops gaps break launch momentum.' — EN에는 BR 없음
+                    'problem' => '라벨링, 패킹, 물류, CS 스크립트 등 운영의 디테일이 무너지면 브랜드 신뢰도가 떨어집니다.',
+                    'solution' => '물류/운영 SOP: 즉시 판매 가능한 물류 체계 구축<br>(SOP, 비용/리드타임 최적화)',
+                ],
+                [
+                    'title' => '불투명한 B2B 시장',
+                    // [BR 제거] EN: "Brands don't know who to contact, what terms buyers demand, or which certifications block deals." — EN에는 BR 없음
+                    'problem' => '바이어 접점, 요구 조건, 필수 인증 등 B2B 시장 정보는 여전히 불투명합니다.',
+                    // [BR 추가] EN 기준: 'We capture real market signals via <br> Outreach +feedback matrix + meetings.'
+                    'solution' => '수요 가시화: 아웃리치와 피드백 매트릭스를 통한<br>실질적인 B2B 수요 데이터 확보',
+                ],
+                [
+                    'title' => '시스템 없는 성장',
+                    'problem' => '런칭 이후 리뷰 확보, UGC 생산, A/B 테스트 등 <br> 반복 가능한 성장 엔진이 부재합니다.',
+                    // [BR 추가] EN 기준: 'Our 90-day Growth Ops builds a creative<br>+ conversion + reorder engine.'
+                    'solution' => '90일 Growth Ops: 크리에이티브, 전환율,<br>재발주 순환 구조(Loop) 완성',
+                ],
+            ],
+            'target_categories' => [
+                'heading' => 'Target Categories for Emerging Markets',
+                'items' => [
+                    ['icon' => 'qnufcwtc', 'title' => 'Beauty & Derma', 'desc' => 'K-뷰티 코스메틱, 더마·스칼프 케어, 프리미엄 퍼스널 케어 등 차별화된 라인업'],
+                    // [BR 추가] EN 기준: 'Sleep Care, Gut Health, Diet,<br>Wellness F&B, Inner Beauty'
+                    ['icon' => 'kxmlrglo', 'title' => 'Health & Wellness', 'desc' => '슬립 케어, 장 건강(Gut Health), 다이어트,<br>웰니스 F&B, 이너뷰티 등 기능성 카테고리'],
+                    ['icon' => 'baakafxt', 'title' => 'Medical & Devices', 'desc' => '가정용 뷰티/헬스 디바이스 및 <br>컨슈머 헬스케어 기기'],
+                ],
+            ],
+            'what_section' => [
+                'kicker' => 'Market Bottlenecks',
+                'heading' => 'What Brands Struggle With',
+            ],
+            'what_cards' => [
+                [
+                    'front_title' => '서류만 준비된 브랜드<br>vs 판매 준비가 된 브랜드',
+                    'front_desc' => '제품은 준비됐지만, 현지 시장의<br>법적·운영적 판매 요건을 갖추지 못한 경우',
+                    'back_desc' => '60일 내 컴플라이언스 및 물류 SOP 구축을 통해 즉시 판매 가능한 <strong>Sale-Ready</strong> 상태로 전환합니다.',
+                    'featured' => false,
+                ],
+                [
+                    'front_title' => '실전 데이터가 필요한<br>테스트 런칭',
+                    // [BR 제거] EN: "You don't want market research—you want conversion + demand signals." — EN에는 BR 없음
+                    'front_desc' => '막연한 시장 조사 대신 실제 구매 전환율과<br>수요 시그널 확인이 필요한 경우',
+                    // [BR 추가] EN 기준: 'deliver a market test report<br>+ 1–2 winner SKU candidates.'
+                    'back_desc' => '에버큐라 공식 스토어(쇼피) 내 테스트 런칭으로 실전 데이터를 확보하고<br><strong>Winner SKU</strong>를 도출합니다.',
+                    'featured' => true,
+                ],
+                [
+                    'front_title' => '전담 조직 없이 글로벌<br>확장을 원하는 브랜드',
+                    // [BR 제거] EN: 'You need a repeatable system, not founder heroics.' — EN에는 BR 없음
+                    'front_desc' => '실무자 한두 명의 역량이 아닌, 지속 가능한<br>운영 시스템이 필요한 경우',
+                    'back_desc' => '규제 대응부터 현지화, 운영 전 과정을 실행하여 반복 가능한 글로벌 비즈니스 시스템을 이식합니다.',
+                    'featured' => false,
+                ],
+                [
+                    'front_title' => 'B2B 시장의 실질적<br>피드백 확보',
+                    'front_desc' => '본격 진입 전 바이어가 요구하는 MOQ, 단가, 인증 등 거래 조건을 확인하고 싶은 경우',
+                    'back_desc' => '직접적인 타깃 아웃리치를 통해 바이어의 실제 요구사항과 시장 시그널을 리포트로 제공합니다.',
+                    'featured' => false,
+                ],
+                [
+                    'front_title' => '런칭을 넘어 지속 성장이<br>필요한 브랜드',
+                    // [BR 제거] EN: 'Launch is not the finish line—growth requires a system: creative, conversion, and reorder loops.' — EN에는 BR 없음
+                    'front_desc' => '런칭 이후 크리에이티브 최적화, 재발주 관리 등<br>체계적인 스케일업이 필요한 경우',
+                    'back_desc' => 'A/B 테스트와 UGC 확보, 재발주 엔진 구축을 통해 지속 가능한 매출 확대 구조를 완성합니다.',
+                    'featured' => false,
+                ],
+            ],
+            'market' => [
+                'kicker' => 'Our Solution',
+                'heading' => '브랜드의 시장 가치를 증명하는<br>4대 핵심 프레임워크',
+                'intro' => '에버큐라는 단일화되고 체계적인 시장 검증 시스템을 통해 모든 브랜드를 운영합니다.<br>이 4가지 핵심 서비스는 브랜드 선정부터 운영, 확장 단계에 이르기까지 일관되게 적용되어 성장을 견인합니다.',
+                'blocks' => [
+                    // [BR 추가] EN 기준: 'margin potential,<br>regulatory feasibility, and real market demand<br>— focusing on quality signals over volume.' (BR 2개)
+                    ['step' => '01', 'title' => '포트폴리오 및 큐레이션', 'body' => "단순한 수량 확보보다 품질 시그널에 집중합니다.<br>마진 확보 가능성, 규제 대응 난이도, 실질적인 시장 수요를 기반으로<br>핵심 주력 상품를 엄선합니다."],
+                    // [BR 추가] EN 기준: 'continuous testing and performance data<br>to identify what converts, optimize execution,<br>and scale proven winners.' (BR 2개)
+                    ['step' => '02', 'title' => '마케팅 및 최적화', 'body' => "판매 데이터를 바탕으로 구매 전환 요소를 발굴하고,<br>검증된 성공 모델에 집중해 운영 효율을 극대화하여<br>성과를 가속화합니다."],
+                    // [BR 추가] EN 기준: 'reorder planning<br>—to ensure a stable and predictable supply cycle.'
+                    ['step' => '03', 'title' => '물류 및 풀필먼트', 'body' => '안정적이고 예측 가능한 공급 사이클을 구축합니다.<br>라벨링, 창고 관리, 월간 재발주 계획을 포함한<br><strong>Sale-Ready</strong> SOP를 수립합니다.'],
+                    // [BR 추가] EN 기준: 'lifecycle of local compliance,<br>from initial document suites to ongoing<br>regulatory maintenance,<br>ensuring error-free market operations.' (BR 3개)
+                    ['step' => '04', 'title' => '규제 및 통관', 'body' => '현지 컴플라이언스 전 과정을 관리하여<br>초기 판매 준비부터 사후 유지보수까지<br>행정 리스크 없는 운영을 보장합니다.'],
+                ],
+                'orbit_aria' => '마켓 프루프 축',
+                'outcome_heading' => "The Outcome:\n데이터 기반의 글로벌 확장",
+                'outcomes' => [
+                    ['title' => '실행 가능한 인사이트', 'desc' => '핵심 주력 상품을 식별하고 실제 시장 수요를 포착한 심층 성과 리포트를 제공합니다.<br>실질적인 수요 시그널을 통해 브랜드의 장기적인 전략 수립을 지원합니다.'],
+                    ['title' => '전략적 레버리지', 'desc' => '검증된 판매 데이터와 이미 구축된 <strong>Sell-Ready</strong> 인프라를 활용하여 <br>주요 리테일 파트너십을 확보하거나 대규모 투자의 근거를 마련합니다.'],
+                ],
+            ],
+            'pricing_section' => [
+                'kicker' => 'Our Operating Models',
+                'heading' => "Choose the right model for your <br> stage of overseas growth",
+                'intro' => '초기 시장 검증부터 통제 가능한 지속 성장까지<br>— 글로벌 확장 단계별 최적화된 운영 모델을 제안합니다.',
+            ],
+            'pricing_highlights' => [
+                ['title' => '규제 리스트 대응', 'desc' => '법적 규제, 라벨링, 제품 등록 등 즉시 판매 가능한 상태를 보장하는 엔드투엔드 컴플라이언스 관리'],
+                ['title' => '수요 증대 전략', 'desc' => '시장 반응 확인 및 성장 증폭을 위해 설계된 체계적인 B2C·B2B 수요 창출 전략'],
+                ['title' => '통합 성장 운영', 'desc' => '콘텐츠, 광고, 재발주 및 채널 통제까지 브랜드가 제품에 집중할 수 있도록 에버큐라가 성장 엔진 전담 운영'],
+            ],
+            'pricing_plans' => [
+                [
+                    'kicker' => '60-Day Market Readiness Sprint',
+                    'name' => 'Export Ready',
+                    'summary' => '60일 내 법적 컴플라이언스 및 판매 체계 구축 —<br>동시에 SKU 수요 검증과 초기 B2B 시그널을 확보합니다.',
+                    'price' => '$3,500',
+                    'unit' => '/ 초기 세팅 비용',
+                    // [BR 추가] EN 기준: 'Brands entering overseas markets for the first time <br> and requiring a complete sale-ready foundation.'
+                    'ideal_for' => '해외 시장에 처음 진입하여<br>완벽한 판매 기반 구축이 필요한 브랜드',
+                    'deliverables' => [
+                        '에버큐라 쇼피(Shopee) 공식 스토어 입점',
+                        '검증된 제품 라인업 선정 (최대 5 SKU)',
+                        '규제 감사 및 서류 작업 대행',
+                        '현지 컴플라이언스 기반 라벨링 및 패키징 가이드',
+                        '쇼피 최적화 PDP 및 브랜드 에셋 현지화',
+                        '초기 수요 검증 (B2C & B2B)',
+                        '물류 SOP 수립 및 테스트 물량 출고 실행',
+                    ],
+                ],
+                [
+                    'kicker' => '90-Day Growth Engine',
+                    'name' => 'Export Boost',
+                    'summary' => '검증된 핵심 주력 상품의 본격적인 스케일업 —<br>수요 증폭, 전환율 최적화, 재발주 선순환 구조를 통해 실질적 성장을 만듭니다.',
+                    'price' => '$1,800',
+                    'unit' => '/ 월',
+                    // [BR 추가] EN 기준: 'Brands that have achieved sale-ready status <br> and want to accelerate revenue and repeat orders.'
+                    'ideal_for' => '판매 기반이 갖춰진 상태에서<br>매출 가속화와 지속적인 재발주를 원하는 브랜드',
+                    'deliverables' => [
+                        '마켓플레이스 매출 증대: 광고, 프로모션, 노출 및 카테고리/키워드 최적화',
+                        '전환 최적화: 상세페이지/오퍼/가격 테스트를 통한 위너 템플릿 도출',
+                        '주간 신규 소재 생산 및 성과 기반 스케일업',
+                        '시딩 및 UGC 증폭 (실행 중심; 유료 광고비 별도)',
+                        '운영 및 CS 플레이북 수립 + 정기 리포팅',
+                        '가격 및 채널 통제: 프로모션 승인 및 정책 준수 관리',
+                        'B2B 수요 창출 가속화',
+                    ],
+                ],
+            ],
+            'short_cta' => [
+                'heading' => '해외 시장 확장,<br>어디서부터 시작해야 할지 고민이라면?',
+                // [BR 추가] EN 기준: 'Start with a short consultation to map your current stage and identify <br>the most efficient path forward.'
+                'lead' => '현재 브랜딩 위치를 진단하고 성공적인 안착을 위한 실행 방안을 상담하세요.',
+                'button' => '전문가 상담 신청하기',
+            ],
+            'works' => [
+                'kicker' => 'How It Works',
+                'heading' => "글로벌 진출 및 성장을 위한 5단계 실전 프로세스",
+                'intro' => "에버큐라의 파트너십은 철저히 속도와 결과에 집중합니다.<br>첫 상담부터 안정적인 재발주 궤도에 오르기까지,<br>모든 과정은 구체적인 결과물과 타임라인,<br>그리고 성장을 위한 명확한 판단 근거를 바탕으로 진행됩니다.",
+                'steps' => [
+                    // [BR 제거] EN works steps(01~05) desc에는 BR 없음 — EN 기준으로 제거
+                    ['num' => '01', 'title' => '비즈니스 진단', 'desc' => '초기 30분 상담을 통해 브랜드의 목표를 파악하고, SKU 포트폴리오나 소싱 요구사항을 검토하여 최적의 패키지를 추천합니다. (별도 비용 없이 진행됩니다.)'],
+                    ['num' => '02', 'title' => '솔루션 확정 및 계약', 'desc' => '브랜드 상황에 맞는 프로그램(Pilot Drop, Scale Sprint 등)을 선택합니다.<br>투명한 비용 구조, 성과 지표(KPI) 및 상세 결과물을 포함한 계약을 체결합니다.'],
+                    ['num' => '03', 'title' => '시장 진출 실행', 'desc' => '30~60일 내에 초도 물량 출고 또는 시장 테스트를 수행합니다. SKU 큐레이션, 에셋 제작, 물류 조율, 컴플라이언스 대응을 포함하며 모든 진행 상황은 대시보드로 공유됩니다.'],
+                    ['num' => '04', 'title' => '성과 분석 및 리뷰', 'desc' => '판매율, 전환 지표가 담긴 SKU별 데이터 리포트를 제공합니다.<br>이를 바탕으로 시장 수요 검증 결과와 재발주 권장 사항을 전달합니다.'],
+                    ['num' => '05', 'title' => '재발주 및 스케일업 결정', 'desc' => '데이터를 기반으로 핵심 주력 상품 재발주, 라인업 확장, 또는 정규 프로그램 전환 여부를 결정합니다.<br>의사결정을 지원하기 위한 정교한 예측 데이터와 마진 분석을 제공합니다.'],
+                ],
+            ],
+            'faq_items' => [
+                ['q' => '어떤 데이터를 공유해야 하나요?', 'a' => '현재 재고 현황과 리드타임(출고 소요 시간) 정보가 필요합니다. 품절 리스크 없이 원활하게 스프린트를 실행하기 위해서는 안정적인 공급 데이터가 필수적입니다.'],
+                ['q' => '결제 및 대금 지급 조건은 어떻게 되나요?', 'a' => '시스템 활성화 및 초기 세팅 비용은 선불(Upfront)입니다. 월간 운영비(Retainers)는 매월 선청구되며, 발주(PO) 대금은 패키지 티어 및 주문 규모에 따라 표준 Net-30 또는 선입금 조건으로 진행됩니다.'],
+                ['q' => '독점 계약이 필수인가요?', 'a' => '아니요. 특정 권역 보호를 위해 별도로 협의된 경우가 아니라면 기본적으로 비독점(Non-exclusive) 패키지로 진행됩니다. 에버큐라는 계약상의 구속보다 실질적인 성과를 통한 파트너십 유지를 우선합니다.'],
+                ['q' => '물류 리드타임과 정확도(SLA)는 어느 정도인가요?', 'a' => '동남아시아(SEA) 주요 시장 기준 7일의 리드타임을 보장하며, FEFO(선유통기한 선출고) 및 Lot Tracking 시스템을 통해 99.95%의 풀필먼트 정확도를 유지합니다. 지난 18개월간 규제 문제로 인한 통관 보류 사례는 0건입니다.'],
+                ['q' => 'SKU 구성을 파트너사에서 직접 결정할 수 있나요?', 'a' => '네. 에버큐라가 수요 신호와 마진 잠재력을 분석해 최적의 큐레이션을 제안해 드리지만, 실제 발주(PO) 전 모든 SKU 선정에 대한 최종 승인권은 파트너사에 있습니다.'],
+                ['q' => '파일럿이나 마켓 스프린트 성과가 좋지 않으면 어떻게 되나요?', 'a' => '경쟁사 분석과 포지셔닝 제언이 포함된 상세 데이터 리포트를 제공합니다. 장기 계약에 대한 강제성이 없으므로, 감이 아닌 철저한 시장 데이터를 바탕으로 비즈니스 지속 여부를 결정하실 수 있습니다.'],
+            ],
+        ],
+        'channel_partners' => [
+            'sub_visual' => [
+                'title' => '채널 파트너',
+                'headline' => '',
+                'headline_html' => '첫 도입부터 리오더까지,<br>끊김 없는 공급망의 완성',
+                // 본문은 description_html(신뢰 소스·퍼블 전용). K-뷰티만 강조 태그 사용.
+                'description_html' => '에버큐라는 리테일러와 유통사가 <strong>K-뷰티</strong> 및 웰니스 제품의 첫 수입을 넘어, <br>리스크 없이 안정적이고 예측 가능한 재발주 시스템을 구축하도록 지원합니다.',
+                'cta_text' => '전문가 상담 신청하기',
+                'cta_href' => '/request-a-meeting',
+            ],
+            'who_we_serve' => [
+                'kicker' => 'Strategic Focus',
+                'heading' => 'Who We Serve',
+                'intro' => "에버큐라는 막연한 리스크를 감수하지 않고, 체계적으로 한국 뷰티·웰니스 브랜드를 확장하고자 하는 리테일러, 유통사, 그리고 글로벌 크리에이터와 파트너십을 맺습니다.\n\n수익률 확보부터 빈틈없는 규제 대응, 그리고 매장 회전율 극대화까지, 에버큐라가 가장 확실한 답이 되어 드리겠습니다.",
+                // [내용 수정] EN: "Cross-border<br>B2B Reseller" — 'Cross-border' 누락 및 BR 없음. EN 기준으로 교체
+                'item_1_title' => "Cross-border<br>B2B Reseller",
+                'item_1_desc' => '개인·소형팀부터 대형 도매 사업자까지,<br>채널 최적화와 마진 방어 전략이 필요한 파트너',
+                'item_2_title' => 'Online/Offline Retailer <br> (로컬 이커머스·오프라인 체인)',
+                'item_2_desc' => '이커머스부터 대형 오프라인 체인까지,<br>리스크 없는 안정적인 공급망이 필요한 파트너',
+                // [BR 추가] EN 기준: "KOCs &<br>Local Influencer Networks"
+                'item_3_title' => "KOC &<br>로컬 인플루언서 네트워크",
+                'item_3_desc' => '마이크로 KOC부터 메가 인플루언서까지,<br>상품 소싱부터 콘텐츠 풀 패키지 지원이 필요한 파트너',
+            ],
+            'retail_struggle' => [
+                'kicker' => 'Market Bottlenecks',
+                'heading' => '리스크는 걷어내고 수익만 남기는 실전 유통 오퍼레이션',
+                'intro' => '',
+                'item_1_title' => '인허가 및 라이선스 리스크',
+                'item_1_quote' => '단일 상품의 규제 위반이<br>라이선스 전체의 타격으로<br>이어질 수 있습니다.',
+                // [BR 추가] EN 기준: 'We run a pre-check <br>+ documentation + registration <br> readiness workflow <br> before you commit.' (BR 3개)
+                'item_1_solution' => '성분 사전 점검부터 서류 준비,<br>현지 등록까지 인허가 과정을<br>완벽히 선행하여<br>리스크를 차단합니다.',
+                'item_2_title' => '악성 재고 및 매대 효율 리스크',
+                'item_2_quote' => '판매 부진으로 인한 악성 재고와<br>매대 회전율이 떨어지는<br>상황이 가장 두렵습니다.',
+                // [BR 추가] EN 기준: "We don't push volume blindly.<br>We validate demand <br> with test launches and early <br> sell-out signals, then scale winners." (BR 3개)
+                'item_2_solution' => '테스트 런칭으로<br>시장 반응을 먼저 검증하고,<br>수요가 입증된 상품 위주로<br>공급 스케일을 조정합니다.',
+                'item_3_title' => '가격 덤핑 및 마진 저하 리스크',
+                'item_3_quote' => '온라인에서 무분별한 가격 덤핑 발생 시,<br>오프라인 매장의<br>마진 구조가 무너집니다.',
+                // [BR 추가] EN 기준: 'We operate with price <br> & channel control rules<br>to protect sustainable <br> retail economics.' (BR 3개)
+                'item_3_solution' => '엄격한 가격 관리와 채널 통제로<br>파트너사가 지속 가능하고,<br>안정적인 마진을 확보할 수 있도록<br>시장 질서를 관리합니다.',
+                'item_4_title' => '공급 불안정 및 품절 리스크',
+                'item_4_quote' => '공급 지연으로 인해 발생하는<br>품절과 매출 기회 손실이 걱정됩니다.',
+                // [BR 추가] EN 기준: 'We set up reorder <br> cadence + inventory visibility<br>+ logistics SOP for <br> predictable replenishment.' (BR 3개)
+                'item_4_solution' => '체계적인 물류 SOP와<br>철저한 재발주 관리를 통해<br>끊김 없는 공급 사이클을<br>운영합니다.',
+            ],
+            'market' => [
+                'kicker' => 'Our Solution',
+                'heading_html' => '지속 가능한 성장을 만드는<br>4가지 핵심 솔루션',
+                'intro_html' => '에버큐라는 단일화된 시장 검증 시스템을 통해 모든 브랜드를 체계적으로 운영합니다. <br> 브랜드 선정부터 운영, 스케일업에 이르는 전 과정에 적용되는 이 4가지 원칙은 파트너십의 모든 단계에서 일관되게 실행됩니다.',
+                'blocks' => [
+                    [
+                        'step' => '01',
+                        'title_html' => '시장 맞춤형 상품 포트폴리오',
+                        'desc_lead' => '첫 발주 전, 현지 시장에서 확실히 통할 상품만 엄선합니다.',
+                        'desc_items' => [
+                            '트렌드·브랜드 분석 및 공급사 검증',
+                            '샘플 테스트 및 실판매 데이터 교차 검증',
+                            '독점 계약 타당성 및 채널별 상품 적합성(Fit) 분석',
+                        ],
+                    ],
+                    [
+                        'step' => '02',
+                        'title_html' => '수익성 및 조건 통제',
+                        'desc_lead' => '비즈니스를 확장하기 전, 서로 윈-윈 할 수 있는 탄탄한 수익 구조를 설계합니다.',
+                        'desc_items' => [
+                            '관세·세금·물류비를 반영한 최종 원가 시뮬레이션',
+                            '유통 마진 타당성 검토 및 최적의 가격 구조(Pricing) 설계',
+                            '결제 조건 및 마케팅 비용(A&P) 분담 등 파트너십 조건 조율',
+                        ],
+                    ],
+                    [
+                        'step' => '03',
+                        'title_html' => '완벽한 현지화 및 규제 대응',
+                        'desc_lead' => '라이선스 이슈로 번지지 않도록 규제 리스크를 원천 차단합니다.',
+                        'desc_items' => [
+                            '현지 규정에 맞춘 성분·라벨링 검토 및 인허가 등록 지원',
+                            '통관에 필요한 필수 서류(CFS/COA/MSDS 등) 완벽 구비',
+                            '수입자(IOR) 자격 요건 확인 및 실무 체크리스트 제공',
+                        ],
+                    ],
+                    [
+                        'step' => '04',
+                        'title_html' => '공급망 관리',
+                        'desc_lead' => '단발성 납품에 그치지 않고, 안정적으로 물량이 공급되는 사이클을 구축합니다.',
+                        'desc_items' => [
+                            '생산 CAPA, 리드타임, MOQ, 유통기한 등 공급 안정성 관리',
+                            '물류·입고 표준운영절차(SOP) 수립 및 이슈 대응 매뉴얼화',
+                            '지속적인 마진 보호를 위한 판매가 및 유통 채널 관리 가이드',
+                            '주간 판매 데이터(Sell-out) 기반의 재주문 타이밍 및 최적의 SKU 구성 제안',
+                        ],
+                    ],
+                ],
+                'orbit_aria' => '리피트 엔진 축',
+                'outcome_heading' => "The Outcome:<br>데이터 기반의 의사결정.<br>리스크 없는 운영.<br>확실한 글로벌 확장.",
+                'outcomes' => [
+                    [
+                        'title' => '운영 리스크 최소화',
+                        'desc' => '사전에 합의된 매뉴얼과 명확한 리스크 분담으로, 돌발 이슈를 사전에 차단합니다.',
+                    ],
+                    [
+                        'title' => '데이터 기반의 재주문',
+                        'desc' => '감에 의존하지 않고, 실제 판매 데이터를 바탕으로 정확하게 발주를 결정합니다.',
+                    ],
+                ],
+            ],
+            'pricing' => [
+                'kicker' => 'Our Operating Models',
+                'heading_html' => '성공적인 시장 안착을 넘어<br>지속 성장을 견인할 최적의 스케일업 플랜',
+                'intro' => '운영 리스크를 최소화하고 반복 가능한 수입 사이클을 구축하기 위해 설계된 <br> 에버큐라만의 두 가지 전략적 운영 플랜입니다.',
+                'highlights' => [
+                    ['title' => '규제 대응', 'desc' => '수입 통관, 제품 등록, 라벨링 컴플라이언스를 선제적으로 처리하여 규제 위반 및 비공식 유통 리스크를 원천 차단합니다.'],
+                    ['title' => '실행 중심, 무역 오퍼레이션', 'desc' => '소싱, 서류 준비, 현지 인도(DAP) 물류, 선적 예외 상황 처리까지 실제 무역의 모든 과정을 직접 실행합니다.'],
+                    ['title' => '통합 리테일 오퍼레이션', 'desc' => 'SKU 선정부터 재발주 주기 관리, 컴플라이언스 갱신까지 에버큐라가 모든 백엔드(Back-end) 운영을 전담합니다.'],
+                ],
+                'cards' => [
+                    [
+                        'kicker' => 'Distribution & Sales Partners',
+                        'title' => '글로벌 B2B 유통 파트너',
+                        'summary_html' => '팔릴 상품만 골라드립니다. <br> 재고 부담과 복잡한 통관 걱정 없이 안정적인 유통 수익을 만들어보세요.',
+                        'price' => '300만원~',
+                        'unit' => '',
+                        'price_note' => 'Or 채널 규모별 맞춤 제안',
+                        'link_text' => '전체 요금표 보기',
+                        'link_href' => '/pricing',
+                        'ko_audience_grid' => [
+                            ['title' => 'Reseller', 'body' => "초기 마진 검증이 필요한\n크로스보더 셀러", 'lord_icon' => 'jbtpukyc'],
+                            ['title' => 'Distributor', 'body' => "통관 리스크 없이 대량 취급 원하는 도매 유통사", 'lord_icon' => 'vmxwytdz'],
+                            ['title' => 'Retailer', 'body' => "안정적인 상품 회전율이\n필요한 온·오프라인 체인", 'lord_icon' => 'pqhjfpys'],
+                        ],
+                        'groups' => [
+                            ['heading' => '핵심 전략 성과물', 'list_class' => '--checklist', 'items' => [
+                                '도입 초기 테스트 운영 환경 구축 지원',
+                                '비즈니스 안정화 단계 진입 시 순이익률 20~30% 기대',
+                                '악성 재고 및 반품 리스크 분담 계약으로 초기 부담 완화',
+                                '핵심 상품을 우선 테스트로 초기 진입/판매 리스크 최소화',
+                                '채널별 맞춤 상품 큐레이션 및 예상 마진 시뮬레이션 제공',
+                                '국가별 통관·인증 컴플라이언스 가이드 지원',
+                                '품절 방지용 체계적인 재고 보충 시스템 운영',
+                            ]],
+                        ],
+                    ],
+                    [
+                        'kicker' => 'Influencer & Creator Partners',
+                        'title' => 'Global Creator Partnership',
+                        'summary_html' => '복잡한 기획과 CS는 저희가 다 할게요.<br>당신의 채널 영향력만으로 지금 바로 수익을 창출하세요.',
+                        'price' => '별도 협의',
+                        'unit' => '',
+                        'price_note' => '',
+                        'link_text' => '전체 요금표 보기',
+                        'link_href' => '/pricing',
+                        'ko_creator_cards' => [
+                            ['title' => '한국 로컬 KOC 공동구매', 'body' => '초기 마진 검증이 필요한 <br> 크로스보더 셀러', 'lord_icon' => 'tllophak'],
+                            ['title' => '로컬 인플루언서 네트워크 공동구매', 'body' => '통관 리스크 없이 <br>대량 취급을 원하는 도매 유통사', 'lord_icon' => 'jkuyamzc'],
+                        ],
+                        'groups' => [
+                            ['heading' => '핵심 전략 성과물', 'list_class' => '--checklist', 'items' => [
+                                '타겟 맞춤형 소싱으로 안정적 판매율 달성',
+                                '캠페인 안정화 단계 진입 시 순이익률 15~25% 기대',
+                                '성과 비례형 맞춤형 커미션 설계로 투명하고 합리적인 수익 분배',
+                                '상품 기획부터 배송까지 공동구매 전 과정 올인원(All-in-one) 지원',
+                                '현지 트렌드와 언어적 뉘앙스를 반영한 로컬라이징 패키지 지원',
+                                '현지 법적 리스크 대비용 컴플라이언스 및 SOP 제공',
+                                '캠페인 종료 후 상세 데이터 분석 및 리포트 발행',
+                            ]],
+                        ],
+                    ],
+                ],
+                'short_cta' => [
+                    'heading' => '어떤 모델이 우리에게 맞을지 고민되시나요?',
+                    // [BR 추가] EN 기준: 'Start with a short consultation to map your current stage and identify <br>the most efficient path forward.'
+                    'lead_html' => '짧은 상담으로 현재 단계를 진단하고 가장 효율적인 다음 경로를 찾으세요.',
+                    'button' => '전문가 상담 신청하기',
+                ],
+                'works' => [
+                    'kicker' => 'How It Works',
+                    // [BR 추가] EN 기준: 'How It Works: <br>Meeting to Scale <br>in 5 Steps' (BR 2개)
+                    'heading_html' => '첫 미팅부터<br>비즈니스 확장까지<br>5단계 프로세스',
+                    'intro_html' => '검증된 데이터와 명확한 산출물을 바탕으로 비즈니스를 전개합니다.<br>에버큐라는 &lsquo;기획부터 실행까지(End-to-End)&rsquo; 전 과정을 책임지며,<br>파트너와 안정적인 유통 수익 창출과 채널 성장을 지원합니다.',
+                    'steps' => [
+                        // [BR 제거] EN works steps(01) desc에는 BR 없음 — EN 기준으로 제거
+                        ['num' => '01', 'title' => '비즈니스 진단 미팅', 'desc' => '30분의 상담을 통해 파트너사의 목표와 SKU 포트폴리오를 검토하고 최적의 패키지를 제안합니다.'],
+                        ['num' => '02', 'title' => '전략 수립 및 파트너십 체결', 'desc' => '상호 성장을 위한 투명한 수익 구조와 명확한 KPI를 설정하여 비즈니스의 안정적인 기반을 다집니다.'],
+                        ['num' => '03', 'title' => '런칭 및 물류 실행', 'desc' => '판매 과정의 병목을 제거하고 타겟 시장에 최적화된 판매 환경을 선제적으로 완성합니다.'],
+                        ['num' => '04', 'title' => '캠페인 런칭 및 올인원 물류 실행', 'desc' => '상품 세팅부터 최종 배송까지, 복잡한 실무를 에버큐라의 고도화된 시스템으로 완벽하게 대행합니다.'],
+                        ['num' => '05', 'title' => '데이터 성과 분석 및 스케일업', 'desc' => '분석 결과를 토대로 베스트 SKU의 재주문이나 라인업 확장을 결정합니다. <br> 정교한 수요 예측과 마진 분석을 제공하여 전략적 의사결정을 지원합니다.'],
+                    ],
+                ],
+                'faq' => [
+                    'aria' => '채널 파트너 FAQ',
+                    'items' => [
+                        ['q' => '어떤 데이터를 공유해야 하나요?', 'a' => 'SKU 단위의 주간 또는 격주 판매량(Sell-through) 데이터입니다. 매출 금액이 아닌, 정확한 재발주 타이밍 계산을 위한 유닛 단위의 소진율(Depletion rates) 데이터만 공유해 주시면 됩니다.'],
+                        ['q' => '결제 및 대금 지급 조건은 어떻게 되나요?', 'a' => '시스템 활성화 및 초기 세팅 비용은 선불(Upfront)입니다. 월간 운영비(Retainers)는 매월 선청구되며, 발주(PO) 대금은 패키지 티어 및 주문 규모에 따라 표준 Net-30 또는 선입금 조건으로 진행됩니다.'],
+                        ['q' => '독점 계약이 필수인가요?', 'a' => '아니요. 특정 권역 보호를 위해 별도로 협의된 경우가 아니라면 기본적으로 비독점(Non-exclusive) 패키지로 진행됩니다. 에버큐라는 계약상의 구속보다 실질적인 성과(Performance)를 통한 파트너십 유지를 우선합니다.'],
+                        ['q' => '물류 리드타임과 정확도(SLA)는 어느 정도인가요?', 'a' => '동남아시아(SEA) 주요 시장 기준 7일의 리드타임을 보장하며, FEFO(선유통기한 선출고) 및 Lot Tracking 시스템을 통해 99.95%의 풀필먼트 정확도를 유지합니다. 지난 18개월간 규제 문제로 인한 통관 보류(Regulatory Holds) 사례는 0건입니다.'],
+                        ['q' => 'SKU 구성을 파트너사에서 직접 결정할 수 있나요?', 'a' => '네. 에버큐라가 수요 신호와 마진 잠재력을 분석해 최적의 큐레이션을 제안해 드리지만, 실제 발주(PO) 전 모든 SKU 선정에 대한 최종 승인권은 파트너사에 있습니다.'],
+                        ['q' => '파일럿이나 마켓 스프린트 성과가 좋지 않으면 어떻게 되나요?', 'a' => '경쟁사 분석과 포지셔닝 제언이 포함된 상세 데이터 리포트를 제공합니다. 장기 계약에 대한 강제성이 없으므로, 감이 아닌 철저한 시장 데이터를 바탕으로 비즈니스 지속 여부를 결정하실 수 있습니다.'],
+                    ],
+                ],
+            ],
+        ],
+        'common' => [
+            'faq_title' => '자주 묻는 질문',
+        ],
+        'common_form' => [
+            'kicker' => 'Request a Meeting',
+            // [BR 추가] EN 기준: 'Ready to Accelerate <br> Your Market Entry?'
+            'heading_html' => '지금,<br>글로벌 성공의 가장 확실한<br>파트너를 만나보세요.',
+            // [BR 추가] EN 기준: 'From curated sourcing to rapid market validation <br>—discover how EverCura can streamline <br>your operations and scale your global presence.' (BR 2개)
+            'lead_html' => '검증된 인프라와 날카로운 시장 분석으로<br>당신의 비즈니스를 세계 무대 위로 끌어올립니다.',
+            'download_brochure' => 'EverCura brochure',
+            'iam_legend' => '문의유형',
+            'iam_brand' => 'Brand / Manufacturer',
+            'iam_retailer' => 'Channel Partners',
+            'label_name' => '성함',
+            'placeholder_name' => '성함을 입력해주세요.',
+            'label_company' => '회사명',
+            'placeholder_company' => '회사명',
+            'label_email' => '이메일',
+            'placeholder_email' => 'name@company.com',
+            'label_phone' => '전화번호',
+            'placeholder_phone' => '전화번호를 입력하세요.',
+            'label_interest' => '진행 단계',
+            'interest_placeholder' => '진행 단계를 선택하세요 (선택)',
+            'interest_just_exploring' => 'Just exploring',
+            'interest_ready_pilot' => 'Ready to pilot',
+            'interest_already_selling' => 'Already selling',
+            'interest_need_proof' => 'Need proof report',
+            'label_notes' => '문의내용',
+            'placeholder_notes' => '비즈니스 고민이나 구체적으로 궁금하신 내용을 자유롭게 남겨주세요.',
+            'consent_main' => '개인정보 수집·이용 및 마케팅 정보 수신에 동의합니다.',
+            'consent_meta_before_link' => '수신 동의는 언제든지 철회 가능하며, 모든 정보는 당사의 ',
+            'consent_meta_after_link' => '에 따라 안전하게 보호됩니다.',
+            'send' => '보내기',
+        ],
+        'pricing' => [
+            'sub_visual' => [
+                'title' => '가격',
+                'headline' => '브랜드·채널에 맞춘<br>플랜과 비용 구조',
+                'description' => 'Brand 페이지에서는 브랜드 패키지가, <br> Retailers & Distributors 페이지에서는 리테일러 패키지가 기본으로 열리도록 설계된 가격 페이지입니다.',
+                'cta_text' => '전문가 상담 요청하기',
+                'cta_href' => '/pricing#request-meeting',
+            ],
+            'section_aria' => '요금제 및 플랜',
+            'hero' => [
+                // [내용 수정] EN: 'Plans and Pricing' — KO 공백, EN 기준으로 채움
+                'kicker' => '플랜 및 가격',
+                // [내용 수정] EN: 'The Trusted Standard for <br> Cross-Border Trade' — KO가 너무 단순함. EN 구조 기준으로 교체
+                'heading_html' => '글로벌 비즈니스를 위한<br>Cross-Border Trade',
+                'intro' => '',
+            ],
+            'toggle' => [
+                'aria' => '대상',
+                'brand' => 'I am a Brand',
+                'retailer' => 'I am a Channel Partners',
+            ],
+            'cards' => [
+                'brand' => [
+                    [
+                        'kicker' => '60-Day Market Readiness Sprint',
+                        'title' => 'Export Ready',
+                        // [BR 추가] EN 기준: 'Global Expansion: Regulatory,<br>Logistics, and Sales Infrastructure—Perfected in 8 Weeks.'
+                        'summary_html' => '해외 확장을 위한 규제,<br>물류, 판매 준비를 60일 만에 완벽하게.',
+                        'price' => '500만원',
+                        'unit' => '/ one-time',
+                        'price_trading_fees' => '+ Trading Fees (FOB + DAP)',
+                        // [BR 추가] EN 기준: '<strong>You focus on perfecting the product.</strong><br>EverCura handles the complexities of export preparation<br>and market validation.' (BR 2개)
+                        'quote_html' => '브랜드는 <strong>제품</strong>에만 집중하세요.<br>복잡한 수출 준비와 초기 시장 검증은<br>에버큐라가 전담합니다.',
+                        'cta' => '상담 신청하기',
+                        'groups' => [
+                            ['heading' => '핵심 모듈 (We Provide)', 'list_class' => '--checklist', 'items' => [
+                                '전략 진단 & 60일 로드맵',
+                                '동남아 5개국 진입 타당성 검토',
+                                '유효 SKU 선별 (최대 5개)',
+                                '통합 Sell-Ready 세팅',
+                                'D2C 콘텐츠 현지화',
+                                'B2B 에셋 현지화',
+                                'Shopee 공식 오피셜 몰 런칭',
+                                '물류 SOP 수립',
+                                '마켓 테스트 및 리포트',
+                            ]],
+                            ['heading' => '브랜드 협조 사항', 'list_class' => '--bullet', 'items' => [
+                                '제품/SKU 정보 및 원료·제조 세부 데이터 제공',
+                                'OEM/공장 서류 발급 협조 (신속 대응 필요)',
+                                '라벨 및 표기 사항 48~72시간 내 승인',
+                                '테스트용 샘플 및 재고 제공',
+                            ]],
+                            ['heading' => '기대 결과', 'card_group_class' => 'no-sub-pricing-card__group no-sub-pricing-card__group--kpi-tiered', 'subsections' => [
+                                ['title' => 'Sale-Ready Exit', 'items' => [
+                                    '수출 서류 패키지 & 인증 완비',
+                                    '국가별 라벨/패키징 가이드 확정',
+                                    '물류 SOP 매뉴얼 및 비용 구조 확립',
+                                    '판매 채널(오피셜 몰) 세팅 완료',
+                                ]],
+                                ['title' => 'Market Test Exit', 'items' => [
+                                    '데이터 기반 초기 시장 반응 리포트',
+                                    '<strong>Winner SKU</strong> 선정 및 제품 개선점 도출',
+                                    'B2B 바이어 DB 및 1차 피드백 (가격/MOQ 등)',
+                                ]],
+                            ]],
+                            ['heading' => '※ 별도 청구 (Excluded)', 'card_group_class' => 'no-sub-pricing-card__group no-sub-pricing-card__group--excluded', 'text' => '실비 항목: 공증/아포스티유, 번역 외주비, 인쇄비, 국제배송/통관비, 바코드 발급비 등'],
+                        ],
+                    ],
+                    [
+                        'kicker' => '90-Day Growth Engine',
+                        'title' => 'Export Boost',
+                        'summary_html' => '검증된 <strong>판매 가능 상태</strong>를 기반으로<br>트래픽, 구매 전환, 재구매 루프를 만드는 성장 단계',
+                        'price' => '350만원',
+                        'unit' => '/ month',
+                        'price_trading_fees' => '+ Trading Fees (FOB + DAP)',
+                        // [BR 추가] EN 기준: '<strong>We are not just an agency; think of us as your overseas HQ.</strong><br>From strategy to execution, CS, and sales—we drive aggressive marketing and B2B outreach to generate real revenue and profit, not just activity.'
+                        'quote_html' => '단순 대행이 아닙니다.<br>귀사의 <strong>해외 지사</strong>처럼<br>기획부터 실행, CS, 영업까지 공격적인 마케팅과<br>B2B 영업으로 실제 매출과 이익을 만듭니다.',
+                        'cta' => '상담 신청하기',
+                        'groups' => [
+                            ['heading' => '핵심 모듈 (We Provide)', 'list_class' => '--checklist', 'items' => [
+                                '90일 Growth 전략: KPI 트리 수립 및 백로그(Backlog) 관리',
+                                '채널 운영: 공식 자사몰(Shopee 등) 광고 및 프로모션 운영',
+                                'Price Control: 채널별 가격 방어 및 브랜드 가치 보호 정책 수립',
+                                'Conversion Lift: 상세페이지·오퍼 A/B 테스트를 통한 전환율 최적화',
+                                'Creative Engine: 위너 소재 발굴을 위한 주간 신규 소재 생산',
+                                'Seeding 2.0: 현지 인플루언서 시딩 및 UGC 콘텐츠 확산',
+                                'Ops & CS: 현지 스크립트 CS 운영 및 정기 리포팅',
+                                'B2B Amplify: 바이어 아웃리치 및 B2B 딜 클로징 가속화',
+                            ]],
+                            ['heading' => '브랜드 협조 사항', 'list_class' => '--bullet', 'items' => [
+                                '가격 경쟁력 확보 (MRP 대비 20% 미만 FOB 공급)',
+                                '가격/프로모션 승인 SLA 준수 (48~72시간 내)',
+                                '안정적 재고 공급 및 리드타임 공유 (품절 방지)',
+                                'UGC/리뷰 2차 저작권 사용 승인',
+                                'B2B 샘플 지원 및 화상 미팅 참석',
+                            ]],
+                            ['heading' => '기대 결과', 'card_group_class' => 'no-sub-pricing-card__group no-sub-pricing-card__group--kpi-tiered', 'subsections' => [
+                                ['title' => 'Revenue & Scale-up (매출 증대)', 'items' => [
+                                    '마켓플레이스 매출 및 노출/키워드 점유율 확대',
+                                    '위너 템플릿(상세페이지/오퍼) 도출 및 전환율 상승',
+                                    '성과 기반 광고 소재 스케일업',
+                                ]],
+                                ['title' => 'Operations & B2B (운영 자산화)', 'items' => [
+                                    '운영 및 CS 플레이북 수립 + 주간/월간 리포트',
+                                    '가격 및 채널 정책 통제 (브랜드 가치 보호)',
+                                    '현지 인플루언서 UGC 자산 확보',
+                                    'B2B 유효 리드 확보 및 수요 창출',
+                                ]],
+                            ]],
+                            ['heading' => '※ 별도 청구 (Excluded)', 'card_group_class' => 'no-sub-pricing-card__group no-sub-pricing-card__group--excluded', 'text' => '실비 항목: 시딩 제품/배송비(샘플), 오프라인 미팅 비용, 추가 콘텐츠 외주(규모 확장 시) 등'],
+                        ],
+                    ],
+                ],
+                'retailer' => [
+                    [
+                        'kicker' => 'Distribution & Sales Partners',
+                        'title' => '글로벌 B2B 유통 파트너',
+                        'summary' => '비공식 유통 및 덤핑 이슈 없이, 판매 역량을 검증하는 안전한 첫 걸음',
+                        'price' => '300만원~',
+                        'unit' => '/ Setup Fee 기준',
+                        // [BR 추가] EN 기준: 'From initial import to business scaling,<br>we eliminate all distribution risks and build a stable reorder system.'
+                        'price_note' => '첫 수입부터 비즈니스 확장까지,<br>모든 유통 리스크를 제거하고 안정적인 반복 발주 시스템을 구축합니다.',
+                        'cta' => '상담 신청하기',
+                        'groups' => [
+                            ['heading' => 'We Provide', 'list_class' => '--checklist', 'items' => [
+                                '판매 데이터 기반의 Hero SKU 선정 및 채널별 적합성 분석',
+                                '도착 원가 시뮬레이션을 통한 안정적 리테일 마진 확보',
+                                '국가별 통관·인증(CFS/MSDS 등) 가이드 및 인허가 완벽 지원',
+                                '악성 재고 방지를 위한 리스크 분담 계약 및 회수 정책 지원',
+                                '품절 방지를 위한 체계적인 재주문(Reorder) 사이클 구축',
+                                '효율적인 수입 업무를 위한 표준 운영 절차 및 매뉴얼 제공',
+                                '도입 초기 시장 검증을 위한 파일럿 운영 환경 지원',
+                            ]],
+                            ['heading' => '파트너사 협조 사항', 'list_class' => '--bullet', 'items' => [
+                                '가격 및 유통 채널 방어 가이드라인 준수',
+                                '수입자(IOR) 자격 요건 확보 및 통관 책임 소재 명확화',
+                                '주간 실제 판매 데이터(Sell-out signals) 공유 및 피드백',
+                            ]],
+                            ['heading' => 'Target KPI', 'card_group_class' => 'no-sub-pricing-card__group no-sub-pricing-card__group--kpi-flat', 'list_class' => '--bullet', 'items' => [
+                                '지속 가능한 재발주(Reorder) 사이클 구축 (Active Loop 형성)',
+                                '핵심 품목(Top SKU) 중심의 재고 효율 극대화 (Dead SKU 제거)',
+                                '표준화된 공급망 구축 및 규제 리스크 제로화',
+                                '안정화 시 순이익률 20~30% 확보 및 유지',
+                            ]],
+                        ],
+                    ],
+                    [
+                        'kicker' => 'Influencer & Creator Partners',
+                        'title' => '글로벌 크리에이터 파트너',
+                        'summary' => '복잡한 실무는 맡기고, 당신의 채널 영향력을 확실한 수익으로 전환하세요.',
+                        'price' => '별도 협의',
+                        // [BR 추가] EN 기준: 'An all-in-one group-buying solution<br>from sourcing to fulfillment, allowing you to focus entirely on your audience and content creation.'
+                        'price_note' => '상품 기획부터 물류, CS까지 공동구매 전 과정을 올인원으로 지원하여,<br>크리에이터가 콘텐츠와 팬덤 소통에만 집중할 수 있는 환경을 제공합니다.',
+                        'cta' => '상담 신청하기',
+                        'groups' => [
+                            ['heading' => 'We Provide', 'list_class' => '--checklist', 'items' => [
+                                '크리에이터 채널 특성에 맞춘 타겟 브랜드 소싱 및 상품 구성 지원',
+                                '성과 비례형 등 투명하고 합리적인 수익 분배 모델 구축',
+                                '올인원 운영 매뉴얼(물류, 관세, CS 처리 기준 등) 제공',
+                                '현지 트렌드와 언어적 뉘앙스를 반영한 콘텐츠 패키지 제공',
+                                '현지 과대광고 등 법적 리스크 대비용 컴플라이언스 가이드',
+                                '캠페인 종료 후 데이터 분석 기반, 결과 보고서 제공',
+                            ]],
+                            ['heading' => '파트너사 협조 사항', 'list_class' => '--bullet', 'items' => [
+                                '채널 영향력을 활용한 적극적인 콘텐츠 포스팅 및 홍보',
+                                '제공된 브랜드 가이드라인 및 캠페인 일정 준수',
+                                '현지 규제 위반 방지를 위한 에버큐라 컴플라이언스/SOP 준수',
+                            ]],
+                            ['heading' => 'Target KPI', 'card_group_class' => 'no-sub-pricing-card__group no-sub-pricing-card__group--kpi-flat', 'list_class' => '--bullet', 'items' => [
+                                '크리에이터 오디언스 분석과 타겟 소싱을 통해 재고 부담 없는 높은 판매 전환율 확보',
+                                '캠페인 안정화 단계 진입 시, 지속 가능하고 차별화된 고수익 구조 구축',
+                                '투명한 수익 분배 및 정산 프로세스 정착',
+                                '글로벌 채널 확장 및 브랜드 포트폴리오 강화',
+                            ]],
+                        ],
+                    ],
+                ],
+            ],
+            'faq' => [
+                'title' => '자주 묻는 질문',
+                'brand' => [
+                    'aria' => '브랜드 요금 FAQ',
+                    'items' => [
+                        ['q' => '어떤 데이터를 공유해야 하나요?', 'a' => '현재 재고 현황과 리드타임(출고 소요 시간) 정보가 필요합니다. 품절 리스크 없이 원활하게 스프린트를 실행하기 위해서는 안정적인 공급 데이터가 필수적입니다.'],
+                        ['q' => '결제 및 대금 지급 조건은 어떻게 되나요?', 'a' => '시스템 활성화 및 초기 세팅 비용은 선불(Upfront)입니다. 월간 운영비(Retainers)는 매월 선청구되며, 발주(PO) 대금은 패키지 티어 및 주문 규모에 따라 표준 Net-30 또는 선입금 조건으로 진행됩니다.'],
+                        ['q' => '독점 계약이 필수인가요?', 'a' => '아니요. 특정 권역 보호를 위해 별도로 협의된 경우가 아니라면 기본적으로 비독점(Non-exclusive) 패키지로 진행됩니다. 에버큐라는 계약상의 구속보다 실질적인 성과를 통한 파트너십 유지를 우선합니다.'],
+                        ['q' => '물류 리드타임과 정확도(SLA)는 어느 정도인가요?', 'a' => '동남아시아(SEA) 주요 시장 기준 7일의 리드타임을 보장하며, FEFO(선유통기한 선출고) 및 Lot Tracking 시스템을 통해 99.95%의 풀필먼트 정확도를 유지합니다. 지난 18개월간 규제 문제로 인한 통관 보류 사례는 0건입니다.'],
+                        ['q' => 'SKU 구성을 파트너사에서 직접 결정할 수 있나요?', 'a' => '네. 에버큐라가 수요 신호와 마진 잠재력을 분석해 최적의 큐레이션을 제안해 드리지만, 실제 발주(PO) 전 모든 SKU 선정에 대한 최종 승인권은 파트너사에 있습니다.'],
+                        ['q' => '파일럿이나 마켓 스프린트 성과가 좋지 않으면 어떻게 되나요?', 'a' => '경쟁사 분석과 포지셔닝 제언이 포함된 상세 데이터 리포트를 제공합니다. 장기 계약에 대한 강제성이 없으므로, 감이 아닌 철저한 시장 데이터를 바탕으로 비즈니스 지속 여부를 결정하실 수 있습니다.'],
+                    ],
+                ],
+                'retailer' => [
+                    'aria' => '채널 파트너 요금 FAQ',
+                    'items' => [
+                        ['q' => '어떤 데이터를 공유해야 하나요?', 'a' => 'SKU 단위의 주간 또는 격주 판매량(Sell-through) 데이터입니다. 매출 금액이 아닌, 정확한 재발주 타이밍 계산을 위한 유닛 단위의 소진율(Depletion rates) 데이터만 공유해 주시면 됩니다.'],
+                        ['q' => '결제 및 대금 지급 조건은 어떻게 되나요?', 'a' => '시스템 활성화 및 초기 세팅 비용은 선불(Upfront)입니다. 월간 운영비(Retainers)는 매월 선청구되며, 발주(PO) 대금은 패키지 티어 및 주문 규모에 따라 표준 Net-30 또는 선입금 조건으로 진행됩니다.'],
+                        ['q' => '독점 계약이 필수인가요?', 'a' => '아니요. 특정 권역 보호를 위해 별도로 협의된 경우가 아니라면 기본적으로 비독점(Non-exclusive) 패키지로 진행됩니다. 에버큐라는 계약상의 구속보다 실질적인 성과(Performance)를 통한 파트너십 유지를 우선합니다.'],
+                        ['q' => '물류 리드타임과 정확도(SLA)는 어느 정도인가요?', 'a' => '동남아시아(SEA) 주요 시장 기준 7일의 리드타임을 보장하며, FEFO(선유통기한 선출고) 및 Lot Tracking 시스템을 통해 99.95%의 풀필먼트 정확도를 유지합니다. 지난 18개월간 규제 문제로 인한 통관 보류(Regulatory Holds) 사례는 0건입니다.'],
+                        ['q' => 'SKU 구성을 파트너사에서 직접 결정할 수 있나요?', 'a' => '네. 에버큐라가 수요 신호와 마진 잠재력을 분석해 최적의 큐레이션을 제안해 드리지만, 실제 발주(PO) 전 모든 SKU 선정에 대한 최종 승인권은 파트너사에 있습니다.'],
+                        ['q' => '파일럿이나 마켓 스프린트 성과가 좋지 않으면 어떻게 되나요?', 'a' => '경쟁사 분석과 포지셔닝 제언이 포함된 상세 데이터 리포트를 제공합니다. 장기 계약에 대한 강제성이 없으므로, 감이 아닌 철저한 시장 데이터를 바탕으로 비즈니스 지속 여부를 결정하실 수 있습니다.'],
+                    ],
+                ],
+            ],
+        ],
+        'request_meeting' => [
+            'sub_visual' => [
+                'title' => '전문가 상담 요청',
+                'headline' => '시장 진입과 운영,<br>지금 단계를 알려주세요',
+                'description' => '회사·목표·문의 단계를 남겨 주시면 에버큐라 팀이 맞춤 다음 단계로 연결합니다. <br> 아래 양식은 EverCura 리드 접수로 전달되며, UTM·마케팅 동의는 제출 시 함께 처리됩니다.',
+                'cta_text' => '문의 양식으로 이동',
+                'cta_href' => '#evercura-lead-form',
+            ],
+        ],
+        'request_meeting_complete' => [
+            'seo_title' => '문의 접수 완료 | EverCura',
+            'seo_desc' => '문의가 정상적으로 접수되었습니다. 에버큐라 팀이 내용을 확인한 뒤 다음 단계로 안내드립니다.',
+            'sub_visual' => [
+                'title' => '문의 접수 완료',
+                'headline_html' => '문의가 정상적으로 <br> 접수되었습니다',
+                'description_html' => '에버큐라에 문의를 남겨주셔서 감사합니다. 접수 내용을 검토한 뒤, 상황에 맞는 다음 단계로 안내드리겠습니다.',
+            ],
+            'eyebrow' => '접수 완료',
+            'title_html' => '문의해 주셔서 감사합니다.<br>곧 연락드리겠습니다.',
+            'description_html' => '제출하신 내용은 에버큐라 팀으로 안전하게 전달되었습니다. 검토가 완료되면 현재 단계와 비즈니스 상황에 맞는 다음 안내를 드립니다.',
+            'note' => '긴급한 문의라면 입력하신 이메일을 꼭 확인해 주세요.',
+            'primary_cta' => '홈으로 이동',
+            'secondary_cta' => '요금 보기',
+        ],
+        'legal' => [
+            'nav' => [
+                'aria' => '법률 페이지',
+                'privacy' => '개인정보처리방침',
+                'marketing' => '마케팅 약관',
+                'cookies' => '쿠키 설정',
+            ],
+            'privacy' => [
+                'sub_visual' => [
+                    'title' => '개인정보처리방침',
+                    'headline' => '개인정보처리방침',
+                    'description' => '에버큐라가 웹사이트와 문의 과정에서 수집하는 개인정보의 항목, 이용 목적, 보관 기간, 보호 방법에 대한 안내입니다.',
+                ],
+                'updated_label' => '최종 업데이트',
+                'updated_at' => '2026.03.31',
+                'intro' => '본 초안은 에버큐라 웹사이트 운영 과정에서 수집될 수 있는 개인정보의 범위와 이용 목적, 보관 원칙, 이용자의 권리에 대해 알기 쉽게 안내하기 위한 문서입니다. 실제 게시 전에는 회사 내부 운영 정책과 법률 검토를 반영해 최종 확정되어야 합니다.',
+                'summary_title' => '핵심 안내',
+                'summary_items' => [
+                    '문의 응대, 미팅 조율, 자료 전달, 서비스 운영에 필요한 최소한의 개인정보만 수집합니다.',
+                    '수집된 정보는 문의 처리, 운영 분석, 보안 유지, 서비스 개선 목적 범위에서 사용합니다.',
+                    '이용자는 열람, 정정, 삭제, 처리 제한 요청 등 관련 법령상 권리를 행사할 수 있습니다.',
+                ],
+                'sections' => [
+                    [
+                        'title' => '1. 수집하는 개인정보 항목',
+                        'body' => [
+                            '에버큐라는 문의 폼 또는 이메일 커뮤니케이션을 통해 이름, 회사명, 이메일 주소, 연락처, 국가 정보와 이용자가 자발적으로 입력한 기타 내용을 수집할 수 있습니다.',
+                            '또한 웹사이트 운영 과정에서 IP 주소, 브라우저 정보, 유입 경로, 페이지 이용 기록, 디바이스 정보, 쿠키 식별자 등 기술적 정보가 분석 및 보안 목적상 수집될 수 있습니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '2. 개인정보 이용 목적',
+                        'body' => [
+                            '수집한 개인정보는 문의 응대, 상담 및 미팅 일정 조율, 요청 자료 전달, 브랜드 및 파트너 커뮤니케이션, 사업 개발 관련 후속 안내를 위해 활용될 수 있습니다.',
+                            '아울러 사이트 성능 분석, 유입 경로 확인, 서비스 개선, 보안 모니터링, 법적 의무 이행, 내부 기록 관리 목적으로 제한적으로 사용될 수 있습니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '3. 보관 기간 및 제3자 제공·위탁',
+                        'body' => [
+                            '개인정보는 수집 목적 달성, 계약상 의무 이행, 법령 준수, 분쟁 대응, 정당한 내부 기록 보관에 필요한 기간 동안만 보관하는 것을 원칙으로 합니다.',
+                            '사이트 운영, 호스팅, 분석, CRM, 커뮤니케이션, 물류 운영 등을 지원하는 신뢰할 수 있는 서비스 제공사에 한하여 필요한 범위 내에서 정보 처리가 위탁되거나 공유될 수 있습니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '4. 이용자의 권리',
+                        'body' => [
+                            '관련 법령이 허용하는 범위에서 이용자는 자신의 개인정보에 대한 열람, 정정, 삭제, 처리 제한, 동의 철회, 특정 처리에 대한 이의 제기를 요청할 수 있습니다.',
+                            '마케팅 정보 수신은 언제든지 철회할 수 있으며, 철회 이후에는 홍보성 안내 발송이 중단됩니다.',
+                        ],
+                    ],
+                ],
+                'contact_title' => '문의 및 검토 안내',
+                'contact_body' => '본 방침 또는 개인정보 처리에 관한 문의는 웹사이트 내 문의 채널을 통해 접수할 수 있습니다. 실제 운영 시에는 개인정보보호 책임자 정보, 세부 보관 기간, 수탁사 목록 등 회사 고유 정보가 추가되어야 합니다.',
+            ],
+            'marketing' => [
+                'sub_visual' => [
+                    'title' => '마케팅 약관',
+                    'headline' => '마케팅 약관',
+                    'description' => '에버큐라의 마케팅 정보 수신에 동의하는 경우 적용되는 기본 안내와 운영 원칙입니다.',
+                ],
+                'updated_label' => '최종 업데이트',
+                'updated_at' => '2026.03.31',
+                'intro' => '본 초안은 이용자가 에버큐라의 마케팅 정보 수신에 동의했을 때 어떤 범위의 안내를 받을 수 있는지, 그리고 언제든지 어떻게 철회할 수 있는지를 설명하기 위한 문서입니다. 실제 적용 전에는 폼 문구와 CRM 운영 규칙에 맞춰 최종 조정이 필요합니다.',
+                'summary_title' => '핵심 안내',
+                'summary_items' => [
+                    '마케팅 수신 동의는 선택 사항이며, 필수 서비스 안내와는 별도로 처리됩니다.',
+                    '동의한 이용자에게는 뉴스레터, 제품 소식, 행사 초청, 캠페인 안내 등 프로모션 정보가 발송될 수 있습니다.',
+                    '이용자는 언제든지 동의를 철회할 수 있으며, 철회 후에도 필수적인 비홍보성 안내는 별도로 전달될 수 있습니다.',
+                ],
+                'sections' => [
+                    [
+                        'title' => '1. 동의의 범위',
+                        'body' => [
+                            '이용자가 마케팅 수신 동의 체크박스를 선택하거나 이에 준하는 방식으로 동의한 경우, 에버큐라는 프로모션 이메일, 이벤트 초청, 제품 업데이트, 시장 인사이트, 캠페인 소식 등 사업 안내성 정보를 발송할 수 있습니다.',
+                            '동의는 수집 시점에 안내된 목적과 채널 범위 내에서만 적용되며, 과도하거나 무관한 홍보 활동까지 포괄하지 않습니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '2. 안내 채널',
+                        'body' => [
+                            '마케팅 정보는 이메일, 전화, 메신저, 리타게팅 광고, 기타 이용자가 제공한 적법한 연락 수단을 통해 전달될 수 있습니다.',
+                            '발송 빈도는 캠페인 운영 상황과 이용자 반응에 따라 달라질 수 있으나, 에버큐라는 과도한 빈도의 발송을 지양하고 합리적인 수준에서 운영하는 것을 원칙으로 합니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '3. 동의 철회 및 수신 거부',
+                        'body' => [
+                            '이용자는 이메일 하단의 수신 거부 링크, 회신 안내, 설정 메뉴 또는 에버큐라에 대한 직접 요청을 통해 언제든지 마케팅 수신을 철회할 수 있습니다.',
+                            '단, 문의 답변, 계약 이행, 법적 의무 준수 등 비홍보성 커뮤니케이션은 마케팅 동의 철회와 별도로 발송될 수 있습니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '4. 마케팅 데이터 처리',
+                        'body' => [
+                            '마케팅 운영에 사용되는 정보는 개인정보처리방침 및 내부 접근 통제 원칙에 따라 관리되며, 동의 이력도 함께 보관될 수 있습니다.',
+                            '에버큐라는 열람, 클릭, 제출, 유입 경로 등 반응 데이터를 활용해 메시지 품질과 관련성을 개선할 수 있습니다.',
+                        ],
+                    ],
+                ],
+                'contact_title' => '운영 참고',
+                'contact_body' => '실서비스 반영 전에는 폼 동의 문구, CRM 수신거부 처리, 국가별 광고성 정보 규정, 로그 보관 방식까지 함께 검토하는 것이 좋습니다.',
+            ],
+            'cookies' => [
+                'sub_visual' => [
+                    'title' => '쿠키 설정',
+                    'headline' => '쿠키 설정',
+                    'description' => '웹사이트에서 사용할 수 있는 쿠키 유형과 이용자가 선택할 수 있는 기본 설정 방향을 안내합니다.',
+                ],
+                'updated_label' => '최종 업데이트',
+                'updated_at' => '2026.03.31',
+                'intro' => '본 초안은 에버큐라 웹사이트에서 사용할 수 있는 쿠키의 범주와 목적, 그리고 이용자가 브라우저 또는 추후 도입될 동의 도구를 통해 이를 어떻게 관리할 수 있는지 설명하기 위한 문서입니다. 현재는 실제 동의 배너 기능이 연결되어 있지 않은 정책 초안입니다.',
+                'summary_title' => '핵심 안내',
+                'summary_items' => [
+                    '필수 쿠키는 사이트 보안, 세션 유지, 언어 처리, 기본 폼 동작 등 핵심 기능을 지원합니다.',
+                    '분석 쿠키는 유입 채널, 방문 흐름, 캠페인 성과, 페이지 사용 패턴을 이해하는 데 도움을 줍니다.',
+                    '마케팅 쿠키는 광고 성과 측정, 리마케팅, 문의 전환 경로 분석 등에 활용될 수 있습니다.',
+                ],
+                'sections' => [
+                    [
+                        'title' => '1. 쿠키의 유형',
+                        'body' => [
+                            '필수 쿠키는 사이트가 정상적으로 동작하는 데 필요한 정보 저장에 사용되며, 예를 들어 언어 처리, 보안 보호, 세션 유지 등에 활용될 수 있습니다.',
+                            '성능·분석·마케팅 쿠키는 방문 통계, 유입 경로, 전환 흐름, 캠페인 효율, 콘텐츠 반응을 파악하기 위해 사용될 수 있습니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '2. 쿠키의 사용 목적',
+                        'body' => [
+                            '쿠키 및 유사 식별자는 이용자 설정 기억, 사이트 성능 측정, 사용자 흐름 개선, 부정 이용 탐지, 캠페인 유입과 문의 제출의 연결 분석 등에 활용될 수 있습니다.',
+                            '일부 쿠키는 분석, 광고, 호스팅, 임베드 도구 등 제3자 서비스 제공사를 통해 설정될 수 있으며, 이 경우 각 제공사의 정책이 함께 적용될 수 있습니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '3. 이용자의 선택권',
+                        'body' => [
+                            '이용자는 브라우저 설정, 디바이스 설정 또는 향후 제공될 수 있는 쿠키 설정 도구를 통해 쿠키를 허용·차단·삭제할 수 있습니다.',
+                            '일부 쿠키를 비활성화하면 저장된 선호 설정, 분석 정확도, 일부 편의 기능이 제한될 수 있으나, 가능한 범위 내에서 필수 기능은 유지되어야 합니다.',
+                        ],
+                    ],
+                    [
+                        'title' => '4. 향후 동의 관리 기능',
+                        'body' => [
+                            '향후 쿠키 배너 또는 설정 센터가 도입되면, 실제 사용 중인 쿠키 종류, 제공사, 보관 기간, 선택 방식에 맞추어 본 문서를 구체화해야 합니다.',
+                        ],
+                    ],
+                ],
+                'contact_title' => '구현 참고',
+                'contact_body' => '현재 이 페이지는 설명용 초안입니다. 실제 쿠키 제어 기능이 필요하다면 다음 단계로 쿠키 배너, 설정 저장 로직, 분석 도구 연동까지 함께 구현하는 것이 좋습니다.',
+            ],
+        ],
+    ],
+];

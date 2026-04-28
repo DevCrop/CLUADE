@@ -1,0 +1,199 @@
+import { ImagePreview } from "../components/ImagePreview.js";
+import {
+  pageAbout,
+  pageAward,
+  pageContact,
+  pageLegal,
+  pageMain,
+  pageWorks,
+  pageWorksModal,
+  pageWorksView,
+} from "../core/setup.js";
+import { AppManager } from "../manager/AppManager.js";
+import { aboutConfig } from "../pages/about/scene/about.scene.js";
+import { contactConfig } from "../pages/contact/scene/contact.scene.js";
+import { mainConfig } from "../pages/main/scene/main.scene.js";
+import type {
+  IPageController,
+  IPageRuntime,
+  IPageStrategy,
+} from "../types/engine.types.js";
+import type { ManagedPageConfig } from "../types/runtime.types.js";
+import { HudPanel } from "../ui/HudPanel.js";
+import { IntroOverlay } from "../ui/IntroOverlay.js";
+import { Panel } from "../ui/Panel.js";
+import { EnvSetup } from "../app/EnvSetup.js";
+import { ScrollLock } from "../utils/ScrollLock.js";
+
+const CONFIG_DRIVEN_PAGES: Readonly<Record<string, ManagedPageConfig>> = {
+  [pageMain]: mainConfig,
+  [pageAbout]: aboutConfig,
+  [pageContact]: contactConfig,
+};
+
+function recoverPageInitFailure(context: string, error: unknown): void {
+  IntroOverlay.hide();
+  ScrollLock.unlock();
+  Panel.getInstance().setVisibleOff();
+  HudPanel.getInstance().setVisibleOff();
+  console.warn(`[${context}] Page initialization failed.`, error);
+}
+
+class ManagedPageStrategy implements IPageStrategy {
+  private readonly _runtime: IPageRuntime;
+
+  constructor(pageConfig: ManagedPageConfig) {
+    this._runtime = new AppManagerPageRuntime(pageConfig);
+  }
+
+  async init(root?: ParentNode | null): Promise<void> {
+    await this._runtime.init(root);
+  }
+
+  dispose(): void {
+    this._runtime.dispose();
+  }
+}
+
+class AppManagerPageRuntime implements IPageRuntime {
+  private readonly _pageConfig: ManagedPageConfig;
+  private _appManager: AppManager | null = null;
+
+  constructor(pageConfig: ManagedPageConfig) {
+    this._pageConfig = pageConfig;
+  }
+
+  async init(root?: ParentNode | null): Promise<void> {
+    if (window.gsap?.registerPlugin && window.ScrollTrigger) {
+      window.gsap.registerPlugin(window.ScrollTrigger);
+    }
+    const three = this._pageConfig.three;
+    if (!three) {
+      recoverPageInitFailure(
+        "ManagedPageStrategy.init",
+        new Error(`Missing page config for ${this._pageConfig.pageId}.`),
+      );
+      return;
+    }
+    const env = EnvSetup.shouldInit({
+      canvasId: three.canvasId,
+      root,
+      allowedPageTypes: new Set(Object.keys(CONFIG_DRIVEN_PAGES)),
+    });
+    if (!env.shouldInit) {
+      recoverPageInitFailure(
+        "ManagedPageStrategy.init",
+        new Error(env.reason ?? "Three.js page init was skipped."),
+      );
+      return;
+    }
+    this._appManager?.dispose();
+    this._appManager = new AppManager();
+    try {
+      await this._appManager.run(this._pageConfig, root);
+    } catch (error) {
+      this._appManager?.dispose();
+      this._appManager = null;
+      recoverPageInitFailure("ManagedPageStrategy.init", error);
+    }
+  }
+
+  dispose(): void {
+    this._appManager?.dispose();
+    this._appManager = null;
+  }
+}
+
+class LazyRuntimePageStrategy implements IPageStrategy {
+  private readonly _failureContext: string;
+  private readonly _loadRuntime: (
+    root?: ParentNode | null,
+  ) => Promise<IPageRuntime>;
+  private _runtime: IPageRuntime | null = null;
+
+  constructor(
+    failureContext: string,
+    loadRuntime: (
+      root?: ParentNode | null,
+    ) => Promise<IPageRuntime>,
+  ) {
+    this._failureContext = failureContext;
+    this._loadRuntime = loadRuntime;
+  }
+
+  async init(root?: ParentNode | null): Promise<void> {
+    try {
+      this._runtime?.dispose();
+      this._runtime = null;
+      const runtime = await this._loadRuntime(root);
+      this._runtime = runtime;
+      await runtime.init(root);
+    } catch (error) {
+      this._runtime?.dispose();
+      this._runtime = null;
+      recoverPageInitFailure(this._failureContext, error);
+    }
+  }
+
+  dispose(): void {
+    this._runtime?.dispose();
+    this._runtime = null;
+  }
+}
+
+class StaticInitPageStrategy implements IPageStrategy {
+  private readonly _initRuntime: () => void;
+
+  constructor(initRuntime: () => void) {
+    this._initRuntime = initRuntime;
+  }
+
+  async init(): Promise<void> {
+    this._initRuntime();
+  }
+
+  dispose(): void {}
+}
+
+class NoopPageStrategy implements IPageStrategy {
+  async init(): Promise<void> {}
+  dispose(): void {}
+}
+
+const PAGE_STRATEGIES: Readonly<Record<string, () => IPageStrategy>> = {
+  [pageMain]: () => new ManagedPageStrategy(mainConfig),
+  [pageAbout]: () => new ManagedPageStrategy(aboutConfig),
+  [pageAward]: () => new StaticInitPageStrategy(() => ImagePreview.init()),
+  [pageWorks]: () =>
+    new LazyRuntimePageStrategy("WorksPageStrategy.init", async (root) => {
+      const { WorksPageRuntime } = await import(
+        "../pages/works/runtime/WorksPageRuntime.js"
+      );
+      return new WorksPageRuntime(root ?? document);
+    }),
+  [pageContact]: () => new ManagedPageStrategy(contactConfig),
+  [pageWorksView]: () => new NoopPageStrategy(),
+  [pageWorksModal]: () => new NoopPageStrategy(),
+  [pageLegal]: () => new NoopPageStrategy(),
+};
+
+export class PageController implements IPageController {
+  private _strategy: IPageStrategy | null = null;
+
+  private _resolveStrategy(pageType: string): IPageStrategy {
+    const createStrategy = PAGE_STRATEGIES[pageType];
+    if (!createStrategy) return new NoopPageStrategy();
+    return createStrategy();
+  }
+
+  async init(root?: ParentNode | null): Promise<void> {
+    const pageType = EnvSetup.getPageType(root);
+    this._strategy = this._resolveStrategy(pageType);
+    await this._strategy.init(root);
+  }
+
+  dispose(): void {
+    this._strategy?.dispose();
+    this._strategy = null;
+  }
+}

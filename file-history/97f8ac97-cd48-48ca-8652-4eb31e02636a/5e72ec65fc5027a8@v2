@@ -1,0 +1,587 @@
+﻿import * as THREE from "three";
+import { SceneObject } from "../../core/SceneObject.js";
+import type {
+  SceneLightsPort,
+  SceneLightsStateSnapshot,
+  SceneLightsObjectOptions,
+  SceneLightsTweenProps,
+} from "../../types/object.types.js";
+import type { LightSpec } from "../../types/runtime.types.js";
+export { type LightSpec } from "../../types/runtime.types.js";
+import {
+  THREE_LAYER_DEFAULT,
+  THREE_LAYER_EARTH,
+  THREE_LAYER_ROCKET,
+} from "../../core/setup.js";
+import type {
+  FollowCameraEntry,
+  GroupTransformProxy,
+  LightCreator,
+  SceneLightsProxy,
+} from "../../types/object-runtime.types.js";
+import { Helpers } from "../../utils/Helpers.js";
+
+export function createPointLightFromSpec(
+  spec: LightSpec,
+  color: number,
+  intensity: number,
+): THREE.PointLight {
+  return new THREE.PointLight(color, intensity, spec.distance, spec.decay);
+}
+
+export class SceneLights
+  extends SceneObject<SceneLightsTweenProps>
+  implements SceneLightsPort
+{
+  private _options: Partial<SceneLightsObjectOptions> = {};
+  private _lights = new Map<string, THREE.Light>();
+  private _specs: LightSpec[] = [];
+  private _flightProgress = 0;
+  private _masterIntensity = 1;
+
+  private _timelineProxy: SceneLightsProxy = {
+    ground: this._createDefaultGroupProxy(),
+  };
+
+  private _groups: Record<"ground", THREE.Group | null> = {
+    ground: null,
+  };
+
+  private _followCameraEntries: FollowCameraEntry[] = [];
+  private _followCamPos = new THREE.Vector3();
+  private _followCamQuat = new THREE.Quaternion();
+  private _followWorldOffset = new THREE.Vector3();
+  private _followWorldTargetPos = new THREE.Vector3();
+
+  private readonly _creators: Readonly<Record<string, LightCreator>> = {
+    ambient: (_p, _s, c, i) => new THREE.AmbientLight(c, i),
+    hemisphere: (_p, s, c, i) =>
+      new THREE.HemisphereLight(s.skyColor ?? c, s.groundColor ?? 0x1b2430, i),
+    point: (_p, s, c, i) => {
+      const l = createPointLightFromSpec(s, c, i);
+      this._applyPosition(l, s.position);
+      return l;
+    },
+    spot: (p, s, c, i) => {
+      const l = new THREE.SpotLight(
+        c,
+        i,
+        s.distance,
+        s.angle,
+        s.penumbra,
+        s.decay,
+      );
+      this._applyPosition(l, s.position);
+      this._applyDirectionalTarget(p, l, s.target);
+      this._applyShadow(l, s);
+      return l;
+    },
+    directional: (p, s, c, i) => {
+      const l = new THREE.DirectionalLight(c, i);
+      this._applyPosition(l, s.position);
+      this._applyDirectionalTarget(p, l, s.target);
+      this._applyShadow(l, s);
+      return l;
+    },
+  };
+
+  setOptions(props: Partial<SceneLightsObjectOptions> | undefined): this {
+    if (props == null) return this;
+    this._options = { ...this._options, ...props };
+    if (Number.isFinite(props.flightProgress as number)) {
+      this._setFlightProgress(props.flightProgress as number);
+    }
+    if (Number.isFinite(props.intensity as number)) {
+      this._setMasterIntensity(props.intensity as number);
+    }
+    if (Array.isArray(props.lights)) {
+      this._setLights(props.lights);
+      if (this.getTimelineRoot()) this._rebuildFromSpecs();
+    }
+    return this;
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options;
+  }
+
+  protected override isAlwaysVisible(): boolean {
+    return true;
+  }
+
+  protected override applyVisibility(_visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (root) root.visible = true;
+  }
+
+  protected override syncFromOptions(): void {
+    if (Number.isFinite(this._options.flightProgress as number)) {
+      this._setFlightProgress(this._options.flightProgress as number);
+    }
+    if (Number.isFinite(this._options.intensity as number)) {
+      this._setMasterIntensity(this._options.intensity as number);
+    }
+    this._syncProxyScalarState();
+  }
+
+  override getAnimationTarget(): SceneLightsProxy {
+    return this._timelineProxy;
+  }
+
+  override getTweenApplyMode(): "gsapOnly" {
+    return "gsapOnly";
+  }
+
+  override runObject(): void {
+    if (!this._context?.scene) return;
+    const root = this.ensureTimelineRoot("sceneLightsRoot");
+    if (!root) return;
+
+    if (Number.isFinite(this._options.flightProgress as number)) {
+      this._setFlightProgress(this._options.flightProgress as number);
+    }
+    if (Number.isFinite(this._options.intensity as number)) {
+      this._setMasterIntensity(this._options.intensity as number);
+    }
+    if (!this._specs.length) {
+      const optLights = this._options.lights;
+      if (Array.isArray(optLights)) this._specs = optLights;
+    }
+
+    this._createGroupNodes(root);
+    this._specs.forEach((spec) => this._addLight(spec));
+    this._buildFollowCameraEntries();
+    this._syncProxyFromGroups();
+    this._syncProxyLightIntensities();
+    this._syncProxyScalarState();
+  }
+
+  override runUpdate(_delta: number): void {
+    this._applyGroupTransformsFromProxy();
+    this._applyScalarStateFromProxy();
+    this._applyDirectLightIntensityOverrides();
+    this._syncProxyLightIntensities();
+    this._syncProxyScalarState();
+    this._applyCameraFollow();
+  }
+
+  override dispose(): void {
+    this._disposeLights();
+    this._followCameraEntries = [];
+    this._groups = { ground: null };
+    super.dispose();
+  }
+
+  private _disposeLights(): void {
+    this._lights.forEach((light) => {
+      light.parent?.remove(light);
+      const disposable = light as THREE.Light & { dispose?: () => void };
+      disposable.dispose?.();
+      const withTarget = light as THREE.Light & { target?: THREE.Object3D };
+      if (withTarget.target && withTarget.target.parent) {
+        withTarget.target.parent.remove(withTarget.target);
+      }
+    });
+    this._lights.clear();
+  }
+
+  setState(state: SceneLightsStateSnapshot): void {
+    if (state.visible) {
+      this.setVisibleOn();
+    } else {
+      this.setVisibleOff();
+    }
+    this._setFlightProgress(state.flightProgress);
+    this._setMasterIntensity(state.intensity);
+    this._timelineProxy.ground.position = { ...state.ground.position };
+    this._timelineProxy.ground.rotation = { ...state.ground.rotation };
+    this._timelineProxy.ground.scale = { ...state.ground.scale };
+    if (this._groups.ground) {
+      this._groups.ground.visible = state.ground.visible;
+    }
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    proxy.groundLight = state.groundLight;
+    proxy.rocketFillLight = state.rocketFillLight;
+    proxy.rocketRimLightLeft = state.rocketRimLightLeft;
+    proxy.rocketRimLightRight = state.rocketRimLightRight;
+    proxy.flightProgress = state.flightProgress;
+    proxy.intensity = state.intensity;
+    this._applyGroupTransformsFromProxy();
+    this._applyScalarStateFromProxy();
+    this._applyDirectLightIntensityOverrides();
+    this._syncProxyLightIntensities();
+    this._syncProxyScalarState();
+  }
+
+  getState(): SceneLightsStateSnapshot {
+    this._syncProxyFromGroups();
+    this._syncProxyLightIntensities();
+    this._syncProxyScalarState();
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    return {
+      visible: this.getVisibleState(),
+      intensity: this._masterIntensity,
+      flightProgress: this._flightProgress,
+      groundLight: this._readNumber(proxy.groundLight, 0),
+      rocketFillLight: this._readNumber(proxy.rocketFillLight, 0),
+      rocketRimLightLeft: this._readNumber(proxy.rocketRimLightLeft, 0),
+      rocketRimLightRight: this._readNumber(proxy.rocketRimLightRight, 0),
+      ground: this._readGroupTransformState(this._groups.ground),
+    };
+  }
+
+  private _rebuildFromSpecs(): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+
+    this._disposeLights();
+    for (let i = root.children.length - 1; i >= 0; i -= 1) {
+      root.remove(root.children[i]);
+    }
+    this._followCameraEntries = [];
+    this._groups = { ground: null };
+
+    this._createGroupNodes(root);
+    this._specs.forEach((spec) => this._addLight(spec));
+    this._buildFollowCameraEntries();
+    this._syncProxyFromGroups();
+  }
+
+  private _createGroupNodes(root: THREE.Group): void {
+    const make = (name: string): THREE.Group => {
+      const g = new THREE.Group();
+      g.name = name;
+      root.add(g);
+      return g;
+    };
+    this._groups.ground = make("sceneLights-ground");
+  }
+
+  private _addLight(spec: LightSpec): void {
+    if (!spec.id) return;
+    const parent = this._groups.ground;
+    if (!parent) return;
+
+    const color = spec.color ?? 0xffffff;
+    const intensity = Number.isFinite(spec.intensity as number)
+      ? Number(spec.intensity)
+      : 1;
+    const type = (spec.type ?? "directional").toLowerCase();
+    const creator = this._creators[type] ?? this._creators.directional;
+    const light = creator(parent, spec, color, intensity);
+    light.name = `light:${spec.id}`;
+    light.layers.set(THREE_LAYER_DEFAULT);
+    if (spec.affectsEarth !== false) {
+      light.layers.enable(THREE_LAYER_EARTH);
+    }
+    if (spec.affectsRocket) {
+      light.layers.enable(THREE_LAYER_ROCKET);
+    }
+    if (
+      (light instanceof THREE.DirectionalLight ||
+        light instanceof THREE.SpotLight) &&
+      light.target
+    ) {
+      light.target.layers.set(THREE_LAYER_DEFAULT);
+      if (spec.affectsEarth !== false) {
+        light.target.layers.enable(THREE_LAYER_EARTH);
+      }
+      if (spec.affectsRocket) {
+        light.target.layers.enable(THREE_LAYER_ROCKET);
+      }
+    }
+    parent.add(light);
+    this._lights.set(spec.id, light);
+  }
+
+  private _applyDirectionalTarget(
+    parent: THREE.Object3D,
+    light: THREE.DirectionalLight | THREE.SpotLight,
+    target?: LightSpec["target"],
+  ): void {
+    if (!target) return;
+    const targetObj = new THREE.Object3D();
+    targetObj.name = `${light.name || "directionalLight"}:target`;
+    targetObj.position.set(target.x ?? 0, target.y ?? 0, target.z ?? 0);
+    parent.add(targetObj);
+    light.target = targetObj;
+  }
+
+  private _applyShadow(
+    light: THREE.DirectionalLight | THREE.SpotLight,
+    spec: LightSpec,
+  ): void {
+    if (!spec.castShadow || !light.shadow) return;
+    light.castShadow = true;
+    const s = spec.shadow;
+    if (s?.mapSize) {
+      light.shadow.mapSize.width = light.shadow.mapSize.height = s.mapSize;
+    }
+    if (s?.bias != null) light.shadow.bias = s.bias;
+    if (s?.normalBias != null) light.shadow.normalBias = s.normalBias;
+    if (s?.radius != null && "radius" in light.shadow) {
+      (light.shadow as { radius?: number }).radius = s.radius;
+    }
+  }
+
+  private _applyPosition(
+    obj: THREE.Object3D,
+    pos?: LightSpec["position"],
+  ): void {
+    if (!pos) return;
+    obj.position.set(pos.x ?? 0, pos.y ?? 0, pos.z ?? 0);
+  }
+
+  private _setLights(specs: LightSpec[]): void {
+    this._specs = specs;
+  }
+
+  private _setFlightProgress(value: number): void {
+    const clamped = Math.max(
+      0,
+      Math.min(1, Number.isFinite(value) ? value : 0),
+    );
+    this._flightProgress = clamped;
+    this._options.flightProgress = clamped;
+  }
+
+  private _setMasterIntensity(value: number): void {
+    const clamped = Math.max(
+      0,
+      Math.min(4, Number.isFinite(value) ? value : 1),
+    );
+    this._masterIntensity = clamped;
+    this._options.intensity = clamped;
+  }
+
+  private _syncProxyFromGroups(): void {
+    for (const key of ["ground"] as const) {
+      const g = this._groups[key];
+      if (!g) continue;
+      const p = this._timelineProxy[key];
+      p.position.x = g.position.x;
+      p.position.y = g.position.y;
+      p.position.z = g.position.z;
+      p.rotation.x = Helpers.radToDeg(g.rotation.x);
+      p.rotation.y = Helpers.radToDeg(g.rotation.y);
+      p.rotation.z = Helpers.radToDeg(g.rotation.z);
+      p.scale.x = g.scale.x;
+      p.scale.y = g.scale.y;
+      p.scale.z = g.scale.z;
+    }
+  }
+
+  private _applyGroupTransformsFromProxy(): void {
+    for (const key of ["ground"] as const) {
+      const group = this._groups[key];
+      if (!group) continue;
+      const src = this._timelineProxy[key];
+      if (!src?.position || !src?.rotation || !src?.scale) continue;
+      group.position.set(
+        src.position.x ?? 0,
+        src.position.y ?? 0,
+        src.position.z ?? 0,
+      );
+      Helpers.applyRotationDeg(group, src.rotation);
+      group.scale.set(src.scale.x ?? 1, src.scale.y ?? 1, src.scale.z ?? 1);
+    }
+  }
+
+  private _applyScalarStateFromProxy(): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    const p = proxy.flightProgress;
+    if (typeof p === "number" && Number.isFinite(p)) {
+      this._setFlightProgress(p);
+    }
+    const intensity = proxy.intensity;
+    if (typeof intensity === "number" && Number.isFinite(intensity)) {
+      this._setMasterIntensity(intensity);
+    }
+  }
+
+  private _applyDirectLightIntensityOverrides(): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    for (const [id, light] of this._lights.entries()) {
+      const base = proxy[id];
+      if (typeof base !== "number" || !Number.isFinite(base)) continue;
+      light.intensity = Math.max(0, base) * this._masterIntensity;
+    }
+  }
+
+  private _syncProxyLightIntensities(): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    const master = Math.max(1e-6, this._masterIntensity);
+    for (const [id, light] of this._lights.entries()) {
+      proxy[id] = light.intensity / master;
+    }
+  }
+
+  private _syncProxyScalarState(): void {
+    const proxy = this._timelineProxy as unknown as Record<string, unknown>;
+    proxy.flightProgress = this._flightProgress;
+    proxy.intensity = this._masterIntensity;
+  }
+
+  private _buildFollowCameraEntries(): void {
+    this._followCameraEntries = [];
+    const camera = this._context?.camera;
+    if (!(camera instanceof THREE.Object3D)) return;
+
+    const camPos = new THREE.Vector3();
+    const camQuat = new THREE.Quaternion();
+    const camInvQuat = new THREE.Quaternion();
+    camera.getWorldPosition(camPos);
+    camera.getWorldQuaternion(camQuat);
+    camInvQuat.copy(camQuat).invert();
+
+    for (const spec of this._specs) {
+      const rawFollow = spec.followCamera;
+      const followOpts =
+        typeof rawFollow === "object" && rawFollow != null ? rawFollow : null;
+      const enabled = rawFollow === true || followOpts?.enabled === true;
+      if (!enabled) continue;
+
+      const light = this._lights.get(spec.id);
+      if (!light) continue;
+      const rotateWithCamera = followOpts?.rotateWithCamera ?? true;
+      const lightType = (spec.type ?? "directional").toLowerCase();
+      const hasTarget = lightType === "directional" || lightType === "spot";
+      const targetObj =
+        hasTarget &&
+        (light instanceof THREE.DirectionalLight ||
+          light instanceof THREE.SpotLight)
+          ? light.target
+          : null;
+
+      const positionOffset = followOpts?.positionOffset
+        ? new THREE.Vector3(
+            followOpts.positionOffset.x ?? 0,
+            followOpts.positionOffset.y ?? 0,
+            followOpts.positionOffset.z ?? 0,
+          )
+        : this._worldDeltaToOffset(
+            light.position.clone().sub(camPos),
+            rotateWithCamera,
+            camInvQuat,
+          );
+
+      const targetOffset =
+        targetObj != null
+          ? followOpts?.targetOffset
+            ? new THREE.Vector3(
+                followOpts.targetOffset.x ?? 0,
+                followOpts.targetOffset.y ?? 0,
+                followOpts.targetOffset.z ?? 0,
+              )
+            : this._worldDeltaToOffset(
+                targetObj.position.clone().sub(camPos),
+                rotateWithCamera,
+                camInvQuat,
+              )
+          : null;
+
+      this._followCameraEntries.push({
+        lightId: spec.id,
+        rotateWithCamera,
+        positionOffset,
+        targetOffset,
+      });
+    }
+  }
+
+  private _worldDeltaToOffset(
+    delta: THREE.Vector3,
+    rotateWithCamera: boolean,
+    camInvQuat: THREE.Quaternion,
+  ): THREE.Vector3 {
+    if (!rotateWithCamera) return delta;
+    return delta.applyQuaternion(camInvQuat);
+  }
+
+  private _applyCameraFollow(): void {
+    if (this._followCameraEntries.length === 0) return;
+    const camera = this._context?.camera;
+    if (!(camera instanceof THREE.Object3D)) return;
+
+    const camPos = this._followCamPos;
+    const camQuat = this._followCamQuat;
+    const worldOffset = this._followWorldOffset;
+    camera.getWorldPosition(camPos);
+    camera.getWorldQuaternion(camQuat);
+
+    for (const entry of this._followCameraEntries) {
+      const light = this._lights.get(entry.lightId);
+      if (!light) continue;
+
+      if (entry.positionOffset) {
+        const lightParent = light.parent;
+        worldOffset.copy(entry.positionOffset);
+        if (entry.rotateWithCamera) worldOffset.applyQuaternion(camQuat);
+        const nextLightWorldPos = this._followWorldTargetPos
+          .copy(camPos)
+          .add(worldOffset);
+        if (lightParent instanceof THREE.Object3D) {
+          lightParent.worldToLocal(nextLightWorldPos);
+        }
+        light.position.copy(nextLightWorldPos);
+      }
+
+      if (
+        entry.targetOffset &&
+        (light instanceof THREE.DirectionalLight ||
+          light instanceof THREE.SpotLight) &&
+        light.target
+      ) {
+        const targetParent = light.target.parent;
+        worldOffset.copy(entry.targetOffset);
+        if (entry.rotateWithCamera) worldOffset.applyQuaternion(camQuat);
+        const nextTargetWorldPos = this._followWorldTargetPos
+          .copy(camPos)
+          .add(worldOffset);
+        if (targetParent instanceof THREE.Object3D) {
+          targetParent.worldToLocal(nextTargetWorldPos);
+        }
+        light.target.position.copy(nextTargetWorldPos);
+      }
+    }
+  }
+
+  private _createDefaultGroupProxy(): GroupTransformProxy {
+    return {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    };
+  }
+
+  private _readGroupTransformState(
+    group: THREE.Group | null,
+  ): SceneLightsStateSnapshot["ground"] {
+    const rotation = Helpers.readRotationDeg(group);
+    return {
+      position: {
+        x: this._readNumber(group?.position.x, 0),
+        y: this._readNumber(group?.position.y, 0),
+        z: this._readNumber(group?.position.z, 0),
+      },
+      rotation: {
+        x: this._readNumber(rotation.x, 0),
+        y: this._readNumber(rotation.y, 0),
+        z: this._readNumber(rotation.z, 0),
+      },
+      scale: {
+        x: this._readNumber(group?.scale.x, 1),
+        y: this._readNumber(group?.scale.y, 1),
+        z: this._readNumber(group?.scale.z, 1),
+      },
+      visible: group?.visible ?? true,
+    };
+  }
+
+  private _readNumber(value: unknown, fallback: number): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+    return value;
+  }
+}
+
+export { SceneLights as Light };

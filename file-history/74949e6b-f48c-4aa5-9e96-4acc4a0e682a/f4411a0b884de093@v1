@@ -1,0 +1,11 @@
+---
+name: --dangerously-skip-permissions alias is active
+description: The claude command runs with --dangerously-skip-permissions in this environment — no permission prompts will appear
+type: feedback
+originSessionId: 624772be-a851-4c46-81a2-c61d8d7b4ad9
+---
+`~/.bashrc` sets `alias claude='claude --dangerously-skip-permissions'`.
+
+**Why:** Per-action permission prompts interrupt workflow. The user trusts this project, so all tool use is auto-approved.
+
+**How to apply:** Do not wait for or mention permission prompts. All tool calls (file writes, Bash commands, etc.) are automatically approved.

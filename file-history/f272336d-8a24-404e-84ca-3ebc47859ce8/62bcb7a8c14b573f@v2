@@ -1,0 +1,29 @@
+<div class="no-legal-doc">
+
+    <p class="no-legal-doc__effective">현행 · 2026년 04월 01일 시행</p>
+
+    <div class="no-legal-doc__section" style="margin-top:0">
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">1. 개인 정보수집 및 이용 목적</p>
+            <p class="no-legal-doc__body">고객의 서비스 이용에 대한 통계, 각종 정보 및 이벤트 관련 사항 소개 및 안내</p>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">2. 수집 항목</p>
+            <ul class="no-legal-doc__bullet-list">
+                <li>개인 식별 정보: 성명, 회사명, 전화번호, 이메일 등</li>
+            </ul>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">3. 보유 기간</p>
+            <p class="no-legal-doc__body">1년</p>
+        </div>
+
+        <div class="no-legal-doc__subsection">
+            <p class="no-legal-doc__subsection-title">4. 약관 개정</p>
+            <p class="no-legal-doc__body">약관은 타당한 사유가 있을 시 개정될 수 있으며, 회사는 이 경우 당사 홈페이지를 통해 이를 공지합니다.</p>
+        </div>
+    </div>
+
+</div>

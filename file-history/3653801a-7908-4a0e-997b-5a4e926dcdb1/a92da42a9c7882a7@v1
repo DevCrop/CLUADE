@@ -1,0 +1,66 @@
+# RTK — Token-Optimized Commands
+
+## Golden Rule
+
+**Use `rtk` for any command whose output may exceed a few lines.** Inside WSL Remote sessions the global PreToolUse hook auto-rewrites Bash commands to their `rtk`-prefixed form (`git status` → `rtk git status`). On native Windows shells the hook is unavailable, so prefix explicitly. `rtk` passes through commands without a dedicated filter unchanged — always safe to use.
+
+```bash
+# ✅ Correct (chains too)
+rtk git add . && rtk git commit -m "msg" && rtk git push
+```
+
+## Commands by Category
+
+```bash
+# Git
+rtk git status / log / diff / show / add / commit / push / pull / branch / fetch / stash
+
+# GitHub CLI
+rtk gh pr list / view / create
+rtk gh issue list / view
+rtk gh run list
+
+# Build & Type Check
+rtk tsc                  # TypeScript errors only, grouped by file
+rtk lint                 # ESLint grouped by rule/file
+rtk next build           # Next.js build compact
+
+# Tests
+rtk test <cmd>           # generic — failures only
+rtk vitest / jest / pytest / cargo test / go test
+
+# Files & Search
+rtk ls <path>            # token-optimized tree
+rtk read <file>          # smart file read
+rtk grep <pattern> <path>
+rtk find "*.ext" <path>
+rtk diff <a> <b>
+
+# Containers
+rtk docker ps / images / logs / compose ps / compose logs
+rtk kubectl pods / logs / services
+
+# Data & Errors
+rtk json <file>          # structure without values
+rtk err <cmd>            # filter errors only from any command
+rtk log <file>           # deduplicated log
+rtk env -f <prefix>      # filtered env vars
+rtk curl <url>           # truncate + save full output
+
+# Meta
+rtk gain                 # token savings stats
+rtk gain --history       # recent commands
+rtk gain --daily         # day-by-day breakdown
+rtk discover             # find missed savings opportunities
+rtk init --show          # verify which AI tool integrations are active
+```
+
+## When to Use
+
+Wrap any noisy command (`git`, `docker`, `tsc`, test runners, `find`, log files). Skip for commands that produce only a handful of lines. RTK passes through unknown commands transparently.
+
+## Setup Reference
+
+For installing RTK in a fresh project (Docker + WSL workflow), see `~/.claude/templates/rtk-setup.md`.
+
+@RTK.md

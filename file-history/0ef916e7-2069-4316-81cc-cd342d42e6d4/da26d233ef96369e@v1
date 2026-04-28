@@ -1,0 +1,370 @@
+
+export interface HeaderMenuToggleOptions {
+  triggerSelector?: string;
+  drawerSelector?: string;
+  headerSelector?: string;
+  openClass?: string;
+  boundFlagAttr?: string;
+}
+
+export interface DropdownToggleOptions {
+  selector?: string;
+  openClass?: string;
+  boundFlagAttr?: string;
+}
+
+export interface WorkModalToggleOptions {
+  root?: ParentNode | null;
+  triggerSelector?: string;
+  modalRootSelector?: string;
+  closeSelector?: string;
+  hostId?: string;
+}
+
+export type ToastVariant = "success" | "error" | "info";
+
+export interface ToastNotifier {
+  setVisibleOn(message: string, variant?: ToastVariant): void;
+}
+
+export interface ClipboardPort {
+  writeText(text: string): Promise<void>;
+}
+
+export interface UrlProvider {
+  getCurrentUrl(): string;
+}
+
+
+export interface ShareButtonInitOptions {
+  root?: ParentNode | null;
+  selector?: string;
+}
+
+
+export interface WhySkillPreviewOptions {
+  listSelector?: string;
+  itemSelector?: string;
+  previewSelector?: string;
+}
+
+export interface WhySkillBinding {
+  item: HTMLElement;
+  onEnter: () => void;
+  onLeave: () => void;
+}
+
+export interface ImagePreviewOptions {
+  listSelector?: string;
+  itemSelector?: string;
+  previewSelector?: string;
+  imageDataAttr?: string;
+  offset?: number;
+}
+
+
+export interface TextRevealOptions {
+  // Used by BlockReveal to pick which class to apply on reveal.
+  // TextReveal itself is attribute-driven (`data-reveal`) and ignores this.
+  revealClass?: string;
+}
+
+export type InviewObserverCallback = (element: Element) => void;
+
+export interface InviewObserverHandlers {
+  onEnter: InviewObserverCallback;
+  onLeave?: InviewObserverCallback;
+}
+
+export interface TextRevealInitOptions {
+  root?: ParentNode | null;
+  selector?: string;
+  excludeSelectors?: string[];
+  // BlockReveal still uses class-based state ("is-block-reveal-up") because
+  // block reveal is a separate animation system from masking-text.
+  // This option lets BlockReveal.observe pick which class to apply on enter.
+  // TextReveal itself no longer reads this field (state is attribute-driven).
+  inviewClass?: string;
+  threshold?: number;
+  rootMargin?: string;
+  observeOnce?: boolean;
+  observerEnabled?: boolean;
+}
+
+export interface RevealObserveOptions extends TextRevealInitOptions {
+  onEnter?: InviewObserverCallback;
+  onLeave?: InviewObserverCallback;
+}
+
+
+export interface CustomCursorOptions {
+  root?: ParentNode | null;
+  disableSelector?: string;
+}
+
+export type CustomCursorState = "idle" | "interactive";
+
+export interface MarqueeConfig {
+  selector: string;
+  viewportSelector: string;
+  trackSelector: string;
+  itemSelector: string;
+  speed: number;
+  pauseOnHover: boolean;
+  fallbackClass: string;
+  fallbackDurationVar: string;
+}
+
+export interface MarqueeInitOptions {
+  root?: ParentNode | null;
+  selector?: string;
+}
+
+export interface MarqueeElements {
+  root: HTMLElement;
+  viewport: HTMLElement;
+  track: HTMLElement;
+  item: HTMLElement;
+}
+
+export interface MarqueeItem {
+  elements: MarqueeElements;
+  speed: number;
+  pauseOnHover: boolean;
+}
+
+export interface FeatureCardCanvasParticle {
+  x: number;
+  y: number;
+  z: number;
+  size: number;
+  drift: number;
+}
+
+export interface FeatureCardCanvasSize {
+  width: number;
+  height: number;
+  dpr: number;
+}
+
+export interface FeatureCardCanvasInstance {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  size: FeatureCardCanvasSize;
+  rotation: number;
+  tilt: number;
+  speed: number;
+  particles: FeatureCardCanvasParticle[];
+}
+
+export interface FeatureCardCanvasConfig {
+  listSelector: string;
+  canvasSelector: string;
+  pixelRatioMax: number;
+  particleCount: number;
+  particleSizeMin: number;
+  particleSizeMax: number;
+  cubeScale: number;
+  strokeStyle: string;
+  fillStyle: string;
+  particleColor: string;
+  clearColor: string;
+  rotationSpeedBase: number;
+  rotationSpeedStep: number;
+}
+
+export interface SubpageStarfieldConfig {
+  rootSelector: string;
+  canvasSelector: string;
+  pagePrefixes: readonly string[];
+  pixelRatioMax: number;
+  starCount: number;
+  speed: number;
+  clearAlpha: number;
+  radiusMin: number;
+  radiusMax: number;
+  depthRangeFactor: number;
+  scrollBoostFactor: number;
+  scrollBoostMax: number;
+  scrollBoostDecayPerSecond: number;
+  scrollBoostLerpPerSecond: number;
+  strokeColor: string;
+}
+
+export interface SubpageStarfieldStar {
+  x: number;
+  y: number;
+  z: number;
+  previousZ: number;
+}
+
+export interface PinnedRevealAnimationConfig {
+  fromAutoAlpha: number;
+  fromY: number;
+  duration: number;
+  ease: string;
+}
+
+export interface PinnedRevealExitAnimationConfig {
+  toAutoAlpha: number;
+  toY: number;
+  duration: number;
+  ease: string;
+}
+
+export interface PinnedRevealConfig {
+  sectionSelector: string;
+  targetSelector: string;
+  start: string;
+  end: string | "viewport-auto";
+  scrub: boolean | number;
+  pinSpacing: boolean;
+  animation: PinnedRevealAnimationConfig;
+  exitAnimation?: PinnedRevealExitAnimationConfig;
+}
+
+export interface GaugeSlot {
+  value: Element | null;
+}
+
+export type LoadingTask<T> = () => Promise<T> | T;
+
+export interface LoadingBoundaryOptions {
+  message?: string;
+  delayMs?: number;
+  minVisibleMs?: number;
+}
+
+export interface LoadingActionConfig {
+  message: string;
+  autoHideMs: number | null;
+}
+
+export type LoadingToken = symbol;
+
+export interface NineoneLoadingApi {
+  begin(options?: LoadingBoundaryOptions | string): () => void;
+  endAll(): void;
+  setVisibleOn(message?: string): void;
+  setVisibleOff(): void;
+  run<T>(
+    task: LoadingTask<T>,
+    options?: LoadingBoundaryOptions | string,
+  ): Promise<T>;
+}
+
+declare global {
+  interface Window {
+    NineoneLoading?: NineoneLoadingApi;
+  }
+}
+
+
+export interface SuspenseConfig {
+  overlayId: string;
+  overlayClass: string;
+  panelClass: string;
+  spinnerClass: string;
+  textClass: string;
+  textSelector: string;
+  bodyLoadingClass: string;
+  defaultText: string;
+  defaultDelayMs: number;
+  defaultMinVisibleMs: number;
+}
+
+
+export interface MagneticCornerGsap {
+  to(target: unknown, vars: object): unknown;
+  killTweensOf(target: unknown): void;
+}
+
+
+export interface MagneticCornerBox {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  L: number;
+  sw: number;
+  cx: number;
+  cy: number;
+  hw: number;
+  hh: number;
+}
+
+
+export interface MagneticCornerTrackerOptions {
+  root?: ParentNode | null;
+  gap?: number;
+  pull?: number;
+  pullText?: number;
+  cornerFollow?: number;
+  color?: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
+export interface ContactFormValidationOptions {
+  root?: ParentNode | null;
+  formSelector?: string;
+  errorClass?: string;
+}
+
+export interface ContactWizardInitOptions {
+  root?: ParentNode | null;
+}
+
+export interface ContactWizardChipData {
+  key: string;
+  label: string;
+  iconClass?: string;
+}
+
+export interface QaManagerInitOptions {
+  root?: ParentNode | null;
+}
+
+export interface QaCheckResult {
+  key: string;
+  valid: boolean;
+  details: string;
+}
+
+export interface QaReport {
+  valid: boolean;
+  results: QaCheckResult[];
+}
+
+export interface SuspenseInitOptions {
+  root?: ParentNode | null;
+}
+
+export interface FieldValidator {
+  validate(): ValidationResult;
+}
+
+export interface GroupValidation {
+  key: string;
+  root: HTMLElement;
+  inputs: HTMLInputElement[];
+  validator: FieldValidator;
+  touched: boolean;
+}
+
+export interface SingleValidation {
+  key: string;
+  root: HTMLElement;
+  input: HTMLInputElement | HTMLTextAreaElement;
+  validator: FieldValidator;
+}
+
+export interface AttachmentElements {
+  input: HTMLInputElement;
+  placeholder: HTMLElement;
+  clearButton: HTMLButtonElement;
+  defaultText: string;
+}

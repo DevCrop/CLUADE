@@ -1,0 +1,75 @@
+# Voice
+
+## Tone Principles
+
+NINEONELABS copy should be:
+
+- Bold: confident, not arrogant.
+- Experimental: surprising only when it improves clarity.
+- Precise: no filler.
+- Warm at scale: collaborative without becoming casual.
+- Proof-driven: grounded in shipped work, systems, or measurable outcomes.
+
+Avoid:
+
+- generic agency speak
+- empty inspiration
+- technical name-dropping without outcome
+- space fantasy without service clarity
+- corporate boilerplate
+- overly polite sales language
+- trend-chasing AI/tool language
+
+## Korean Copy
+
+- Use formal polite public-facing Korean.
+- Keep sentences short.
+- Prefer `함께`, `여정`, `브랜드`, `설계`, `경험`, `구조`, `증명`.
+- Avoid `솔루션`, `최고의`, `최적의`, `고객님`.
+- A Korean line break must preserve grammar and meaning when each line is read alone.
+
+## English Copy
+
+- Display copy may use ALL CAPS or title case depending on visual role.
+- English must be understandable to Korean readers at a glance.
+- Prefer short, common words over clever phrasing.
+- For clear utility/proof sections, use direct nouns first: `SERVICES`, `WORKS`, `PARTNERS`, `CLIENTS`, `CONTACT`.
+- Do not force journey or space metaphors into section titles when the section job is already obvious.
+- Avoid repeated `WE... / WE... / WE...` headline patterns unless repetition is the concept.
+- Do not stack the same English opening shape across adjacent homepage sections when a stronger noun-led or outcome-led alternative exists.
+- Vary openings with nouns, objects, outcomes, or fragments: `NEW WEBSITES`, `REAL WORK`, `FROM TEST TO LAUNCH`, `DESIGNED TO PROVE`, `BUILT THROUGH FRICTION`.
+- Use `NINEONELABS` for public brand display. Use `nineonelabs` only in technical/code contexts.
+
+## Rhythm Rules
+
+Do not let consecutive sections use the same copy shape.
+
+| Scene | Copy Job | Suggested Shape |
+|---|---|---|
+| `intro` | invite | short English headline + 2 Korean lines |
+| `introAction` | align and move | two short beats, each with a different verb |
+| `hero` | land the slogan | slogan + short clarifying Korean line |
+| `story` | reveal attitude | brand belief + concrete Korean proof |
+
+## Bad Copy And Better Direction
+
+| Do Not Write | Better Direction |
+|---|---|
+| `우리는 최고의 웹 경험을 제공합니다` | `우리가 만든 웹은 사용자가 스크롤을 멈추게 합니다` |
+| `Innovative digital solutions` | `Scroll-triggered 3D brand story, built in Three.js` |
+| `We are passionate about design` | `We ship design systems that work across 5 touchpoints` |
+| `We use cutting-edge technology` | `Three.js, GSAP, and TypeScript embedded in the site you actually ship` |
+| `브랜드의 가치를 높여드립니다` | `브랜드를 한 문장으로 설명할 수 있을 때, 설계가 끝난 겁니다` |
+
+## Web Agency Copy Rules
+
+- Talk about results, not tools.
+- Frame process as journey language only when it supports a concrete digital outcome.
+- Every space metaphor must land on web, app, branding, UI/UX, maintenance, proof, or action.
+
+## Skill Label Rules
+
+- Skill labels in `why` may be short and technical, but descriptions must stay clear and outcome-aware.
+- Use skill labels as proof signals, not service descriptions.
+- Prefer compact pairs such as `THREE.JS / INTERACTIVE WEB`, `GSAP / MOTION & ANIMATION`, `CMS SYSTEM / CONTENT CONTROL`.
+- If a skill description needs a full sentence, it probably belongs in `services` or a case study.

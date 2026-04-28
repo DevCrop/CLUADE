@@ -1,0 +1,526 @@
+import * as THREE from "three";
+import { EnvSetup } from "../../app/EnvSetup.js";
+import { SceneObject } from "../../core/SceneObject.js";
+import { THREE_LAYER_ROCKET } from "../../core/setup.js";
+import type {
+  RocketFlameStateSnapshot,
+  RocketFlameOptions,
+  RocketObjectOptions,
+  RocketPort,
+  RocketTweenProps,
+} from "../../types/object.types.js";
+import { Helpers } from "../../utils/Helpers.js";
+import { Logger } from "../../utils/Logger.js";
+import flameVertexShader from "../../../shaders/rocket-flame/vertex.glsl?raw";
+import flameFragmentShader from "../../../shaders/rocket-flame/fragment.glsl?raw";
+
+const ROCKET_CLASS = "Rocket";
+const ROCKET_FLAME_SHADER_KEY = "rocket-flame";
+const DEFAULT_FLAME_SCALE = { x: 1.65, y: 3.4, z: 1 };
+const DEFAULT_FLAME_OFFSET = { x: 0, y: -0.35, z: 0 };
+const DEFAULT_FLAME_ROTATION = { x: 0, y: 0, z: 0 };
+const DEFAULT_FLAME_OPACITY = 0.9;
+const DEFAULT_FLAME_RENDER_ORDER = 5;
+const DEFAULT_FLAME_SPEED = 2;
+const DEFAULT_FLAME_WAVE = 1.2;
+const DEFAULT_FLAME_ANCHOR_NAME_INCLUDES = [
+  "flame",
+  "nozzle",
+  "thruster",
+  "engine",
+  "exhaust",
+] as const;
+
+export class Rocket
+  extends SceneObject<RocketTweenProps>
+  implements RocketPort
+{
+  private _model: THREE.Group | null = null;
+  private _options: Partial<RocketObjectOptions> = {};
+  private _flameMesh: THREE.Mesh<
+    THREE.PlaneGeometry,
+    THREE.ShaderMaterial
+  > | null = null;
+  private _flameAnchor: THREE.Object3D | null = null;
+  private _hasLoggedFlameAnchorDebug = false;
+  private readonly _modelBounds = new THREE.Box3();
+  private readonly _modelBoundsCenter = new THREE.Vector3();
+  private readonly _cameraWorldQuaternion = new THREE.Quaternion();
+  private readonly _rootWorldQuaternion = new THREE.Quaternion();
+  private readonly _flameLocalQuaternion = new THREE.Quaternion();
+  private readonly _flameLocalEuler = new THREE.Euler();
+  private readonly _anchorLocalPosition = new THREE.Vector3();
+
+  setOptions(props: Partial<RocketObjectOptions> | undefined): this {
+    if (props != null) this._options = { ...this._options, ...props };
+    return this;
+  }
+
+  protected override getOptions(): Record<string, unknown> {
+    return this._options;
+  }
+
+  protected override isAlwaysVisible(): boolean {
+    return true;
+  }
+
+  protected override applyVisibility(_visible: boolean): void {
+    const root = this.getTimelineRoot();
+    if (root) root.visible = true;
+  }
+
+  protected override syncFromOptions(): void {
+    this._syncTransform();
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    this._applyMaterialVisibilityBoost(root);
+    if (!this._flameMesh && this._model) {
+      this._buildFlame();
+    }
+    this._syncFlameState(root);
+  }
+
+  override getAnimationTarget(): THREE.Object3D | null {
+    return this.getTimelineRoot();
+  }
+
+  override getTweenApplyMode(): "gsapOnly" {
+    return "gsapOnly";
+  }
+
+  override async runObject(): Promise<void> {
+    const ctx = this._context;
+    if (!ctx) return;
+
+    const modelUrl = this._options.modelUrl;
+    if (!modelUrl) {
+      Logger.error(
+        ROCKET_CLASS,
+        "runObject",
+        "Rocket modelUrl must be defined in object.config.ts.",
+      );
+      return;
+    }
+
+    try {
+      const model = await ctx.loadModel(this.resolveAssetPath(modelUrl));
+      const group = model as THREE.Group;
+      this._model = group;
+      this.attachToTimelineRoot(group, "rocketRoot");
+      this._flameAnchor = this._resolveFlameAnchor(group);
+      this._logFlameAnchorDebug(group, this._flameAnchor);
+      this._syncTransform();
+      this._applyMaterialVisibilityBoost(group);
+      this._buildFlame();
+      this._syncFlameState(this.getTimelineRoot());
+    } catch (error) {
+      Logger.error(
+        ROCKET_CLASS,
+        "runObject",
+        "Failed to load rocket model.",
+        error,
+      );
+    }
+  }
+
+  override runUpdate(_delta: number): void {
+    this._syncFlameBillboard();
+  }
+
+  override dispose(): void {
+    this.releaseShaders(this.getShaderOwnerId());
+    this._disposeFlame();
+    if (this._model) {
+      this._model.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+          mesh.geometry?.dispose();
+          const materials = Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material];
+          for (const material of materials) {
+            (material as THREE.Material)?.dispose?.();
+          }
+        }
+      });
+    }
+    this._model = null;
+    this._flameAnchor = null;
+    super.dispose();
+  }
+
+  setFlameState(state: RocketFlameStateSnapshot): void {
+    this._options.flame = {
+      ...(this._options.flame ?? {}),
+      visible: state.visible,
+      offset: { ...state.offset },
+      rotation: { ...state.rotation },
+      scale: { ...state.scale },
+      opacity: state.opacity,
+      renderOrder: state.renderOrder,
+      speed: state.speed,
+      wave: state.wave,
+    };
+    if (!this._flameMesh && this._model) {
+      this._buildFlame();
+    }
+    this._syncFlameState(this.getTimelineRoot());
+  }
+
+  getFlameState(): RocketFlameStateSnapshot {
+    const flameOptions = this._resolveFlameOptions();
+    const offset = flameOptions.offset ?? DEFAULT_FLAME_OFFSET;
+    const rotation = flameOptions.rotation ?? DEFAULT_FLAME_ROTATION;
+    const scale = flameOptions.scale ?? DEFAULT_FLAME_SCALE;
+    return {
+      visible: flameOptions.visible !== false,
+      offset: {
+        x: offset.x ?? DEFAULT_FLAME_OFFSET.x,
+        y: offset.y ?? DEFAULT_FLAME_OFFSET.y,
+        z: offset.z ?? DEFAULT_FLAME_OFFSET.z,
+      },
+      rotation: {
+        x: rotation.x ?? DEFAULT_FLAME_ROTATION.x,
+        y: rotation.y ?? DEFAULT_FLAME_ROTATION.y,
+        z: rotation.z ?? DEFAULT_FLAME_ROTATION.z,
+      },
+      scale: {
+        x: scale.x ?? DEFAULT_FLAME_SCALE.x,
+        y: scale.y ?? DEFAULT_FLAME_SCALE.y,
+        z: scale.z ?? DEFAULT_FLAME_SCALE.z,
+      },
+      opacity: this._resolveFlameOpacity(flameOptions),
+      renderOrder: this._resolveFlameRenderOrder(flameOptions),
+      speed: this._resolveFlameSpeed(flameOptions),
+      wave: this._resolveFlameWave(flameOptions),
+    };
+  }
+
+  private _applyMaterialVisibilityBoost(group: THREE.Group): void {
+    const emissiveIntensity = Number.isFinite(
+      this._options.emissiveIntensity as number,
+    )
+      ? Number(this._options.emissiveIntensity)
+      : 0;
+    const emissiveColor = Number.isFinite(this._options.emissiveColor as number)
+      ? Number(this._options.emissiveColor)
+      : 0;
+    const color = new THREE.Color(emissiveColor);
+
+    group.traverse((child) => {
+      if (!(child as THREE.Mesh).isMesh) return;
+      const mesh = child as THREE.Mesh;
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (const material of materials) {
+        if (!material) continue;
+        const target = material as {
+          emissive?: THREE.Color;
+          emissiveIntensity?: number;
+          needsUpdate?: boolean;
+        };
+        if (!(target.emissive instanceof THREE.Color)) continue;
+        target.emissive.copy(color);
+        target.emissiveIntensity = emissiveIntensity;
+        if (typeof target.needsUpdate === "boolean") {
+          target.needsUpdate = true;
+        }
+      }
+    });
+  }
+
+  private _syncTransform(): void {
+    const root = this.getTimelineRoot();
+    if (!root) return;
+    Helpers.applyTransform(root, this._options);
+    root.traverse((child) => {
+      child.layers.set(THREE_LAYER_ROCKET);
+    });
+  }
+
+  private _buildFlame(): void {
+    const root = this.getTimelineRoot();
+    const model = this._model;
+    if (!root || !model) return;
+
+    this._disposeFlame();
+    this._modelBounds.setFromObject(model);
+    const flameOptions = this._resolveFlameOptions();
+    if (flameOptions.visible === false) return;
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        iTime: { value: 0 },
+        iResolution: { value: new THREE.Vector2(512, 1024) },
+        uOpacity: { value: this._resolveFlameOpacity(flameOptions) },
+        uFlameSpeed: { value: this._resolveFlameSpeed(flameOptions) },
+        uWaveStrength: { value: this._resolveFlameWave(flameOptions) },
+      },
+      vertexShader: flameVertexShader as string,
+      fragmentShader: flameFragmentShader as string,
+      transparent: true,
+      depthWrite: false,
+      depthTest: true,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+
+    this.registerShader({
+      key: this.createShaderKey(ROCKET_FLAME_SHADER_KEY),
+      ownerId: this.getShaderOwnerId(),
+      material,
+    });
+
+    const geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+    geometry.translate(0, -0.5, 0);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.layers.set(THREE_LAYER_ROCKET);
+    mesh.renderOrder = this._resolveFlameRenderOrder(flameOptions);
+    const anchor = this._flameAnchor;
+    if (anchor) {
+      anchor.add(mesh);
+    } else {
+      root.add(mesh);
+    }
+    this._flameMesh = mesh;
+  }
+
+  private _disposeFlame(): void {
+    const flameMesh = this._flameMesh;
+    if (!flameMesh) return;
+    flameMesh.parent?.remove(flameMesh);
+    flameMesh.geometry.dispose();
+    flameMesh.material.dispose();
+    this._flameMesh = null;
+  }
+
+  private _syncFlameState(root: THREE.Object3D | null): void {
+    const flameMesh = this._flameMesh;
+    if (!root || !flameMesh) return;
+    const flameOptions = this._resolveFlameOptions();
+    const flameScale = flameOptions.scale ?? DEFAULT_FLAME_SCALE;
+    const flameOffset = flameOptions.offset ?? DEFAULT_FLAME_OFFSET;
+    const anchor = this._flameAnchor;
+    if (anchor && flameMesh.parent !== anchor) {
+      anchor.add(flameMesh);
+    } else if (!anchor && flameMesh.parent !== root) {
+      root.add(flameMesh);
+    }
+
+    flameMesh.visible = flameOptions.visible !== false && root.visible;
+    if (anchor && flameMesh.parent === anchor) {
+      const ox = flameOffset?.x ?? DEFAULT_FLAME_OFFSET.x;
+      const oy = flameOffset?.y ?? DEFAULT_FLAME_OFFSET.y;
+      const oz = flameOffset?.z ?? DEFAULT_FLAME_OFFSET.z;
+      flameMesh.position.set(ox, oy, oz);
+    } else {
+      const flamePosition = this._resolveFlamePosition(flameOffset);
+      flameMesh.position.set(flamePosition.x, flamePosition.y, flamePosition.z);
+    }
+    flameMesh.scale.set(
+      flameScale.x ?? DEFAULT_FLAME_SCALE.x,
+      flameScale.y ?? DEFAULT_FLAME_SCALE.y,
+      flameScale.z ?? DEFAULT_FLAME_SCALE.z,
+    );
+    flameMesh.renderOrder = this._resolveFlameRenderOrder(flameOptions);
+    flameMesh.material.uniforms.uOpacity.value =
+      this._resolveFlameOpacity(flameOptions);
+    flameMesh.material.uniforms.uFlameSpeed.value =
+      this._resolveFlameSpeed(flameOptions);
+    flameMesh.material.uniforms.uWaveStrength.value =
+      this._resolveFlameWave(flameOptions);
+    this._syncFlameBillboard();
+  }
+
+  private _syncFlameBillboard(): void {
+    const root = this.getTimelineRoot();
+    const flameMesh = this._flameMesh;
+    const camera = this._context?.camera;
+    if (!root || !flameMesh || !camera) return;
+
+    camera.getWorldQuaternion(this._cameraWorldQuaternion);
+    root.getWorldQuaternion(this._rootWorldQuaternion);
+    this._rootWorldQuaternion.invert();
+    flameMesh.quaternion
+      .copy(this._rootWorldQuaternion)
+      .multiply(this._cameraWorldQuaternion);
+    const flameRotation = this._resolveFlameRotation(
+      this._resolveFlameOptions(),
+    );
+    this._flameLocalEuler.set(
+      THREE.MathUtils.degToRad(flameRotation.x),
+      THREE.MathUtils.degToRad(flameRotation.y),
+      THREE.MathUtils.degToRad(flameRotation.z),
+    );
+    this._flameLocalQuaternion.setFromEuler(this._flameLocalEuler);
+    flameMesh.quaternion.multiply(this._flameLocalQuaternion);
+  }
+
+  private _resolveFlameOptions(): RocketFlameOptions {
+    return this._options.flame ?? {};
+  }
+
+  private _resolveFlameAnchor(model: THREE.Group): THREE.Object3D | null {
+    const flameOptions = this._resolveFlameOptions();
+    const explicitAnchor = this._findExplicitFlameAnchor(model, flameOptions);
+    if (explicitAnchor) return explicitAnchor;
+    return this._findHeuristicFlameAnchor(model, flameOptions);
+  }
+
+  private _findExplicitFlameAnchor(
+    model: THREE.Group,
+    options: RocketFlameOptions,
+  ): THREE.Object3D | null {
+    const anchorName = options.anchorName?.trim();
+    if (!anchorName) return null;
+    const target = model.getObjectByName(anchorName);
+    if (!target) {
+      Logger.warn(
+        ROCKET_CLASS,
+        "runObject",
+        `Rocket flame anchor "${anchorName}" was not found. Falling back to heuristics.`,
+      );
+      return null;
+    }
+    return target;
+  }
+
+  private _findHeuristicFlameAnchor(
+    model: THREE.Group,
+    options: RocketFlameOptions,
+  ): THREE.Object3D | null {
+    const normalizedIncludes = this._getNormalizedFlameAnchorIncludes(options);
+    let bestMatch: THREE.Object3D | null = null;
+
+    model.traverse((child) => {
+      if (bestMatch || child === model) return;
+      const normalizedName = child.name.trim().toLowerCase();
+      if (!normalizedName) return;
+      if (!normalizedIncludes.some((value) => normalizedName.includes(value)))
+        return;
+      bestMatch = child;
+    });
+
+    if (!bestMatch) {
+      Logger.warn(
+        ROCKET_CLASS,
+        "runObject",
+        "Rocket flame anchor was not found by name. Falling back to bounding-box placement.",
+      );
+    }
+
+    return bestMatch;
+  }
+
+  private _logFlameAnchorDebug(
+    model: THREE.Group,
+    anchor: THREE.Object3D | null,
+  ): void {
+    if (this._hasLoggedFlameAnchorDebug) return;
+    if (!EnvSetup.hasQueryFlag("theatre", "1")) return;
+    this._hasLoggedFlameAnchorDebug = true;
+
+    const flameOptions = this._resolveFlameOptions();
+    const normalizedIncludes =
+      this._getNormalizedFlameAnchorIncludes(flameOptions);
+    const allNodeNames: string[] = [];
+    const candidateNodeNames: string[] = [];
+
+    model.traverse((child) => {
+      if (child === model) return;
+      const nodeName = child.name.trim();
+      if (!nodeName) return;
+      allNodeNames.push(nodeName);
+      const normalizedName = nodeName.toLowerCase();
+      if (!normalizedIncludes.some((value) => normalizedName.includes(value)))
+        return;
+      candidateNodeNames.push(nodeName);
+    });
+
+    Logger.info(ROCKET_CLASS, "runObject", "Rocket flame anchor debug.", {
+      resolvedAnchorName: anchor?.name ?? null,
+      explicitAnchorName: flameOptions.anchorName?.trim() || null,
+      anchorNameIncludes: normalizedIncludes,
+      candidateNodeNames,
+      allNodeNames,
+    });
+  }
+
+  private _getNormalizedFlameAnchorIncludes(
+    options: RocketFlameOptions,
+  ): string[] {
+    const includes = options.anchorNameIncludes?.length
+      ? options.anchorNameIncludes
+      : [...DEFAULT_FLAME_ANCHOR_NAME_INCLUDES];
+    return includes.map((value) => value.toLowerCase());
+  }
+
+  private _resolveFlamePosition(
+    offset: RocketFlameOptions["offset"],
+  ): THREE.Vector3 {
+    const x = offset?.x ?? DEFAULT_FLAME_OFFSET.x;
+    const y = offset?.y ?? DEFAULT_FLAME_OFFSET.y;
+    const z = offset?.z ?? DEFAULT_FLAME_OFFSET.z;
+    const anchor = this._flameAnchor;
+    const model = this._model;
+    if (!anchor || !model) {
+      this._modelBounds.getCenter(this._modelBoundsCenter);
+      return new THREE.Vector3(
+        this._modelBoundsCenter.x + x,
+        this._modelBounds.min.y + y,
+        this._modelBoundsCenter.z + z,
+      );
+    }
+
+    anchor.getWorldPosition(this._anchorLocalPosition);
+    model.worldToLocal(this._anchorLocalPosition);
+    return new THREE.Vector3(
+      this._anchorLocalPosition.x + x,
+      this._anchorLocalPosition.y + y,
+      this._anchorLocalPosition.z + z,
+    );
+  }
+
+  private _resolveFlameOpacity(options: RocketFlameOptions): number {
+    return Number.isFinite(options.opacity as number)
+      ? Number(options.opacity)
+      : DEFAULT_FLAME_OPACITY;
+  }
+
+  private _resolveFlameRotation(
+    options: RocketFlameOptions,
+  ): Required<RocketFlameStateSnapshot>["rotation"] {
+    const rotation = options.rotation ?? DEFAULT_FLAME_ROTATION;
+    return {
+      x: Number.isFinite(rotation.x as number)
+        ? Number(rotation.x)
+        : DEFAULT_FLAME_ROTATION.x,
+      y: Number.isFinite(rotation.y as number)
+        ? Number(rotation.y)
+        : DEFAULT_FLAME_ROTATION.y,
+      z: Number.isFinite(rotation.z as number)
+        ? Number(rotation.z)
+        : DEFAULT_FLAME_ROTATION.z,
+    };
+  }
+
+  private _resolveFlameRenderOrder(options: RocketFlameOptions): number {
+    return Number.isFinite(options.renderOrder as number)
+      ? Math.round(Number(options.renderOrder))
+      : DEFAULT_FLAME_RENDER_ORDER;
+  }
+
+  private _resolveFlameSpeed(options: RocketFlameOptions): number {
+    return Number.isFinite(options.speed as number)
+      ? Number(options.speed)
+      : DEFAULT_FLAME_SPEED;
+  }
+
+  private _resolveFlameWave(options: RocketFlameOptions): number {
+    return Number.isFinite(options.wave as number)
+      ? Number(options.wave)
+      : DEFAULT_FLAME_WAVE;
+  }
+
+}

@@ -1,0 +1,303 @@
+import * as THREE from "three";
+import {
+  aboutLights as aboutLightsId,
+  earth as earthId,
+  jetEngine as jetEngineId,
+  rocket as rocketId,
+  terrian as terrianId,
+} from "../../../core/setup.js";
+import type { SceneObject } from "../../../core/SceneObject.js";
+import type { Engine } from "../../../core/Engine.js";
+import type { SceneFromState } from "../../../types/core.types.js";
+import type {
+  ContactCameraTheatreValue,
+  ContactLightsPort,
+  ContactSceneState,
+  ContactTransformState,
+} from "../../../types/contact.types.js";
+import type {
+  MainJetEngineState,
+  MainRocketPort,
+  MainRocketState,
+} from "../../../types/main.types.js";
+import type { JetEngineTweenProps } from "../../../types/object.types.js";
+import { Helpers } from "../../../utils/Helpers.js";
+import { CONTACT_DEFAULT_SCENE_STATE } from "../scene/contact.scene.js";
+
+export class ContactSceneRig {
+  createDefaultValue(): ContactSceneState {
+    const d = CONTACT_DEFAULT_SCENE_STATE;
+    return {
+      camera: {
+        position: { ...d.camera.position },
+        target: { ...d.camera.target },
+        fov: d.camera.fov,
+      },
+      light: {
+        ...d.light,
+        rig: {
+          position: { ...d.light.rig.position },
+          rotation: { ...d.light.rig.rotation },
+          scale: { ...d.light.rig.scale },
+          visible: d.light.rig.visible,
+        },
+      },
+      earth: {
+        position: { ...d.earth.position },
+        rotation: { ...d.earth.rotation },
+        scale: { ...d.earth.scale },
+        visible: d.earth.visible,
+      },
+      rocket: {
+        position: { ...d.rocket.position },
+        rotation: { ...d.rocket.rotation },
+        scale: { ...d.rocket.scale },
+        visible: d.rocket.visible,
+        flame: { ...d.rocket.flame },
+      } as MainRocketState,
+      jetEngine: {
+        position: { ...d.jetEngine.position },
+        rotation: { ...d.jetEngine.rotation },
+        scale: { ...d.jetEngine.scale },
+        visible: d.jetEngine.visible,
+        intensity: d.jetEngine.intensity,
+        length: d.jetEngine.length,
+        nozzleRadius: d.jetEngine.nozzleRadius,
+        nozzleGap: d.jetEngine.nozzleGap,
+        noise: d.jetEngine.noise,
+        bloom: d.jetEngine.bloom,
+      },
+      terrian: {
+        position: { ...d.terrian.position },
+        rotation: { ...d.terrian.rotation },
+        scale: { ...d.terrian.scale },
+        visible: d.terrian.visible,
+      },
+    };
+  }
+
+  compose(state: ContactSceneState): SceneFromState {
+    return {
+      camera: {
+        position: { ...state.camera.position },
+        fov: state.camera.fov,
+      },
+      cameraTarget: {
+        position: { ...state.camera.target },
+      },
+      [earthId]: state.earth,
+      [rocketId]: state.rocket,
+      [jetEngineId]: {
+        position: { ...state.jetEngine.position },
+        rotation: { ...state.jetEngine.rotation },
+        scale: { ...state.jetEngine.scale },
+        visible: state.jetEngine.visible,
+      },
+      [terrianId]: state.terrian,
+    } as unknown as SceneFromState;
+  }
+
+  apply(engine: Engine, state: ContactSceneState): void {
+    engine.setState(this.compose(state));
+    engine.getCamera().lookAt(engine.getCameraTarget().position);
+    this._applyLight(engine, state.light);
+    this._applyRocket(engine, state.rocket);
+    this._applyJetEngine(engine, state.jetEngine);
+  }
+
+  read(engine: Engine): ContactSceneState {
+    const camera = engine.getCamera();
+    const target = engine.getCameraTarget();
+    const defaults = CONTACT_DEFAULT_SCENE_STATE;
+    return {
+      camera: {
+        position: {
+          x: this._toFinite(camera.position.x, defaults.camera.position.x),
+          y: this._toFinite(camera.position.y, defaults.camera.position.y),
+          z: this._toFinite(camera.position.z, defaults.camera.position.z),
+        },
+        target: {
+          x: this._toFinite(target.position.x, defaults.camera.target.x),
+          y: this._toFinite(target.position.y, defaults.camera.target.y),
+          z: this._toFinite(target.position.z, defaults.camera.target.z),
+        },
+        fov: this._toFinite(camera.fov, defaults.camera.fov),
+      },
+      light: this._readLight(engine),
+      earth: this._readTransform(engine, earthId, defaults.earth),
+      rocket: this._readRocket(engine),
+      jetEngine: this._readJetEngine(engine),
+      terrian: this._readTransform(engine, terrianId, defaults.terrian),
+    };
+  }
+
+  readCamera(engine: Engine): ContactCameraTheatreValue {
+    return {
+      camera: this.read(engine).camera,
+    };
+  }
+
+  readObjectValue(value: ContactSceneState): ContactSceneState {
+    return {
+      camera: {
+        position: { ...value.camera.position },
+        target: { ...value.camera.target },
+        fov: value.camera.fov,
+      },
+      light: {
+        ...value.light,
+        rig: {
+          position: { ...value.light.rig.position },
+          rotation: { ...value.light.rig.rotation },
+          scale: { ...value.light.rig.scale },
+          visible: value.light.rig.visible,
+        },
+      },
+      earth: {
+        position: { ...value.earth.position },
+        rotation: { ...value.earth.rotation },
+        scale: { ...value.earth.scale },
+        visible: value.earth.visible,
+      },
+      rocket: {
+        position: { ...value.rocket.position },
+        rotation: { ...value.rocket.rotation },
+        scale: { ...value.rocket.scale },
+        visible: value.rocket.visible,
+        flame: { ...value.rocket.flame },
+      } as MainRocketState,
+      jetEngine: {
+        position: { ...value.jetEngine.position },
+        rotation: { ...value.jetEngine.rotation },
+        scale: { ...value.jetEngine.scale },
+        visible: value.jetEngine.visible,
+        intensity: value.jetEngine.intensity,
+        length: value.jetEngine.length,
+        nozzleRadius: value.jetEngine.nozzleRadius,
+        nozzleGap: value.jetEngine.nozzleGap,
+        noise: value.jetEngine.noise,
+        bloom: value.jetEngine.bloom,
+      },
+      terrian: {
+        position: { ...value.terrian.position },
+        rotation: { ...value.terrian.rotation },
+        scale: { ...value.terrian.scale },
+        visible: value.terrian.visible,
+      },
+    };
+  }
+
+  private _applyLight(
+    engine: Engine,
+    state: ContactSceneState["light"],
+  ): void {
+    const light = engine.getSceneObjectById(
+      aboutLightsId,
+    ) as ContactLightsPort | null;
+    if (!light) return;
+    light.setState(state);
+  }
+
+  private _applyRocket(engine: Engine, state: MainRocketState): void {
+    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+    if (!rocket) return;
+    rocket.setFlameState(state.flame);
+  }
+
+  private _applyJetEngine(engine: Engine, state: MainJetEngineState): void {
+    const jet = engine.getSceneObjectById(jetEngineId) as SceneObject<
+      JetEngineTweenProps
+    > | null;
+    if (!jet || typeof jet.setTimelineVars !== "function") return;
+    const { position: _p, rotation: _r, scale: _s, ...rest } = state;
+    jet.setTimelineVars(rest, "to");
+  }
+
+  private _readLight(engine: Engine): ContactSceneState["light"] {
+    const light = engine.getSceneObjectById(
+      aboutLightsId,
+    ) as ContactLightsPort | null;
+    if (!light) {
+      const d = CONTACT_DEFAULT_SCENE_STATE.light;
+      return {
+        ...d,
+        rig: {
+          position: { ...d.rig.position },
+          rotation: { ...d.rig.rotation },
+          scale: { ...d.rig.scale },
+          visible: d.rig.visible,
+        },
+      };
+    }
+    return light.getState();
+  }
+
+  private _readRocket(engine: Engine): MainRocketState {
+    const transform = this._readTransform(
+      engine,
+      rocketId,
+      CONTACT_DEFAULT_SCENE_STATE.rocket,
+    );
+    const defaults = CONTACT_DEFAULT_SCENE_STATE.rocket;
+    const rocket = engine.getSceneObjectById(rocketId) as MainRocketPort | null;
+    return {
+      ...transform,
+      flame: rocket?.getFlameState() ?? defaults.flame,
+    } as MainRocketState;
+  }
+
+  private _readJetEngine(engine: Engine): MainJetEngineState {
+    const transform = this._readTransform(
+      engine,
+      jetEngineId,
+      CONTACT_DEFAULT_SCENE_STATE.jetEngine,
+    );
+    const defaults = CONTACT_DEFAULT_SCENE_STATE.jetEngine;
+    const object = engine.getSceneObjectById(jetEngineId) as
+      | { getRuntimeOptions?: () => Record<string, unknown> }
+      | null;
+    const runtime = object?.getRuntimeOptions?.() ?? {};
+    return {
+      ...transform,
+      intensity: this._toFinite(runtime.intensity, defaults.intensity),
+      length: this._toFinite(runtime.length, defaults.length),
+      nozzleRadius: this._toFinite(runtime.nozzleRadius, defaults.nozzleRadius),
+      nozzleGap: this._toFinite(runtime.nozzleGap, defaults.nozzleGap),
+      noise: this._toFinite(runtime.noise, defaults.noise),
+      bloom: this._toFinite(runtime.bloom, defaults.bloom),
+    };
+  }
+
+  private _readTransform(
+    engine: Engine,
+    id: string,
+    fallback: ContactTransformState,
+  ): ContactTransformState {
+    const target = engine.getObjectById(id) as THREE.Object3D | null;
+    const rotation = Helpers.readRotationDeg(target);
+    return {
+      position: {
+        x: this._toFinite(target?.position.x, fallback.position.x),
+        y: this._toFinite(target?.position.y, fallback.position.y),
+        z: this._toFinite(target?.position.z, fallback.position.z),
+      },
+      rotation: {
+        x: this._toFinite(rotation.x, fallback.rotation.x),
+        y: this._toFinite(rotation.y, fallback.rotation.y),
+        z: this._toFinite(rotation.z, fallback.rotation.z),
+      },
+      scale: {
+        x: this._toFinite(target?.scale.x, fallback.scale.x),
+        y: this._toFinite(target?.scale.y, fallback.scale.y),
+        z: this._toFinite(target?.scale.z, fallback.scale.z),
+      },
+      visible: target?.visible ?? fallback.visible,
+    };
+  }
+
+  private _toFinite(value: unknown, fallback: number): number {
+    if (typeof value !== "number") return fallback;
+    if (!Number.isFinite(value)) return fallback;
+    return value;
+  }
+}

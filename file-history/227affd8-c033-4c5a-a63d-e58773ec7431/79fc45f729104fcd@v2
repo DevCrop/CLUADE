@@ -1,0 +1,12 @@
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+---
+
+# Frontend Rules
+
+- Bundler: Vite / Language: TypeScript (ES6+)
+- 3D: Three.js — follow existing patterns in `resource/js/`
+- Do NOT run `npm run build` or `npm run watch` — dev server is always running

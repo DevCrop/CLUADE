@@ -1,0 +1,37 @@
+---
+paths:
+  - "**/*.scss"
+---
+
+# SCSS Rules
+
+- BEM pattern for class naming
+- Source: `resource/scss/` -> output: `resource/dist/`
+- Do NOT run build commands -- the dev server reflects changes on save automatically
+- Admin CSS (`admin/resource/css/`) is separate -- do not import from the public SCSS entry
+
+## Token Contract
+
+- Reusable tokens -> `resource/scss/abstract/` or `base/_root.scss`
+- Use `var(--clr-*)`, `var(--duration-*)` etc. in consumers -- no raw hex when a semantic token exists upstream
+- Prefer semantic tokens over raw values when an upstream token exists
+- **Do NOT use CSS variable fallbacks** like `var(--token, fallback)`. Use `var(--token)` or `fluid(...)` directly.
+- Do not introduce base/root tokens for one-off component values -- only when genuinely shared across multiple features
+
+## Fluid Helper
+
+- In **component, layout, page** SCSS: call `fluid(min, max)` directly
+- In shared **`abstract/`** or **`base/`**: use `#{fluid(...)}` interpolation only when emitting CSS custom properties or shared tokens
+- Files outside `resource/scss/abstract/` and `resource/scss/base/`: add `@use "../abstract" as *;` at the top before using `fluid(...)` and other shared helpers
+
+## Reset / Init Contract
+
+`_init.scss` applies the following globally -- component / page SCSS must NOT redeclare them:
+- `margin: 0` -- already zero on the `*` selector
+- `padding: 0` -- already zero on the `*` selector
+- `list-style: none` -- already removed from `ul, ol, li`
+- Single-axis zeros like `padding-left: 0` / `padding-right: 0` are also forbidden
+  (Exception: when the immediate parent rule declares a non-zero value on the same axis.)
+
+The `@include font("...")` mixin emits `font-size`, `line-height`, and `letter-spacing` together.
+Do not redeclare any of these immediately after the mixin call with the same value.

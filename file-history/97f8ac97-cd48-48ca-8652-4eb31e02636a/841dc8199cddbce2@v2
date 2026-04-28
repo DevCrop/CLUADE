@@ -1,0 +1,714 @@
+﻿import * as THREE from "three";
+import { AnimationLoop } from "./AnimationLoop.js";
+import { Scene } from "./Scene.js";
+import { ModelLoader } from "./ModelLoader.js";
+import { PostProcessor } from "./PostProcessor.js";
+import { BackgroundManager } from "../manager/BackgroundManager.js";
+import { Helpers } from "../utils/Helpers.js";
+import type { SceneObject } from "../core/SceneObject.js";
+import { hasWebGLRendererFeatures } from "../types/engine.types.js";
+import type {
+  RendererLike,
+  RendererBackend,
+  HasPositionSet,
+} from "../types/engine.types.js";
+import { hasPositionSet } from "../types/engine.types.js";
+import type {
+  EngineOptions,
+  RenderBudgetOptions,
+} from "../types/engine.types.js";
+import type { ResponsiveSnapshot } from "../types/runtime.types.js";
+import type {
+  SceneFromState,
+  CameraVars,
+  ObjectVars,
+} from "../types/core.types.js";
+import { getDefaultThreeConfig } from "../config/base.config.js";
+import { ResponsiveRuntime } from "../runtime/ResponsiveRuntime.js";
+import {
+  camera as cameraId,
+  cameraTarget as cameraTargetId,
+  THREE_LAYER_EARTH,
+  THREE_LAYER_MARQUEE,
+  THREE_LAYER_ROCKET,
+} from "./setup.js";
+
+const DEFAULT_RENDER_BUDGET: Required<RenderBudgetOptions> = {
+  budgetMs: 33,
+  mode: "performance",
+  enterSkipFrames: 2,
+  exitSkipFrames: 8,
+};
+export class Engine {
+  private _scene: Scene;
+  private _camera: THREE.PerspectiveCamera;
+  private _cameraTarget: THREE.Object3D;
+  private _cameraTargetFollow: THREE.Object3D | null = null;
+  private _cameraTargetFollowAnchorNode: THREE.Object3D | null = null;
+  private _cameraTargetFollowLocalAnchor: THREE.Vector3 | null = null;
+  private _followBounds = new THREE.Box3();
+  private _followCenter = new THREE.Vector3();
+  private _followWorldPos = new THREE.Vector3();
+  private _renderer: RendererLike | null = null;
+  private _postProcessor: PostProcessor | null = null;
+  private _backgroundManager: BackgroundManager | null = null;
+  private _rendererBackend: RendererBackend = "webgl";
+  private _loader: ModelLoader;
+  private _animationLoop: AnimationLoop | null = null;
+  private _lastDelta = 0;
+  private _contextLost = false;
+  private _onContextLost: ((event: Event) => void) | null = null;
+  private _onContextRestored: ((event: Event) => void) | null = null;
+  private _opts: EngineOptions;
+  private _pixelRatioMax: number;
+  private _renderBudget: Required<RenderBudgetOptions>;
+  private _renderModeState = {
+    skipActive: false,
+    exceededFrames: 0,
+    stableFrames: 0,
+  };
+  private _didWarnPostProcessingFallback = false;
+  private readonly _defaultThreeConfig = getDefaultThreeConfig();
+
+  constructor(opts: EngineOptions = {}) {
+    this._opts = opts;
+    this._renderBudget = this._resolveRenderBudget(opts.renderBudget);
+    const pr = opts.pixelRatioMax;
+    this._pixelRatioMax =
+      typeof pr === "number" && Number.isFinite(pr) && pr > 0
+        ? pr
+        : this._defaultThreeConfig.pixelRatioMax;
+    const responsive = ResponsiveRuntime.getDefault().getSnapshot();
+    const aspect = responsive.viewportWidth / responsive.viewportHeight;
+    const cam = opts.camera ?? {};
+    const fov = cam.fov ?? this._defaultThreeConfig.camera.fov;
+    const near = cam.near ?? this._defaultThreeConfig.camera.near;
+    const far = cam.far ?? this._defaultThreeConfig.camera.far;
+    this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    this._camera.scale.set(1, 1, 1);
+    this._camera.layers.enable(THREE_LAYER_EARTH);
+    this._camera.layers.enable(THREE_LAYER_MARQUEE);
+    this._camera.layers.enable(THREE_LAYER_ROCKET);
+    if (cam.position) {
+      this._camera.position.set(
+        cam.position.x ?? 0,
+        cam.position.y ?? 0,
+        cam.position.z ?? 0,
+      );
+    }
+    const sceneFactory = opts.dependencies?.sceneFactory;
+    this._scene = sceneFactory ? (sceneFactory() as Scene) : new Scene();
+    this._cameraTarget = new THREE.Object3D();
+    this._cameraTarget.name = cameraTargetId;
+    const ct = opts.cameraTarget?.position;
+    this._cameraTarget.position.set(ct?.x ?? 0, ct?.y ?? 0, ct?.z ?? 0);
+    const loaderFactory = opts.dependencies?.modelLoaderFactory;
+    this._loader = loaderFactory
+      ? (loaderFactory() as ModelLoader)
+      : new ModelLoader();
+  }
+
+  init(): boolean {
+    const targetCanvas = this._resolveTargetCanvas();
+    if (!targetCanvas) return false;
+
+    const scene = this._scene.three;
+    scene.add(this._cameraTarget);
+
+    this._scene.registerObject(cameraId, this._camera);
+    this._scene.registerObject(cameraTargetId, this._cameraTarget);
+    const cfg = this._opts.scene ?? {};
+    scene.background =
+      cfg.background != null ? new THREE.Color(cfg.background) : null;
+    const fogOpt = cfg.fog;
+    scene.fog =
+      fogOpt != null && typeof fogOpt === "object" && "far" in fogOpt
+        ? new THREE.Fog(
+            fogOpt.color ?? 0x000000,
+            fogOpt.near ?? 1000,
+            fogOpt.far ?? 15000,
+          )
+        : null;
+
+    const rendererOpts = this._opts.renderer ?? {};
+    this._renderer = this._createRenderer(targetCanvas, rendererOpts);
+    if (!this._renderer) return false;
+    const responsive = ResponsiveRuntime.getDefault().getSnapshot();
+    const w = responsive.viewportWidth;
+    const h = responsive.viewportHeight;
+    this._renderer.setSize?.(w, h);
+    this._renderer.setPixelRatio?.(Math.min(responsive.render.clampedPixelRatio, this._pixelRatioMax));
+    if (
+      this._renderer &&
+      hasWebGLRendererFeatures(this._renderer) &&
+      this._renderer.shadowMap
+    ) {
+      const shadowOpt = this._opts.shadowMap ?? {};
+      this._renderer.shadowMap.enabled = shadowOpt.enabled ?? false;
+      this._renderer.shadowMap.type = shadowOpt.type ?? THREE.PCFSoftShadowMap;
+    }
+    this._renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this._renderer.toneMappingExposure = 0.56;
+    this._renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this._attachContextEvents();
+
+    this._camera.aspect = w / h;
+    this._camera.updateProjectionMatrix();
+
+    const postProcessorOptions = this._resolvePostProcessorOptions();
+    this._postProcessor =
+      this._rendererBackend === "webgl" &&
+      this._renderer instanceof THREE.WebGLRenderer &&
+      postProcessorOptions
+        ? new PostProcessor(
+            this._renderer,
+            scene,
+            this._camera,
+            postProcessorOptions,
+          )
+        : null;
+
+    const loadModel = (path: string) => this._loadModel(path);
+    const loadModelWithAnimation = (path: string) =>
+      this._loader.loadGLTF(this._scene.three, path, {
+        addToScene: false,
+      });
+    const loadTexture = (path: string) => this._loader.loadTexture(path);
+    const loadHdrTexture = (path: string) => this._loader.loadHdrTexture(path);
+    const compileScene = (camera?: THREE.Camera) =>
+      this._compileScene(camera ?? this._camera);
+    const prepareTexture = (texture: THREE.Texture) =>
+      this._prepareTexture(texture);
+    const getObject = (id: string) => this._scene.getObject(id);
+    const registerObject = (
+      id: string,
+      object: THREE.Object3D | Record<string, unknown>,
+    ) => this._scene.registerObject(id, object);
+    const unregisterObject = (id: string) => this._scene.unregisterObject(id);
+    this._scene.setContext({
+      scene: this._scene.three,
+      camera: this._camera,
+      renderer: this._renderer,
+      rendererBackend: this._rendererBackend,
+      compileScene,
+      prepareTexture,
+      getObject,
+      registerObject,
+      unregisterObject,
+      loadModel,
+      loadModelWithAnimation,
+      loadTexture,
+      loadHdrTexture,
+    });
+    if (this._renderer instanceof THREE.WebGLRenderer) {
+      this._backgroundManager = new BackgroundManager(
+        this._renderer,
+        this._scene.three,
+        this._camera,
+      );
+      this._scene.registerObject(
+        "env.backgroundManager.runtime",
+        this._backgroundManager as unknown as Record<string, unknown>,
+      );
+    }
+    return true;
+  }
+
+  private _resolveTargetCanvas(): HTMLCanvasElement | null {
+    const providedCanvas = this._opts.canvasElement;
+    if (providedCanvas instanceof HTMLCanvasElement) {
+      return providedCanvas;
+    }
+    const canvasId = this._opts.canvasId ?? "canvas";
+    const el = document.getElementById(canvasId);
+    if (!el) return null;
+    if (el instanceof HTMLCanvasElement) {
+      return el;
+    }
+    const nestedCanvas = el.querySelector("canvas");
+    if (nestedCanvas instanceof HTMLCanvasElement) {
+      return nestedCanvas;
+    }
+    return this._createCanvas(el);
+  }
+
+  private _createRenderer(
+    canvas: HTMLCanvasElement,
+    rendererOpts: EngineOptions["renderer"] = {},
+  ): RendererLike | null {
+    const performance = ResponsiveRuntime.getDefault().getSnapshot().performance;
+    const webglContext =
+      canvas.getContext("webgl2") ??
+      canvas.getContext("webgl") ??
+      canvas.getContext("experimental-webgl");
+    if (!webglContext) return null;
+    this._rendererBackend = "webgl";
+    try {
+      return new THREE.WebGLRenderer({
+        canvas,
+        antialias: rendererOpts.antialias ?? performance.rendererAntialias,
+        alpha: rendererOpts.alpha ?? false,
+        powerPreference:
+          rendererOpts.powerPreference ?? performance.rendererPowerPreference,
+      });
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private _createCanvas(container: HTMLElement): HTMLCanvasElement {
+    const canvas = document.createElement("canvas");
+    canvas.id = "canvas-webgl";
+    container.appendChild(canvas);
+    return canvas;
+  }
+
+  private async _loadModel(path: string): Promise<THREE.Object3D> {
+    const result = await this._loader.loadGLTF(this._scene.three, path, {
+      addToScene: false,
+    });
+    if (!result.model) throw new Error(`Failed to load model: ${path}`);
+    return result.model;
+  }
+
+  runModelLoad(path: string): Promise<THREE.Object3D> {
+    return this._loadModel(path);
+  }
+
+  async setObject(id: string, object: SceneObject): Promise<void> {
+    await this._scene.addObject(id, object);
+  }
+
+  getScene(): Scene {
+    return this._scene;
+  }
+
+  setState(state: SceneFromState): void {
+    const cam = state.camera;
+    if (cam) {
+      this._applyCamState(cam);
+    }
+    const camTarget = state.cameraTarget;
+    if (camTarget?.position) {
+      this.setCameraTargetPosition(
+        this._num(camTarget.position.x),
+        this._num(camTarget.position.y),
+        this._num(camTarget.position.z),
+      );
+    }
+    const scene = this._scene;
+    for (const [targetId, vars] of Object.entries(state)) {
+      if (
+        targetId === cameraId ||
+        targetId === cameraTargetId ||
+        vars == null ||
+        typeof vars !== "object"
+      )
+        continue;
+      const obj = scene.getObject(targetId);
+      if (!obj) continue;
+      if (hasPositionSet(obj)) {
+        this._applyVector3(obj, vars as ObjectVars);
+        this._applyScalarProps(
+          obj as unknown as Record<string, unknown>,
+          vars as Record<string, unknown>,
+        );
+        continue;
+      }
+      if (!this._isPlainRecord(obj)) continue;
+      this._applyScalarProps(obj, vars as Record<string, unknown>);
+    }
+  }
+
+  private _applyCamState(cam: CameraVars): void {
+    this._applyVector3(this._camera, cam, false);
+    if (cam.fov == null || !Number.isFinite(cam.fov)) return;
+    this._camera.fov = cam.fov;
+    this._camera.updateProjectionMatrix();
+  }
+
+  private _num(v: number | undefined): number {
+    return v != null && Number.isFinite(v) ? v : 0;
+  }
+
+  private _applyVector3(
+    obj: HasPositionSet,
+    vars: ObjectVars | CameraVars,
+    applyRotation = true,
+  ): void {
+    if (vars.position)
+      obj.position.set(
+        this._num(vars.position.x),
+        this._num(vars.position.y),
+        this._num(vars.position.z),
+      );
+    if (applyRotation && "rotation" in vars && vars.rotation && obj.rotation) {
+      const r = Helpers.rotationDegToRad({
+        x: this._num(vars.rotation.x),
+        y: this._num(vars.rotation.y),
+        z: this._num(vars.rotation.z),
+      });
+      obj.rotation.set(r.x, r.y, r.z);
+    }
+    if (vars.scale && obj.scale)
+      obj.scale.set(
+        this._num(vars.scale.x),
+        this._num(vars.scale.y),
+        this._num(vars.scale.z),
+      );
+  }
+
+  private _isPlainRecord(obj: unknown): obj is Record<string, unknown> {
+    if (
+      obj == null ||
+      typeof obj !== "object" ||
+      Array.isArray(obj) ||
+      obj instanceof THREE.Object3D
+    ) {
+      return false;
+    }
+    const proto = Object.getPrototypeOf(obj);
+    return proto === Object.prototype || proto === null;
+  }
+
+  private _applyScalarProps(
+    target: Record<string, unknown>,
+    vars: Record<string, unknown>,
+  ): void {
+    for (const [key, value] of Object.entries(vars)) {
+      if (key === "position" || key === "rotation" || key === "scale") continue;
+      if (typeof value === "number" && Number.isFinite(value)) {
+        target[key] = value;
+        continue;
+      }
+      if (typeof value === "boolean" || typeof value === "string") {
+        target[key] = value;
+        continue;
+      }
+      if (this._isPlainRecord(value)) {
+        const current = target[key];
+        const nextTarget = this._isPlainRecord(current) ? current : {};
+        target[key] = nextTarget;
+        this._applyScalarProps(nextTarget, value);
+      }
+    }
+  }
+
+  getCamera(): THREE.PerspectiveCamera {
+    return this._camera;
+  }
+
+  getCameraTarget(): THREE.Object3D {
+    return this._cameraTarget;
+  }
+
+  getObjectById(id: string): unknown {
+    return this._scene.getObject(id);
+  }
+
+  getObjectIds(): string[] {
+    return this._scene.getObjectIds();
+  }
+
+  getSceneObjectById(id: string): SceneObject | null {
+    return this._scene.getSceneObject(id);
+  }
+
+  removeSceneObject(id: string): void {
+    this._scene.removeObject(id);
+  }
+
+  setCameraTargetPosition(x: number, y: number, z: number): void {
+    this._cameraTargetFollow = null;
+    this._cameraTargetFollowAnchorNode = null;
+    this._cameraTargetFollowLocalAnchor = null;
+    this._cameraTarget.position.set(
+      Number.isFinite(x) ? x : this._cameraTarget.position.x,
+      Number.isFinite(y) ? y : this._cameraTarget.position.y,
+      Number.isFinite(z) ? z : this._cameraTarget.position.z,
+    );
+  }
+
+  setFollowObject(object3D: THREE.Object3D): void {
+    this._cameraTargetFollow = object3D;
+    this._cameraTargetFollowAnchorNode = null;
+    this._cameraTargetFollowLocalAnchor = null;
+    const namedAnchor = object3D.getObjectByName("cameraAnchor");
+    if (namedAnchor) {
+      this._cameraTargetFollowAnchorNode = namedAnchor;
+    } else {
+      this._followBounds.setFromObject(object3D);
+      if (!this._followBounds.isEmpty()) {
+        this._followBounds.getCenter(this._followCenter);
+        this._cameraTargetFollowLocalAnchor = object3D.worldToLocal(
+          this._followCenter.clone(),
+        );
+      }
+    }
+    this._cameraTarget.position.copy(this._resolveFollowAnchor(object3D));
+  }
+
+  offFollowObject(): void {
+    this._cameraTargetFollow = null;
+    this._cameraTargetFollowAnchorNode = null;
+    this._cameraTargetFollowLocalAnchor = null;
+  }
+
+  runBlendObject(
+    object3D: THREE.Object3D,
+    duration: number,
+    animate?: (
+      target: THREE.Vector3,
+      destination: THREE.Vector3,
+      duration: number,
+    ) => void,
+  ): void {
+    this.offFollowObject();
+    const anchor = this._resolveFollowAnchor(object3D);
+    if (animate) {
+      animate(this._cameraTarget.position, anchor, duration);
+      return;
+    }
+    this._cameraTarget.position.copy(anchor);
+  }
+
+  private _resolveFollowAnchor(object3D: THREE.Object3D): THREE.Vector3 {
+    if (this._cameraTargetFollowAnchorNode) {
+      this._cameraTargetFollowAnchorNode.updateWorldMatrix(true, false);
+      this._cameraTargetFollowAnchorNode.getWorldPosition(this._followWorldPos);
+      return this._followWorldPos;
+    }
+    object3D.updateWorldMatrix(true, false);
+    if (this._cameraTargetFollowLocalAnchor) {
+      this._followWorldPos
+        .copy(this._cameraTargetFollowLocalAnchor)
+        .applyMatrix4(object3D.matrixWorld);
+      return this._followWorldPos;
+    }
+    this._followBounds.setFromObject(object3D);
+    if (!this._followBounds.isEmpty()) {
+      this._followBounds.getCenter(this._followCenter);
+      return this._followCenter;
+    }
+    object3D.getWorldPosition(this._followWorldPos);
+    return this._followWorldPos;
+  }
+
+  getRenderer(): RendererLike | null {
+    return this._renderer;
+  }
+
+  getPostProcessor(): PostProcessor | null {
+    return this._postProcessor;
+  }
+
+  getBackgroundManager(): BackgroundManager | null {
+    return this._backgroundManager;
+  }
+
+  start(onUpdate: (deltaTime: number) => void, onRender: () => void): void {
+    if (this._animationLoop) return;
+    this._animationLoop = new AnimationLoop({
+      budgetMs: this._renderBudget.budgetMs,
+      onUpdate: (dt) => {
+        this._lastDelta = dt;
+        this._scene.update(dt);
+        this._backgroundManager?.update(dt);
+        onUpdate(dt);
+      },
+      onRender: () => {
+        if (this._contextLost) return;
+        if (this._cameraTargetFollow) {
+          this._cameraTarget.position.copy(
+            this._resolveFollowAnchor(this._cameraTargetFollow),
+          );
+        }
+        this._camera.lookAt(this._cameraTarget.position);
+        onRender();
+        const frameExceeded = this._animationLoop?.frameExceeded ?? false;
+        const skipPost = this._shouldSkipPostProcessing(frameExceeded);
+        this._renderMainScene(skipPost);
+      },
+    });
+    this._animationLoop.start();
+  }
+
+  stop(): void {
+    this._animationLoop?.stop();
+    this._resetRenderModeState();
+  }
+
+  setViewport(width: number, height: number): void {
+    const dpr = Math.min(
+      ResponsiveRuntime.getDefault().getSnapshot().render.clampedPixelRatio,
+      this._pixelRatioMax,
+    );
+    this._camera.aspect = width / height;
+    this._camera.updateProjectionMatrix();
+    this._renderer?.setPixelRatio?.(dpr);
+    this._renderer?.setSize?.(width, height);
+    this._postProcessor?.resize(width, height, dpr);
+    this._backgroundManager?.resize(width, height, dpr);
+  }
+
+  applyResponsiveSnapshot(snapshot: ResponsiveSnapshot): void {
+    this._pixelRatioMax = snapshot.render.pixelRatioMax;
+    this.setViewport(snapshot.viewportWidth, snapshot.viewportHeight);
+  }
+
+  dispose(): void {
+    this.stop();
+    this._animationLoop?.dispose();
+    this._animationLoop = null;
+    this._postProcessor?.dispose();
+    this._postProcessor = null;
+    this._backgroundManager?.dispose();
+    this._backgroundManager = null;
+    this._loader.dispose();
+    if (this._cameraTarget.parent)
+      this._cameraTarget.parent.remove(this._cameraTarget);
+    this._cameraTargetFollow = null;
+    this._cameraTargetFollowAnchorNode = null;
+    this._cameraTargetFollowLocalAnchor = null;
+    this._scene.dispose();
+    this._detachContextEvents();
+    this._renderer?.dispose?.();
+    this._renderer = null;
+  }
+
+  private _attachContextEvents(): void {
+    if (!(this._renderer instanceof THREE.WebGLRenderer)) return;
+    const canvas = this._renderer.domElement;
+    this._onContextLost = (event: Event): void => {
+      const webglEvent = event as Event & { preventDefault?: () => void };
+      webglEvent.preventDefault?.();
+      this._contextLost = true;
+      this._animationLoop?.stop();
+    };
+    this._onContextRestored = (): void => {
+      this._contextLost = false;
+      this._animationLoop?.start();
+    };
+    canvas.addEventListener("webglcontextlost", this._onContextLost);
+    canvas.addEventListener("webglcontextrestored", this._onContextRestored);
+  }
+
+  private _detachContextEvents(): void {
+    if (!(this._renderer instanceof THREE.WebGLRenderer)) return;
+    const canvas = this._renderer.domElement;
+    if (this._onContextLost) {
+      canvas.removeEventListener("webglcontextlost", this._onContextLost);
+    }
+    if (this._onContextRestored) {
+      canvas.removeEventListener(
+        "webglcontextrestored",
+        this._onContextRestored,
+      );
+    }
+    this._onContextLost = null;
+    this._onContextRestored = null;
+    this._contextLost = false;
+  }
+
+  private _resolveRenderBudget(
+    options: RenderBudgetOptions | undefined,
+  ): Required<RenderBudgetOptions> {
+    const budgetMs =
+      Number.isFinite(options?.budgetMs as number) &&
+      (options?.budgetMs as number) > 0
+        ? (options?.budgetMs as number)
+        : DEFAULT_RENDER_BUDGET.budgetMs;
+    const mode =
+      options?.mode === "consistent" || options?.mode === "performance"
+        ? options.mode
+        : DEFAULT_RENDER_BUDGET.mode;
+    const enterSkipFrames =
+      Number.isFinite(options?.enterSkipFrames as number) &&
+      (options?.enterSkipFrames as number) > 0
+        ? Math.floor(options?.enterSkipFrames as number)
+        : DEFAULT_RENDER_BUDGET.enterSkipFrames;
+    const exitSkipFrames =
+      Number.isFinite(options?.exitSkipFrames as number) &&
+      (options?.exitSkipFrames as number) > 0
+        ? Math.floor(options?.exitSkipFrames as number)
+        : DEFAULT_RENDER_BUDGET.exitSkipFrames;
+    return { budgetMs, mode, enterSkipFrames, exitSkipFrames };
+  }
+
+  private _resolvePostProcessorOptions(): EngineOptions["postProcessing"] | null {
+    const options = this._opts.postProcessing;
+    if (!options) return null;
+    const hasBloom = options.bloom !== false && options.bloom != null;
+    const hasVignette = options.vignette !== false && options.vignette != null;
+    if (!hasBloom && !hasVignette) {
+      return null;
+    }
+    return options;
+  }
+
+  private _resetRenderModeState(): void {
+    this._renderModeState.skipActive = false;
+    this._renderModeState.exceededFrames = 0;
+    this._renderModeState.stableFrames = 0;
+  }
+
+  private _shouldSkipPostProcessing(frameExceeded: boolean): boolean {
+    if (!this._postProcessor || this._renderBudget.mode !== "performance") {
+      this._resetRenderModeState();
+      return false;
+    }
+
+    if (frameExceeded) {
+      this._renderModeState.exceededFrames += 1;
+      this._renderModeState.stableFrames = 0;
+      if (
+        !this._renderModeState.skipActive &&
+        this._renderModeState.exceededFrames >=
+          this._renderBudget.enterSkipFrames
+      ) {
+        this._renderModeState.skipActive = true;
+      }
+      return this._renderModeState.skipActive;
+    }
+
+    this._renderModeState.stableFrames += 1;
+    this._renderModeState.exceededFrames = 0;
+    if (
+      this._renderModeState.skipActive &&
+      this._renderModeState.stableFrames >= this._renderBudget.exitSkipFrames
+    ) {
+      this._renderModeState.skipActive = false;
+    }
+    return this._renderModeState.skipActive;
+  }
+
+  private _renderMainScene(skipPostProcessing: boolean): void {
+    if (!this._renderer) return;
+    this._backgroundManager?.render();
+    if (skipPostProcessing || !this._postProcessor) {
+      this._renderer.render?.(this._scene.three, this._camera);
+      return;
+    }
+    try {
+      this._postProcessor.render(this._scene.getBloomRoots(), this._lastDelta);
+    } catch (error) {
+      if (!this._didWarnPostProcessingFallback) {
+        this._didWarnPostProcessingFallback = true;
+      }
+      this._renderer.render?.(this._scene.three, this._camera);
+    }
+  }
+
+  private _compileScene(camera: THREE.Camera): void {
+    if (!(this._renderer instanceof THREE.WebGLRenderer)) return;
+    this._renderer.compile(this._scene.three, camera);
+  }
+
+  private _prepareTexture(texture: THREE.Texture): void {
+    if (!(this._renderer instanceof THREE.WebGLRenderer)) return;
+    const renderer = this._renderer as THREE.WebGLRenderer & {
+      initTexture?: (map: THREE.Texture) => void;
+    };
+    renderer.initTexture?.(texture);
+  }
+}

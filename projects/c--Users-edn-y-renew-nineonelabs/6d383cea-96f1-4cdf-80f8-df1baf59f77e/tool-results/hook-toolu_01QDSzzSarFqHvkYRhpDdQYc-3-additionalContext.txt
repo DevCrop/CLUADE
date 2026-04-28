@@ -1,0 +1,530 @@
+<ide_diagnostics>[
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 16,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 16,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 16,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 16,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 27,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 27,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 27,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 27,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 27,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 27,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 38,
+    "column": 1,
+    "message": "MD040/fenced-code-language: Fenced code blocks should have a language specified",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 55,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 55,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 55,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 55,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 63,
+    "column": 1,
+    "message": "MD032/blanks-around-lists: Lists should be surrounded by blank lines",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 84,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 84,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 84,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 84,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 84,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 84,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 108,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 108,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 108,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 108,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 108,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 108,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 108,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 108,
+    "column": 17,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 125,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 125,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 125,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 125,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 125,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 125,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 151,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 151,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 151,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 151,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 171,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 171,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 171,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 171,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 198,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 198,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 198,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 198,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 13,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 17,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 17,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 218,
+    "column": 21,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 245,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 245,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 245,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 245,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 260,
+    "column": 1,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 260,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 260,
+    "column": 5,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  },
+  {
+    "filePath": "/c:/Users/edn_y/renew_nineonelabs/BRAND.md",
+    "line": 260,
+    "column": 9,
+    "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+    "code": "[object Object]",
+    "severity": "Warning"
+  }
+]</ide_diagnostics>

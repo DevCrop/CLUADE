@@ -1,0 +1,945 @@
+import { PCFSoftShadowMap } from "three";
+import type { PageThreeConfig } from "../../../types/core.types.js";
+import { getDefaultThreeConfig } from "../../../config/base.config.js";
+import { EnvSetup } from "../../../app/EnvSetup.js";
+import {
+  mainBackground,
+  cloud,
+  cloud2,
+  cloud3,
+  cloud4,
+  cloud5,
+  cloud6,
+  earth,
+  ground,
+  planet,
+  rocket,
+  jetEngine,
+  sceneLights,
+  terrian,
+  sceneTransitionVeil,
+  windowObj,
+} from "../../../core/setup.js";
+import {
+  createMainInitialSceneState,
+  createMainPostProcessingOptions,
+} from "../theatre/MainSceneState.js";
+import { MainSceneRig } from "../theatre/MainSceneRig.js";
+import type {
+  MainPageConfig,
+  MainSceneSectionKey,
+  MainTheatreSheetId,
+} from "../../../types/main.types.js";
+import { BlockReveal } from "../../../animation/BlockReveal.js";
+import { TextReveal } from "../../../animation/TextReveal.js";
+import { Helpers } from "../../../utils/Helpers.js";
+import { runIntroDomTimeline } from "../../../runtime/IntroLoadingRuntime.js";
+import { INIT_DOM_CLASSES } from "../../../config/dom.config.js";
+import {
+  MAIN_BACKGROUND_CLIENT_LOOK,
+  MAIN_BACKGROUND_CONTACT_LOOK,
+  MAIN_BACKGROUND_HERO_LOOK,
+  MAIN_BACKGROUND_INTRO_LOOK,
+  MAIN_BACKGROUND_INTRO_ACTION_LOOK,
+  MAIN_BACKGROUND_SERVICES_LOOK,
+  MAIN_BACKGROUND_STORY_LOOK,
+  MAIN_BACKGROUND_WHO_LOOK,
+  MAIN_BACKGROUND_WHY_LOOK,
+  MAIN_BACKGROUND_WORKS_DETAIL_LOOK,
+  MAIN_BACKGROUND_WORKS_FINAL_LOOK,
+  MAIN_BACKGROUND_WORKS_LOOK,
+} from "../../../config/background.config.js";
+import {
+  BACKGROUND_APP_DOM as APP_MANAGER_DOM,
+  CONTACT_HEAD_TRANSITION,
+  WORKS_DETAIL_HEAD_TRANSITION,
+} from "../../../config/transition.config.js";
+import type {
+  PageSceneRuntimePolicy,
+  SceneBackgroundPolicy,
+  SceneProgressOptionsMap,
+  SceneSelectorMap,
+} from "../../../types/runtime.types.js";
+import type {
+  BackgroundTransitionRule,
+  BackgroundVariantKey,
+  SceneProgressTransitionWindow,
+} from "../../../types/object-runtime.types.js";
+
+const MAIN_THEATRE_QUERY_KEY = "theatre";
+const MAIN_THEATRE_QUERY_ENABLED = "1";
+const WHO_TEXT_SELECTOR = ".no-main-who .mask-target";
+const WHO_REVEAL_START = 0.12;
+const WHO_REVEAL_END = 0.92;
+const WHO_REVEAL_STAGGER_SECONDS = 0.12;
+const WHY_INNER_SELECTOR = ".no-main-why__inner";
+const WHY_REVEAL_START = 0.02;
+const WHY_REVEAL_END = 0.22;
+const CLIENT_ITEM_SELECTOR = ".no-main-clients__item";
+const CLIENT_REVEAL_START = 0.08;
+const CLIENT_REVEAL_END = 0.96;
+const CLIENT_REVEAL_STAGGER_SECONDS = 0.045;
+const CONTACT_SECTION_SELECTOR = ".no-main-contact";
+const CONTACT_HEAD_SELECTOR = ".no-main-contact__head";
+const CONTACT_ACTIONS_SELECTOR = ".no-main-contact__actions";
+const CONTACT_ACTION_ITEM_SELECTOR =
+  ".no-main-contact__actions > .no-corner-btn-wrap";
+const WORKS_DETAIL_HEAD_SELECTOR = APP_MANAGER_DOM.portfolioHeadSelector;
+const MAIN_IS_AUTHOR_MODE = EnvSetup.hasQueryFlag(
+  MAIN_THEATRE_QUERY_KEY,
+  MAIN_THEATRE_QUERY_ENABLED,
+);
+const MAIN_SCENE_RIG = new MainSceneRig();
+const mainInitialSceneState = createMainInitialSceneState();
+const initialState = MAIN_SCENE_RIG.compose(
+  mainInitialSceneState,
+) as NonNullable<MainPageConfig["initialState"]>;
+const initialCameraPosition = {
+  x: initialState.camera?.position?.x ?? 0,
+  y: initialState.camera?.position?.y ?? 0,
+  z: initialState.camera?.position?.z ?? 0,
+};
+const initialCameraTargetPosition = {
+  x: initialState.cameraTarget?.position?.x ?? 0,
+  y: initialState.cameraTarget?.position?.y ?? 0,
+  z: initialState.cameraTarget?.position?.z ?? 0,
+};
+const defaultThree = getDefaultThreeConfig();
+const initialCameraFov = initialState.camera?.fov ?? defaultThree.camera.fov;
+const initialPostProcessing = createMainPostProcessingOptions(
+  mainInitialSceneState.postProcessing,
+);
+const mainSceneDomState = {
+  isWhoTextVisible: false,
+  whoTextTimers: [] as number[],
+  isWorksDetailHeadVisible: false,
+  worksDetailHeadTimers: [] as number[],
+  isClientItemsVisible: false,
+  clientItemTimers: [] as number[],
+  isContactHeadVisible: false,
+  contactHeadTimers: [] as number[],
+  isContactActionsVisible: false,
+  contactActionTimers: [] as number[],
+};
+
+function clearTimers(timerIds: number[]): number[] {
+  timerIds.forEach((timerId) => {
+    window.clearTimeout(timerId);
+  });
+  return [];
+}
+
+function syncWhoScene(progress: number): void {
+  const textItems = Array.from(
+    document.querySelectorAll<HTMLElement>(WHO_TEXT_SELECTOR),
+  );
+  if (textItems.length === 0) return;
+
+  const shouldShow = progress >= WHO_REVEAL_START && progress < WHO_REVEAL_END;
+  if (mainSceneDomState.isWhoTextVisible === shouldShow) return;
+  mainSceneDomState.isWhoTextVisible = shouldShow;
+  mainSceneDomState.whoTextTimers = clearTimers(
+    mainSceneDomState.whoTextTimers,
+  );
+
+  const items = shouldShow ? textItems : textItems.slice().reverse();
+  items.forEach((item, index) => {
+    const timerId = window.setTimeout(
+      () => {
+        if (shouldShow) {
+          TextReveal.setVisibleOn(item);
+          return;
+        }
+        TextReveal.setVisibleOff(item);
+      },
+      index * WHO_REVEAL_STAGGER_SECONDS * 1000,
+    );
+    mainSceneDomState.whoTextTimers.push(timerId);
+  });
+}
+
+function disposeWhoScene(): void {
+  mainSceneDomState.isWhoTextVisible = false;
+  mainSceneDomState.whoTextTimers = clearTimers(
+    mainSceneDomState.whoTextTimers,
+  );
+  const textItems = Array.from(
+    document.querySelectorAll<HTMLElement>(WHO_TEXT_SELECTOR),
+  );
+  textItems.forEach((item) => TextReveal.setVisibleOff(item));
+}
+
+function remapWhyProgress(value: number, start: number, end: number): number {
+  if (value <= start) return 0;
+  if (value >= end) return 1;
+  return (value - start) / Math.max(end - start, Number.EPSILON);
+}
+
+function easeOutWhyProgress(value: number): number {
+  const clampedValue = Helpers.clamp01(value);
+  return 1 - Math.pow(1 - clampedValue, 3);
+}
+
+function syncWhyScene(progress: number): void {
+  const inner = document.querySelector<HTMLElement>(WHY_INNER_SELECTOR);
+  if (!inner) return;
+
+  const revealProgress = remapWhyProgress(
+    progress,
+    WHY_REVEAL_START,
+    WHY_REVEAL_END,
+  );
+
+  const shouldBeVisible = revealProgress > 0;
+  inner.classList.toggle("is-visible", shouldBeVisible);
+}
+
+function disposeWhyScene(): void {
+  const inner = document.querySelector<HTMLElement>(WHY_INNER_SELECTOR);
+  if (inner) {
+    inner.classList.remove("is-visible");
+  }
+}
+
+function syncWorksDetailHead(progress: number): void {
+  const head = document.querySelector<HTMLElement>(WORKS_DETAIL_HEAD_SELECTOR);
+  if (!head) return;
+  const textItems = Array.from(
+    head.querySelectorAll<HTMLElement>(".mask-target"),
+  );
+  const shouldShow =
+    progress >= WORKS_DETAIL_HEAD_TRANSITION.revealStart &&
+    progress < WORKS_DETAIL_HEAD_TRANSITION.hideStart;
+
+  if (mainSceneDomState.isWorksDetailHeadVisible === shouldShow) return;
+  mainSceneDomState.isWorksDetailHeadVisible = shouldShow;
+  mainSceneDomState.worksDetailHeadTimers = clearTimers(
+    mainSceneDomState.worksDetailHeadTimers,
+  );
+
+  if (shouldShow) {
+    head.dataset.active = "true";
+    TextReveal.setVisibleOff(textItems);
+    textItems.forEach((item, index) => {
+      const timerId = window.setTimeout(
+        () => {
+          TextReveal.setVisibleOn(item);
+        },
+        index * WORKS_DETAIL_HEAD_TRANSITION.revealStagger * 1000,
+      );
+      mainSceneDomState.worksDetailHeadTimers.push(timerId);
+    });
+    return;
+  }
+
+  textItems
+    .slice()
+    .reverse()
+    .forEach((item, index) => {
+      const timerId = window.setTimeout(
+        () => {
+          TextReveal.setVisibleOff(item);
+        },
+        index * WORKS_DETAIL_HEAD_TRANSITION.hideStagger * 1000,
+      );
+      mainSceneDomState.worksDetailHeadTimers.push(timerId);
+    });
+  const hideTimerId = window.setTimeout(
+    () => {
+      head.dataset.active = "false";
+    },
+    (Math.max(textItems.length - 1, 0) *
+      WORKS_DETAIL_HEAD_TRANSITION.hideStagger +
+      WORKS_DETAIL_HEAD_TRANSITION.hideSettleDuration) *
+      1000,
+  );
+  mainSceneDomState.worksDetailHeadTimers.push(hideTimerId);
+}
+
+function disposeWorksDetailHead(): void {
+  mainSceneDomState.isWorksDetailHeadVisible = false;
+  mainSceneDomState.worksDetailHeadTimers = clearTimers(
+    mainSceneDomState.worksDetailHeadTimers,
+  );
+  const head = document.querySelector<HTMLElement>(WORKS_DETAIL_HEAD_SELECTOR);
+  if (!head) return;
+  head.dataset.active = "false";
+  const textItems = Array.from(
+    head.querySelectorAll<HTMLElement>(".mask-target"),
+  );
+  textItems.forEach((item) => TextReveal.setVisibleOff(item));
+}
+
+function syncClientItems(progress: number): void {
+  const items = Array.from(
+    document.querySelectorAll<HTMLElement>(CLIENT_ITEM_SELECTOR),
+  );
+  if (items.length === 0) return;
+
+  const shouldShow =
+    progress >= CLIENT_REVEAL_START && progress < CLIENT_REVEAL_END;
+  if (mainSceneDomState.isClientItemsVisible === shouldShow) return;
+  mainSceneDomState.isClientItemsVisible = shouldShow;
+  mainSceneDomState.clientItemTimers = clearTimers(
+    mainSceneDomState.clientItemTimers,
+  );
+
+  const queue = shouldShow ? items : items.slice().reverse();
+  queue.forEach((item, index) => {
+    const timerId = window.setTimeout(
+      () => {
+        item.classList.add(INIT_DOM_CLASSES.blockBase);
+        item.classList.remove(INIT_DOM_CLASSES.boxHidden);
+        item.classList.remove("is-block-reveal-down");
+        if (shouldShow) {
+          BlockReveal.reveal(item);
+          return;
+        }
+        item.classList.remove(INIT_DOM_CLASSES.blockUp);
+        item.classList.add("is-block-reveal-down");
+      },
+      index * CLIENT_REVEAL_STAGGER_SECONDS * 1000,
+    );
+    mainSceneDomState.clientItemTimers.push(timerId);
+  });
+}
+
+function disposeClientItems(): void {
+  mainSceneDomState.isClientItemsVisible = false;
+  mainSceneDomState.clientItemTimers = clearTimers(
+    mainSceneDomState.clientItemTimers,
+  );
+  const items = Array.from(
+    document.querySelectorAll<HTMLElement>(CLIENT_ITEM_SELECTOR),
+  );
+  items.forEach((item) => {
+    item.classList.add(INIT_DOM_CLASSES.blockBase);
+    item.classList.remove(INIT_DOM_CLASSES.blockUp, "is-block-reveal-down");
+    item.classList.add(INIT_DOM_CLASSES.boxHidden);
+  });
+}
+
+function syncContactHead(progress: number): void {
+  const section = document.querySelector<HTMLElement>(CONTACT_SECTION_SELECTOR);
+  const head = document.querySelector<HTMLElement>(CONTACT_HEAD_SELECTOR);
+  const actions = document.querySelector<HTMLElement>(CONTACT_ACTIONS_SELECTOR);
+  if (!section || !head || !actions) return;
+  const textItems = Array.from(
+    head.querySelectorAll<HTMLElement>(".mask-target"),
+  );
+  const actionItems = Array.from(
+    document.querySelectorAll<HTMLElement>(CONTACT_ACTION_ITEM_SELECTOR),
+  );
+  const shouldShow =
+    progress >= CONTACT_HEAD_TRANSITION.revealStart &&
+    progress < CONTACT_HEAD_TRANSITION.hideStart;
+
+  if (mainSceneDomState.isContactActionsVisible !== shouldShow) {
+    mainSceneDomState.isContactActionsVisible = shouldShow;
+    mainSceneDomState.contactActionTimers = clearTimers(
+      mainSceneDomState.contactActionTimers,
+    );
+    const queue = shouldShow ? actionItems : actionItems.slice().reverse();
+    const delayStep = shouldShow
+      ? CONTACT_HEAD_TRANSITION.revealStagger
+      : CONTACT_HEAD_TRANSITION.hideStagger;
+    queue.forEach((item, index) => {
+      const timerId = window.setTimeout(
+        () => {
+          item.classList.add(INIT_DOM_CLASSES.blockBase);
+          item.classList.remove(INIT_DOM_CLASSES.boxHidden);
+          if (shouldShow) {
+            item.classList.remove("is-block-reveal-down");
+            BlockReveal.reveal(item);
+            return;
+          }
+          item.classList.remove(INIT_DOM_CLASSES.blockUp);
+          item.classList.add("is-block-reveal-down");
+        },
+        index * delayStep * 1000,
+      );
+      mainSceneDomState.contactActionTimers.push(timerId);
+    });
+  }
+
+  if (mainSceneDomState.isContactHeadVisible === shouldShow) return;
+  mainSceneDomState.isContactHeadVisible = shouldShow;
+  mainSceneDomState.contactHeadTimers = clearTimers(
+    mainSceneDomState.contactHeadTimers,
+  );
+
+  if (shouldShow) {
+    section.dataset.active = "true";
+    head.dataset.active = "true";
+    actions.dataset.active = "true";
+    TextReveal.setVisibleOff(textItems);
+    textItems.forEach((item, index) => {
+      const timerId = window.setTimeout(
+        () => {
+          TextReveal.setVisibleOn(item);
+        },
+        index * CONTACT_HEAD_TRANSITION.revealStagger * 1000,
+      );
+      mainSceneDomState.contactHeadTimers.push(timerId);
+    });
+    return;
+  }
+
+  textItems
+    .slice()
+    .reverse()
+    .forEach((item, index) => {
+      const timerId = window.setTimeout(
+        () => {
+          TextReveal.setVisibleOff(item);
+        },
+        index * CONTACT_HEAD_TRANSITION.hideStagger * 1000,
+      );
+      mainSceneDomState.contactHeadTimers.push(timerId);
+    });
+
+  const hideTimerId = window.setTimeout(
+    () => {
+      section.dataset.active = "false";
+      head.dataset.active = "false";
+      actions.dataset.active = "false";
+    },
+    (Math.max(textItems.length - 1, 0) *
+      CONTACT_HEAD_TRANSITION.hideStagger +
+      CONTACT_HEAD_TRANSITION.hideSettleDuration) *
+      1000,
+  );
+  mainSceneDomState.contactHeadTimers.push(hideTimerId);
+}
+
+function disposeContactHead(): void {
+  mainSceneDomState.isContactHeadVisible = false;
+  mainSceneDomState.contactHeadTimers = clearTimers(
+    mainSceneDomState.contactHeadTimers,
+  );
+  mainSceneDomState.isContactActionsVisible = false;
+  mainSceneDomState.contactActionTimers = clearTimers(
+    mainSceneDomState.contactActionTimers,
+  );
+  const section = document.querySelector<HTMLElement>(CONTACT_SECTION_SELECTOR);
+  const head = document.querySelector<HTMLElement>(CONTACT_HEAD_SELECTOR);
+  const actions = document.querySelector<HTMLElement>(CONTACT_ACTIONS_SELECTOR);
+  if (!section || !head || !actions) return;
+  section.dataset.active = "false";
+  head.dataset.active = "false";
+  actions.dataset.active = "false";
+  const textItems = Array.from(
+    head.querySelectorAll<HTMLElement>(".mask-target"),
+  );
+  textItems.forEach((item) => TextReveal.setVisibleOff(item));
+  const actionItems = Array.from(
+    document.querySelectorAll<HTMLElement>(CONTACT_ACTION_ITEM_SELECTOR),
+  );
+  actionItems.forEach((item) => {
+    item.classList.add(INIT_DOM_CLASSES.blockBase);
+    item.classList.remove(INIT_DOM_CLASSES.blockUp, "is-block-reveal-down");
+    item.classList.add(INIT_DOM_CLASSES.boxHidden);
+  });
+}
+
+export const three: PageThreeConfig = {
+  ...defaultThree,
+  renderer: {
+    ...defaultThree.renderer,
+    alpha: true,
+  },
+  scene: {
+    ...defaultThree.scene,
+    background: null,
+    fog: null,
+  },
+  camera: {
+    ...defaultThree.camera,
+    position: initialCameraPosition,
+    fov: initialCameraFov,
+  },
+  cameraTarget: {
+    position: initialCameraTargetPosition,
+  },
+  shadowMap: {
+    enabled: true,
+    type: defaultThree.shadowMap?.type ?? PCFSoftShadowMap,
+  },
+  postProcessing: {
+    bloom: { ...initialPostProcessing.bloom, selective: true },
+    vignette: { ...initialPostProcessing.vignette },
+  },
+};
+
+const introOverlay = { tl: runIntroDomTimeline };
+
+const MAIN_SCROLL_SCENE_SELECTORS: SceneSelectorMap<MainSceneSectionKey> = {
+  intro: ".no-main-intro",
+  hero: ".no-main-hero",
+  story: ".no-main-story",
+  who: ".no-main-who",
+  whyus: ".no-main-why",
+  services: ".no-main-services",
+  works: '.no-main-portfolio-intro[data-scene="works"]',
+  worksDetail: '.no-main-portfolio[data-scene="worksDetail"]',
+  worksFinal: '.no-main-portfolio-gallery[data-scene="worksFinal"]',
+  client: ".no-main-clients",
+  contact: ".no-main-contact",
+} as const;
+
+const MAIN_SCROLL_SCENE_OPTIONS: SceneProgressOptionsMap<MainSceneSectionKey> =
+  {
+    intro: {
+      scrollSpanVh: 220,
+      progressLagMs: 160,
+      progressStart: 0.04,
+      progressEnd: 0.96,
+      progressPower: 1.02,
+      progressMode: "top",
+    },
+    hero: {
+      scrollSpanVh: 280,
+      progressLagMs: 160,
+      progressStart: 0.03,
+      progressEnd: 0.97,
+      progressPower: 1.12,
+      progressMode: "top",
+    },
+    story: {
+      scrollSpanVh: 420,
+      progressLagMs: 180,
+      progressStart: 0.02,
+      progressEnd: 0.88,
+      progressPower: 1.18,
+      progressMode: "top",
+    },
+    who: {
+      scrollSpanVh: 340,
+      progressLagMs: 150,
+      progressStart: 0.04,
+      progressEnd: 0.9,
+      progressPower: 1.12,
+    },
+    whyus: {
+      scrollSpanVh: 320,
+      progressLagMs: 150,
+      progressStart: 0.05,
+      progressEnd: 0.9,
+      progressPower: 1.1,
+    },
+    services: {
+      scrollSpanVh: 380,
+      progressLagMs: 170,
+      progressStart: 0.03,
+      progressEnd: 0.9,
+      progressPower: 1.15,
+    },
+    works: {
+      scrollSpanVh: 480,
+      progressLagMs: 180,
+      progressStart: 0.02,
+      progressEnd: 0.96,
+      progressPower: 1.18,
+      progressMode: "top",
+    },
+    worksDetail: {
+      scrollSpanVh: 340,
+      progressLagMs: 110,
+      progressStart: 0.2,
+      progressEnd: 0.98,
+      progressPower: 1.06,
+      progressMode: "top",
+    },
+    worksFinal: {
+      scrollSpanVh: 720,
+      progressLagMs: 110,
+      progressStart: 0.02,
+      progressEnd: 0.88,
+      progressPower: 1.18,
+      progressMode: "top",
+    },
+    client: {
+      scrollSpanVh: 360,
+      progressLagMs: 160,
+      progressStart: 0.04,
+      progressEnd: 0.94,
+      progressPower: 1.12,
+    },
+    contact: {
+      scrollSpanVh: 320,
+      progressLagMs: 150,
+      progressStart: 0.08,
+      progressEnd: 0.96,
+      progressPower: 1.08,
+    },
+  } as const;
+
+const MAIN_BACKGROUND_TRANSITION_RULES: readonly BackgroundTransitionRule<MainTheatreSheetId>[] =
+  [
+    {
+      from: "story",
+      to: "who",
+      mode: "skip",
+    },
+  ] as const;
+
+const MAIN_BACKGROUND_VARIANT_BY_SHEET_ID: Readonly<
+  Record<MainTheatreSheetId, BackgroundVariantKey>
+> = {
+  intro: "intro",
+  introAction: "introAction",
+  hero: "hero",
+  story: "story",
+  who: "who",
+  why: "services",
+  services: "services",
+  works: "services",
+  worksDetail: "services",
+  worksFinal: "services",
+  client: "client",
+  contact: "client",
+};
+
+const MAIN_BACKGROUND_STATES_BY_SHEET_ID = {
+  intro: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.intro,
+    look: MAIN_BACKGROUND_INTRO_LOOK,
+  },
+  introAction: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.introAction,
+    look: MAIN_BACKGROUND_INTRO_ACTION_LOOK,
+  },
+  hero: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.hero,
+    look: MAIN_BACKGROUND_HERO_LOOK,
+  },
+  story: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.story,
+    look: MAIN_BACKGROUND_STORY_LOOK,
+  },
+  who: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.who,
+    look: MAIN_BACKGROUND_WHO_LOOK,
+  },
+  why: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.why,
+    look: MAIN_BACKGROUND_WHY_LOOK,
+  },
+  services: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.services,
+    look: MAIN_BACKGROUND_SERVICES_LOOK,
+  },
+  works: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.works,
+    look: MAIN_BACKGROUND_WORKS_LOOK,
+  },
+  worksDetail: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.worksDetail,
+    look: MAIN_BACKGROUND_WORKS_DETAIL_LOOK,
+  },
+  worksFinal: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.worksFinal,
+    look: MAIN_BACKGROUND_WORKS_FINAL_LOOK,
+  },
+  client: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.client,
+    look: MAIN_BACKGROUND_CLIENT_LOOK,
+  },
+  contact: {
+    variant: MAIN_BACKGROUND_VARIANT_BY_SHEET_ID.contact,
+    look: MAIN_BACKGROUND_CONTACT_LOOK,
+  },
+} as const;
+
+const MAIN_BACKGROUND_DEFAULT_STATE = {
+  variant: "story",
+  look: MAIN_BACKGROUND_STORY_LOOK,
+} as const;
+
+const MAIN_PROGRESS_TRANSITION_WINDOWS = {
+  storyVeil: {
+    sceneKey: "story",
+    sheetId: "story",
+    start: 0.88,
+    end: 0.985,
+    from: 1,
+    to: 0,
+    easing: "easeInOutCubic",
+  },
+  whoVeilReveal: {
+    sceneKey: "who",
+    sheetId: "who",
+    start: 0.01,
+    end: 0.16,
+    from: 0,
+    to: 1,
+    easing: "easeInOutCubic",
+  },
+  servicesVeil: {
+    sceneKey: "services",
+    sheetId: "services",
+    start: 0.88,
+    end: 0.99,
+    from: 1,
+    to: 0,
+    easing: "easeInOutCubic",
+  },
+  worksVeilReveal: {
+    sceneKey: "works",
+    sheetId: "works",
+    start: 0.02,
+    end: 0.34,
+    from: 0,
+    to: 1,
+    easing: "easeInOutCubic",
+  },
+  worksOverlayIn: {
+    sceneKey: "works",
+    sheetId: "works",
+    start: 0.88,
+    end: 0.995,
+    from: 0,
+    to: 1,
+    easing: "easeInOutCubic",
+  },
+  worksOverlayOut: {
+    sceneKey: "worksDetail",
+    sheetId: "worksDetail",
+    start: 0,
+    end: 0.18,
+    from: 1,
+    to: 0,
+    easing: "easeInOutCubic",
+  },
+  servicesWorksOverlayIn: {
+    sceneKey: "services",
+    sheetId: "services",
+    start: 0.82,
+    end: 0.98,
+    from: 0,
+    to: 1,
+    easing: "easeInOutCubic",
+  },
+  servicesWorksOverlayOut: {
+    sceneKey: "works",
+    sheetId: "works",
+    start: 0,
+    end: 0.24,
+    from: 1,
+    to: 0,
+    easing: "easeInOutCubic",
+  },
+  clientContactOverlayIn: {
+    sceneKey: "client",
+    sheetId: "client",
+    start: 0.82,
+    end: 0.98,
+    from: 0,
+    to: 1,
+    easing: "easeInOutCubic",
+  },
+  clientContactOverlayOut: {
+    sceneKey: "contact",
+    sheetId: "contact",
+    start: 0,
+    end: 0.18,
+    from: 1,
+    to: 0,
+    easing: "easeInOutCubic",
+  },
+} as const satisfies Readonly<{
+  storyVeil: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  whoVeilReveal: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  worksOverlayIn: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  worksOverlayOut: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  servicesVeil: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  worksVeilReveal: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  servicesWorksOverlayIn: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  servicesWorksOverlayOut: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  clientContactOverlayIn: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+  clientContactOverlayOut: SceneProgressTransitionWindow<
+    MainSceneSectionKey,
+    MainTheatreSheetId
+  >;
+}>;
+
+const MAIN_SCENE_RUNTIME_POLICIES: PageSceneRuntimePolicy<
+  MainSceneSectionKey,
+  MainTheatreSheetId
+> = {
+  domTargets: {
+    mainOverlay: APP_MANAGER_DOM.worksOverlaySelector,
+    portfolioGallery: APP_MANAGER_DOM.portfolioGallerySelector,
+  },
+  overlays: [
+    {
+      targetKey: "mainOverlay",
+      windows: [
+        MAIN_PROGRESS_TRANSITION_WINDOWS.worksOverlayIn,
+        MAIN_PROGRESS_TRANSITION_WINDOWS.worksOverlayOut,
+        MAIN_PROGRESS_TRANSITION_WINDOWS.clientContactOverlayIn,
+        MAIN_PROGRESS_TRANSITION_WINDOWS.clientContactOverlayOut,
+      ],
+    },
+  ],
+  visibility: [
+    {
+      targetKey: "portfolioGallery",
+      datasetKey: "active",
+      activeStates: [{ sceneKey: "worksFinal", sheetId: "worksFinal" }],
+    },
+  ],
+  veils: [
+    {
+      objectId: sceneTransitionVeil,
+      windows: [
+        MAIN_PROGRESS_TRANSITION_WINDOWS.storyVeil,
+        MAIN_PROGRESS_TRANSITION_WINDOWS.whoVeilReveal,
+        MAIN_PROGRESS_TRANSITION_WINDOWS.servicesVeil,
+        MAIN_PROGRESS_TRANSITION_WINDOWS.worksVeilReveal,
+      ],
+      inactiveProgress: 1,
+    },
+  ],
+};
+
+const MAIN_BACKGROUND_POLICIES: readonly SceneBackgroundPolicy<
+  MainSceneSectionKey,
+  MainTheatreSheetId
+>[] = [
+  {
+    backgroundId: mainBackground,
+    defaultState: MAIN_BACKGROUND_DEFAULT_STATE,
+    statesBySheetId: MAIN_BACKGROUND_STATES_BY_SHEET_ID,
+    transitionRules: MAIN_BACKGROUND_TRANSITION_RULES,
+    resetShaderClockOnVariant: "hero",
+  },
+] as const;
+
+export const scenes = {
+  intro: {},
+  hero: {},
+  story: {},
+  who: {
+    onProgress: (progress: number): void => {
+      syncWhoScene(progress);
+    },
+    onDispose: (): void => {
+      disposeWhoScene();
+    },
+  },
+  whyus: {
+    onProgress: (progress: number): void => {
+      syncWhyScene(progress);
+    },
+    onDispose: (): void => {
+      disposeWhyScene();
+    },
+  },
+  services: {},
+  works: {},
+  worksDetail: {
+    onProgress: (progress: number): void => {
+      syncWorksDetailHead(progress);
+    },
+    onDispose: (): void => {
+      disposeWorksDetailHead();
+    },
+  },
+  worksFinal: {},
+  client: {
+    onProgress: (progress: number): void => {
+      syncClientItems(progress);
+    },
+    onDispose: (): void => {
+      disposeClientItems();
+    },
+  },
+  contact: {
+    onProgress: (progress: number): void => {
+      syncContactHead(progress);
+    },
+    onDispose: (): void => {
+      disposeContactHead();
+    },
+  },
+} as const;
+
+export const objects = {
+  [rocket]: true,
+  [jetEngine]: true,
+  [ground]: true,
+  [mainBackground]: true,
+  [cloud]: true,
+  [cloud2]: true,
+  [cloud3]: true,
+  [cloud4]: true,
+  [cloud5]: true,
+  [cloud6]: true,
+  [sceneLights]: true,
+  [earth]: true,
+  [planet]: true,
+  [sceneTransitionVeil]: true,
+  [terrian]: true,
+  [windowObj]: true,
+};
+
+export const mainConfig: MainPageConfig = {
+  pageId: "main",
+  three,
+  initialState,
+  scenes,
+  objects,
+  scrollSceneSelectors: MAIN_SCROLL_SCENE_SELECTORS,
+  scrollSceneOptions: MAIN_SCROLL_SCENE_OPTIONS,
+  sceneRuntimePolicies: MAIN_SCENE_RUNTIME_POLICIES,
+  backgroundPolicies: MAIN_BACKGROUND_POLICIES,
+  introOverlay: MAIN_IS_AUTHOR_MODE ? null : introOverlay,
+  orbitControls: {
+    enabled: true,
+    enableDamping: true,
+    dampingFactor: 0.08,
+    rotateSpeed: 0.7,
+    zoomSpeed: 0.8,
+    panSpeed: 0.6,
+    minDistance: 0.01,
+    maxDistance: 80,
+    minPolarAngle: 0.1,
+    maxPolarAngle: Math.PI - 0.1,
+  },
+  onScrollTimelineInit: (gsap): void => {
+    if (MAIN_IS_AUTHOR_MODE) {
+      gsap.set("#intro", {
+        autoAlpha: 0,
+        pointerEvents: "none",
+      });
+    }
+  },
+};

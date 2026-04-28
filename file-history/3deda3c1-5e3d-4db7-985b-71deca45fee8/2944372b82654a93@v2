@@ -1,0 +1,476 @@
+import type {
+  AboutLightsObjectOptions,
+  PageConfigObjectOptions,
+  SceneLightsObjectOptions,
+} from "../types/object.types.js";
+import type { AboutTransformState } from "../types/about.types.js";
+import {
+  ABOUT_BACKGROUND_OBJECT_DEFAULTS,
+  MAIN_BACKGROUND_OBJECT_DEFAULTS,
+} from "./background.config.js";
+import {
+  ABOUT_TERRIAN_FALLOFF,
+  GROUND_SHADER_DEFAULTS,
+} from "./ground.config.js";
+import { rocket as rocketObjectId } from "../core/setup.js";
+import {
+  BACKGROUND_CLOUD_PLANE_OPTIONS as CLOUD_PLANE_OPTIONS,
+  CLOUD_SHADER_BASE,
+  TRANSITION_VEIL_PLANE,
+  TRANSITION_VEIL_SHADER,
+} from "./transition.config.js";
+import { ABOUT_LIGHT_AUTHOR_DEFAULTS } from "./scene-light.config.js";
+
+export {
+  ABOUT_BACKGROUND_STATE_DEFAULTS,
+  BACKGROUND_TRANSITION_CONFIG,
+  MAIN_BACKGROUND_LOOK,
+  MAIN_BACKGROUND_SERVICES_LOOK,
+} from "./background.config.js";
+export {
+  ABOUT_LIGHT_STATE_DEFAULTS,
+  MAIN_SCENE_LIGHT_STATE_DEFAULTS,
+} from "./scene-light.config.js";
+export { SCENE_TRANSITION_VEIL_SEQUENCE } from "./transition.config.js";
+
+const DEFAULT_CLOUD_COUNT = 2400;
+const CLOUD_SCENE_COUNT_MULTIPLIER = 10;
+
+function createCloudLayer(
+  label: string,
+  position: { x: number; y: number; z: number },
+  scale: { x: number; y: number; z: number },
+  opacity: number,
+) {
+  return {
+    label,
+    visible: true,
+    position,
+    scale,
+    plane: CLOUD_PLANE_OPTIONS,
+    shader: {
+      ...CLOUD_SHADER_BASE,
+      opacity,
+    },
+  };
+}
+
+const SKY_FILL_LIGHT = {
+  id: "skyFillLight",
+  type: "hemisphere",
+  intensity: 0.52,
+  skyColor: 0xe1ecff,
+  groundColor: 0x111826,
+  affectsRocket: false,
+} satisfies NonNullable<SceneLightsObjectOptions["lights"]>[number];
+
+const GROUND_LIGHT = {
+  id: "groundLight",
+  type: "directional",
+  intensity: 1.42,
+  color: 0xf3f7ff,
+  position: { x: -22, y: 156, z: 104 },
+  target: { x: 0, y: 8, z: -10 },
+  castShadow: true,
+  shadow: {
+    mapSize: 2048,
+    bias: -0.00012,
+    normalBias: 0.02,
+    radius: 2,
+  },
+  affectsRocket: true,
+} satisfies NonNullable<SceneLightsObjectOptions["lights"]>[number];
+
+const ROCKET_FILL_LIGHT = {
+  id: "rocketFillLight",
+  type: "spot",
+  intensity: 1.68,
+  color: 0xeaf3ff,
+  affectsEarth: false,
+  affectsRocket: true,
+  distance: 260,
+  decay: 1.0,
+  angle: 0.72,
+  penumbra: 0.92,
+  followCamera: {
+    enabled: true,
+    positionOffset: { x: 14, y: 18, z: 28 },
+    targetOffset: { x: 0, y: 4, z: -8 },
+    rotateWithCamera: true,
+  },
+  castShadow: false,
+} satisfies NonNullable<SceneLightsObjectOptions["lights"]>[number];
+
+const ROCKET_RIM_LIGHT_LEFT = {
+  id: "rocketRimLightLeft",
+  type: "spot",
+  intensity: 0.86,
+  color: 0x9ec5ff,
+  affectsEarth: false,
+  affectsRocket: true,
+  distance: 220,
+  decay: 1.2,
+  angle: 0.42,
+  penumbra: 0.88,
+  followCamera: {
+    enabled: true,
+    positionOffset: { x: -22, y: 8, z: -18 },
+    targetOffset: { x: 0, y: 10, z: -6 },
+    rotateWithCamera: true,
+  },
+  castShadow: false,
+} satisfies NonNullable<SceneLightsObjectOptions["lights"]>[number];
+
+const ROCKET_RIM_LIGHT_RIGHT = {
+  id: "rocketRimLightRight",
+  type: "spot",
+  intensity: 0.72,
+  color: 0xd6e6ff,
+  affectsEarth: false,
+  affectsRocket: true,
+  distance: 220,
+  decay: 1.2,
+  angle: 0.38,
+  penumbra: 0.9,
+  followCamera: {
+    enabled: true,
+    positionOffset: { x: 22, y: 6, z: -14 },
+    targetOffset: { x: 0, y: 8, z: -6 },
+    rotateWithCamera: true,
+  },
+  castShadow: false,
+} satisfies NonNullable<SceneLightsObjectOptions["lights"]>[number];
+
+const SCENE_LIGHT_SPECS: NonNullable<SceneLightsObjectOptions["lights"]> = [
+  SKY_FILL_LIGHT,
+  GROUND_LIGHT,
+  ROCKET_FILL_LIGHT,
+  ROCKET_RIM_LIGHT_LEFT,
+  ROCKET_RIM_LIGHT_RIGHT,
+];
+
+const ABOUT_KEY_LIGHT = {
+  id: "keyLight",
+  type: "spot",
+  intensity: ABOUT_LIGHT_AUTHOR_DEFAULTS.keyLight,
+  color: 0xdfe8ff,
+  affectsEarth: false,
+  castShadow: true,
+  shadow: {
+    mapSize: 1024,
+    bias: -0.00018,
+    normalBias: 0.018,
+    radius: 3,
+  },
+  position: { x: 18, y: 26, z: 16 },
+  target: { x: 0, y: 8, z: 0 },
+  distance: 64,
+  decay: 1.35,
+  angle: 0.28,
+  penumbra: 0.54,
+} satisfies NonNullable<AboutLightsObjectOptions["lights"]>[number];
+
+const ABOUT_AMBIENT_LIGHT = {
+  id: "ambientLight",
+  type: "ambient",
+  intensity: ABOUT_LIGHT_AUTHOR_DEFAULTS.ambientLight,
+  color: 0x8ea8d8,
+  affectsEarth: true,
+} satisfies NonNullable<AboutLightsObjectOptions["lights"]>[number];
+
+const ABOUT_FILL_LIGHT = {
+  id: "fillLight",
+  type: "directional",
+  intensity: ABOUT_LIGHT_AUTHOR_DEFAULTS.fillLight,
+  color: 0xa9c2ff,
+  affectsEarth: true,
+  castShadow: false,
+  position: { x: -28, y: 18, z: 34 },
+  target: { x: 0, y: 24, z: 380 },
+} satisfies NonNullable<AboutLightsObjectOptions["lights"]>[number];
+
+const ABOUT_RIM_LIGHT = {
+  id: "rimLight",
+  type: "spot",
+  intensity: ABOUT_LIGHT_AUTHOR_DEFAULTS.rimLight,
+  color: 0x9fb7ff,
+  affectsEarth: false,
+  castShadow: false,
+  position: { x: -14, y: 10, z: -18 },
+  target: { x: 0, y: 8, z: 0 },
+  distance: 48,
+  decay: 1.4,
+  angle: 0.18,
+  penumbra: 0.9,
+} satisfies NonNullable<AboutLightsObjectOptions["lights"]>[number];
+
+const ABOUT_LIGHT_SPECS: NonNullable<AboutLightsObjectOptions["lights"]> = [
+  ABOUT_AMBIENT_LIGHT,
+  ABOUT_KEY_LIGHT,
+  ABOUT_FILL_LIGHT,
+  ABOUT_RIM_LIGHT,
+];
+
+export function resolveAboutObjectTransformDefaults(
+  id: keyof PageConfigObjectOptions,
+  overrides?: Partial<AboutTransformState>,
+): AboutTransformState {
+  const options = OBJECT_CONFIG[id];
+  return {
+    position: {
+      x: overrides?.position?.x ?? options?.position?.x ?? 0,
+      y: overrides?.position?.y ?? options?.position?.y ?? 0,
+      z: overrides?.position?.z ?? options?.position?.z ?? 0,
+    },
+    rotation: {
+      x: overrides?.rotation?.x ?? options?.rotation?.x ?? 0,
+      y: overrides?.rotation?.y ?? options?.rotation?.y ?? 0,
+      z: overrides?.rotation?.z ?? options?.rotation?.z ?? 0,
+    },
+    scale: {
+      x: overrides?.scale?.x ?? options?.scale?.x ?? 1,
+      y: overrides?.scale?.y ?? options?.scale?.y ?? 1,
+      z: overrides?.scale?.z ?? options?.scale?.z ?? 1,
+    },
+    visible: overrides?.visible ?? options?.visible ?? true,
+  };
+}
+
+export const OBJECT_CONFIG: PageConfigObjectOptions = {
+  mainBackground: MAIN_BACKGROUND_OBJECT_DEFAULTS,
+  aboutBackground: ABOUT_BACKGROUND_OBJECT_DEFAULTS,
+  cloud: createCloudLayer(
+    "rear haze A",
+    { x: -6.4, y: 4.7, z: -27.8 },
+    { x: 40, y: 20, z: 10 },
+    0.98,
+  ),
+  cloud2: createCloudLayer(
+    "rear haze B",
+    { x: 3.1, y: 6.2, z: -21.6 },
+    { x: 40, y: 20, z: 10 },
+    0.96,
+  ),
+  cloud3: createCloudLayer(
+    "mid body A",
+    { x: -1.7, y: -2.4, z: -14.2 },
+    { x: 40, y: 20, z: 10 },
+    0.99,
+  ),
+  cloud4: createCloudLayer(
+    "mid body B",
+    { x: 7.9, y: 1.4, z: -18.7 },
+    { x: 40, y: 20, z: 10 },
+    0.95,
+  ),
+  cloud5: createCloudLayer(
+    "front accent A",
+    { x: -4.8, y: 0.6, z: -11.3 },
+    { x: 40, y: 20, z: 10 },
+    0.97,
+  ),
+  cloud6: createCloudLayer(
+    "front accent B",
+    { x: 5.7, y: -1.1, z: -12.1 },
+    { x: 40, y: 20, z: 10 },
+    0.98,
+  ),
+  sceneTransitionVeil: {
+    visible: true,
+    active: false,
+    progress: 0,
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+    plane: TRANSITION_VEIL_PLANE,
+    shader: TRANSITION_VEIL_SHADER,
+  },
+  ground: {
+    visible: true,
+    modelUrl: "/resource/models/ground_draco.glb",
+    scale: { x: 1, y: 1, z: 1 },
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    meshShadow: { cast: false, receive: true },
+    shader: GROUND_SHADER_DEFAULTS,
+    panelLights: [],
+  },
+  window: {
+    modelUrl: "/resource/models/window_draco.glb",
+    position: { x: 0, y: 4501, z: -5 },
+    rotation: { x: 0, y: 270, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+    visible: false,
+  },
+  astronaut: {
+    modelUrl: "/resource/models/Astronaut_draco.glb",
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1.8, y: 1.8, z: 1.8 },
+    visible: true,
+  },
+  planet: {
+    radius: 1,
+    widthSegments: 48,
+    heightSegments: 32,
+    color: 0xffffff,
+    dayTextureUrl: "/resource/images/texture/moon/moonmap4k.jpg",
+    bumpTextureUrl: "/resource/images/texture/moon/moonbump4k.jpg",
+    bumpScale: 0.018,
+    roughness: 0.42,
+    metalness: 0.05,
+    atmosphereScale: 1.16,
+    atmosphereOpacity: 0.58,
+    atmospherePowFactor: 4.3,
+    atmosphereMultiplier: 8.4,
+    atmosphereColor: [0.92, 0.96, 1],
+    position: { x: 0, y: 200, z: 0 },
+    rotation: { x: 0, y: 166, z: 0 },
+    scale: { x: 30, y: 30, z: 30 },
+    visible: false,
+  },
+  terrian: {
+    visible: true,
+    modelUrl: "/resource/models/crater_draco.glb?v=2",
+    meshShadow: { cast: true, receive: true },
+    aboutFalloff: ABOUT_TERRIAN_FALLOFF,
+    position: { x: 0, y: -1, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1.5, y: 1.5, z: 1.5 },
+  },
+  clouds: {
+    visible: true,
+    cloudCount: DEFAULT_CLOUD_COUNT,
+    spreadX: 800,
+    spreadY: 200,
+    spreadZ: 2000,
+    cloudZMin: 0,
+    cloudZMax: 2000,
+    planeSize: 156,
+    textureUrl: "/resource/images/texture/cloud10.png",
+    brightnessScale: 1,
+    saturation: 0.65,
+    depthAlphaPower: 14,
+    edgeSoftness: 0.58,
+    flowSpeed: 12,
+    position: { x: 0, y: 220, z: -22.5 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 0.2, y: 0.2, z: 0.2 },
+  },
+  cloudScene: {
+    visible: true,
+    cloudCount: DEFAULT_CLOUD_COUNT * CLOUD_SCENE_COUNT_MULTIPLIER,
+    spreadX: 2200,
+    spreadY: 320,
+    spreadZ: 2200,
+    cloudZMin: -900,
+    cloudZMax: 7800,
+    planeSize: 192,
+    textureUrl: "/resource/images/texture/cloud10.png",
+    brightnessScale: 0.95,
+    saturation: 0.6,
+    depthAlphaPower: 6,
+    edgeSoftness: 0.62,
+    flowSpeed: 8,
+    position: { x: 0, y: 4500, z: 400 },
+    scale: { x: 1, y: 1, z: 1 },
+  },
+  earth: {
+    visible: true,
+    radius: 10,
+    segments: 64,
+    dayTextureUrl: "/resource/images/texture/earth/Albedo.webp",
+    bumpTextureUrl: "/resource/images/texture/earth/Bump.webp",
+    specularTextureUrl: "/resource/images/texture/earth/Ocean.webp",
+    cloudsAlphaTextureUrl: "/resource/images/texture/earth/Clouds.webp",
+    bumpScale: 0.03,
+    cloudOpacity: 0.52,
+    cloudScale: 1.005,
+    atmosphereScale: 1.18,
+    axialTiltDeg: 23.5,
+    atmOpacity: 0.055,
+    atmPowFactor: 6.1,
+    atmMultiplier: 0.9,
+    terminatorSoftness: 0.16,
+    nightFloor: 0.06,
+    cloudNightOpacity: 0.65,
+    rotationSpeedY: 0.01,
+    cloudsRotationSpeedY: 0.008,
+    position: { x: 0, y: 4400, z: 100 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+  },
+  rocket: {
+    visible: true,
+    modelUrl: "/resource/models/rocket_draco.glb?v=4",
+    emissiveIntensity: 0.5,
+    emissiveColor: 0x2a2f3a,
+    flame: {
+      visible: false,
+      anchorNameIncludes: ["flame", "nozzle", "thruster", "engine", "exhaust"],
+      offset: { x: 0, y: -0.35, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1.65, y: 3.4, z: 1 },
+      opacity: 0.9,
+      renderOrder: 5,
+      speed: 2,
+      wave: 1.2,
+    },
+    scale: { x: 1, y: 1, z: 1 },
+    position: { x: 0, y: 1, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+  },
+  jetEngine: {
+    visible: true,
+    attachTo: rocketObjectId,
+    offset: { x: 0, y: -0.34, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+    intensity: 0.78,
+    length: 2.4,
+    nozzleRadius: 0.028,
+    nozzleGap: 2.2,
+    noise: 1,
+    bloom: 1,
+    innerColor: [0.4, 0.75, 1.0],
+    outerColor: [1.0, 0.92, 0.78],
+  },
+  smokeFloor: {
+    visible: false,
+    floorLevel: -2.5,
+    floorDimensions: 25,
+  },
+  gravityBalls: {
+    visible: true,
+    attachTo: rocketObjectId,
+    spawnOffset: { x: 0, y: -0.34, z: 0 },
+    floorLevel: -2.5,
+    floorDimensions: 25,
+    radius: 0.05,
+    colors: ["#FFFFFF", "#F5F5F5", "#EEEEEE"],
+    dotsPerInterval: 3,
+    physicsScale: 0.006,
+    proximityRange: 4.0,
+    maxGravityBoost: 3.0,
+    particleScaleMin: 1.2,
+    particleScaleMax: 3.0,
+    vxMult: 2.5,
+    vzMult: 1.5,
+    vyMult: -0.5,
+    textureUrls: [
+      "/resource/images/texture/smoke/smoke_01.png",
+      "/resource/images/texture/rocket/smoke.png",
+    ],
+  },
+  sceneLights: {
+    visible: true,
+    flightProgress: 0,
+    intensity: 1,
+    lights: SCENE_LIGHT_SPECS,
+  },
+  aboutLights: {
+    visible: true,
+    travelProgress: 0,
+    intensity: ABOUT_LIGHT_AUTHOR_DEFAULTS.intensity,
+    lights: ABOUT_LIGHT_SPECS,
+  },
+};

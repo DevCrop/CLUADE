@@ -1,0 +1,250 @@
+import type {
+  TheatreAuthorBridgeHooks,
+  TheatreAuthorMode,
+  TheatreObjectPort,
+  TheatreScrubPort,
+  TheatreSequencePort,
+} from "./theatre.types.js";
+import type { Engine } from "../core/Engine.js";
+import type { PageConfig } from "./core.types.js";
+import type {
+  SceneLightsPort,
+  SceneLightsStateSnapshot,
+  RocketFlameStateSnapshot,
+  RocketPort,
+} from "./object.types.js";
+import type { BackgroundLookOptions } from "./object-visual.types.js";
+import type { SceneShakeStateSnapshot } from "./runtime.types.js";
+
+export interface SceneVec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface MainTransformState {
+  position: SceneVec3;
+  rotation: SceneVec3;
+  scale: SceneVec3;
+  visible: boolean;
+}
+
+export type MainRocketFlameState = RocketFlameStateSnapshot;
+
+export interface MainRocketState extends MainTransformState {
+  flame: MainRocketFlameState;
+}
+
+export interface MainGravityBallsState {
+  visible: boolean;
+  dotsPerInterval: number;
+  physicsScale: number;
+  maxGravityBoost: number;
+  particleScaleMin: number;
+  particleScaleMax: number;
+}
+
+/** Main Theatre / Studio: jet plume transform + tuning (colors stay in `object.config`). */
+export interface MainJetEngineState extends MainTransformState {
+  intensity: number;
+  length: number;
+  nozzleRadius: number;
+  nozzleGap: number;
+  noise: number;
+  bloom: number;
+}
+
+export interface MainCameraState {
+  position: SceneVec3;
+  target: SceneVec3;
+  fov: number;
+}
+
+export interface MainBloomState {
+  strength: number;
+  radius: number;
+  threshold: number;
+  compositeStrength: number;
+}
+
+export interface MainVignetteState {
+  offset: number;
+  darkness: number;
+}
+
+export interface MainPostProcessingState {
+  bloom: MainBloomState;
+  vignette: MainVignetteState;
+  exposure: number;
+}
+
+export interface MainBackgroundLookState extends Required<BackgroundLookOptions> {}
+
+export interface MainBackgroundState extends MainTransformState {
+  exposure: number;
+  look: MainBackgroundLookState;
+}
+
+export interface MainCloudState extends MainTransformState {
+  chapter: number;
+  transition: number;
+}
+
+export type MainSceneLightsState = SceneLightsStateSnapshot;
+export type MainSceneLightsPort = SceneLightsPort;
+export type MainRocketPort = RocketPort;
+export type MainSceneShakeState = SceneShakeStateSnapshot;
+
+export interface MainTheatreState {
+  camera: MainCameraState;
+  rocket: MainRocketState;
+  jetEngine: MainJetEngineState;
+  gravityBalls: MainGravityBallsState;
+  ground: MainTransformState;
+  planet: MainTransformState;
+  earth: MainTransformState;
+  terrian: MainTransformState;
+  window: MainTransformState;
+  background: MainBackgroundState;
+  cloud: MainCloudState;
+  cloud2: MainCloudState;
+  cloud3: MainCloudState;
+  cloud4: MainCloudState;
+  cloud5: MainCloudState;
+  cloud6: MainCloudState;
+  postProcessing: MainPostProcessingState;
+  sceneLights: MainSceneLightsState;
+  sceneShake: MainSceneShakeState;
+}
+
+export type MainTheatreValue = MainTheatreState;
+export type MainTheatreProps = MainTheatreState;
+
+export interface MainCameraTheatreValue {
+  camera: MainTheatreValue["camera"];
+}
+
+export interface MainCameraTheatreProps {
+  camera: MainTheatreProps["camera"];
+}
+
+export const MAIN_THEATRE_SHEET_IDS = [
+  "intro",
+  "introAction",
+  "hero",
+  "story",
+  "who",
+  "why",
+  "services",
+  "works",
+  "worksDetail",
+  "worksFinal",
+  "client",
+  "contact",
+] as const;
+
+export type MainTheatreSheetId = (typeof MAIN_THEATRE_SHEET_IDS)[number];
+
+export type MainSceneSectionKey =
+  | "intro"
+  | "hero"
+  | "story"
+  | "who"
+  | "whyus"
+  | "services"
+  | "works"
+  | "worksDetail"
+  | "worksFinal"
+  | "client"
+  | "contact";
+
+export type MainPageConfig = PageConfig<
+  "main",
+  MainSceneSectionKey,
+  MainTheatreSheetId
+>;
+
+export interface MainTheatrePlaybackRange {
+  start: number;
+  end: number;
+}
+
+export interface MainSceneProgressState {
+  sheetId: MainTheatreSheetId;
+  localProgress: number;
+}
+
+export interface MainSceneProgressRange {
+  start: number;
+  end: number;
+}
+
+export interface MainTheatrePlaybackStep {
+  sheetId: MainTheatreSheetId;
+  progressRange?: MainSceneProgressRange;
+  playbackRange?: MainTheatrePlaybackRange;
+  playbackRangeSource?: "default" | "camera";
+}
+
+export interface MainResolvedTheatrePlaybackStep {
+  sheetId: MainTheatreSheetId;
+  range: MainTheatrePlaybackRange;
+  progressRange: MainSceneProgressRange;
+}
+
+export interface MainSceneDebugTrackSnapshot {
+  track: string;
+  keyframeCount: number;
+  fromKeyframeIndex: number | null;
+  toKeyframeIndex: number | null;
+}
+
+export interface MainSceneDebugSnapshot {
+  sceneKey: MainSceneSectionKey;
+  sheetId: MainTheatreSheetId;
+  localProgress: number;
+  sheetPosition: number;
+  rangeStart: number;
+  rangeEnd: number;
+  tracks: readonly MainSceneDebugTrackSnapshot[];
+}
+
+export type MainTheatreObject = TheatreObjectPort<
+  MainTheatreValue,
+  MainTheatreProps
+>;
+
+export type MainTheatreSequence = TheatreSequencePort;
+export interface MainTheatreSheetBinding {
+  sheetId: MainTheatreSheetId;
+  object: MainTheatreObject;
+  sequence: MainTheatreSequence;
+  length: number;
+}
+export type MainTheatreScrub = TheatreScrubPort<
+  MainTheatreValue,
+  MainTheatreProps
+>;
+export type MainTheatreApplyState = (
+  engine: Engine,
+  values: MainTheatreValue,
+) => void;
+export type MainTheatreSyncSheetState = (
+  engine: Engine,
+  sheetId: MainTheatreSheetId,
+  position: number,
+) => void;
+
+export interface MainTheatreScrubCameraApi {
+  set: (
+    props: MainCameraTheatreProps["camera"],
+    values: MainCameraTheatreValue["camera"],
+  ) => void;
+}
+
+export interface MainTheatreScrubCameraPort {
+  capture: (callback: (api: MainTheatreScrubCameraApi) => void) => void;
+}
+
+export type MainTheatreMode = TheatreAuthorMode;
+export type MainTheatreBridgeHooks = TheatreAuthorBridgeHooks;

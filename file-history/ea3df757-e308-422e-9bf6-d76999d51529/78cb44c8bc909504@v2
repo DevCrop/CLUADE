@@ -1,0 +1,41 @@
+{
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "vite",
+    "dev:serve": "php -S localhost:8000",
+    "build": "npm-run-all build:bundle build:css",
+    "build:ts": "npm-run-all build:bundle build:css",
+    "build:bundle": "vite build",
+    "build:css": "sass resource/scss/style.scss resource/dist/style.css --no-source-map --quiet-deps",
+    "watch": "npm-run-all --parallel watch:ts:bundle watch:css",
+    "watch:ts:bundle": "vite build --watch --mode production --minify esbuild --sourcemap false",
+    "watch:ts:typecheck": "tsc --watch --noEmit --preserveWatchOutput --pretty",
+    "watch:css": "sass resource/scss/style.scss resource/dist/style.css --watch --source-map --embed-sources --source-map-urls=relative --quiet-deps",
+    "compress:pad": "npx gltf-transform optimize resource/models/pad.glb resource/models/pad_draco.glb --compress draco",
+    "compress:crater": "npx gltf-transform optimize resource/models/crater.glb resource/models/crater_draco.glb --compress draco",
+    "compress:ground": "npx gltf-transform draco resource/models/ground.glb resource/models/ground_draco.glb",
+    "compress:rocket": "npx gltf-transform optimize resource/models/rocket.glb resource/models/rocket_draco.glb --compress draco",
+    "compress:planet": "npx gltf-transform optimize resource/models/planet.glb resource/models/planet_draco.glb --compress draco",
+    "compress:window": "npx gltf-transform optimize resource/models/window.glb resource/models/window_draco.glb --compress draco",
+    "compress:all": "npm run compress:pad && npm run compress:ground && npm run compress:rocket && npm run compress:planet && npm run compress:window"
+  },
+  "devDependencies": {
+    "@gltf-transform/cli": "^3.2.1",
+    "@prettier/plugin-php": "^0.24.0",
+    "@types/node": "^24.10.1",
+    "@types/three": "^0.182.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.8.1",
+    "sass": "^1.80.0",
+    "three": "^0.180.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@theatre/core": "^0.7.2",
+    "@theatre/studio": "^0.7.2"
+  }
+}

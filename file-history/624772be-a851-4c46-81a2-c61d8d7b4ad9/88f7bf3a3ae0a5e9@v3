@@ -1,0 +1,29 @@
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+---
+
+# Frontend Rules
+
+- Bundler: Vite / Language: TypeScript (ES6+)
+- 3D: Three.js — follow existing patterns in `resource/ts/`
+- **Do NOT run `npm run build`, `npm run watch`, or `npm install`**
+  - Reason: Vite dev server at `http://localhost:8888` auto-bundles on every file save
+  - Only `npm install <package>` is allowed when adding a new dependency
+  - Do not include these commands in verification steps, PR notes, or agent plans
+
+## TypeScript
+
+- All types/interfaces/enums → `resource/ts/types/*.types.ts` only — no inline types, no `any`
+- All constants, colors, sizes, URLs → config files only — no magic numbers
+- Page theatre: `resource/ts/pages/<page>/theatre/`
+- Page scene: `resource/ts/pages/<page>/scene/`
+- Shared engine/runtime code stays out of page folders
+
+## Three.js
+
+- `dispose()` required for every geometry, material, texture
+- No object creation inside render loop
+- `addEventListener` must have matching `removeEventListener`
+- No monkey-patching Three.js API

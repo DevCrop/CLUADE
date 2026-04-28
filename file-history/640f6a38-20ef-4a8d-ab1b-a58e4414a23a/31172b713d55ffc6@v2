@@ -1,0 +1,81 @@
+<?php
+
+namespace Core;
+
+use Spatie\Image\Image;
+use Throwable;
+
+class ImageProcessor
+{
+    public const MAX_WIDTH = 2560;
+    public const WEBP_QUALITY = 82;
+    public const CONVERTIBLE = ['jpg', 'jpeg', 'png', 'gif'];
+    public const MEMORY_LIMIT = '1024M';
+
+    /**
+     * 원본 경로 옆에 .webp 파일을 생성한다. 본 함수 자체는 원본을 건드리지 않지만,
+     * 호출자(`inc/lib/func.php::imageUpload`)는 변환 성공 시 원본을 unlink 하여
+     * .webp 가 원본을 대체하는 신 전략을 구현한다.
+     * 실패해도 예외를 삼켜서 업로드 플로우를 깨뜨리지 않는다.
+     */
+    public static function makeWebpSibling(string $absolutePath): bool
+    {
+        if (!is_file($absolutePath)) {
+            return false;
+        }
+
+        $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::CONVERTIBLE, true)) {
+            return false;
+        }
+
+        $webpPath = preg_replace('/\.[^.]+$/', '.webp', $absolutePath);
+
+        // GD 의 비트맵 디코딩은 압축된 jpg 크기보다 훨씬 더 큰 메모리를 소모한다.
+        // 기본 128M 으로는 큰 이미지에서 OOM 으로 silent fail 하므로 일시 상향.
+        $previousLimit = ini_get('memory_limit');
+        @ini_set('memory_limit', self::MEMORY_LIMIT);
+
+        try {
+            $image = Image::load($absolutePath);
+
+            $size = @getimagesize($absolutePath);
+            if (is_array($size) && isset($size[0]) && $size[0] > self::MAX_WIDTH) {
+                $image->width(self::MAX_WIDTH);
+            }
+
+            $image->format('webp')
+                ->quality(self::WEBP_QUALITY)
+                ->save($webpPath);
+
+            return is_file($webpPath);
+        } catch (Throwable $e) {
+            error_log('[ImageProcessor] webp sibling failed for ' . $absolutePath . ': ' . $e->getMessage());
+            return false;
+        } finally {
+            if ($previousLimit !== false) {
+                @ini_set('memory_limit', $previousLimit);
+            }
+        }
+    }
+
+    /**
+     * 주어진 이미지 경로 옆의 .webp 파일을 삭제한다. 원본은 건드리지 않는다.
+     * 신 전략에서는 DB 가 .webp 를 직접 가리키므로 호출이 거의 발생하지 않으나,
+     * legacy 행(.png/.jpg + 동반 .webp)을 삭제·덮어쓸 때 청소를 담당한다.
+     */
+    public static function deleteWebpSibling(string $absolutePath): bool
+    {
+        $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::CONVERTIBLE, true)) {
+            return false;
+        }
+
+        $webpPath = preg_replace('/\.[^.]+$/', '.webp', $absolutePath);
+        if (is_file($webpPath)) {
+            return @unlink($webpPath);
+        }
+
+        return false;
+    }
+}

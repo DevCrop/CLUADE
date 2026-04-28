@@ -1,0 +1,139 @@
+# Plan: 260424 코드 변경 검토 → 메모리 업데이트 → 커밋
+
+## Context
+2026-04-24 기준으로 누적된 미커밋 변경사항이 git status에 다량 존재한다.  
+오늘 변경된 내용을 정확히 파악해 메모리 문서를 최신화하고, `260424_dev` 커밋으로 브랜치를 정리하는 것이 목표다.
+
+---
+
+## 오늘 변경의 핵심 요약 (탐색 결과)
+
+### TypeScript — 주요 변경 5가지
+| 카테고리 | 내용 |
+|---|---|
+| **bfcache 지원** | `app.ts`, `AnimationLoop.ts`, `LenisRuntime.ts` — `pageshow`/`pagehide` 이벤트 추가, RAF 재시작 |
+| **신규 유틸/런타임** | `ResizeSetup.ts` (resize debounce+visualViewport), `SubpageStarfieldRuntime.ts` (3D 별빛 parallax), `WorkCard.ts` (canvas 기반 카드 텍스처) |
+| **Works 페이지 대규모 개편** | `WorksPageRuntime.ts` — `WorksGridFeedRuntime`, category 필터 모달, 영상 hover preview, IntersectionObserver sentinel 무한스크롤 |
+| **UI 고도화** | `Drawer.ts` (+102줄) — GNB rect 애니메이션 + magnetic corner; `Header.ts` — Panel 가시성 조율 |
+| **반응형·성능** | `Device.ts` iOS visualViewport, `PerformanceProfile.ts` 티어 임계값 조정, `PinnedRevealRuntime.ts` viewport-auto 종료 트리거 |
+
+### SCSS — 주요 변경 3가지
+| 카테고리 | 내용 |
+|---|---|
+| **Author/editor 모드** | `_utils.scss` — `data-*-mode="author"` 셀렉터로 Theatre.js 편집 중 UI 격리 |
+| **신규 버튼/컴포넌트** | `_button.scss` — `.shiny-cta` (CSS @property 애니메이션 border), `.no-btn-char` (char rolling), `.no-magnetic-corner-btn`; `_form.scss` — `.no-wizard` 멀티스텝 폼 |
+| **페이지 애니메이션** | `_main.scss` intro countdown/glow, `_sub.scss` starfield BG + 3D perspective 카드, `_works-canvas.scss` scatter/grid 토글·드래그 힌트 |
+
+### PHP/API + SEO
+| 카테고리 | 내용 |
+|---|---|
+| **Works API 확장** | `api/works.php` — categories, services, awards, 다수 이미지, 페이지네이션 |
+| **Works 뷰 파라미터** | `routes/web.php` — `?view=scatter\|grid`, `?category=slug&page=N` 지원 |
+| **SEO 인프라 신규** | `robots.txt` (admin/api 차단), `views/pages/sitemap.php` (동적 XML 사이트맵) |
+| **Button 컴포넌트** | `views/components/button/button.php` — corner / prev-button / shiny / default 변형 |
+
+---
+
+## 발견된 Spatie 패키지 현황
+
+프로젝트에서 사용 중인 패키지:
+- **`spatie/image` v1.10.6** (직접 의존, `composer.json`에 선언)
+  - `spatie/image-optimizer` v1.8.1, `spatie/temporary-directory` v1.3.0 자동 포함
+- 사용 파일: `src/Core/ImageProcessor.php`
+- 기능: 업로드 이미지 자동 WebP 변환 (최대 2560px, quality 82), 삭제 시 sibling 정리
+
+---
+
+## Step 1: 메모리 파일 업데이트
+
+### 1-a. `project_works_improvements.md` 전면 갱신
+- Works 페이지 개선 6가지 모두 **구현 완료** 상태로 업데이트
+- `WorkCard.ts` 파일 위치 테이블 추가
+- `views/pages/works/view.php`가 실제 파일명임을 반영 (기존 기록에 `index.php`로 잘못 기재)
+- Works API 확장 항목 추가
+
+### 1-b. `project_architecture.md` 업데이트
+- 신규 파일 추가: `ResizeSetup.ts`, `SubpageStarfieldRuntime.ts`, `WorkCard.ts`
+- bfcache 지원이 아키텍처 패턴으로 정착했음을 기록
+- SEO 파일(`robots.txt`, `sitemap.php`) 추가
+
+### 1-c. 신규 메모리: `project_today_260424.md`
+
+오늘 세션에서 새로 등장한 패턴/결정:
+
+- Author mode 패턴 (Theatre.js 편집 시 `data-*-mode="author"` CSS 격리)
+- `.shiny-cta`, `.no-btn-char` 신규 버튼 컴포넌트 완성
+- `.no-wizard` 멀티스텝 폼 시스템
+- SubpageStarfield: contact/careers/inside 페이지 별빛 배경 공통화
+- `sitemap.php`: 동적 XML 사이트맵 (works/news/insight/award 포함)
+
+### 1-d. 신규 참조 문서: `reference_spatie_image.md` (타 프로젝트 재사용 목적)
+
+PHP 7.4~8.2 환경에서 `spatie/image`를 처음부터 설치하고 동일 패턴으로 쓸 수 있는 **독립 가이드** 작성.
+
+포함 내용:
+
+**설치 조건**
+- PHP 7.2+ (7.4~8.2 모두 호환)
+- 필수 PHP 확장: `ext-exif`, `ext-json`, `ext-mbstring`, `ext-gd` 또는 `ext-imagick`
+- Composer 필수
+
+**설치 명령**
+```bash
+composer require spatie/image
+```
+v1.x (PHP 7.4 안정 라인) vs v3.x (PHP 8.1+) 분기 명시
+
+**핵심 사용 패턴** — `src/Core/ImageProcessor.php` 기반:
+```php
+use Spatie\Image\Image;
+
+Image::load($absolutePath)
+    ->width(2560)          // 리사이즈 (비율 유지)
+    ->format('webp')       // 포맷 변환
+    ->quality(82)          // 품질
+    ->save($outputPath);   // 저장
+```
+
+**WebP sibling 자동화 패턴** (업로드 훅에 결합):
+- 업로드 후 `ImageProcessor::makeWebpSibling($path)` 호출
+- 삭제 시 `ImageProcessor::deleteWebpSibling($path)` 호출
+- 실패해도 업로드 플로우 중단 안 함 (try/catch로 silent fail)
+
+**지원 포맷**: jpg, jpeg, png, gif → webp 변환; svg/ico는 스킵
+**권장 설정값**: `MAX_WIDTH = 2560`, `WEBP_QUALITY = 82`
+
+**Docker/서버 주의**: GD 또는 Imagick 중 하나가 활성화돼 있어야 함 (`php -m | grep -E 'gd|imagick'`)
+
+메모리 타입: `reference` (타 프로젝트에서도 꺼내 쓸 수 있도록)
+
+---
+
+## Step 2: git 커밋
+
+커밋 대상 파일 (git status 기준 전체):
+- `.claude/rules/scss.md`
+- `api/works.php`
+- `resource/scss/**` (14개 파일)
+- `resource/ts/**` (17개 파일)
+- `routes/web.php`
+- `views/**` (13개 파일)
+- `robots.txt` (신규)
+- `views/pages/sitemap.php` (신규)
+
+커밋 메시지: `260424_dev`  
+(기존 패턴 `260423_dev.` / `260422_dev` / `260421_dev` 따름)
+
+---
+
+## Step 3: 문서 best practice 적용 커밋
+
+변경 파일:
+- `CLAUDE.md` — `@AGENTS.md` import 추가
+- `.claude/skills/migration/SKILL.md` — `disable-model-invocation: true`, `argument-hint` 추가
+- `.claude/skills/new-route/SKILL.md` — 동일
+
+커밋 메시지: `260424_docs` → push to origin
+
+## Verification
+- `chop git log --oneline -5` 로 커밋이 정상 추가됐는지 확인

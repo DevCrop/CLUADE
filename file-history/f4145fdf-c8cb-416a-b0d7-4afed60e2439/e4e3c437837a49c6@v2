@@ -1,0 +1,16 @@
+---
+name: migration
+description: Create a new database migration file for this project
+disable-model-invocation: true
+argument-hint: <description>
+---
+
+Create a database migration for: $ARGUMENTS
+
+1. Run `make m` to generate the migration file interactively, OR create manually:
+   - File path: `database/migrations/YYYYMMDD_<description>.sql`
+   - Format: plain SQL with `-- migrate:up` and `-- migrate:down` sections
+2. Write the SQL — use `IF EXISTS` / `IF NOT EXISTS` guards
+3. All tables must use the `nb_` prefix
+4. Never ALTER tables directly outside a migration file
+5. Verify with `rtk make migrate-status` after applying

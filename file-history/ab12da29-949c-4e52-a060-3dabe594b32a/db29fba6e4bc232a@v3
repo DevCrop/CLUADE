@@ -1,0 +1,165 @@
+import * as THREE from "three";
+import { getDefaultThreeConfig } from "../../../config/base.config.js";
+import { ABOUT_LIGHT_STATE_DEFAULTS } from "../../../config/scene-light.config.js";
+import {
+  aboutBackground,
+  aboutLights,
+  earth,
+  gravityBalls,
+  jetEngine,
+  rocket,
+  terrian,
+} from "../../../core/setup.js";
+import type { PageThreeConfig } from "../../../types/core.types.js";
+import type {
+  ContactInitialState,
+  ContactPageConfig,
+  ContactSceneState,
+} from "../../../types/contact.types.js";
+import type { MainJetEngineState, MainRocketState } from "../../../types/main.types.js";
+import { runIntroDomTimeline } from "../../../runtime/IntroLoadingRuntime.js";
+import { resolveContactAuthorMode } from "../theatre/ContactTheatreConfig.js";
+
+const CONTACT_IS_AUTHOR_MODE = resolveContactAuthorMode();
+
+const defaultThree = getDefaultThreeConfig();
+
+export const CONTACT_DEFAULT_SCENE_STATE: ContactSceneState = {
+  camera: {
+    position: { x: -10, y: 4, z: 42 },
+    target: { x: 10, y: 2, z: -8 },
+    fov: 52,
+  },
+  light: { ...ABOUT_LIGHT_STATE_DEFAULTS },
+  earth: {
+    position: { x: 14, y: 2, z: -24 },
+    rotation: { x: 0, y: 18, z: 0 },
+    scale: { x: 1.16, y: 1.16, z: 1.16 },
+    visible: true,
+  },
+  rocket: {
+    visible: false,
+    position: { x: 0, y: 1, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+    flame: {
+      visible: false,
+      offset: { x: 0, y: -0.35, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1.65, y: 3.4, z: 1 },
+      opacity: 0.9,
+      renderOrder: 5,
+      speed: 2,
+      wave: 1.2,
+    },
+  } as MainRocketState,
+  jetEngine: {
+    visible: false,
+    position: { x: 0, y: -0.34, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+    intensity: 0.78,
+    length: 2.4,
+    nozzleRadius: 0.028,
+    nozzleGap: 2.2,
+    noise: 1,
+    bloom: 1,
+  } as MainJetEngineState,
+  smoke: { visible: false, dotsPerInterval: 3, physicsScale: 0.006, maxGravityBoost: 3.0 },
+  terrian: {
+    visible: false,
+    position: { x: 0, y: -1, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1.5, y: 1.5, z: 1.5 },
+  },
+};
+
+function createContactInitialState(
+  sceneState: ContactSceneState,
+): ContactInitialState {
+  return {
+    camera: {
+      position: { ...sceneState.camera.position },
+      fov: sceneState.camera.fov,
+    },
+    cameraTarget: {
+      position: { ...sceneState.camera.target },
+    },
+    aboutLights: {
+      ...sceneState.light,
+      rig: {
+        position: { ...sceneState.light.rig.position },
+        rotation: { ...sceneState.light.rig.rotation },
+        scale: { ...sceneState.light.rig.scale },
+        visible: sceneState.light.rig.visible,
+      },
+    },
+    earth: {
+      position: { ...sceneState.earth.position },
+      rotation: { ...sceneState.earth.rotation },
+      scale: { ...sceneState.earth.scale },
+      visible: sceneState.earth.visible,
+    },
+    rocket: {
+      position: { ...sceneState.rocket.position },
+      rotation: { ...sceneState.rocket.rotation },
+      scale: { ...sceneState.rocket.scale },
+      visible: sceneState.rocket.visible,
+      flame: { ...sceneState.rocket.flame },
+    } as MainRocketState,
+    terrian: {
+      position: { ...sceneState.terrian.position },
+      rotation: { ...sceneState.terrian.rotation },
+      scale: { ...sceneState.terrian.scale },
+      visible: sceneState.terrian.visible,
+    },
+  };
+}
+
+export const contactThree: PageThreeConfig = {
+  ...defaultThree,
+  scene: { ...defaultThree.scene, fog: null },
+  camera: {
+    ...defaultThree.camera,
+    position: { ...CONTACT_DEFAULT_SCENE_STATE.camera.position },
+    fov: CONTACT_DEFAULT_SCENE_STATE.camera.fov,
+  },
+  cameraTarget: {
+    position: { ...CONTACT_DEFAULT_SCENE_STATE.camera.target },
+  },
+  shadowMap: {
+    enabled: true,
+    type: THREE.PCFSoftShadowMap,
+  },
+};
+
+export const contactConfig: ContactPageConfig = {
+  pageId: "contact",
+  three: contactThree,
+  initialState: createContactInitialState(CONTACT_DEFAULT_SCENE_STATE),
+  introOverlay: CONTACT_IS_AUTHOR_MODE ? null : { tl: runIntroDomTimeline },
+  scenes: {
+    contact: {},
+  },
+  objects: {
+    [aboutBackground]: true,
+    [aboutLights]: true,
+    [earth]: true,
+    [rocket]: true,
+    [jetEngine]: true,
+    [gravityBalls]: true,
+    [terrian]: true,
+  },
+  orbitControls: {
+    enabled: true,
+    enableDamping: true,
+    dampingFactor: 0.08,
+    rotateSpeed: 0.7,
+    zoomSpeed: 0.8,
+    panSpeed: 0.6,
+    minDistance: 12,
+    maxDistance: 120,
+    minPolarAngle: 0.1,
+    maxPolarAngle: Math.PI - 0.1,
+  },
+};

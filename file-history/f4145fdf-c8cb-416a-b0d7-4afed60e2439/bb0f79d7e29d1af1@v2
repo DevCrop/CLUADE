@@ -1,0 +1,194 @@
+# RTK Setup — Portable BEST PRACTICE
+
+Reusable setup guide for installing RTK ([rtk-ai/rtk](https://github.com/rtk-ai/rtk)) in any Docker-based project, optimized for the Windows + WSL2 + Docker Desktop workflow that matches my dev environment. Drop into any new project: read top-to-bottom, run the commands, you're done in ~5 minutes.
+
+> RTK = "Rust Token Killer". Single Rust binary, filters/compresses 100+ shell command outputs before they reach the LLM. Typical 30-min Claude Code session: ~118k tokens → ~24k. MIT licensed, <10ms overhead.
+
+## 1. Why RTK in every project
+
+- 60–90% token savings on noisy commands (`git`, `tsc`, `docker`, test runners, log files).
+- One global install covers all projects; per-project `.rtk/filters.toml` adds project-specific patterns.
+- Replaces ad-hoc shell wrappers (CHOP and similar) — single source of truth, supported across 12 AI coding tools.
+- Auto-rewrite is **transparent**: in WSL Remote sessions the AI never sees the rewrite, just gets compact output. No prompt engineering or rule memorization required.
+
+## 2. Prerequisites
+
+| Platform | Mode | Setup notes |
+|---|---|---|
+| **macOS / Linux** | Full auto-rewrite | Install via Homebrew or curl, run `rtk init -g`, done. |
+| **Windows + WSL2** (this guide's primary target) | Full auto-rewrite **only inside WSL Remote sessions** | Install RTK in WSL, open VS Code/Cursor with WSL Remote → AI uses WSL bash → hook fires. |
+| Native Windows (Git Bash / PowerShell) | Explicit `rtk` prefix only — no auto hook | Use only when WSL Remote isn't an option. |
+
+For Docker projects on Windows: Docker Desktop's WSL2 backend already runs your containers in WSL, so adopting WSL Remote for the editor is a natural extension — no new infrastructure.
+
+## 3. One-shot install (run inside WSL)
+
+```bash
+# Inside WSL (any distro with curl + sh + git)
+curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+grep -q '$HOME/.local/bin' ~/.bashrc || \
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+rtk --version    # Expect 0.37.x or newer
+```
+
+`install.sh` writes the binary to `~/.local/bin/rtk`. No sudo needed.
+
+## 4. Per-AI init (run only the lines for tools you actually use)
+
+Each command writes/edits the corresponding global config file inside WSL (`/root/.claude/`, `/root/.cursor/`, `/root/.codex/`). They're idempotent and leave existing config untouched.
+
+```bash
+# Pre-create config dirs once (rtk fails if these don't exist)
+mkdir -p ~/.claude ~/.cursor ~/.codex ~/.config/rtk
+
+# Claude Code — PreToolUse hook + RTK.md + @RTK.md import in CLAUDE.md
+rtk init -g --auto-patch
+
+# Cursor — preToolUse hook in ~/.cursor/hooks.json
+rtk init -g --agent cursor --auto-patch
+
+# Codex — AGENTS.md + RTK.md instructions (no hook; instruction-based)
+rtk init -g --codex      # interactive, no --auto-patch flag here
+
+# Optional: other AI tools
+rtk init -g --gemini --auto-patch
+rtk init -g --copilot --auto-patch
+
+# Verify what's wired up (Claude/Cursor/OpenCode shown; Codex is file-based, check ~/.codex/)
+rtk init --show
+```
+
+After each init, **restart the AI tool** to pick up the new config.
+
+## 5. VS Code / Cursor → WSL Remote
+
+This step is what unlocks full auto-rewrite for Windows users.
+
+1. Install the **WSL** extension in VS Code (or the equivalent in Cursor).
+2. Bottom-left status bar → click `><` → **Connect to WSL** → select your distro.
+3. Open the project folder via WSL path: `/mnt/c/...` for projects on Windows drive, or `~/projects/...` for projects you've moved into WSL ext4 (faster IO).
+4. The AI extension (Claude Code / Cursor) re-installs into the WSL server and now invokes Bash via WSL → RTK hook fires.
+
+**Test it works**: open a chat, type `git status`. Tool log should show the call as `rtk git status`.
+
+## 6. Project-level filters template
+
+Drop this at `<project>/.rtk/filters.toml` for any Docker + PHP/Node project. Filters layer on top of RTK's built-ins — no overlap with `rtk git`, `rtk tsc`, `rtk docker ps` (those have native handlers).
+
+```toml
+schema_version = 1
+# Project-level RTK filters
+
+[filters.docker-compose-logs]
+description = "Filter docker compose logs to relevant lines"
+match_command = "^docker compose logs\\b"
+strip_ansi = true
+strip_lines_matching = ["^(?!web\\s+\\||db\\s+\\|).*(?<!(error|warn|warning|exception|fatal|critical|traceback|deprecated|notice|apache|php))$"]
+max_lines = 120
+
+[filters.docker-compose-php-lint]
+description = "PHP lint via docker compose — errors/warnings only"
+match_command = "^docker compose exec web php -l\\b"
+strip_ansi = true
+strip_lines_matching = ["^(?!.*(no syntax errors detected|parse error|fatal error|warning|notice)).*$"]
+
+[filters.php-lint]
+description = "PHP lint — errors/warnings only"
+match_command = "^php -l\\b"
+strip_ansi = true
+strip_lines_matching = ["^(?!.*(no syntax errors detected|parse error|fatal error|warning|notice)).*$"]
+
+[filters.docker-compose-ps]
+description = "docker compose ps — first 20 lines"
+match_command = "^docker compose ps\\b"
+strip_ansi = true
+max_lines = 20
+```
+
+Adapt service names (`web`, `db`) to your compose file. Add a `vite-dev` filter if you tail Vite logs frequently.
+
+## 7. Hook integration: PostToolUse type-check
+
+For TypeScript projects, run `tsc --noEmit` after every edit so the AI gets compile feedback on every save. Drop into `.claude/settings.json` (Claude Code project-level):
+
+```json
+{
+  "allowedTools": ["Bash(rtk *)", "Bash(git *)"],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const i=JSON.parse(d);const f=(i.tool_input&&i.tool_input.file_path)||'';if(f.endsWith('.ts')||f.endsWith('.tsx')){const {execSync}=require('child_process');try{execSync('rtk tsc --noEmit',{stdio:'inherit',cwd:process.cwd()})}catch(e){process.exit(1)}}}catch(e){}});\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`rtk tsc --noEmit` returns errors only, grouped by file — minimal noise in the hook output. The hook runs inside the WSL session when the project is opened via WSL Remote.
+
+## 8. Repository rule files (CLAUDE.md / AGENTS.md / .cursor/rules)
+
+Add a single bullet to your repo-level rule docs so future AI sessions know to use rtk:
+
+```markdown
+- Prefer `rtk` for output that may exceed a few lines (git, search, typecheck, docker, test runners). Examples: `rtk git status`, `rtk git diff`, `rtk tsc --noEmit`, `rtk docker compose ps`. WSL Remote sessions auto-rewrite via the global PreToolUse hook; native Windows shells require explicit prefix.
+```
+
+Place this in:
+- `AGENTS.md` (cross-AI canonical) — Codex + Claude both read it
+- `.cursor/rules/*.mdc` if Cursor users edit the project
+- Project-level `CLAUDE.md` only if Claude needs deltas beyond AGENTS.md
+
+## 9. Verification checklist
+
+Run from inside the WSL Remote session:
+
+- [ ] `rtk --version` → 0.37.x or newer
+- [ ] `which rtk` → `/root/.local/bin/rtk` (or `~/.local/bin/rtk`)
+- [ ] `rtk init --show` → Claude/Cursor/(OpenCode) hooks show `[ok]`
+- [ ] In a fresh AI chat, ask the AI to run `git status` → tool log shows `rtk git status`
+- [ ] `rtk docker compose ps` (with the filters.toml above) outputs ≤ 20 lines
+- [ ] Edit a `.ts` file → PostToolUse hook fires `rtk tsc --noEmit` (visible in Claude Code session log)
+- [ ] `rtk gain` after a few minutes of work → savings counter > 0
+
+## 10. Migrating from CHOP
+
+If a project currently mandates CHOP, run this migration once per project:
+
+1. Replace strings: `grep -rl 'chop' .claude .cursor .codex AGENTS.md CLAUDE.md` then sed `chop` → `rtk` (review each match — some are documentation prose, not commands).
+2. Update `.claude/settings.json`:
+   - `allowedTools`: `Bash(chop *)` → `Bash(rtk *)`
+   - PostToolUse hook command: `chop ...` → `rtk ...`
+3. Convert `.chop-filters.yml` → `.rtk/filters.toml` (RTK uses TOML with `schema_version = 1`).
+4. Uninstall CHOP binary:
+   - Windows: delete `C:\Users\<you>\AppData\Local\Programs\chop\` and remove that path from system PATH (Win+R → `sysdm.cpl` → Advanced → Environment Variables → User PATH).
+   - WSL: nothing to do unless you separately installed it inside the distro.
+5. Verify zero residual: `grep -ri chop .claude .cursor .codex AGENTS.md CLAUDE.md` returns nothing.
+6. Remove memory entries: `feedback_chop.md` (if any), update `MEMORY.md` index line.
+
+## 11. Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| AI runs `git status` raw, not `rtk git status` | Not in WSL Remote, or hook not registered | `rtk init --show` to verify; reconnect VS Code with WSL Remote |
+| `rtk gain` always 0 | rtk binary never invoked (e.g., Windows native session) | Check `which rtk`; ensure bash session sources `~/.bashrc` |
+| `rtk init -g` fails: "No such file or directory" | `~/.claude` (or `~/.cursor`/`~/.codex`) not yet created | `mkdir -p ~/.claude ~/.cursor ~/.codex` and re-run |
+| Hook fires but output is unfiltered | Custom filter regex mismatched | Test with `rtk proxy <command>` to confirm RTK sees it; check `match_command` regex |
+| Telemetry prompt during init | Default disabled, asks for opt-in | Decline (`rtk telemetry disable`) or `export RTK_TELEMETRY_DISABLED=1` permanently in `~/.bashrc` |
+
+## 12. Uninstall
+
+```bash
+rtk init -g --uninstall      # Remove hook + RTK.md + settings.json entry
+rtk init -g --codex --uninstall   # if Codex was wired up
+rm ~/.local/bin/rtk          # remove binary
+rm -rf ~/.config/rtk         # remove global filters
+# project-side: remove .rtk/filters.toml and any rtk references in rule docs
+```

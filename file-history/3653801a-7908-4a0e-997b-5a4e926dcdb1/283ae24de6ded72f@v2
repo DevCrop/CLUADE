@@ -1,0 +1,82 @@
+# RTK — Token-Optimized Commands
+
+**Usage**: Token-optimized CLI proxy (60-90% savings on dev operations)
+
+## Golden Rule
+
+출력이 몇 줄을 초과할 Bash 명령에는 `rtk` 프리픽스 필수. RTK는 모르는 명령은 그대로 통과시키므로 항상 안전하게 사용 가능.
+
+```bash
+# ✅ Correct (chains too)
+rtk git add . && rtk git commit -m "msg" && rtk git push
+```
+
+## Commands by Category
+
+```bash
+# Git
+rtk git status / log / diff / show / add / commit / push / pull / branch / fetch / stash
+
+# GitHub CLI
+rtk gh pr list / view / create
+rtk gh issue list / view
+rtk gh run list
+
+# Build & Type Check
+rtk tsc                  # TypeScript errors only, grouped by file
+rtk lint                 # ESLint grouped by rule/file
+rtk next build           # Next.js build compact
+
+# Tests
+rtk test <cmd>           # generic — failures only
+rtk vitest / jest / pytest / cargo test / go test
+
+# Files & Search
+rtk ls <path>            # token-optimized tree
+rtk read <file>          # smart file read
+rtk grep <pattern> <path>
+rtk find "*.ext" <path>
+rtk diff <a> <b>
+
+# Containers
+rtk docker ps / images / logs / compose ps / compose logs
+rtk kubectl pods / logs / services
+
+# Data & Errors
+rtk json <file>          # structure without values
+rtk err <cmd>            # filter errors only from any command
+rtk log <file>           # deduplicated log
+rtk env -f <prefix>      # filtered env vars
+rtk curl <url>           # truncate + save full output
+
+# Meta (항상 rtk 직접 호출)
+rtk gain                 # token savings stats
+rtk gain --history       # recent commands
+rtk gain --daily         # day-by-day breakdown
+rtk discover             # find missed savings opportunities
+rtk proxy <cmd>          # raw command without filtering (debugging)
+rtk init --show          # verify which AI tool integrations are active
+```
+
+## When to Use
+
+노이즈가 많은 명령(`git`, `docker`, `tsc`, test runners, `find`, log files)에 사용. 몇 줄만 나오는 명령은 생략 가능.
+
+## Installation Verification
+
+```bash
+rtk --version         # Should show: rtk X.Y.Z
+rtk gain              # Should work (not "command not found")
+which rtk             # Verify correct binary
+```
+
+⚠️ **Name collision**: `rtk gain`이 실패하면 reachingforthejack/rtk (Rust Type Kit)가 설치된 것일 수 있음.
+
+## Hook-Based Usage
+
+WSL Remote 세션에서는 PreToolUse hook이 Bash 명령을 자동으로 `rtk`-prefixed 형태로 재작성.
+native Windows/PowerShell에서는 명시적으로 prefix 필요.
+
+## Setup Reference
+
+새 프로젝트에 RTK 설치 (Docker + WSL 워크플로우): `~/.claude/templates/rtk-setup.md`

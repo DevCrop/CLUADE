@@ -1,0 +1,39 @@
+﻿[2026-04-27 00:42] plans:0 shell-snapshots:0 file-history:7 projects:0 session-env:1
+[2026-04-27 00:43] plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:0
+[2026-04-27 00:43] plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:0
+[2026-04-27 00:45] plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:0
+[2026-04-27 00:47] plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:2
+[2026-04-27 00:50] plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:1
+[2026-04-27 03:43] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:12
+[2026-04-27 15:26] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:3
+[2026-04-27 15:45] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:2
+[2026-04-27 15:46] end:prompt_input_exit plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:0
+[2026-04-27 15:49] end:prompt_input_exit plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:0
+[2026-04-27 16:07] auto-pin: d-----------------260413
+[2026-04-27 16:51] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:6
+[2026-04-27 17:17] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:5
+[2026-04-27 17:26] end:manual-test plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:1 backups:0 workers:0
+[2026-04-27 17:28] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:3 backups:0 workers:0
+[2026-04-27 17:28] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:0 backups:0 workers:0
+[2026-04-27 17:28] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:0 backups:0 workers:0
+[2026-04-27 17:38] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:1 backups:0 workers:0
+[2026-04-28 09:35] end:unknown plans:0 shell-snapshots:0 file-history:1 projects:0 session-env:7 backups:0 workers:0
+[2026-04-28 09:35] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:0 backups:0 workers:0
+[2026-04-28 10:37] end:unknown plans:0 shell-snapshots:0 file-history:0 projects:0 session-env:2 backups:0 workers:0
+[2026-04-28 13:58] oneshot-consolidate: starting consolidation
+[2026-04-28 13:59] oneshot-consolidate: rollback zip created: C:\Users\nineonelabs003\.claude-archive\rollback-pre-consolidation.zip
+[2026-04-28 13:59] oneshot-consolidate: moved 14/14 data dirs from D to C
+[2026-04-28 13:59] oneshot-consolidate: deleted: D:\.claude
+[2026-04-28 13:59] oneshot-consolidate: deleted: D:\.claude-data
+[2026-04-28 13:59] oneshot-consolidate: deleted: D:\migration-tmp
+[2026-04-28 13:59] oneshot-consolidate: archived backup: backup-claude-20260428-1238.zip
+[2026-04-28 13:59] oneshot-consolidate: consolidation COMPLETE - marker written
+[2026-04-28 13:59] oneshot-consolidate: verification:
+  D:\.claude exists = False
+  D:\.claude-data exists = False
+  D:\migration-tmp exists = False
+  D backup zips = 0
+  env CLAUDE_CONFIG_DIR User = <null>
+  env CLAUDE_CONFIG_DIR Machine = <null>
+  junctions on C = 0
+  marker .consolidation-done = True

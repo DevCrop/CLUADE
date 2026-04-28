@@ -1,0 +1,218 @@
+import { Rocket } from "../objects/rocket/Rocket.js";
+import { JetEngine } from "../objects/rocket/JetEngine.js";
+import { GravityBalls } from "../objects/rocket/GravityBalls.js";
+import { Background } from "../objects/env/Background.js";
+import { CloudPlane } from "../objects/env/CloudPlane.js";
+import { Ground } from "../objects/main/Ground.js";
+import { Light } from "../objects/env/SceneLights.js";
+import { Earth } from "../objects/shared/Earth.js";
+import { Planet } from "../objects/shared/Planet.js";
+import { Astronaut } from "../objects/sub/Astronaut.js";
+import { AboutTerrian } from "../objects/sub/AboutTerrian.js";
+import { TransitionVeil } from "../objects/sub/TransitionVeil.js";
+import { Window } from "../objects/main/Window.js";
+import type { Engine } from "../core/Engine.js";
+import type { SceneObject } from "../core/SceneObject.js";
+import type { PageConfig } from "../types/core.types.js";
+import {
+  rocket,
+  jetEngine,
+  gravityBalls,
+  mainBackground,
+  aboutBackground,
+  cloud,
+  cloud2,
+  cloud3,
+  cloud4,
+  cloud5,
+  cloud6,
+  ground,
+  planet,
+  sceneLights,
+  earth,
+  astronaut,
+  sceneTransitionVeil,
+  terrian,
+  windowObj,
+} from "../core/setup.js";
+import type {
+  SceneLightsObjectOptions,
+  ObjectOptionsByKey,
+} from "../types/object.types.js";
+import type {
+  ObjectFactoryRegistry,
+  ObjectRegistrationSpec,
+  ISetup,
+} from "../types/runtime.types.js";
+import { ObjectConfigRuntime } from "../runtime/ObjectConfigRuntime.js";
+
+function createSetOptionsSpec(
+  id: keyof ObjectOptionsByKey,
+  create: () => SceneObject,
+): ObjectRegistrationSpec {
+  return {
+    id,
+    create,
+    applyOptions: (instance, options) => {
+      const target = instance as { setOptions?: (props: unknown) => unknown };
+      if (typeof target.setOptions === "function") {
+        target.setOptions(options);
+      }
+    },
+  };
+}
+
+function createDefaultRegistry(): ObjectFactoryRegistry {
+  return {
+    [rocket]: createSetOptionsSpec(rocket, () => new Rocket()),
+    [jetEngine]: createSetOptionsSpec(jetEngine, () => new JetEngine()),
+    [gravityBalls]: createSetOptionsSpec(gravityBalls, () => new GravityBalls()),
+    [mainBackground]: createSetOptionsSpec(
+      mainBackground,
+      () => new Background(mainBackground),
+    ),
+    [aboutBackground]: createSetOptionsSpec(
+      aboutBackground,
+      () => new Background(aboutBackground),
+    ),
+    [cloud]: createSetOptionsSpec(
+      cloud,
+      () => new CloudPlane(),
+    ),
+    [cloud2]: createSetOptionsSpec(
+      cloud2,
+      () => new CloudPlane(),
+    ),
+    [cloud3]: createSetOptionsSpec(
+      cloud3,
+      () => new CloudPlane(),
+    ),
+    [cloud4]: createSetOptionsSpec(
+      cloud4,
+      () => new CloudPlane(),
+    ),
+    [cloud5]: createSetOptionsSpec(
+      cloud5,
+      () => new CloudPlane(),
+    ),
+    [cloud6]: createSetOptionsSpec(
+      cloud6,
+      () => new CloudPlane(),
+    ),
+    [ground]: createSetOptionsSpec(ground, () => new Ground()),
+    [planet]: createSetOptionsSpec(planet, () => new Planet()),
+    [sceneLights]: {
+      id: sceneLights,
+      create: () => new Light(),
+      applyOptions: (instance, options) => {
+        const target = instance as {
+          setOptions?: (
+            props: Partial<SceneLightsObjectOptions> | undefined,
+          ) => unknown;
+        };
+        target.setOptions?.(
+          options as Partial<SceneLightsObjectOptions> | undefined,
+        );
+      },
+    },
+    [earth]: createSetOptionsSpec(earth, () => new Earth()),
+    [astronaut]: createSetOptionsSpec(astronaut, () => new Astronaut()),
+    [sceneTransitionVeil]: createSetOptionsSpec(
+      sceneTransitionVeil,
+      () => new TransitionVeil(),
+    ),
+    [terrian]: createSetOptionsSpec(terrian, () => new AboutTerrian()),
+    [windowObj]: createSetOptionsSpec(windowObj, () => new Window()),
+  };
+}
+
+export class ObjectSetup implements ISetup<
+  [Engine, PageConfig],
+  Promise<void>
+> {
+  private readonly _registry = new Map<string, ObjectRegistrationSpec>();
+  private readonly _configRuntime = new ObjectConfigRuntime();
+  private _disposed = false;
+  private static readonly _ENV_ALIAS_BY_OBJECT_ID: Readonly<
+    Partial<Record<keyof ObjectOptionsByKey, string>>
+  > = {
+    [sceneLights]: "env.light",
+  };
+
+  constructor(registry: ObjectFactoryRegistry = createDefaultRegistry()) {
+    for (const [id, spec] of Object.entries(registry)) {
+      this._registry.set(id, spec);
+    }
+  }
+
+  registerFactory(id: string, spec: ObjectRegistrationSpec): void {
+    this._registry.set(id, spec);
+  }
+
+  register(id: string, spec: ObjectRegistrationSpec): void {
+    this.registerFactory(id, spec);
+  }
+
+  async init(engine: Engine, pageConfig: PageConfig): Promise<void> {
+    if (this._disposed) return;
+    for (const [id, spec] of this._getEnabledSpecs(pageConfig)) {
+      const object = this._createConfiguredObject(
+        spec,
+        pageConfig.objectOptions,
+        pageConfig.initialState,
+      );
+      await engine.setObject(id, object);
+      this._registerEnvironmentAlias(engine, id as keyof ObjectOptionsByKey);
+    }
+  }
+
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._registry.clear();
+  }
+
+  private _getEnabledSpecs(
+    pageConfig: PageConfig,
+  ): Array<[string, ObjectRegistrationSpec]> {
+    const enabledSpecs: Array<[string, ObjectRegistrationSpec]> = [];
+    for (const [id, enabled] of Object.entries(pageConfig.objects)) {
+      if (!enabled) continue;
+      const spec = this._registry.get(id);
+      if (!spec) continue;
+      enabledSpecs.push([id, spec]);
+    }
+    return enabledSpecs;
+  }
+
+  private _createConfiguredObject(
+    spec: ObjectRegistrationSpec,
+    pageOptions: PageConfig["objectOptions"] | undefined,
+    initialState: PageConfig["initialState"] | undefined,
+  ): SceneObject {
+    const object = spec.create();
+    const resolvedConfig = this._configRuntime.resolve(
+      spec.id,
+      pageOptions,
+      initialState,
+    );
+    spec.applyOptions?.(object, resolvedConfig.options);
+    if (resolvedConfig.effects && typeof object.setEffects === "function") {
+      object.setEffects(resolvedConfig.effects);
+    }
+    return object;
+  }
+
+  private _registerEnvironmentAlias(
+    engine: Engine,
+    objectId: keyof ObjectOptionsByKey,
+  ): void {
+    const envAlias = ObjectSetup._ENV_ALIAS_BY_OBJECT_ID[objectId];
+    if (!envAlias) return;
+    const target = engine.getObjectById(objectId as string);
+    if (!target || typeof target !== "object") return;
+    engine
+      .getScene()
+      .registerObject(envAlias, target as Record<string, unknown>);
+  }
+}

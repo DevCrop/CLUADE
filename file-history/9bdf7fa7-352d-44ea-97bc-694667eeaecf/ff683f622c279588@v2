@@ -1,0 +1,122 @@
+---
+name: Spatie Image — PHP 7.4~8.2 설치 및 사용 가이드
+description: spatie/image 설치, 의존 확장, WebP 변환 패턴 — 타 프로젝트에서 동일하게 재사용 가능한 독립 가이드
+type: reference
+originSessionId: 9bdf7fa7-352d-44ea-97bc-694667eeaecf
+---
+PHP 7.4~8.2 환경에서 `spatie/image`를 설치하고 WebP 자동 변환 패턴을 구현하는 가이드.
+nineonelabs의 `src/Core/ImageProcessor.php` 구현을 기준으로 작성됨.
+
+## 버전 선택
+
+| PHP 버전 | 권장 spatie/image 버전 | 명령 |
+|---|---|---|
+| PHP 7.4 | v1.x (최종 v1.10.x) | `composer require "spatie/image:^1.0"` |
+| PHP 8.0 ~ 8.1 | v2.x | `composer require "spatie/image:^2.0"` |
+| PHP 8.1+ | v3.x (최신, GD/Imagick 선택) | `composer require spatie/image` |
+
+> PHP 7.4라면 반드시 `^1.0`을 명시해야 함. 버전 미지정 시 Composer가 v3를 받아 PHP 버전 충돌.
+
+## 필수 PHP 확장
+
+```bash
+# 확인
+php -m | grep -E 'gd|imagick|exif|json|mbstring'
+
+# Docker Dockerfile 예시 (php:7.4-fpm-alpine 기준)
+RUN docker-php-ext-install exif
+RUN docker-php-ext-configure gd --with-jpeg && docker-php-ext-install gd
+# 또는 Imagick:
+RUN apk add --no-cache imagemagick imagemagick-dev \
+    && pecl install imagick && docker-php-ext-enable imagick
+```
+
+필수: `ext-exif`, `ext-json`, `ext-mbstring` + (`ext-gd` 또는 `ext-imagick` 중 하나)
+
+## 설치
+
+```bash
+composer require "spatie/image:^1.0"   # PHP 7.4
+# 또는
+composer require spatie/image            # PHP 8.1+
+```
+
+자동으로 함께 설치되는 패키지:
+- `spatie/image-optimizer` — 이미지 최적화
+- `spatie/temporary-directory` — 임시 디렉터리 관리
+- `league/glide` — 이미지 변환 내부 엔진
+
+## 핵심 API (v1.x 기준)
+
+```php
+use Spatie\Image\Image;
+
+Image::load($absolutePath)        // 파일 로드
+    ->width(2560)                 // 너비 제한 (비율 유지)
+    ->format('webp')              // 포맷 변환 (webp / jpg / png / gif)
+    ->quality(82)                 // 압축 품질 (0~100)
+    ->save($outputPath);          // 저장 (덮어쓰기)
+```
+
+v2/v3 에서 API 동일. v3는 `Manipulations` 클래스가 분리됐으나 체이닝 방식은 같음.
+
+## WebP sibling 자동화 패턴
+
+업로드 훅에 결합해 원본과 나란히 `.webp` 파일을 생성하는 패턴:
+
+```php
+class ImageProcessor
+{
+    private const MAX_WIDTH    = 2560;
+    private const WEBP_QUALITY = 82;
+    private const CONVERTIBLE  = ['jpg', 'jpeg', 'png', 'gif'];
+
+    public static function makeWebpSibling(string $absolutePath): bool
+    {
+        $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::CONVERTIBLE, true)) {
+            return false;
+        }
+        try {
+            $webpPath = preg_replace('/\.[^.]+$/', '.webp', $absolutePath);
+            $image = Image::load($absolutePath);
+            [$w] = getimagesize($absolutePath);
+            if ($w > self::MAX_WIDTH) {
+                $image->width(self::MAX_WIDTH);
+            }
+            $image->format('webp')->quality(self::WEBP_QUALITY)->save($webpPath);
+            return true;
+        } catch (\Throwable $e) {
+            return false;   // silent fail — 업로드 플로우 중단 안 함
+        }
+    }
+
+    public static function deleteWebpSibling(string $absolutePath): bool
+    {
+        $webpPath = preg_replace('/\.[^.]+$/', '.webp', $absolutePath);
+        if (file_exists($webpPath)) {
+            return unlink($webpPath);
+        }
+        return false;
+    }
+}
+```
+
+## 사용 연결 지점
+
+```php
+// 이미지 업로드 직후
+$saved = saveImageToDb($file);
+ImageProcessor::makeWebpSibling($saved['absolutePath']);
+
+// 이미지 삭제 전
+ImageProcessor::deleteWebpSibling($absolutePath);
+unlink($absolutePath);
+```
+
+## 주의 사항
+
+- **silent fail 필수**: WebP 변환 실패가 업로드를 막으면 안 됨 — try/catch로 감싸고 bool 반환
+- **svg / ico 스킵**: 벡터·아이콘 포맷은 변환 불필요, CONVERTIBLE 배열에서 제외
+- **서버 권한**: `$webpPath` 경로에 쓰기 권한 확인 (`chmod 755` 또는 웹서버 소유)
+- **Nginx 서빙**: WebP를 자동으로 서빙하려면 Nginx `map` 블록 + `$webp_suffix` 변수 활용

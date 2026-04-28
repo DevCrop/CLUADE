@@ -1,0 +1,16 @@
+---
+name: RTK token optimization — mandatory prefix
+description: All Bash commands prefer `rtk` prefix; WSL Remote sessions auto-rewrite via PreToolUse hook, native Windows requires explicit prefix
+type: feedback
+originSessionId: f4145fdf-c8cb-416a-b0d7-4afed60e2439
+---
+Prefix Bash commands with `rtk` whenever output may exceed a few lines.
+
+**Why:** Noisy output (`git`, `tsc`, `docker`, test runners, file dumps) wastes the context window. RTK filters/compresses to 10–40% of the original size — 60–90% token savings on a typical 30-min session. Replaced CHOP entirely (2026-04-25) — chop is uninstalled, all rules now reference rtk.
+
+**How to apply:**
+- WSL Remote (recommended): the global Claude Code PreToolUse hook (registered by `rtk init -g` inside WSL) auto-prefixes — no manual action needed.
+- Native Windows shells (Git Bash, PowerShell): the hook does not run, so prefix explicitly. `rtk git status`, `rtk tsc --noEmit`, `rtk docker compose ps`, `rtk grep ...`.
+- Short outputs (<5 lines, e.g. `git rev-parse HEAD`) may skip `rtk`.
+- Project-level filters: `.rtk/filters.toml` overrides global behavior for `docker compose logs`, `php -l`, etc.
+- Verify usage: `rtk gain` (zero counter ⇒ rtk not actually being invoked).

@@ -1,0 +1,411 @@
+<?php
+
+use Database\DB;
+
+$siteinfo = [];
+
+try {
+    $conn = DB::getInstance();
+    $siteKey = defined('NB_SITEKEY') ? (string) NB_SITEKEY : 'PROJ00';
+    $stmt = $conn->prepare('SELECT * FROM nb_siteinfo WHERE sitekey = :sitekey LIMIT 1');
+    $stmt->execute([':sitekey' => $siteKey]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (is_array($row)) {
+        $siteinfo = $row;
+    }
+} catch (Throwable $e) {
+    // DB 연결 실패 시 기본 siteinfo 로 렌더링
+}
+
+app()->share('siteinfo', $siteinfo);
+
+$LOCALE = $LOCALE ?? 'ko';
+$host = $NO_CURRENT_HOST ?? ($_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost'));
+$scheme = $NO_CURRENT_SCHEME ?? 'http';
+$uri = $_SERVER['REQUEST_URI'] ?? '/';
+$requestPath = parse_url($uri, PHP_URL_PATH) ?: '/';
+$baseUrl = $scheme . '://' . $host;
+
+$isAboutAuthorMode = (($pageType ?? '') === 'about') && (($_GET['theatre'] ?? null) === '1');
+$isMainAuthorMode = (($pageType ?? '') === 'main') && (($_GET['theatre'] ?? null) === '1');
+$isContactAuthorMode = (($pageType ?? '') === 'contact') && (($_GET['theatre'] ?? null) === '1');
+$isWorksAuthorMode = (($pageType ?? '') === 'works')
+    && (($_GET['theatre'] ?? null) === '1');
+$hasSubpageStarfield = preg_match('#^/(careers|inside)(/|$)#', $requestPath) === 1;
+
+$siteName = trim((string) ($siteinfo['title'] ?? ''));
+if ($siteName === '') {
+    $siteName = defined('PROJECT_NAME') ? (string) PROJECT_NAME : 'My Project';
+}
+$metaTitleBase = trim((string) ($siteinfo['meta_title'] ?? ''));
+if ($metaTitleBase === '') {
+    $metaTitleBase = $siteName;
+}
+$metaDescBase = $siteinfo['meta_description'] ?? '';
+$metaKeywords = $siteinfo['meta_keywords'] ?? '';
+
+$pathSeo = [];
+try {
+    $seoModelPath = '';
+    if (defined('ROOT_PATH') && is_string(ROOT_PATH)) {
+        $c = rtrim(ROOT_PATH, '/') . '/admin/Model/SeoModel.php';
+        if (is_file($c)) {
+            $seoModelPath = $c;
+        }
+    }
+    if ($seoModelPath === '' && !empty($GLOBALS['NO_ADMIN_PATH'])) {
+        $c = rtrim((string) $GLOBALS['NO_ADMIN_PATH'], '/') . '/Model/SeoModel.php';
+        if (is_file($c)) {
+            $seoModelPath = $c;
+        }
+    }
+    if ($seoModelPath !== '') {
+        require_once $seoModelPath;
+    }
+
+    if (class_exists('SeoModel')) {
+        $matched = SeoModel::findForRequestUri($uri);
+        if (is_array($matched)) {
+            $pathSeo = $matched;
+        }
+    }
+} catch (Exception $e) {
+    // SEO 모델이 없어도 렌더링은 계속 진행
+}
+
+$pageBranchMetaTitle = trim((string) ($pathSeo['meta_title'] ?? ''));
+$pageBranchPageTitle = trim((string) ($pathSeo['page_title'] ?? ''));
+$finalSeoTitle = $pageBranchMetaTitle !== ''
+    ? $pageBranchMetaTitle
+    : ($pageBranchPageTitle !== '' ? $pageBranchPageTitle : $metaTitleBase);
+$finalSeoDesc = !empty($pathSeo['meta_description']) ? $pathSeo['meta_description'] : $metaDescBase;
+$finalSeoKeywords = !empty($pathSeo['meta_keywords']) ? $pathSeo['meta_keywords'] : $metaKeywords;
+
+$pageTitle = $finalSeoTitle ?? '';
+$pageDesc = $finalSeoDesc ?? '';
+$pageKeywords = $finalSeoKeywords ?? '';
+
+$canonicalUrl = !empty($pathSeo['seo_canonical'])
+    ? (strpos($pathSeo['seo_canonical'], 'http') === 0 ? $pathSeo['seo_canonical'] : ($baseUrl . $pathSeo['seo_canonical']))
+    : ($baseUrl . $requestPath);
+
+$robotsContent = !empty($pathSeo['seo_robots'])
+    ? $pathSeo['seo_robots']
+    : ($siteinfo['robots'] ?? 'index, follow');
+
+$ogTitle = !empty($pathSeo['seo_og_title'])
+    ? $pathSeo['seo_og_title']
+    : ($siteinfo['og_title'] ?? $finalSeoTitle);
+$ogDescription = !empty($pathSeo['meta_description'])
+    ? $pathSeo['meta_description']
+    : ($siteinfo['og_description'] ?? $pageDesc);
+$ogImage = !empty($pathSeo['seo_og_image'])
+    ? $pathSeo['seo_og_image']
+    : ($siteinfo['og_image'] ?? (!empty($siteinfo['meta_thumb']) ? (BASE_PATH . '/uploads/meta/' . $siteinfo['meta_thumb']) : (BASE_PATH . '/resource/images/ogimg.jpg')));
+$ogImageAbs = strpos($ogImage, 'http') === 0 ? $ogImage : ($baseUrl . $ogImage);
+$ogLocale = $siteinfo['og_locale'] ?? ($LOCALE === 'ko' ? 'ko_KR' : 'en_US');
+$ogType = $siteinfo['og_type'] ?? 'website';
+
+$ogImageWidth = null;
+$ogImageHeight = null;
+$ogImageType = null;
+if (!empty($ogImageAbs)) {
+    if (!empty($pathSeo['og_image_width']) && !empty($pathSeo['og_image_height'])) {
+        $ogImageWidth = $pathSeo['og_image_width'];
+        $ogImageHeight = $pathSeo['og_image_height'];
+    } elseif (!empty($siteinfo['og_image_width']) && !empty($siteinfo['og_image_height'])) {
+        $ogImageWidth = $siteinfo['og_image_width'];
+        $ogImageHeight = $siteinfo['og_image_height'];
+    } else {
+        $localImagePath = str_replace($baseUrl, '', $ogImageAbs);
+        $localImagePath = str_replace(BASE_PATH, '', $localImagePath);
+        $localImagePath = ltrim($localImagePath, '/');
+
+        $possiblePaths = [
+            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/' . $localImagePath,
+            dirname(__DIR__, 2) . '/' . $localImagePath,
+            dirname(__DIR__, 2) . '/public/' . $localImagePath,
+        ];
+
+        foreach ($possiblePaths as $fullImagePath) {
+            if (!file_exists($fullImagePath) || !function_exists('getimagesize')) {
+                continue;
+            }
+
+            $imageInfo = @getimagesize($fullImagePath);
+            if ($imageInfo === false) {
+                continue;
+            }
+
+            $ogImageWidth = $imageInfo[0];
+            $ogImageHeight = $imageInfo[1];
+            $ogImageType = $imageInfo['mime'] ?? null;
+            break;
+        }
+    }
+}
+
+$twitterCard = $siteinfo['twitter_card'] ?? 'summary';
+$twitterImage = $siteinfo['twitter_image'] ?? ($ogImageAbs ?? '');
+$twitterTitle = $siteinfo['twitter_title'] ?? $pageTitle;
+$twitterDesc = $siteinfo['twitter_desc'] ?? $pageDesc;
+
+$aeoFaqJson = !empty($pathSeo['aeo_faq_json']) ? $pathSeo['aeo_faq_json'] : null;
+$aeoSchemaMarkup = !empty($pathSeo['aeo_schema_markup']) ? $pathSeo['aeo_schema_markup'] : null;
+
+$favicon = '';
+$faviconMimeSource = '';
+if (!empty($siteinfo['favicon'])) {
+    $fv = trim((string) $siteinfo['favicon']);
+    if (preg_match('#^https?://#i', $fv)) {
+        $favicon = $fv;
+        $faviconMimeSource = basename(parse_url($fv, PHP_URL_PATH) ?: '');
+    } elseif ($fv !== '') {
+        $favicon = ($fv[0] === '/') ? $fv : base_path(ltrim($fv, '/'));
+        $faviconMimeSource = basename($fv);
+    }
+}
+if ($favicon === '' && !empty($siteinfo['meta_favicon_ico'])) {
+    $faviconMimeSource = (string) $siteinfo['meta_favicon_ico'];
+    $favicon = base_path('/uploads/meta/' . ltrim($faviconMimeSource, '/'));
+}
+if ($favicon === '') {
+    $faviconMimeSource = 'favicon.png';
+    $favicon = base_path('/resource/images/favicon.png');
+}
+$faviconExt = strtolower(pathinfo($faviconMimeSource, PATHINFO_EXTENSION));
+switch ($faviconExt) {
+    case 'ico':
+        $faviconMime = 'image/x-icon';
+        break;
+    case 'svg':
+        $faviconMime = 'image/svg+xml';
+        break;
+    case 'jpg':
+    case 'jpeg':
+        $faviconMime = 'image/jpeg';
+        break;
+    case 'webp':
+        $faviconMime = 'image/webp';
+        break;
+    case 'gif':
+        $faviconMime = 'image/gif';
+        break;
+    default:
+        $faviconMime = 'image/png';
+        break;
+}
+$faviconAbs = $favicon !== '' && !preg_match('#^https?://#i', $favicon)
+    ? ($baseUrl . $favicon)
+    : ($favicon !== '' ? $favicon : '');
+
+$hasCustomSiteFavicon = !empty($siteinfo['meta_favicon_ico'])
+    || trim((string) ($siteinfo['favicon'] ?? '')) !== '';
+
+$naverVerify = $siteinfo['naver_site_verification'] ?? null;
+$googleVerify = $siteinfo['google_site_verification'] ?? [];
+if (!is_array($googleVerify)) {
+    $googleVerify = array_filter([$googleVerify]);
+}
+
+$metaImageAbs = $siteinfo['meta_image'] ?? $ogImageAbs;
+
+?>
+
+<!DOCTYPE html>
+<html lang="<?= e($LOCALE) ?>" data-base="<?= e(BASE_PATH ?? '') ?>"
+    class="<?= (($pageType ?? '') === 'main') ? 'is-intro' : '' ?>"
+    <?= $isAboutAuthorMode ? 'data-about-mode="author"' : '' ?>
+    <?= $isMainAuthorMode ? 'data-main-mode="author"' : '' ?>
+    <?= (($pageType ?? '') === 'contact') ? 'data-contact-dom-state="pending"' : '' ?>
+    <?= $isContactAuthorMode ? 'data-contact-mode="author"' : '' ?>
+    <?= $isWorksAuthorMode ? 'data-works-mode="author"' : '' ?>>
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#000000">
+    <meta name="color-scheme" content="dark light">
+
+    <?php
+    $seo_title = yield_section('seo_title') ?: ($finalSeoTitle ?? '');
+    $seo_desc = yield_section('seo_desc') ?: ($finalSeoDesc ?? '');
+    $seo_keywords = yield_section('seo_keywords') ?: ($finalSeoKeywords ?? '');
+    ?>
+
+    <title><?= e($seo_title) ?></title>
+    <meta name="description" content="<?= e($seo_desc) ?>">
+    <meta name="keywords" content="<?= e($seo_keywords) ?>">
+
+    <link rel="canonical" href="<?= e($canonicalUrl) ?>">
+    <?php if (function_exists('hreflang_alternates_for_request')): ?>
+    <?php foreach (hreflang_alternates_for_request($uri, $scheme, $host) as $hreflangRow): ?>
+    <link rel="alternate" hreflang="<?= e($hreflangRow['hreflang']) ?>" href="<?= e($hreflangRow['href']) ?>">
+    <?php endforeach; ?>
+    <?php endif; ?>
+    <meta name="robots" content="<?= e($robotsContent) ?>">
+    <meta name="image" content="<?= e($metaImageAbs) ?>">
+
+    <?php if ($naverVerify): ?>
+    <meta name="naver-site-verification" content="<?= e($naverVerify) ?>">
+    <?php endif; ?>
+    <?php foreach ($googleVerify as $gv): ?>
+    <meta name="google-site-verification" content="<?= e($gv) ?>">
+    <?php endforeach; ?>
+
+    <meta property="og:locale" content="<?= e($ogLocale) ?>">
+    <meta property="og:url" content="<?= e($canonicalUrl) ?>">
+    <meta property="og:type" content="<?= e($ogType) ?>">
+    <meta property="og:site_name" content="<?= e($siteName) ?>">
+    <meta property="og:title" content="<?= e($ogTitle) ?>">
+    <meta property="og:description" content="<?= e($ogDescription ?: $seo_desc) ?>">
+    <?php if (!empty($ogImageAbs)): ?>
+    <meta property="og:image" content="<?= e($ogImageAbs) ?>">
+    <meta property="og:image:secure_url" content="<?= e($ogImageAbs) ?>">
+    <?php if (!empty($ogImageWidth) && !empty($ogImageHeight)): ?>
+    <meta property="og:image:width" content="<?= e($ogImageWidth) ?>">
+    <meta property="og:image:height" content="<?= e($ogImageHeight) ?>">
+    <?php endif; ?>
+    <?php if (!empty($ogImageType)): ?>
+    <meta property="og:image:type" content="<?= e($ogImageType) ?>">
+    <?php endif; ?>
+    <meta property="og:image:alt" content="<?= e($ogTitle) ?>">
+    <?php endif; ?>
+
+    <meta name="twitter:card" content="<?= e($twitterCard) ?>">
+    <meta name="twitter:title" content="<?= e($seo_title) ?>">
+    <meta name="twitter:description" content="<?= e($seo_desc) ?>">
+    <meta name="twitter:image" content="<?= e($twitterImage) ?>">
+    <?php if (!empty($siteinfo['twitter_site'])): ?>
+    <meta name="twitter:site" content="<?= e($siteinfo['twitter_site']) ?>">
+    <?php endif; ?>
+    <?php if (!empty($siteinfo['twitter_creator'])): ?>
+    <meta name="twitter:creator" content="<?= e($siteinfo['twitter_creator']) ?>">
+    <?php endif; ?>
+
+    <?php if (!empty($aeoSchemaMarkup)): ?>
+    <?php
+        $schemaData = json_decode($aeoSchemaMarkup, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($schemaData)) {
+            $schemas = isset($schemaData['@graph']) ? $schemaData['@graph'] : [$schemaData];
+            foreach ($schemas as $schema) {
+                echo '<script type="application/ld+json">' . "\n";
+                echo json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+                echo "\n" . '</script>' . "\n";
+            }
+        } else {
+            echo '<script type="application/ld+json">' . "\n";
+            echo $aeoSchemaMarkup;
+            echo "\n" . '</script>' . "\n";
+        }
+    ?>
+    <?php endif; ?>
+
+    <?php if (!empty($aeoFaqJson)): ?>
+    <?php
+        $faqData = json_decode($aeoFaqJson, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($faqData) && !empty($faqData)) {
+            $faqSchema = [
+                '@context' => 'https://schema.org',
+                '@type' => 'FAQPage',
+                'mainEntity' => [],
+            ];
+
+            foreach ($faqData as $faq) {
+                if (empty($faq['question']) || empty($faq['answer'])) {
+                    continue;
+                }
+
+                $faqSchema['mainEntity'][] = [
+                    '@type' => 'Question',
+                    'name' => $faq['question'],
+                    'acceptedAnswer' => [
+                        '@type' => 'Answer',
+                        'text' => $faq['answer'],
+                    ],
+                ];
+            }
+
+            if (!empty($faqSchema['mainEntity'])) {
+                echo '<script type="application/ld+json">' . "\n";
+                echo json_encode($faqSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+                echo "\n" . '</script>' . "\n";
+            }
+        }
+    ?>
+    <?php endif; ?>
+
+    <?php if ($hasCustomSiteFavicon && $favicon !== ''): ?>
+    <link rel="icon" type="<?= e($faviconMime) ?>" href="<?= e($favicon) ?>">
+    <link rel="shortcut icon" href="<?= e($favicon) ?>">
+    <?php else: ?>
+    <link rel="apple-touch-icon" sizes="180x180"
+        href="<?= base_path('/resource/images/favicon/apple-touch-icon.png') ?>">
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="<?= base_path('/resource/images/favicon/favicon-32x32.png') ?>">
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="<?= base_path('/resource/images/favicon/favicon-16x16.png') ?>">
+    <?php endif; ?>
+
+    <link rel="stylesheet" href="<?= BASE_PATH ?>/resource/vendor/swiper/swiper-bundle.css">
+    <?php $_style_css = (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2)) . '/resource/dist/style.css'; ?>
+    <link rel="stylesheet"
+        href="<?= BASE_PATH ?>/resource/dist/style.css?v=<?= file_exists($_style_css) ? filemtime($_style_css) : time() ?>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Geist+Mono:wght@100..900&family=Orbitron:wght@400..900&display=swap"
+        rel="stylesheet">
+    <?= yield_section('style', '') ?>
+
+    <script src="<?= BASE_PATH ?>/resource/vendor/swiper/swiper-bundle.js" defer></script>
+    <script src="https://cdn.lordicon.com/lordicon.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/gsap.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/ScrollTrigger.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/SplitText.min.js" defer></script>
+    <script src="https://unpkg.com/@barba/core" defer></script>
+    <script src="https://unpkg.com/lenis@1.3.17/dist/lenis.min.js" defer></script>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+          }
+        }
+    </script>
+
+    <?php $_app_js = (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2)) . '/resource/dist/js/app.js'; ?>
+    <script type="module"
+        src="<?= BASE_PATH ?>/resource/dist/js/app.js?v=<?= file_exists($_app_js) ? filemtime($_app_js) : time() ?>"
+        defer></script>
+</head>
+
+<body class="<?= implode(' ', array_filter([
+    (($pageType ?? 'main') === 'main') ? 'is-main' : '',
+    (($pageType ?? '') === 'contact') ? 'is-contact' : '',
+])) ?>">
+    <div class="__root">
+        <?= include_view('components.panel') ?>
+        <?= include_view('components.header') ?>
+        <main class="<?= $mainClass ?? '' ?>" data-page="<?= e($pageType ?? 'main') ?>">
+            <?php if (in_array($pageType ?? '', ['main', 'about', 'contact'], true)): ?>
+            <?= include_view('components.intro') ?>
+            <?php endif; ?>
+            <?php if ($hasSubpageStarfield): ?>
+            <div class="no-subpage-starfield" aria-hidden="true">
+                <canvas data-subpage-starfield-canvas></canvas>
+            </div>
+            <?php endif; ?>
+            <?= yield_section('content') ?>
+            <?php if (!in_array($pageType ?? '', ['works', 'contact', 'main', 'about'], true)): ?>
+            <?= include_view('components.footer') ?>
+            <?php endif; ?>
+        </main>
+    </div>
+    <?= yield_section('portal', '') ?>
+    <?= yield_section('script', '') ?>
+</body>
+
+</html>

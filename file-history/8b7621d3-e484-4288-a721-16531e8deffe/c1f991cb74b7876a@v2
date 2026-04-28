@@ -1,0 +1,44 @@
+# Global AI Rules
+
+**RTK is mandatory**: any Bash command whose output spans more than a few lines requires the `rtk` prefix. WSL Remote = automatic hook rewrite. Native Windows = explicit prefix required.
+
+@RTK.md
+
+## Response Style
+
+- **Language**: user-facing chat replies in Korean. AI-consumed content (docs, hooks, plans, MEMORY topic files, AUTO marks, comments, log messages) in English. Code identifiers, paths, commands, error messages stay in English verbatim regardless. See `feedback_english_for_ai.md` in project memory for the full policy.
+- **Brevity**: state results and decisions directly. Do not enumerate the reasoning process.
+
+## Auto Memory
+
+The auto-memory system runs on a `D:\.claude\projects\<project>\memory\MEMORY.md` index plus per-topic `.md` files. The index is capped at 200 lines / 25 KB; split into topic files when it grows. Four memory types: user profile, feedback, project context, external-system reference.
+
+## New Project Setup
+
+See `D:\.claude\templates\project-init.md`. Standard layout: CLAUDE.md / AGENTS.md / `.claude/rules/` / agents / settings.json.
+
+## Frequently Used Skills
+
+`/loop` (recurring interval) - `/schedule` (cron) - `/review` (PR review) - `/security-review` - `/migration` - `/new-route` - `/sandbox`.
+
+## Active Global Hooks (`D:\.claude\settings.json`)
+
+- **SessionStart** (`hooks/session-start.ps1`): regenerate AUTOMATION.md AUTO marks, auto-pin project, memory-lint, weekly memory-backup, 24h doc-update gate, 60-day plan archive.
+- **SessionEnd**: `cleanup.ps1` (async) rotates `plans/` (2d), `shell-snapshots/` (7d), `file-history/` (14d), `projects/` (30d, pinned excluded), `session-env/` (empty), `backups/` (precompact 28d, memory-zip 56d), checks MEMORY.md link integrity, kills stale workers >24h. `drift-detect-worker.ps1` (async) drains `.drift-queue` and appends findings to `review-needed.md`.
+- **PostToolUse** (`Edit|Write|Bash`): `hooks/drift-enqueue.ps1` enqueues edited files / dep-install commands.
+- **UserPromptSubmit**: `hooks/inject-runtime-ctx.ps1` -- skip-when-clean git status / log injection (suffix block, prefix-cache safe).
+- **PreCompact** / **PostCompact**: snapshot memory + active plans via hard-link; verify @import chain integrity post-compact.
+- **Stop**: `hooks/token-report.ps1` (async) appends rtk session stats to `D:\.claude\reports\token-usage.md`.
+- **statusLine**: `D:\.claude\statusline.ps1` -- cwd-leaf | model | effort | session count.
+- **env**: `ENABLE_PROMPT_CACHING_1H=1` (1h prompt-cache TTL); `prefix-version.txt` is bumped on rule changes to invalidate stale cache.
+
+## RTK Automation Modes
+
+| Environment | Mechanism | Notes |
+|---|---|---|
+| WSL Remote (recommended) | Automatic hook rewrite | VSCode `><` -> Connect to WSL, then `rtk init -g --auto-patch` (one-time) |
+| Windows native (current) | Explicit prefix required | Type `rtk <command>` manually. Hook-based automation is not supported by RTK on native Windows. |
+
+## Permission-Mode Caveat
+
+`permissions.defaultMode = "bypassPermissions"` + `skipDangerousModePermissionPrompt = true` are active. **Safe only inside Docker / isolated environments.** When working directly on the host, the safety net relies on `permissions.deny` (rm -rf, force push, hard reset, `.credentials`); keep `settings.json` in sync when adding new deny entries.

@@ -1,0 +1,21 @@
+uniform float uTime; uniform float uSeed;
+varying vec2 vUv; varying float vNDot;
+__NOISE_GLSL__
+void main(){
+  vUv = uv;
+  float t = uv.y;
+  float tipW = pow(t, 1.8);
+  vec3 pos = position;
+  float angle = atan(position.x, position.z);
+  vec2 tUV = vec2(angle*0.4+0.5, t*2.5 - uTime*__PARENT_RS__ + uSeed);
+  float rT = (fbm(tUV*1.2, 4) - 0.5) * __PARENT_RT__ * tipW;
+  pos.x += rT * sign(position.x + 0.001);
+  pos.z += rT * sign(position.z + 0.001);
+  vec2 lUV = vec2(angle*0.3+0.5, t*1.8 - uTime*__PARENT_LS__ + uSeed*0.7);
+  float lT = (fbm(lUV, 4) - 0.5) * __PARENT_LT__ * tipW;
+  pos.y += lT;
+  vec3 wn = normalize(normalMatrix * normal);
+  vec3 vd = normalize(-vec3(modelViewMatrix * vec4(position, 1.)));
+  vNDot = dot(wn, vd);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+}
