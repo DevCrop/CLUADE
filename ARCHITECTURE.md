@@ -16,7 +16,7 @@ This document describes the architecture of this machine's global Claude Code se
 |---|---|
 | OS | Windows 10 (native, no WSL) |
 | Shell | Git Bash (primary) / PowerShell 5.1 |
-| AI assistant | Claude Code (sole assistant — Codex / Cursor removed) |
+| AI assistant | Claude Code (primary) + OpenAI Codex CLI (secondary — parallel / second-opinion work). Cursor removed. See §10. |
 | IDE host | VS Code with Claude Code extension |
 | Drive layout | C drive (under `%USERPROFILE%`) for the `.claude` config root. Project work lives on D:; only the Claude infra itself is single-drive. |
 
@@ -100,7 +100,7 @@ Eight hook events are registered in `settings.json` (plus a `statusLine` rendere
 
 | Event | Purpose | Async |
 |---|---|---|
-| PreToolUse (Bash) | RTK auto-rewrite via `hooks/rtk-prerewrite.js`; bypass per-command with `RTK_DISABLED=1` | no |
+| PreToolUse (Bash) | RTK auto-rewrite via `rtk hook claude` (native binary, v0.37.2); raw output bypass: `rtk proxy <cmd>` | no |
 | SessionStart | regenerate AUTO-marks, auto-pin, memory-lint, weekly memory-backup, 24h doc gate, 60d plan archive, **D-remnant detection → oneshot consolidation** | no |
 | SessionEnd | retention rotations (13 categories), MEMORY.md link integrity, kill stale workers, drift queue drain | yes |
 | PostToolUse (Edit\|Write\|Bash) | enqueue edited files / dep-install audits to `.drift-queue` | yes |
@@ -148,7 +148,7 @@ See `AUTOMATION.md` → "Compaction Policy" for the MUST-preserve / MAY-drop set
 
 RTK is a Rust-based CLI output filter (60–90% token savings). On this machine:
 
-- **Mode**: PreToolUse hook (`hooks/rtk-prerewrite.js`) auto-prefixes every Bash call. Bypass per-command with `RTK_DISABLED=1 <cmd>`.
+- **Mode**: PreToolUse hook (`rtk hook claude` — native binary, v0.37.2) auto-prefixes every Bash call. Raw output without filtering: `rtk proxy <cmd>`. Permanent exclusion: `~/.config/rtk/config.toml → exclude_commands`.
 - **Coverage**: noisy multi-line outputs (`git`, `docker`, `tsc`, test runners, `find`, log files, `gh pr`, package managers).
 - **Skip**: built-ins (`echo`, `pwd`), already-prefixed commands, and bypassed calls — pass through unchanged.
 
@@ -187,7 +187,8 @@ Current non-vanilla customizations and their justifications:
 | `permissions.defaultMode = "bypassPermissions"` | productivity in trusted host environment |
 | 8 hook events (9 command entries — SessionEnd registers 2) in `settings.json` | RTK auto-rewrite, upstream doc drift, plan rotation, prompt cache invalidation |
 | `ENABLE_PROMPT_CACHING_1H` env | 1h prompt cache TTL for token efficiency |
-| `effortLevel = "high"` | model output quality preference |
+| `effortLevel = "xhigh"` | model output quality preference |
+| `model = "sonnet"` + `advisorModel = "opus"` | default working model = Sonnet; escalate to Opus via the `advisor` tool or `/model opus` for genuinely hard tasks |
 | 13-category retention in `cleanup.ps1` | unbounded growth in volatile dirs |
 
 ### FOMO guard
@@ -201,14 +202,21 @@ If neither exists: skip it.
 
 ---
 
-## 10. AI Tool Exclusivity
+## 10. AI Tool Roles
 
-Claude Code is the sole AI assistant on this machine.
+Two AI assistants, one shared cross-AI rule set.
 
-- **Removed**: Codex CLI (`%USERPROFILE%\.codex`), Cursor (`%APPDATA%\Cursor`, `%LOCALAPPDATA%\cursor-updater`).
-- **Pending uninstall** (out of architecture scope, user-driven): VS Code extensions `openai.chatgpt-*`, `github.copilot-chat-*`, Cursor app binaries.
+| Tool | Role | Config root |
+|---|---|---|
+| Claude Code | Primary assistant | `%USERPROFILE%\.claude\` |
+| OpenAI Codex CLI | Secondary — parallel work, second opinions | `%USERPROFILE%\.codex\` |
 
-Rationale: split AI surfaces produce conflicting context, duplicate token costs, and inconsistent rule application. One assistant = one rule set = predictable behavior.
+The cross-AI rules (language convention, RTK prefixing, Order Match Verification, forbidden actions, Karpathy coding principles) are mirrored on both sides. Claude-specific behavior lives in `.claude\CLAUDE.md`; Codex-specific behavior in `.codex\AGENTS.md`, which carries the shared rules in Codex vocabulary and back-references `CLAUDE.md`.
+
+- **Removed**: Cursor (`%APPDATA%\Cursor`, `%LOCALAPPDATA%\cursor-updater`).
+- **Pending uninstall** (out of architecture scope, user-driven): VS Code extensions `github.copilot-chat-*`, Cursor app binaries.
+
+**Two-tool cap.** Claude (primary) + Codex (secondary) is the limit — do not add a third AI surface. Rationale: more AI surfaces produce conflicting context, duplicate token costs, and inconsistent rule application; two tools with one synchronized rule set is the most surface this setup will carry.
 
 ---
 
@@ -219,7 +227,7 @@ Rationale: split AI surfaces produce conflicting context, duplicate token costs,
 | User-facing chat replies | Korean |
 | AI-consumed artifacts (docs, hooks, plans, memory, comments, log lines) | **English** |
 | Code identifiers, paths, commands, error messages | English (verbatim, regardless of context) |
-| Quoted user phrases (e.g. "완료" / "done") | preserved as-is in either language |
+| Quoted user phrases (e.g. "done") | preserved as-is |
 
 Rationale: AI consumption efficiency. English keeps tokens predictable across models and avoids encoding ambiguity (PowerShell 5.1 ANSI codepage corrupts em-dash and similar non-ASCII glyphs).
 
@@ -244,6 +252,7 @@ Single-day bootstrap; consolidated to keep the change log scannable for future d
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-05-12 | Global config de-project-ified: removed `260427` / project-path / project-stack strings from `CLAUDE.md`, `HARNESS_ARCHITECTURE.md`, `templates/project-init.md`, `.codex/AGENTS.md`. Added a "Delegation, Parallelism & Model Escalation" section to `CLAUDE.md` and the Codex analog ("Delegation, Parallelism & Reasoning Effort") to `.codex/AGENTS.md`. Set `model = "sonnet"` in `settings.json` (escalate to Opus via the `advisor` tool or `/model opus`). Added a self-contained "Coding Principles (Karpathy)" block to `.codex/AGENTS.md`. **Reframed §10 "AI Tool Exclusivity" → "AI Tool Roles" (Claude primary, Codex secondary) — this reverses the 2026-04-28 "Codex removed for AI tool exclusivity" decision.** Operational-state registries (`active-projects.json`, Codex `[projects.*]` trust entry) kept as-is with clarifying comments. | User keeps both Claude + Codex for parallel / second-opinion work and wants the global layer to be 100% project-agnostic with explicit subagent / parallelism / model-escalation guidance. |
 | _(append future entries here)_ | | |
 
 ---

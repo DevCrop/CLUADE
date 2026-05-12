@@ -39,4 +39,4 @@
 - [ ] **INCOMPLETE** — gaps:
   - <criterion N>: <reason / next step>
 
-If INCOMPLETE: do not say "완료". Either complete the gaps or report them explicitly to the user.
+If INCOMPLETE: do not say "done". Either complete the gaps or report them explicitly to the user.

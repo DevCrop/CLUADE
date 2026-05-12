@@ -33,7 +33,7 @@ if (Test-Path $projectRegistry) {
     } catch {}
 }
 # Fallback: try the obvious project paths
-$projectRoots += 'd:\최신프로젝트\나인원랩스\퍼블\260427'
+# (project 260427 retired — path removed)
 foreach ($root in ($projectRoots | Select-Object -Unique)) {
     $bpFile = Join-Path $root '.claude\BEST_PRACTICES.md'
     if (-not (Test-Path $bpFile)) { continue }

@@ -1,6 +1,7 @@
 # New Project AI Harness Setup Guide
 
 Based on Claude Code official docs. Read this when starting a new project and follow the steps to wire it up.
+For **forking an existing project** (A → B), see `project-fork.md` in this folder.
 
 ---
 
@@ -14,7 +15,7 @@ Based on Claude Code official docs. Read this when starting a new project and fo
     ├── BEST_PRACTICES.md        # domain-invariant architecture rules
     ├── SETUP_CHECKLIST.md       # harness-setup verification checklist
     ├── settings.json            # project hooks (tsc, etc.)
-    ├── rules/                   # Interface Segregation (paths: frontmatter)
+    ├── rules/                   # path-scoped topic rules (paths: frontmatter)
     │   ├── frontend.md          # paths: **/*.ts, **/*.tsx
     │   ├── backend.md           # paths: **/*.py / **/*.go / **/*.php
     │   └── style.md             # paths: **/*.scss / **/*.css
@@ -43,42 +44,29 @@ Official guidance: keep CLAUDE.md under 200 lines. Beyond that, split into `.cla
 
 Agent files use YAML frontmatter + system-prompt Markdown body. Manageable via the `/agents` command.
 
+Define one read-only **domain explorer** per major subsystem (frontend / backend / data / infra — whatever the project's stack divides into). Tune `name` and `description` to that subsystem's actual modules, entry points, and table/file prefixes so Claude knows when to delegate to it.
+
 ```markdown
 ---
-name: scene-explorer
+name: <domain>-explorer
 description: >
-  Use when exploring Three.js scene structure, objects, shaders,
-  theatre bindings, or runtime relationships. Use for tasks involving
-  Engine, Scene, AppManager, WorksSceneManager, Theatre bindings.
-  Do NOT use for PHP, SCSS, or unrelated backend code.
+  Use when exploring <subsystem> structure, schema, routing, or runtime
+  relationships in this project — without loading everything into context.
+  Use for tasks involving <key modules / entry points / table or file prefixes of that subsystem>.
+  Do NOT use for code review, cross-file consistency audits, or open-ended analysis;
+  do NOT use for unrelated subsystems.
 tools: Read, Grep, Glob
 model: haiku
 disallowedTools: Write, Edit, Bash
 ---
 
-You are a read-only Three.js architecture explorer.
-Focus on: scene graph ownership, lifecycle methods, disposal patterns,
-Theatre bindings, and runtime coordination.
+You are a read-only architecture explorer for <subsystem>.
+Focus on: ownership boundaries, lifecycle / entry points, the relevant data model,
+and runtime coordination within this subsystem.
 Always report file paths and line numbers for every finding.
 ```
 
-```markdown
----
-name: php-explorer
-description: >
-  Use when exploring PHP routing, views, admin structure, or database schema.
-  Use for tasks involving routes/web.php, Controller, Model, render() chain,
-  nb_ tables, or admin pages. Do NOT use for TypeScript or SCSS.
-tools: Read, Grep, Glob
-model: haiku
-disallowedTools: Write, Edit, Bash
----
-
-You are a read-only PHP MVC architecture explorer.
-Focus on: routing chains, render() entry points, controller/model patterns,
-DB schema (nb_ prefix), and admin page structure.
-Always report file paths and line numbers.
-```
+(e.g. `frontend-explorer.md`, `backend-explorer.md`, `data-explorer.md` — one file each, descriptions stack-specific.)
 
 ### Global agents (`~/.claude/agents/`)
 
@@ -154,8 +142,8 @@ Append to the `pinned` array in `~/.claude/active-projects.json`:
 ```json
 {
   "pinned": [
-    "c--Users-edn-y-renew-nineonelabs",
-    "c--Users-edn-y-<new-project-name>"
+    "<existing-project-slug>",
+    "<new-project-slug>"
   ]
 }
 ```

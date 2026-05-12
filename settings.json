@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"%USERPROFILE%/.claude/hooks/rtk-prerewrite.js\"",
+            "command": "rtk hook claude",
             "async": false
           }
         ]
@@ -134,9 +134,11 @@
     "type": "command",
     "command": "powershell.exe -NonInteractive -File \"%USERPROFILE%/.claude/statusline.ps1\""
   },
-  "effortLevel": "high",
+  "effortLevel": "xhigh",
+  "advisorModel": "opus",
   "autoUpdatesChannel": "latest",
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
+  "autoCompactEnabled": false,
   "agentPushNotifEnabled": false
 }

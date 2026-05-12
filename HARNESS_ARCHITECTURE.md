@@ -46,7 +46,7 @@ This decision is final. If a future project tries to reintroduce DDD framing, po
 ┌──────────────────────────▼──────────────────────────────────────┐
 │  LAYER 3 — HOOK-ENFORCED DETERMINISM                            │
 │                                                                 │
-│  PreToolUse[Bash]  rewrite tool input   (e.g. rtk-prerewrite)   │
+│  PreToolUse[Bash]  rewrite tool input   (rtk hook claude)        │
 │  PostToolUse       file-type checks     (tsc / vitest / lint)   │
 │  PreCompact/Post   memory snapshot integrity                    │
 │  SessionStart/End  retention + drift drain                      │
@@ -88,7 +88,7 @@ When adding ANY new piece of configuration, ask:
 | Does every session need this loaded into context? | Layer 1 (CLAUDE.md/AGENTS.md) | "Reply in Korean", "Don't run npm build" |
 | Does it apply only to specific file types or paths? | Layer 2 (`.claude/rules/<topic>.md` with `paths:` frontmatter) | TypeScript-only rules, SCSS-only rules |
 | Is it persistent learning across sessions for this project? | Layer 2 (`memory/<topic>.md` linked from MEMORY.md) | "User prefers terse responses", project architecture map |
-| Is it a multi-step procedure that the user invokes? | Layer 2 (`.claude/skills/<skill>/SKILL.md`) | `/new-route`, `/audit-harness` |
+| Is it a multi-step procedure that the user invokes? | Layer 2 (`.claude/skills/<skill>/SKILL.md`) | `/rtk-discover`, `/rtk-reference` (global skills); a project's own route-generator skill (e.g. `/new-route`) lives in that project, not here |
 | Must it hold every time, no exceptions, even mid-task? | Layer 3 (hook in `settings.json`) | RTK auto-prefix, file-type lint |
 | Is it a structural prohibition (data destruction, credential exfil)? | Layer 3 (`permissions.deny`) | `rm -rf`, force push, `.credentials*` reads |
 
