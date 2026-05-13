@@ -15,7 +15,10 @@
 6. [훅 시스템](#6-훅-시스템)
 7. [동작 확인](#7-동작-확인)
 8. [자주 묻는 문제 (FAQ)](#8-자주-묻는-문제-faq)
-9. [절대 하지 말 것](#9-절대-하지-말-것)
+9. [변경사항 GitHub에 푸시 (운영 워크플로우)](#9-변경사항-github에-푸시-운영-워크플로우)
+10. [정기 점검 체크리스트](#10-정기-점검-체크리스트)
+11. [머신 간 동기화 (옵션)](#11-머신-간-동기화-옵션)
+12. [절대 하지 말 것](#12-절대-하지-말-것)
 
 ---
 
@@ -228,15 +231,19 @@ Claude가 매 세션마다 로드합니다. DO / DON'T, RTK 강제, Order Match 
 
 ### 5-3. `RTK.md` — 토큰 최적화
 
-`git status` → `rtk git status`로 자동 변환되어 출력이 압축됩니다. 60–90% 토큰 절감.
+`git status` → `rtk git status`로 자동 변환되어 출력이 압축됩니다. 60–90% 토큰 절감. 골든 룰·헬스체크·동작 모드·트러블슈팅·핫패스 표가 한 곳에 정리돼 있습니다.
 
 수동 사용:
 ```bash
 rtk gain              # 절감 통계
 rtk gain --history    # 명령 이력
-rtk discover          # 미사용 기회 분석
+rtk discover          # 미사용 기회 분석 (Windows: /rtk-discover 스킬 사용)
 rtk proxy <cmd>       # 필터 없이 raw 출력
+rtk rewrite <cmd>     # 실행 없이 rewrite 미리보기
+rtk trust             # 프로젝트 .rtk/filters.toml 신뢰
 ```
+
+전체 명령 카탈로그 + 카테고리별 표는 `/rtk-reference` 스킬(On-Demand 로드)에 있습니다.
 
 ### 5-4. `ARCHITECTURE.md` / `HARNESS_ARCHITECTURE.md`
 
@@ -362,7 +369,103 @@ backups/ sessions/ projects/ file-history/ shell-snapshots/ reports/ plans/
 
 ---
 
-## 9. 절대 하지 말 것
+## 9. 변경사항 GitHub에 푸시 (운영 워크플로우)
+
+이 저장소(`%USERPROFILE%\.claude\`)는 **글로벌 Claude 설정의 보일러플레이트**가 GitHub `260513` 브랜치에 올라가 있는 형태입니다. 일상적인 갱신 절차:
+
+### 9-1. 매일 사용 → 푸시 (가장 흔한 케이스)
+
+```powershell
+cd $env:USERPROFILE\.claude
+
+# 1. 의도치 않은 캐시/세션이 staged 되지 않는지 먼저 확인
+rtk git status -sb
+
+# 2. 정상이면 commit + push
+rtk git add .
+rtk git commit -m "chore: <변경 요약>"
+rtk git push origin 260513
+```
+
+⚠️ `rtk git status`에서 `projects/`, `sessions/`, `plans/`, `reports/`, `backups/`, `plugins/`, `docs-updates.md`, `review-needed.md`, `stats-cache.json` 등이 보이면 **`.gitignore` 수정이 누락된 신호** — 즉시 commit 중단하고 `.gitignore`부터 추가하세요. 한 번이라도 commit되면 git 히스토리에 영구 남아 회수가 까다롭습니다.
+
+### 9-2. 새 브랜치로 갈라치기
+
+다음 날짜(예: `260520`)로 작업을 분리하고 싶을 때:
+
+```powershell
+cd $env:USERPROFILE\.claude
+rtk git checkout -b 260520        # 현 브랜치에서 분기
+rtk git push -u origin 260520
+```
+
+`260513`은 그대로 보존되고 새 작업은 `260520`에서 진행. main은 손대지 않음.
+
+### 9-3. 첫 번째 푸시 (보일러플레이트가 비어있는 신규 GitHub repo)
+
+```powershell
+cd $env:USERPROFILE\.claude
+rtk git init
+rtk git config user.name "<your-name>"
+rtk git config user.email "<your-email>"
+rtk git checkout -b 260513
+rtk git add .
+rtk git status -sb                # ★ 캐시류가 안 staged 됐는지 마지막 점검
+rtk git commit -m "chore: boilerplate snapshot (YYYY-MM-DD)"
+rtk git remote add origin https://github.com/<owner>/<repo>.git
+rtk git push -u origin 260513
+```
+
+### 9-4. 푸시 전 자가점검 (4가지)
+
+| 점검 | 명령 | 통과 기준 |
+|------|------|-----------|
+| 캐시/세션 누락 차단 | `rtk git status -sb` | `projects/`, `sessions/`, `backups/` 안 보임 |
+| 비밀파일 안 들어감 | `rtk git ls-files \| rtk grep -i credentials` | 결과 0건 |
+| Korean 인코딩 OK | `chcp` | `65001` |
+| Order Match | `templates/order-match-checklist.md` | 모든 항목 ✓ |
+
+---
+
+## 10. 정기 점검 체크리스트
+
+주 1회 권장:
+
+- [ ] `rtk gain` — 토큰 절감 비율 50% 이상 유지 중인가?
+- [ ] `cleanup.log` (마지막 20줄) — SessionEnd 13개 회전 모두 작동 중?
+- [ ] `docs-updates.md` — Anthropic 공식 문서 변경 알림 있나? 있으면 검토 후 비움
+- [ ] `review-needed.md` — drift 큐가 비어있는가? 항목 있으면 처리 후 비움
+- [ ] `Get-PSDrive C` — C 드라이브 여유공간 안정적인가?
+- [ ] `Test-Path D:\.claude` — `False`여야 함 (단일 드라이브 보장)
+
+월 1회 권장:
+
+- [ ] AUTOMATION.md AUTO 마크 자연 갱신 동작 확인 (TIMESTAMP가 이번 달인가?)
+- [ ] `reports/token-usage.md` 최근 항목 — 이상값 없나?
+- [ ] 사용 안 하는 hook / skill 정리 (FOMO 가드 재적용)
+- [ ] GitHub `260513` 브랜치에 최신 보일러 반영했는가?
+
+---
+
+## 11. 머신 간 동기화 (옵션)
+
+여러 머신을 쓰는 경우 동일한 글로벌 Claude 설정을 유지하려면:
+
+```powershell
+# 머신 A에서 push
+cd $env:USERPROFILE\.claude
+rtk git add . && rtk git commit -m "sync from machine-A" && rtk git push origin 260513
+
+# 머신 B에서 pull
+cd $env:USERPROFILE\.claude
+rtk git pull origin 260513
+```
+
+⚠️ 머신별로 다른 값(예: `settings.local.json`, `active-projects.json`)은 `.gitignore`에 이미 등록돼 있어 안전. push되지 않습니다.
+
+---
+
+## 12. 절대 하지 말 것
 
 1. ❌ `.claude` 폴더 루트를 **D드라이브로 이동** (NTFS 정션 포함). 글로벌 인프라는 `%USERPROFILE%`에 고정.
 2. ❌ `.credentials.json` / `.claude.json` / `mcp-needs-auth-cache.json` **커밋**. 이미 `.gitignore` 등록됨.
@@ -370,6 +473,7 @@ backups/ sessions/ projects/ file-history/ shell-snapshots/ reports/ plans/
 4. ❌ `--no-verify` / `rm -rf` 같은 **파괴적 단축키로 우회**. 근본 원인 수정.
 5. ❌ 훅 / 스킬 / MCP / 규칙 **무분별 추가**. FOMO 가드 — 월 3회 이상 실제 사용 또는 측정 가능 이익 증명 시에만 추가.
 6. ❌ Anthropic 기본 동작과 다른 커스터마이징을 **사고 없이** 도입. Vanilla compliance 원칙.
+7. ❌ `projects/`, `sessions/`, `plans/`, `reports/`, `backups/`, `plugins/` 같은 **휘발성/누적 데이터 커밋**. 보일러플레이트 깔끔함 유지.
 
 ---
 
@@ -384,7 +488,7 @@ backups/ sessions/ projects/ file-history/ shell-snapshots/ reports/ plans/
 ## 기여 / 문의
 
 - 리포지토리: https://github.com/DevCrop/CLUADE
-- 브랜치: `260512` (최신 작업), `main` (안정)
+- 브랜치: `260513` (현재 보일러플레이트, edn_y→%USERPROFILE% 정리 후), `260512`, `main`
 - 이슈 / PR: GitHub Issues 사용
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
