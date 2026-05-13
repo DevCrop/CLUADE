@@ -1,0 +1,41 @@
+# ── Credentials & auth (NEVER commit) ──────────────────────────────────────
+.credentials.json
+mcp-needs-auth-cache.json
+.claude.json
+
+# ── Personal session state ──────────────────────────────────────────────────
+active-projects.json
+history.jsonl
+.last-cleanup
+cleanup.log
+.consolidation-done
+settings.local.json
+stats-cache.json
+
+# ── Auto-generated notification logs (hooks append; not boilerplate) ────────
+docs-updates.md
+review-needed.md
+
+# ── Ephemeral / auto-generated directories ──────────────────────────────────
+projects/
+backups/
+file-history/
+shell-snapshots/
+sessions/
+session-env/
+paste-cache/
+downloads/
+telemetry/
+cache/
+.docs-cache/
+.drift-queue/
+reports/
+plans/
+ide/
+docs/
+plugins/
+
+# ── OS / editor ─────────────────────────────────────────────────────────────
+.vscode/
+*.lock
+Thumbs.db
